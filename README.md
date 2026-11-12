@@ -4,7 +4,7 @@ A fast, quiet, native Spotify client for Windows. It plays music through your ow
 
 ![Library](docs/screenshots/library.png)
 
-> **Status:** early. There is no download yet. Releases are coming soon; until then you can [build it from source](#build-from-source).
+> **Status:** early (0.1). [Download the installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) or [build it from source](#build-from-source).
 
 ## What it is
 
@@ -37,7 +37,15 @@ All screenshots use a demo library with made-up artists, albums and friends.
 
 ## Install
 
-There is no installer yet. **Releases are coming soon** on the Releases page of this repository. When they land, the installer will update itself in the background.
+1. Download [Openify-win-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) from the [latest release](https://github.com/FurkanKY/Openify/releases/latest).
+2. Run it. Openify installs for your user only (no administrator rights) and opens.
+3. Sign in with your Spotify account in the browser window that opens.
+
+The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**. A portable zip is on the same release page if you prefer not to install.
+
+Openify updates itself in the background and applies the update the next time you open it. If a new version fails to start twice, it goes back to the previous one on its own.
+
+To uninstall, use Windows Settings > Apps.
 
 Requirements: Windows 10 or 11 (64-bit), a Spotify Premium account and a working audio output.
 
@@ -82,4 +90,4 @@ Openify is licensed under the **GNU General Public License, version 3 or later**
 
 ## Türkçe
 
-Openify, Spotify Premium hesabınla çalışan, Windows için yerel, hızlı ve sade bir Spotify istemcisidir. Rust ile yazıldı; arayüz gpui, ses librespot ile gelir. Az bellek kullanır (çalarken yaklaşık 95 MB, tepsideyken yaklaşık 70 MB), klavyeyle her şey yapılır, şarkılar arası boşluk yoktur, isteğe bağlı yumuşak geçiş, ekolayzer ve OPRA kulaklık profilleri, kütüphane araçları (yinelenen bulucu, birleştir / böl, sıralama, yedek, istatistik), çeviri destekli sözler ve arkadaş etkinliği vardır. Arayüz İngilizce ve Türkçedir. Verilerin bilgisayarında kalır; Openify Spotify'a ne dinlediğini bildirmez. Henüz hazır sürüm yok ("Releases yakında"); şimdilik yukarıdaki yönergeyle kaynaktan derleyebilirsin. Spotify ile ilişkisi yoktur, Spotify bir Spotify AB ticari markasıdır. Katkı için [CONTRIBUTING.md](CONTRIBUTING.md), lisans GPL-3.0-or-later.
+Openify, Spotify Premium hesabınla çalışan, Windows için yerel, hızlı ve sade bir Spotify istemcisidir. Rust ile yazıldı; arayüz gpui, ses librespot ile gelir. Az bellek kullanır (çalarken yaklaşık 95 MB, tepsideyken yaklaşık 70 MB), klavyeyle her şey yapılır, şarkılar arası boşluk yoktur, isteğe bağlı yumuşak geçiş, ekolayzer ve OPRA kulaklık profilleri, kütüphane araçları (yinelenen bulucu, birleştir / böl, sıralama, yedek, istatistik), çeviri destekli sözler ve arkadaş etkinliği vardır. Arayüz İngilizce ve Türkçedir. Verilerin bilgisayarında kalır; Openify Spotify'a ne dinlediğini bildirmez. Kurulum dosyası [son sürüm sayfasında](https://github.com/FurkanKY/Openify/releases/latest); dosya henüz imzalı olmadığı için Windows "Bilgisayarınız korundu" derse **Ek bilgi**, sonra **Yine de çalıştır**'a bas. Spotify ile ilişkisi yoktur, Spotify bir Spotify AB ticari markasıdır. Katkı için [CONTRIBUTING.md](CONTRIBUTING.md), lisans GPL-3.0-or-later.
