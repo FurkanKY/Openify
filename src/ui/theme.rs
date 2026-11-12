@@ -110,6 +110,15 @@ pub fn shade(alpha: f32) -> Rgba {
     with_alpha(0x000000, alpha)
 }
 
+/// Hapın arkasındaki alt perde: pencerenin alt kenarından yukarı, hap payı
+/// (`PILL_CLEARANCE`) + `PILL_SCRIM_FADE` kadar yükselir; üstte saydam, hapın
+/// arkasında `PILL_SCRIM_ALPHA` kadar siyah. Hapın altından geçen satırlar
+/// hafifçe söner, hap öne çıkar (gölgesi tek başına yetmiyordu: yazılar
+/// hapın yanından ve altından kesik görünüyordu).
+pub const PILL_SCRIM_ALPHA: f32 = 0.5;
+/// Perdenin hap payının üstünde, saydamdan başlayan yumuşak geçiş yüksekliği.
+pub const PILL_SCRIM_FADE: f32 = S6;
+
 /// Işımanın yüksekliği (Atmosferik yönün ağırlığı burada).
 pub const GLOW_HEIGHT: f32 = 460.;
 /// Işımanın gücü: zeminle bu oranda karışır. 0,58'de bütün pencereyi

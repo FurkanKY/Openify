@@ -154,7 +154,7 @@ pub struct Settings {
     /// hangi profil olduğunu ve atıf bilgisini tutar (veri depoda yok).
     pub eq_profile: Option<EqProfile>,
 
-    // ── Spotify Connect (bkz. PLAN-MOTOR-CONNECT.md §5, 7.1) ────────────
+    // ── Spotify Connect ─────────────────────────────────────────────────
     /// Bu kurulumun KALICI Spotify aygıt kimliği. İlk açılışta bir kez üretilir
     /// (`Settings::load`) ve dosyada kalır: librespot her oturumda rastgele bir
     /// kimlik üretir, Connect'te ise telefonun listesinde aynı aygıt kalmalı
@@ -819,7 +819,7 @@ mod tests {
         assert!(CROSSFADE_CHOICES_MS.iter().all(|ms| *ms <= CROSSFADE_MAX_MS));
     }
 
-    // ── Spotify Connect alanları (7.1) ──
+    // ── Spotify Connect alanları ──
 
     #[test]
     fn connect_fields_default_on_and_need_no_migration() {

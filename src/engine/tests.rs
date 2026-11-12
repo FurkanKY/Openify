@@ -824,7 +824,7 @@ fn the_radio_survives_a_restart_through_the_saved_state() {
     assert_eq!((info.seed.as_str(), info.title.as_str()), ("spotify:artist:art", "Sanatçı"));
 }
 
-// ── Oturum: `install_session` ve yeniden bağlanma kararları (7.2) ──
+// ── Oturum: `install_session` ve yeniden bağlanma kararları ──
 
 /// Bağlanmamış bir oturum nesnesi (ağa hiç çıkmaz); bir tokio ortamı içinde kurulmalı.
 fn test_session(device_id: &str) -> Session {

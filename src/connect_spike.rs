@@ -1,9 +1,7 @@
-//! `openify connect-spike`: Spotify Connect (Spirc) canlı denemesi
-//! (PLAN-MOTOR-CONNECT.md §5, 7.0). Yalnız `connect-spike` özelliğiyle derlenir;
-//! varsayılan derleme bu dosyayı hiç görmez.
+//! `openify connect-spike`: Spotify Connect (Spirc) canlı denemesi. Yalnız
+//! `connect-spike` özelliğiyle derlenir; varsayılan derleme bu dosyayı hiç görmez.
 //!
-//! GERÇEK hesap ve GERÇEK telefon ister: sahibi çalıştırır, adımları
-//! `CONNECT-DENEME.md`de. Bir onay listesidir: her adım telefonda ne yapılacağını
+//! GERÇEK hesap ve GERÇEK telefon ister: yalnız geliştirici çalıştırır. Bir onay listesidir: her adım telefonda ne yapılacağını
 //! söyler, gördüklerini (olaylar, süreler, kaç istek gittiği) yazar, gerekirse
 //! sana "e / h" diye sorar ve her sonucu bir günlük dosyasına yazar
 //! (`%TEMP%\openify-connect-spike\connect-spike-<an>.log`).
@@ -15,7 +13,7 @@
 //! hiçbir uç çağrılmaz. Openify'ın gerçek ayar dosyasına (`settings.json`) ve
 //! önbelleğine de dokunmaz: aygıt kimliği geçici klasörde tutulur.
 //!
-//! Senaryolar (plan §5, 7.0):
+//! Senaryolar:
 //! - S1: bağlı oturumla `Spirc::with_session` (dealer dinleyicileri bağlı oturuma
 //!   eklenebiliyor mu; telefon aygıtı görüyor mu?)
 //! - S2: etkin değilken yerel çalmaya KARIŞMAMA (şarkı sonu / önyükleme olayları)
@@ -91,7 +89,7 @@ fn parse_options(args: &[String]) -> Result<Options> {
             "-h" | "--help" => {
                 println!(
                     "openify connect-spike [--only S1,S3,...] [--idle-min DAKİKA] [--track spotify:track:ID]\n\
-                     Adımlar için CONNECT-DENEME.md'ye bak."
+                     Adımlar çalışırken ekranda yazar."
                 );
                 std::process::exit(0);
             }
@@ -939,7 +937,7 @@ async fn run_async(options: Options) -> Result<()> {
         }
     });
 
-    println!("Openify Spotify Connect denemesi (PLAN-MOTOR-CONNECT.md 7.0)\n");
+    println!("Openify Spotify Connect denemesi\n");
     println!("Bu deneme GERÇEK hesabına bağlanır ve hesapta '{DEVICE_NAME}' adlı bir Connect aygıtı kaydeder");
     println!("(deneme bitince silinir). Hesap ayarlarını, kütüphaneni, listelerini DEĞİŞTİRMEZ; Openify'ın ayar");
     println!("dosyasına ve önbelleğine dokunmaz. Bu bilgisayardan ses çıkacak; telefonun elinin altında olsun.");

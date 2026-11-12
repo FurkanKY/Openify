@@ -14,8 +14,12 @@
 //! sıra ve sözler paneli düğmeleri. Karıştırma ve tekrar açıkken simge kapak
 //! ışığı renginde ve altında küçük bir nokta: durumu bir bakışta. Tam ekran
 //! kapağa tıklayınca (üzerine gelince ortasında simge) ya da F11. Dar hapta
-//! (760 px'ten dar) önce ses çubuğu (sessize al kalır, üzerinde tekerlek
-//! sesi değiştirir), sonra ilerlemenin süre yazıları çekilir.
+//! (760 px'ten dar) ses çubuğu çekilir (sessize al kalır, üzerinde tekerlek
+//! sesi değiştirir).
+//!
+//! Orta sütun iki satır: üstte düğmeler, altında süre yazılarıyla ilerleme
+//! çubuğu (sütunun bütün eni; 800 px'lik hapta ~280 px, en dar hapta
+//! ~250 px). Eskiden çubuk düğmelerin yanındaki artan yere sığıyordu: ~60 px.
 
 use std::{cell::Cell, rc::Rc, sync::Arc, time::{Duration, Instant}};
 
@@ -43,6 +47,9 @@ use crate::{t, tf};
 pub(super) const PILL_HEIGHT: f32 = 72.;
 pub(super) const PILL_BOTTOM: f32 = S5;
 pub(super) const PILL_CLEARANCE: f32 = PILL_HEIGHT + PILL_BOTTOM;
+/// Kaydırılan listenin sonundaki pay: hap payı + nefes boşluğu. En sona
+/// kaydırınca son satır hapın üst kenarına yapışmaz, 16 px üstünde durur.
+pub(super) const PILL_LIST_END: f32 = PILL_CLEARANCE + S4;
 /// Hapın en geniş hâli. Adım 11'de 720'den 800'e: karıştır, tekrar, sıra ve
 /// sözler düğmeleri geldi; ilerleme satırı yine en az 136 px.
 pub(super) const PILL_MAX_WIDTH: f32 = 800.;
@@ -55,10 +62,12 @@ const PILL_INFO: f32 = 180.;
 const PILL_INFO_MIN: f32 = 112.;
 /// Süre yazılarının genişliği ("12:34").
 const TIME_WIDTH: f32 = 36.;
-/// İlerleme satırının en dar hâli (süreler dahil).
-const PROGRESS_MIN: f32 = 136.;
-/// Dar hapta (süre yazıları yok) ilerleme çubuğunun en dar hâli.
-const PROGRESS_MIN_NARROW: f32 = S8 + S6;
+/// Orta sütun (düğmeler üstte, ilerleme altta): düğme satırının eni
+/// (4 × 36 px düğme + 44 px çal + 4 aralık). Sütun bunun altına inmez.
+const CONTROLS_WIDTH: f32 = 36. * 4. + 44. + S1 * 4.;
+/// İlerleme satırının yüksekliği (tıklama alanı); çizgi 4 px. Düğme satırı
+/// (44 px çal düğmesi) ile birlikte 64 px: hapın 72 px'ine 4 px boşlukla sığar.
+const PROGRESS_ROW: f32 = S4 + S1;
 /// Ses çubuğu: genişliği ve en dar hâli.
 const VOLUME_WIDTH: f32 = 72.;
 const VOLUME_MIN: f32 = 40.;
@@ -295,10 +304,12 @@ impl Shell {
             .child(next)
             .child(repeat_button);
 
-        // İlerleme. Şarkı yokken "0:00 ─── 0:00" bozuk bir çalar gibi
-        // duruyordu: gizlenir ama yerini korur (şarkı gelince öğeler zıplamasın).
+        // İlerleme: düğmelerin altında, orta sütunun bütün eninde (800 px'lik
+        // hapta ~280 px; eskiden düğmelerin yanında 60 px'e sıkışıyordu).
+        // Şarkı yokken "0:00 ─── 0:00" bozuk bir çalar gibi duruyordu:
+        // gizlenir ama yerini korur (şarkı gelince öğeler zıplamasın).
         let progress_slider = if live {
-            slider(
+            slider_hit(
                 "progress",
                 m.progress,
                 accent,
@@ -311,19 +322,20 @@ impl Shell {
                         this.notify_pill(cx);
                     }
                 }))),
+                PROGRESS_ROW,
             )
         } else {
-            slider("progress", m.progress, accent, m.has_track, None, Rc::default(), None)
+            slider_hit("progress", m.progress, accent, m.has_track, None, Rc::default(), None, PROGRESS_ROW)
         };
-        // Dar hap (pencere 824 px'ten dar): önce ses çubuğu, sonra süre
-        // yazıları çekilir; şarkı adı sığsın (konum ipucu ilerlemenin
-        // kendisi, süreler tam ekranda ve Windows medya kontrolünde).
+        // Dar hap (pencere 824 px'ten dar): ses çubuğu çekilir (sessize al
+        // kalır); ilerleme satırı yine tam: 696 px'lik hapta bile sütun
+        // ≥ 340 px, çubuk ≥ 250 px.
         let wide = !live || self.pill_width >= VOLUME_SLIDER_MIN_PILL;
         let progress = div()
-            .flex_1()
+            .w_full()
+            .h(px(PROGRESS_ROW))
             // Sarınca hapın boş yer tıklaması (panel) çalışmasın.
             .block_mouse_except_scroll()
-            .min_w(px(if wide { PROGRESS_MIN } else { PROGRESS_MIN_NARROW }))
             .flex()
             .items_center()
             .gap(px(S2))
@@ -331,9 +343,21 @@ impl Shell {
             .type_role(T_LABEL)
             .tabular()
             .text_color(muted())
-            .when(wide, |el| el.child(div().w(px(TIME_WIDTH)).flex_none().text_right().child(fmt_time(m.position_ms))))
+            .child(div().w(px(TIME_WIDTH)).flex_none().text_right().child(fmt_time(m.position_ms)))
             .child(progress_slider)
-            .when(wide, |el| el.child(div().w(px(TIME_WIDTH)).flex_none().child(fmt_time(m.duration_ms))));
+            .child(div().w(px(TIME_WIDTH)).flex_none().child(fmt_time(m.duration_ms)));
+        // Orta sütun: üstte karıştır / önceki / çal / sonraki / tekrar, altında
+        // ilerleme. Solda bildirim ya da çevrimdışı durumu varken ilerleme
+        // yok ama satırı yerinde (düğmeler iki durum arasında kaymasın).
+        let center = div()
+            .when(wide_left, |el| el.flex_none())
+            .when(!wide_left, |el| el.flex_1())
+            .min_w(px(CONTROLS_WIDTH))
+            .flex()
+            .flex_col()
+            .items_center()
+            .child(controls)
+            .child(if wide_left { div().h(px(PROGRESS_ROW)).into_any_element() } else { progress.into_any_element() });
 
         // Sağ: ses. Sessizken çubuk boşalmaz: önceki düzey soluk görünür,
         // sesi açınca nereye döneceği belli.
@@ -460,8 +484,7 @@ impl Shell {
             .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Now, cx)))
         })
         .child(left)
-        .child(controls)
-        .when(!wide_left, |el| el.child(progress))
+        .child(center)
         .child(volume)
         .children(toast)
         .children(remote)
@@ -934,6 +957,22 @@ pub(super) fn slider(
     bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
     on_down: Option<OnDown>,
 ) -> AnyElement {
+    slider_hit(id, value, fill, enabled, focus, bounds, on_down, SLIDER_HIT)
+}
+
+/// `slider`, tıklama alanı `hit` px yüksek (ilerleme satırında 20 px: altındaki
+/// ve üstündeki düğmelerin alanına taşmasın).
+#[allow(clippy::too_many_arguments)]
+pub(super) fn slider_hit(
+    id: &'static str,
+    value: f32,
+    fill: u32,
+    enabled: bool,
+    focus: Option<(FocusHandle, bool)>,
+    bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
+    on_down: Option<OnDown>,
+    hit: f32,
+) -> AnyElement {
     let value = value.clamp(0.0, 1.0);
     let group: SharedString = format!("slider-{id}").into();
     let ring = focus.as_ref().is_some_and(|(_, ring)| *ring);
@@ -943,7 +982,7 @@ pub(super) fn slider(
         .when_some(focus.filter(|_| enabled), |el, (handle, _)| el.track_focus(&handle))
         .group(group.clone())
         .flex_1()
-        .h(px(SLIDER_HIT))
+        .h(px(hit))
         .relative()
         .flex()
         .items_center()
@@ -975,7 +1014,7 @@ pub(super) fn slider(
             el.child(
                 div()
                     .absolute()
-                    .top(px((SLIDER_HIT - SLIDER_THUMB) / 2.))
+                    .top(px((hit - SLIDER_THUMB) / 2.))
                     .left(gpui::relative(value))
                     .ml(px(-SLIDER_THUMB / 2.))
                     .size(px(SLIDER_THUMB))

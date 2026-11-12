@@ -12,9 +12,9 @@
 //! uç) ve biçimi bilgiye dayanır: çözümleme eksik alana ve anahtar adı
 //! değişikliğine toleranslıdır (rol listesi `roleCredits` / `credits` /
 //! `roles`, kişi listesi `artists` / `people`, kişi düz yazı da olabilir; adı
-//! olmayan kişi atılır, adresi bozuk olan kişi tıklanmaz ama görünür). Canlı
-//! yanıtla doğrulanmadı: sahibinin elle koşacağı `live_credits` sınaması var
-//! (`#[ignore]`).
+//! olmayan kişi atılır, adresi bozuk olan kişi tıklanmaz ama görünür). 12 Kasım'da
+//! gerçek hesapla bir kez koşturuldu (`live_credits` sınaması, `#[ignore]`,
+//! yalnız hesap sahibi koşar): yanıt çözümlendi.
 //!
 //! İstek, token, kapı (429, aralık, devre kesici), 401'de token yenileme ve
 //! 5xx yeniden denemesi `pathfinder.rs`'in ortak altyapısından geçer

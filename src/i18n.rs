@@ -55,6 +55,17 @@ pub enum Lang {
     Tr,
 }
 
+impl Lang {
+    /// BCP 47 dil kodu (`en`, `tr`): ağ isteklerinin `accept-language` başlığı gibi
+    /// yerlerde, yeni bir dil eklenince tek yerden genişler.
+    pub fn code(self) -> &'static str {
+        match self {
+            Lang::En => "en",
+            Lang::Tr => "tr",
+        }
+    }
+}
+
 /// Ayardaki dil seçenekleri (`settings.json`'da `language`): sistem diline uy / İngilizce / Türkçe.
 pub const PREFS: [&str; 3] = ["system", "en", "tr"];
 

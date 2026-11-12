@@ -1682,6 +1682,22 @@ impl Render for Shell {
             shelf.into_any_element()
         };
         let pill = (!(hide("pill") || hide("bar"))).then_some(pill);
+        // Hapın arkasındaki alt perde (bkz. `theme::PILL_SCRIM_ALPHA`): hap
+        // olmadan perde de yok; tıklamayı ve tekerleği etkilemez (dinleyicisi
+        // yok), ekolayzerin üstünde, hapın altında.
+        let scrim = pill.is_some().then(|| {
+            div()
+                .absolute()
+                .left_0()
+                .bottom_0()
+                .w_full()
+                .h(px(pill::PILL_CLEARANCE + PILL_SCRIM_FADE))
+                .bg(linear_gradient(
+                    180.,
+                    linear_color_stop(shade(0.), 0.),
+                    linear_color_stop(shade(PILL_SCRIM_ALPHA), 1.),
+                ))
+        });
         let equalizer = (!hide("equalizer")).then_some(equalizer);
         let glow = if hide("glow") { div().into_any_element() } else { self.render_glow() };
         self.flush_image_requests(cx);
@@ -1794,6 +1810,7 @@ impl Render for Shell {
             .children(glow)
             .children(titlebar_main)
             .children(equalizer)
+            .children(scrim)
             // Hap pencerenin ortasında (panel açılıp kapanınca kaymaz),
             // alttan 24 px yukarıda. Dış kutunun fare dinleyicisi yok: hapın
             // iki yanındaki satırlara tıklanabilir.

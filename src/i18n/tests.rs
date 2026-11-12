@@ -190,7 +190,7 @@ const ALLOW: &[(&str, &str, &str)] = &[
     ("engine/wire.rs", "önbellek yok", "hata nedeni"),
     ("engine/mod.rs", "network:", "hata önekiyle sınıflanır (`explain_error`)"),
     ("engine/session.rs", "network:", "hata önekiyle sınıflanır (`explain_error`); bağlantı kodu `mod.rs`ten taşındı"),
-    // `openify connect-spike` (özellik `connect-spike`; PLAN-MOTOR-CONNECT.md 7.0): sahibinin gerçek hesapla
+    // `openify connect-spike` (özellik `connect-spike`): sahibinin gerçek hesapla
     // koşturduğu Türkçe konsol onay listesi, uygulama arayüzü değil.
     ("connect_spike", "", "geliştirici / sahip denemesi, terminal çıktısı (cli.rs gibi)"),
     ("engine/mod.rs", "henüz bağlanılmadı", "hata nedeni"),

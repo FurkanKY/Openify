@@ -481,7 +481,7 @@ lists created, moves) show a warning and ask again before anything is queued.
   per request, at most 1000 songs in the context (`radio::Feed`, pure and
   tested). New songs are appended through `Queue::extend_context`, so the shuffle
   rules (never play, skip explicit, versions) and hidden songs apply to radio
-  like to any context. Not verified against a live account (`live_radio`, owner's
+  like to any context. Checked once against a live account on 12 Nov (`live_radio`, owner's
   approval).
 - **Hidden songs** (`hidden.rs`): "Hide this song" (per playlist / album) and
   "Never play anywhere" (global), kept in `library.db` `hidden_songs` (v8, user
@@ -495,13 +495,20 @@ lists created, moves) show a warning and ask again before anything is queued.
   Recently played (`Shell::note_played`) and the local play history
   (`stats::set_private_session`, checked by both the UI and the engine) are not
   written; where you left off is still saved. It ends when the app quits (not
-  persisted). Openify never sends listening reports to Spotify: the vendored
-  librespot code contains no event-service / playback-report call, and Openify
-  does not register a Connect device (no `put_connect_state`), so nothing on the
-  Spotify side (friend activity, history) is written either way. That is why the
-  UI says "Openify doesn't write to its own history" and nothing more. When
-  Connect arrives (group 5) the device state will carry Spotify's own private
-  session flag, which must be decided then.
+  persisted). Playback reporting: Openify's own (local) playback sends no
+  listening reports to Spotify. The vendored librespot code contains no
+  event-service / playback-report call (`spclient.rs` has none; only the
+  Connect-state calls `put_connect_state_request`, `delete_connect_state_request`
+  and `put_connect_state_inactive`). While Connect is on (the default) the app
+  does register a Connect device, but while the local player drives the device
+  stays inactive and publishes no playing state (`Spirc` ignores player events
+  then, patch P2). So songs played locally may not appear in Spotify's Recently
+  played, in Wrapped, in artists' play counts or in friends' activity; this was
+  not checked against a live account. Playback that a phone started or
+  transferred (`Driver::Spirc`) goes through Spotify's own Connect protocol and
+  may be counted by Spotify. The private session switch only controls Openify's
+  own history and statistics; it does not change the Connect device state. The UI
+  therefore says "Openify doesn't write to its own history" and no more.
 
 ### Resume (`engine/resume.rs`)
 
@@ -536,8 +543,8 @@ changes). The `Saver` thread coalesces writes.
   the web player's credits dialog uses. Same pattern as friend activity:
   `Pathfinder::get_json` on its own gate (`pathfinder::credits`), tolerant
   parsing, typed failure codes, an in-memory cache only. The UI asks with
-  `LibraryCommand::OpenCredits` and gets `LibraryEvent::Credits`. Not verified
-  against a live account (`live_credits`, owner's approval).
+  `LibraryCommand::OpenCredits` and gets `LibraryEvent::Credits`. Checked once
+  against a live account on 12 Nov (`live_credits`, owner's approval).
 - Lyrics (`engine/lyrics.rs`) try several sources in order and cache results,
   including negative results.
 - **Friend activity** (`engine/friends.rs`, optional, off by default): the
@@ -786,8 +793,8 @@ From an internal architecture review:
 
 - `Engine`, `Shell` and a few files (`output/`, `edits.rs`) are large and not
   encapsulated. `Engine` is down to 27 fields and `engine/mod.rs` to about 1800
-  lines (refactor #5 moved the playback state and decisions to `playback/`, #7.2
-  moved connection, login and reconnect state to `session.rs`).
+  lines (the playback state and decisions moved to `playback/`, and
+  connection, login and reconnect state moved to `session.rs`).
 - The player now has a test seam (`PlayerPort` / `FakePort`, scenario tests in
   `playback/tests.rs`). Still concrete: the librespot `Session` (`SessionHost`
   holds the state and decisions are unit-tested, but the network calls are not
@@ -798,7 +805,7 @@ From an internal architecture review:
   search does not go through the shared rate gate.
 - The engine still produces some user-facing text (i18n migration in progress).
 - Vendor drift against upstream is checked by script, not yet enforced.
-- Spirc (Connect) is wired (7.4 - 7.6) and on by default since 13 Nov, after the
+- Spirc (Connect) is wired and on by default since 13 Nov, after the
   owner's live check passed (phone picked Openify and played). Transfer-here, phone
   volume and on/off/on were not separately checked yet. Its assumptions (dealer listeners on a connected
   session, no interference while inactive, same `device_id` on reconnect, no idle
@@ -807,6 +814,6 @@ From an internal architecture review:
   volume reaches the output but not the UI slider; the queue panel shows our own
   queue while the phone drives; a phone-side seek leaves up to one queue length of
   old audio; turning Connect on or renaming restarts the Spotify session once.
-- Planned: folders / pinning in the
-  library. The review explains the intended designs (single `Driver`,
-  overlap-add crossfade at the track-end margin, EQ inside `RingSource::fill`).
+- Folders (read-only) and pinning in the library, the single playback `Driver`,
+  the overlap-add crossfade at the track-end margin and the EQ inside
+  `RingSource::fill` are implemented; the sections above describe them.

@@ -15,10 +15,11 @@
 mod readme {
     use std::sync::Arc;
 
+    use crate::i18n::Lang;
     use crate::engine::{
         cache::Db,
         cover_path,
-        explore::{CardKind, Category, CategoryList, ExploreCard, ExploreSection, Feed},
+        explore::{CardKind, Category, CategoryList, ExploreCard, ExploreKey, ExploreSection, Feed},
         library::{CollectionId, Entry, Folder, Library, LibraryItem, LibraryMeta, TrackRow},
         pages::{AlbumCard, AlbumPage, ArtistCard, ArtistPage, PageCache, ReleaseKind},
     };
@@ -553,7 +554,7 @@ mod readme {
                 ],
             }],
         };
-        cache.put("explore:home", &Arc::new(home), now).unwrap();
+        cache.put(&ExploreKey::Home.cache_key(Lang::En), &Arc::new(home), now).unwrap();
         let colors = ["#8d67ab", "#ba5d07", "#e61e32", "#1e3264", "#477d95", "#dc148c", "#509bf5", "#e8115b", "#148a08", "#27856a", "#af2896", "#006450"];
         let names = ["Pop", "Hip-Hop", "Rock", "Indie", "Chill", "Dance", "Jazz", "Soul", "Folk", "Focus", "Mood", "Sleep"];
         let categories = CategoryList {
@@ -564,13 +565,13 @@ mod readme {
                 .map(|(i, (name, color))| Category { uri: format!("spotify:page:0JQ5DA{i:016}"), name: (*name).into(), color: color.into() })
                 .collect(),
         };
-        cache.put("explore:categories", &Arc::new(categories), now).unwrap();
+        cache.put(&ExploreKey::Categories.cache_key(Lang::En), &Arc::new(categories), now).unwrap();
         let releases = Feed {
             title: String::new(),
             color: String::new(),
             sections: vec![ExploreSection { title: "New releases".into(), cards: (0..8).map(album_ex).collect() }],
         };
-        cache.put("explore:new-releases", &Arc::new(releases), now).unwrap();
+        cache.put(&ExploreKey::NewReleases.cache_key(Lang::En), &Arc::new(releases), now).unwrap();
         let chart = |n: usize, name: &str, subtitle: &str| ExploreCard {
             uri: format!("spotify:playlist:{:022}", 300 + n),
             name: name.into(),
@@ -593,6 +594,6 @@ mod readme {
                 ],
             }],
         };
-        cache.put("explore:charts", &Arc::new(charts), now).unwrap();
+        cache.put(&ExploreKey::Charts.cache_key(Lang::En), &Arc::new(charts), now).unwrap();
     }
 }

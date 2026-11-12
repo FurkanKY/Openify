@@ -53,7 +53,7 @@ Yol bağımlılığı olunca görünen iki "falling back to `f32`" uyarısı. Da
 - **Sorun:** gölge, sınırının `3 × blur_radius` dışına kadar boyar (`shaders.hlsl` `shadow_vertex`: `margin = 3.0 * blur_radius`), ama çizim sırası (`BoundsTree`) yalnız gölgenin kendi sınırıyla veriliyordu. Bulanık payın altında kalan, gölgeden ÖNCE boyanmış ama sırası gölgeninkinden büyük öğeler (iç içe kutular, satır yazısı, kapak; sıra, iç içelik derinliğiyle büyür) gölgenin ÜSTÜNE çiziliyordu: gölgede keskin kenarlı, gölgesiz yamalar.
 - **Yama:** gölgenin sıra kutusu `bounds.dilate(3 * blur_radius)`: boyadığı alanın tamamı. Sonuç boyama sırasıyla aynı (önce boyanan altta, sonra boyanan üstte); ek iş yok. İçerik maskesinin boşluk denetimi de bu alanla yapılır (öğesi maskenin dışında kalıp bulanığı içeri taşan gölge artık atılmıyor).
 - **Kanıt (bağımsız gpui örneği, 3 panel + aralarında 8 kat iç içe kutular):** önce kutular gölge payında ham renginde (#3A3A40), sonra gölgenin altında (#333339); 52 544 piksel değişti, yalnız gölge paylarında. Openify'ın kendi ekranlarında fark küçük (vitrinde panel ile hap arasında 4 757 piksel, en çok 7 düzey).
-- **Kare süresi (`kare-ab.ps1` wheel, 4 tur dönüşümlü, yalnız bu yama farklı iki exe):** önce p50 4,88 / p95 7,71 ms, 130,7 kare/sn; sonra p50 4,81 / p95 7,57 ms, 132,5 kare/sn: gerileme yok. (Makine o sırada başka derlemelerle yüklüydü; mutlak değerler sakin makinedeki ~3,8 ms p95'ten yüksek, iki değişken aynı koşulda.)
+- **Kare süresi (dönüşümlü kare ölçümü, wheel, 4 tur, yalnız bu yama farklı iki exe):** önce p50 4,88 / p95 7,71 ms, 130,7 kare/sn; sonra p50 4,81 / p95 7,57 ms, 132,5 kare/sn: gerileme yok. (Makine o sırada başka derlemelerle yüklüydü; mutlak değerler sakin makinedeki ~3,8 ms p95'ten yüksek, iki değişken aynı koşulda.)
 
 #### "Sağ panelin gölgesi şeffaf delik açıyor" (7 Kasım): gpui'de değil, ekran görüntüsü betiğinde
 
@@ -61,7 +61,7 @@ Yol bağımlılığı olunca görünen iki "falling back to `f32`" uyarısı. Da
 - Ölçülen: arka arabellek (çizimden hemen sonra GPU'dan okundu) o piksellerde **doğru**: (13, 11, 12, 255), yani #0D0B0C. Görüntüdeki 136 delik pikselin hepsi ve yalnız onlar bu renkte. gpui'siz bir WinForms (GDI) penceresine boyanan #0D0B0C de aynı şekilde (0,0,0,0) çıktı, komşu renkler (#0E0B0C, #0C0B0C, #0D0B0D) çıkmadı.
 - Neden: betikler PrintWindow'u `System.Drawing.Graphics.GetHdc()`'ye çizdiriyordu; GDI+ bu yolda #0D0B0C'yi kendi saydamlık anahtarı sayıyor (32 bpp ARGB'de (0,0,0,0), RGB biçimlerinde siyah). Gölgenin yumuşak geçişi bu renge tam denk gelen bantlar üretince "delik" göründü; ekranda hiç yoktu. İki katmanlı gölgede renkler kaydığı için o örnekte yoktu.
 - Çürütülen başka adaylar (hepsi denendi, delik aynen kaldı): gölgelendirici çıktısında NaN / sonsuz (bütün parça gölgelendiricilerine sonluluk koruması), temizleme rengi (magenta ile temizlendi: delik magenta olmadı), alfa harmanlaması (`DestBlendAlpha = INV_SRC_ALPHA`), takas zincirinin kullanımı (UAV / SRV), DirectComposition (`GPUI_DISABLE_DIRECT_COMPOSITION=1`). Hepsi geri alındı; gpui'de bu konu için değişiklik yok.
-- Düzeltme betikte: `scripts/ekran-sinama.ps1` PrintWindow'u düz bir GDI bitmap'ine alıp `Image.FromHbitmap` ile kaydediyor (aynı pikseller #0D0B0C, delik 0). `gizli-olcum.ps1`, `kaydirma-sinama.ps1`, `sistem-sinama.ps1` hâlâ `GetHdc` kullanıyor: #0D0B0C pikselleri onlarda da siyah / saydam görünür.
+- Düzeltme betikte: yerel ekran görüntüsü betiği PrintWindow'u düz bir GDI bitmap'ine alıp `Image.FromHbitmap` ile kaydediyor (aynı pikseller #0D0B0C, delik 0). Öteki yerel ölçüm betikleri (gizli bellek, kaydırma, sistem sınaması) hâlâ `GetHdc` kullanıyor: #0D0B0C pikselleri onlarda da siyah / saydam görünür.
 
 ## Ölçümler (7 Kasım 2026, AMD Radeon RX 5700, tek ekran 1920×1080 %100, sınama penceresi 1180×760)
 
@@ -69,7 +69,7 @@ Yol bağımlılığı olunca görünen iki "falling back to `f32`" uyarısı. Da
 
 | ölçüm | önce | sonra |
 |---|---|---|
-| tepside gizli, süreç işlemcisi 60 sn (`is-parcacigi-islemci.ps1 -Gizle -Calma`) | 312 ms = %0,52 (`VSyncProvider` 297 ms) | **0 ms = %0** |
+| tepside gizli, süreç işlemcisi 60 sn (iş parçacığı başına işlemci ölçümü, gizli + çalma) | 312 ms = %0,52 (`VSyncProvider` 297 ms) | **0 ms = %0** |
 | aynı, açılır pencereler bir kez açılmış (`-Acilir`) | 484 ms = %0,81 | **0 ms = %0** (2 koşu) |
 | simge durumunda 10 sn, süreç işlemcisi | 281 ms | 31 ms (iki saat tıkı; iş parçacığı ayrımı ölçülmedi) |
 | tepsiden gösterme → pencere görünür (2 × 15 tur, dönüşümlü) | ortanca 12,1 / 24,1 ms, en çok 29,5 | ortanca 12 / 13 ms, en çok 27,3 |
@@ -79,13 +79,13 @@ Yol bağımlılığı olunca görünen iki "falling back to `f32`" uyarısı. Da
 | gizli özel bellek, 5.–6. maddelerden sonra (en ağır durum: palette arama + menü, 3 tur dönüşümlü; normal durum) | en ağır 80,7–81,2 MB; normal 66,8–67,1 MB | **en ağır 70,4–71,7 MB; normal 64,0–64,6 MB** |
 | gizliyken palet / tepsi menüsü açılışı (pencere her seferinde yeniden kurulur) | 2,6–3,5 ms (aynı pencere yeniden kullanılırdı; yalnız ana pencere görünürken hâlâ öyle) | 15,5–16,2 ms (ilk açılış 28–32 ms); 12 + 12 yeniden kuruluşta bellek birikmedi (67,2 → 67,5 MB) |
 | pencere aç / kapa başına kalan bellek (40 pencere, `gpui-sizinti`) | 724–727 KB | **61–69 KB** |
-| görünürken kare (`kare-ab.ps1 play`, 6 tur ortancası) | 25,6 kare/sn, %6,7, çizim p50 0,74 / p95 1,00 ms | 26,4 kare/sn, %6,5, p50 0,64 / p95 1,09 ms |
-| görünürken kare (`kare-ab.ps1 wheel`, 6 tur ortancası) | 68,3 kare/sn, %31,8, p50 3,18 / p95 4,28 ms | 68,2 kare/sn, %30,7, p50 3,15 / p95 4,24 ms |
+| görünürken kare (dönüşümlü kare ölçümü, play, 6 tur ortancası) | 25,6 kare/sn, %6,7, çizim p50 0,74 / p95 1,00 ms | 26,4 kare/sn, %6,5, p50 0,64 / p95 1,09 ms |
+| görünürken kare (dönüşümlü kare ölçümü, wheel, 6 tur ortancası) | 68,3 kare/sn, %31,8, p50 3,18 / p95 4,28 ms | 68,2 kare/sn, %30,7, p50 3,15 / p95 4,24 ms |
 | tepsiden gösterme, açılır pencerelerin ikinci açılışı | görüntüler | piksel piksel aynı (PrintWindow, palet / yazılı palet / menü) |
 
 Bellek, gizlendikten 2–3 sn sonra düşüyor (sürücü serbest bırakmayı o kadar erteliyor). Gösterilince yüzeyler geri gelir (görünürken bellek öncekiyle aynı).
 
-## Kalan bellek (gizli; 5.–6. maddelerden önce ~72 MB, sonra normal durumda 64 MB, döküm `bellek-dokum.ps1` sınıflarıyla)
+## Kalan bellek (gizli; 5.–6. maddelerden önce ~72 MB, sonra normal durumda 64 MB, döküm sınıfları yerel bellek dökümü betiğinden)
 
 - Rust / DLL yığını (NT heap) ~23 MB + büyük yığın blokları ~16–18 MB (bunun çoğu işlenmiş ama hiç dokunulmamış sayfa). Openify'ın kendi verisi (kütüphane, kapaklar, SQLite) ve gpui'nin kare arenası (1 MB'lık parçalar, geri verilmez).
 - Sürücü (yazma-birleştirmeli) ~20–24 MB: AMD sürücüsünün yükleme / komut halkaları. `IDXGIDevice3::Trim` denendi: ~0,8 MB kazanç, ama ortak bağlamda `ClearState` gerektiriyor; değmez bulundu, eklenmedi. Boru hatlarının örnek tamponlarını küçültmek de denendi: kazanç yok.
@@ -94,7 +94,7 @@ Bellek, gizlendikten 2–3 sn sonra düşüyor (sürücü serbest bırakmayı o 
 ### 8. Sınama kancası: zorlanan ekran ölçeği ve ekrandan büyük pencere (`window.rs` `test_scale_override`, `events.rs`)
 
 - **Sorun:** tek %100'lük 1920×1080 ekranlı makinede %125 / %150 / %200 ekran ve 2560×1440 pencere görünümü sınanamıyordu (gpui pencere ölçeğini ekranın DPI'ından alır; ekrandan büyük pencere de ikinci ekrandan taşıp birinci ekrandaki işe biner).
-- **Yama (yalnız `OPENIFY_TEST_DISPLAY` + `OPENIFY_TEST_SCALE=<0,5–4>` ikisi de varken; normal çalışmada hiçbir şey değişmez):** (a) pencere ölçeği (`WindowsWindowState::new`, `WM_DPICHANGED`) bu değerdir; (b) `WindowKind::Normal` ana pencere `retrieve_window_placement`'te mantıksal boyut × ölçek kadar CİHAZ pikseliyle, ekrana sığıyorsa ekranın ortasına, sığmıyorsa sanal masaüstünün sağ kenarının ötesine (`x = SM_XVIRTUALSCREEN + SM_CXVIRTUALSCREEN + 64`) konur: hiçbir ekranda görünmez, `PrintWindow` yine tam görüntüyü alır; (c) `WM_GETMINMAXINFO` üst sınırı 16384. `scripts/ekran-sinama.ps1 -Scale 1.5`.
+- **Yama (yalnız `OPENIFY_TEST_DISPLAY` + `OPENIFY_TEST_SCALE=<0,5–4>` ikisi de varken; normal çalışmada hiçbir şey değişmez):** (a) pencere ölçeği (`WindowsWindowState::new`, `WM_DPICHANGED`) bu değerdir; (b) `WindowKind::Normal` ana pencere `retrieve_window_placement`'te mantıksal boyut × ölçek kadar CİHAZ pikseliyle, ekrana sığıyorsa ekranın ortasına, sığmıyorsa sanal masaüstünün sağ kenarının ötesine (`x = SM_XVIRTUALSCREEN + SM_CXVIRTUALSCREEN + 64`) konur: hiçbir ekranda görünmez, `PrintWindow` yine tam görüntüyü alır; (c) `WM_GETMINMAXINFO` üst sınırı 16384. Ölçek taklidi yerel ekran görüntüsü betiğinde (`-Scale 1.5`).
 - **Sınır:** yalnız ölçek çarpanı taklit edilir (yazı, resim, 1 px çizgiler gerçekten o ölçekte çizilir); pencere çerçevesi / başlık düğmesi gibi Windows'un kendi DPI ölçüleri (`GetSystemMetricsForDpi`) gerçek %100 kalır, ölçekli ekranda başlık çubuğunu bizim çizdiğimiz için görüntüye yansımaz.
 
 ### 9. Tıklama, henüz görünmemiş (bekleyen) ipucunu iptal eder (`elements/div.rs`, `clear_active_tooltip_if_not_hoverable`)
@@ -106,7 +106,7 @@ Bellek, gizlendikten 2–3 sn sonra düşüyor (sürücü serbest bırakmayı o 
 ## Riskler
 
 - Gösterme yolu `WM_SHOWWINDOW` / `WM_WINDOWPOSCHANGING`'e dayanıyor; Windows'un pencereyi bu iletiler olmadan gösterdiği bir yol olursa VSync en geç 1 sn içinde uyanır ve ilk çizim yüzeyleri geri alır (siyah kare gösterilmez, ama o pencere kirlenene kadar eski içerik gelmeyebilir).
-- Her gizle / göster bir `ResizeBuffers` ve bir sunum ekliyor; gösterme süresi ölçümde değişmedi (yukarıdaki tablo). Makine yüklüyken tek koşularda iki sürümde de 40–180 ms görüldü (önce 44–80, sonra 61–180); dönüşümlü 15'er turda fark yok. Açılır pencereyi çok sık aç / kapa yapınca (250 ms aralık) sürücü eski arabellekleri geç bıraktığı için o an bellek öncekinden yüksek görünebilir (sistem-sinama palet adımında açıkken 124,6 MB'a karşı 105 MB); gizlendikten sonra düşüyor.
+- Her gizle / göster bir `ResizeBuffers` ve bir sunum ekliyor; gösterme süresi ölçümde değişmedi (yukarıdaki tablo). Makine yüklüyken tek koşularda iki sürümde de 40–180 ms görüldü (önce 44–80, sonra 61–180); dönüşümlü 15'er turda fark yok. Açılır pencereyi çok sık aç / kapa yapınca (250 ms aralık) sürücü eski arabellekleri geç bıraktığı için o an bellek öncekinden yüksek görünebilir (sistem sınamasının palet adımında açıkken 124,6 MB'a karşı 105 MB); gizlendikten sonra düşüyor.
 - Başka sanal masaüstündeki (cloaked) ya da tamamen örtülü pencere "görünür" sayılır: VSync o durumda eskisi gibi çalışır.
 - `Window::release_memory` arenayı boşaltıyor (`Arena::shrink` → `clear`): çizim sırasında çağrılırsa canlı `ArenaBox`'ları geçersiz kılardı. `try_borrow_mut` yalnız çizim içinden çağrıyı yakalar; Openify yalnız `AsyncApp` güncellemesinden (çizim dışı) çağırıyor. Başka bir çağıran çizim sırasında çağırmamalı.
 - Gizliyken açılır pencere kapanınca yok edildiği için bir sonraki palet / menü açılışı pencereyi yeniden kurar (15,5–16 ms; çıta 100). Pencere başına aç/kapa kalıntısı 61–69 KB (madde 3); gizliyken en sık kullanımda bile (12 palet + 12 menü) bellek birikmedi. Ana pencere görünürken açılır pencereler eskisi gibi yeniden kullanılıyor.

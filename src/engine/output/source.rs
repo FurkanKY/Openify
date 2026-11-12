@@ -388,7 +388,7 @@ impl RingSource {
     }
 }
 
-/// Ölçüm (PLAN §4: EQ kapalı `fill` ≤ +%5): yuva seçimi (`pull`) eklenmeden
+/// Ölçüm (çıta: EQ kapalı `fill` ≤ +%5): yuva seçimi (`pull`) eklenmeden
 /// ÖNCEKİ `fill`in aynısı (halka tek yuva, sabit `MASK`). `xfade_tests.rs`
 /// ikisini aynı süreçte, dönüşümlü çalıştırıp oranlar.
 #[cfg(test)]

@@ -64,8 +64,10 @@ pub struct Operation {
     /// 7 Kasım 2026'da web player'da bulunan hash: yalnız başlangıç değeri
     /// (kayıtlı hash yoksa); eskirse yenisi bulunur. Yoksa ilk istekte aranır.
     pub seed: Option<&'static str>,
-    /// `accept-language` başlığı (yoksa gönderilmez).
-    pub accept_language: Option<&'static str>,
+    /// `true`: yanıt dile bağlı (liste adları, bölüm başlıkları, açıklamalar);
+    /// istek uygulamanın arayüz diliyle `accept-language` başlığı taşır
+    /// (`language_header`). `false`: başlık gönderilmez.
+    pub localized: bool,
     /// `Some(alan)`: katı yanıt denetimi. Yanıtta herhangi bir GraphQL hatası
     /// ya da `data.<alan>` yoksa hash eskimiş sayılır. `None`: yalnız
     /// `PersistedQueryNotFound` hatası.
@@ -93,7 +95,7 @@ pub const SEARCH_DESKTOP: Operation = Operation {
     chunk: "xpui-routes-search",
     meta_key: "search_hash",
     seed: None,
-    accept_language: None,
+    localized: false,
     strict_root: Some("searchV2"),
 };
 pub const ARTIST_RELATED: Operation = Operation {
@@ -101,7 +103,7 @@ pub const ARTIST_RELATED: Operation = Operation {
     chunk: "xpui-routes-artist",
     meta_key: "hash:queryArtistRelated",
     seed: Some("3d031d6cb22a2aa7c8d203d49b49df731f58b1e2799cc38d9876d58771aa66f3"),
-    accept_language: Some("tr"),
+    localized: true,
     strict_root: None,
 };
 pub const HOME: Operation = Operation {
@@ -109,7 +111,7 @@ pub const HOME: Operation = Operation {
     chunk: "xpui-main",
     meta_key: "hash:home",
     seed: Some("5fb7da7a03ee2776c0670856609cb85a189a3cecc36cc160b91cde79063b9cf1"),
-    accept_language: Some("tr"),
+    localized: true,
     strict_root: None,
 };
 pub const BROWSE_ALL: Operation = Operation {
@@ -117,7 +119,7 @@ pub const BROWSE_ALL: Operation = Operation {
     chunk: "xpui-routes-search",
     meta_key: "hash:browseAll",
     seed: Some("dbd8b55e09a58afc52eab438bc228ba28fd72ac2f2148c6c26354980e4579001"),
-    accept_language: Some("tr"),
+    localized: true,
     strict_root: None,
 };
 pub const BROWSE_PAGE: Operation = Operation {
@@ -125,7 +127,7 @@ pub const BROWSE_PAGE: Operation = Operation {
     chunk: "browse-v2",
     meta_key: "hash:browsePage",
     seed: Some("f5c4e6d668f5716464a231c1cc8b22c1cbf6ad68b09929fd7de813a30581298b"),
-    accept_language: Some("tr"),
+    localized: true,
     strict_root: None,
 };
 
@@ -563,7 +565,14 @@ fn request_for(op: &Operation, hash: &str, variables: &Value) -> Request {
         "variables": variables,
         "extensions": { "persistedQuery": { "version": 1, "sha256Hash": hash } },
     });
-    Request { body: body.to_string(), accept_language: op.accept_language }
+    Request { body: body.to_string(), accept_language: language_header(op, crate::i18n::lang()) }
+}
+
+/// İşlem dile bağlıysa `accept-language` değeri: arayüz dilinin kodu (`en`, `tr`;
+/// yeni bir arayüz dili `Lang::code` ile otomatik gelir). Dile bağlı olmayan
+/// işlemde başlık yok.
+fn language_header(op: &Operation, lang: crate::i18n::Lang) -> Option<&'static str> {
+    op.localized.then(|| lang.code())
 }
 
 impl Pathfinder {
@@ -1472,10 +1481,28 @@ mod tests {
         assert_eq!(body["variables"]["uri"], "spotify:artist:a");
         assert_eq!(body["extensions"]["persistedQuery"]["version"], 1);
         assert_eq!(body["extensions"]["persistedQuery"]["sha256Hash"], ARTIST_RELATED.seed.unwrap());
+        // Birim testlerde arayüz dili varsayılan Türkçedir (`i18n::lang`).
         assert_eq!(seen[0].1, Some("tr"));
         assert_eq!(seen[1].1, None, "arama accept-language göndermez");
         let body: Value = serde_json::from_str(&seen[1].0).unwrap();
         assert_eq!(body["operationName"], "searchDesktop");
         assert_eq!(body["extensions"]["persistedQuery"]["sha256Hash"], OLD);
+    }
+
+    #[test]
+    fn accept_language_follows_the_interface_language() {
+        use crate::i18n::{Lang, with_lang};
+        // Dile bağlı işlemler arayüz dilini taşır, arama hiçbir şey göndermez.
+        for op in [&HOME, &BROWSE_ALL, &BROWSE_PAGE, &ARTIST_RELATED] {
+            assert!(op.localized, "{} dile bağlı olmalı", op.name);
+            assert_eq!(language_header(op, Lang::En), Some("en"));
+            assert_eq!(language_header(op, Lang::Tr), Some("tr"));
+        }
+        assert_eq!(language_header(&SEARCH_DESKTOP, Lang::En), None);
+        // İstek kurulurken etkin dil okunur: dil değişince sonraki istek değişir.
+        let en = with_lang(Lang::En, || request_for(&HOME, "h", &json!({})).accept_language);
+        let tr = with_lang(Lang::Tr, || request_for(&HOME, "h", &json!({})).accept_language);
+        assert_eq!((en, tr), (Some("en"), Some("tr")));
+        assert_eq!(with_lang(Lang::En, || request_for(&SEARCH_DESKTOP, "h", &json!({})).accept_language), None);
     }
 }

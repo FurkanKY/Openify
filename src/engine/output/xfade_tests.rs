@@ -1,5 +1,4 @@
-//! Geçiş (crossfade) ve büyüyebilen halka testleri (PLAN-MOTOR-CONNECT.md §4,
-//! 6.3 – 6.5): aygıtsız, sanal saatli. Düzenek, çaldan gelen olayları
+//! Geçiş (crossfade) ve büyüyebilen halka testleri: aygıtsız, sanal saatli. Düzenek, çaldan gelen olayları
 //! (`EndOfTrack`, `TrackChanged`, `Playing`) yazara gerçek kanaldan verir; ses
 //! kartı yerine `RingSource` çekilir. Altın test (`tests.rs`) bindirmesiz
 //! çıkışın bit düzeyinde değişmediğini ayrıca doğrular.
@@ -925,7 +924,7 @@ fn audio_thread_never_allocates() {
     assert_eq!(n, 0, "ses iş parçacığı {n} kez bellek ayırdı (karaoke ıslak yol)");
 }
 
-/// Bellek bedeli (plan §4: geçiş kapalı < +0,1 MiB, açık ≤ +6,5 MiB): çıkışın
+/// Bellek bedeli (çıta: geçiş kapalı < +0,1 MiB, açık ≤ +6,5 MiB): çıkışın
 /// kurulurken ayırdığı bayt. Kapalıyken bugünkü 2 MiB'lık halkadan fazlası
 /// yalnız birkaç yüz baytlık yeni alan; 12 sn'de halka 8 MiB (+6 MiB).
 #[test]
@@ -957,7 +956,7 @@ fn ring_memory_cost_stays_within_the_budget() {
     assert!(grown >= 8 << 20 && grown < (8 << 20) + 4096);
 }
 
-/// Ölçüm (PLAN §4: EQ kapalı `fill` ≤ +%5): yuva seçimli `fill` ile öncesinin
+/// Ölçüm (çıta: EQ kapalı `fill` ≤ +%5): yuva seçimli `fill` ile öncesinin
 /// kopyası (`RingSource::fill_baseline`) AYNI süreçte dönüşümlü koşulur; oran
 /// makinenin hız durumundan bağımsız. Çalıştırma:
 /// `cargo test --release fill_cost_against -- --ignored --nocapture`.

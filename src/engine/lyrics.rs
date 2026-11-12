@@ -193,7 +193,9 @@ struct SpotifyLyrics {
     provider: Option<String>,
     /// Spotify'ın çevirileri: `[{ "language": "en", "lines": ["…", …] }]`,
     /// satırlar asıl `lines` ile aynı sırada. Anahtar adı bilgiye dayanır
-    /// (`alternatives`; `translations` de kabul): canlı doğrulanmadı.
+    /// (`alternatives`; `translations` de kabul): 12 Kasım'daki canlı sınama
+    /// (`live_lyrics_translation`) geçti, ama sınanan şarkıların yanıtında
+    /// çeviri yoktu; bu alanın adı canlı bir çeviri örneğiyle doğrulanmadı.
     #[serde(default, alias = "translations")]
     alternatives: Option<Vec<SpotifyAlternative>>,
 }

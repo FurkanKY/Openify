@@ -1,5 +1,4 @@
-//! Çalma motoru: çalar dikişi, deste, çalma durumu ve sürücü (bkz.
-//! `PLAN-MOTOR-CONNECT.md` §3).
+//! Çalma motoru: çalar dikişi, deste, çalma durumu ve sürücü.
 //!
 //! Katmanlar (alttan üste):
 //! - `port.rs`: motorun çalardan istedikleri (`PlayerPort`) ve çaldan gelen

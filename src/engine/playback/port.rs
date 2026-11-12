@@ -61,7 +61,7 @@ pub(in crate::engine) enum PlayerSignal {
     /// içi: Spirc etkinleşirken / etkinlikten çıkarken çaldan geçen
     /// `SessionConnected` / `SessionDisconnected` olayıdır; çalar olay
     /// sırasında Spirc'in o andan sonraki komutlarının ÖNÜNDE gelir (bkz.
-    /// `connect.rs`, `PLAN-MOTOR-CONNECT.md` 7.5).
+    /// `connect.rs`).
     RemoteAttached,
     RemoteDetached,
 }

@@ -1,13 +1,13 @@
 //! Sürücü: çalmayı kim yürütüyor, komutlar kime gidiyor?
 //!
-//! Karar (PLAN-MOTOR-CONNECT §0.1): "kim başlattıysa o sürer".
+//! Karar: "kim başlattıysa o sürer".
 //! - `Local`: Openify'da başlatılan çalma. Sıra (`Queue`), kurallar ve dengeli
 //!   karıştırma bizde, çalar bizim çaladır.
-//! - `Spirc`: telefondan başlatılan / aktarılan çalma (Spotify Connect, 7.5).
+//! - `Spirc`: telefondan başlatılan / aktarılan çalma (Spotify Connect).
 //!   Sıra ve ilerleme telefonun (Spirc'in); bizde yalnız gözlem ve
 //!   çıkış. Çalara KOMUT vermeyiz (komutu Spirc verir); duraklat, sar, sonraki
 //!   Spirc'e iletilir, çıkış önceden susturulur / kuyruğu atılır.
-//! - `Remote`: başka bir aygıtta çalıyor, bizde çalan yok (7.6). Yalnız
+//! - `Remote`: başka bir aygıtta çalıyor, bizde çalan yok. Yalnız
 //!   gözlem ve "buraya aktar"; uzak aygıta başka komut yok.
 //!
 //! Geçişler `connect.rs`'te (saf, sahte porta karşı sınanır); `TransportCmd`
@@ -62,7 +62,7 @@ pub(in crate::engine) struct SpircDrive {
     pub load_expected: bool,
 }
 
-/// Başka bir aygıtta çalıyor (7.6).
+/// Başka bir aygıtta çalıyor.
 #[derive(Debug, Clone, PartialEq)]
 pub(in crate::engine) struct RemoteDrive {
     pub device_id: String,

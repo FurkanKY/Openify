@@ -3,7 +3,7 @@
 //! kararı verir ve çıkışa `TransitionSpec` olarak iletir
 //! (`OutputCtl::arm_transition`).
 //!
-//! Kurallar (PLAN-MOTOR-CONNECT.md §0 ve §4, 6.5):
+//! Kurallar:
 //! - Yalnız kendiliğinden geçişte (`Advance::Auto`, şarkı bitince). Kullanıcının
 //!   Sonraki / Önceki / listeden seçmesi ve şarkı yüklemesi bindirmesizdir
 //!   (zaten kuyruğu atar).

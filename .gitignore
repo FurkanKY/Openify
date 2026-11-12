@@ -1,27 +1,13 @@
 target/
-# Ölçüm derlemeleri (çalışan exe target'ı kilitlerken)
+# Measurement builds (used while the running exe locks target/)
 target-olcum/
 .env
-# Denemeler (karar verilince silinir, commit edilmez)
+# Experiments, not committed
 prototypes/
-# Yerel araçlar (vpk: scripts/surum-hazirla.ps1)
+# Local tools (vpk, see scripts/surum-hazirla.ps1)
 .tools/
 
-# İç çalışma notları (yerelde kalır, herkese açık depoda yok)
-CLAUDE.md
-BEKLEYEN-KARARLAR.md
-ROADMAP.md
-MIMARI-INCELEME.md
-OZELLIK-KARSILASTIRMA.md
-design/
-.impeccable/
-olcumler/
-.claude/
-PLAN-MOTOR-CONNECT.md
-CONNECT-DENEME.md
-.env.example
-prototypes/
-# Ölçüm ve sınama betikleri yerelde; depoda yalnız paketleme, lisans ve CI betikleri
+# Local measurement and test scripts; only packaging, license and CI scripts are tracked
 scripts/*
 !scripts/surum-hazirla.ps1
 !scripts/third_party_licenses.py

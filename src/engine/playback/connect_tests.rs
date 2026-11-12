@@ -1,5 +1,4 @@
-//! Sürücü geçişleri ve Spirc kolu testleri (PLAN-MOTOR-CONNECT.md 7.5, 7.6):
-//! sahte çalar (`FakePort`), sahte Spirc ucu (`FakeConnect`) ve sahte Spirc
+//! Sürücü geçişleri ve Spirc kolu testleri: sahte çalar (`FakePort`), sahte Spirc ucu (`FakeConnect`) ve sahte Spirc
 //! olayları; ağ, ses kartı, librespot oturumu ve gerçek Spirc gerekmez.
 
 use std::{
@@ -507,7 +506,7 @@ fn enqueue_goes_to_the_phones_queue_only_while_spirc_drives() {
     assert_eq!(b.port.take(), [format!("enqueue({})", uri(5)), format!("enqueue({})", uri(6))]);
 }
 
-// ── Başka aygıtta çalıyor (7.6) ─────────────────────────────────────────
+// ── Başka aygıtta çalıyor ─────────────────────────────────────────
 
 #[test]
 fn another_device_playing_turns_an_idle_local_into_remote() {

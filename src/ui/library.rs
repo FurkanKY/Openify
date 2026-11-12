@@ -17,7 +17,7 @@ use super::{
     },
     cover_image,
     manage::ListKey,
-    pill::PILL_CLEARANCE,
+    pill::{PILL_CLEARANCE, PILL_LIST_END},
     player::fmt_time,
     shelf::{COLLAPSE_MAX, COMPACT_AT, header_height},
     smooth_scroll::{SmoothScroll, Wheel},
@@ -176,7 +176,7 @@ impl Shell {
         self.trace_scroll("select", || format!("{}", id.key()));
         // Geliştirme denemesi: OPENIFY_TEST_FIND="sorgu" ilk açılan listede
         // bulu açar, OPENIFY_TEST_SELECT="a-b" satırları seçer (Ctrl / Shift
-        // tuşları pencereye iletiyle gönderilemiyor; bkz. ekran-sinama).
+        // tuşları pencereye iletiyle gönderilemiyor).
         static TEST_HOOKS: std::sync::Once = std::sync::Once::new();
         TEST_HOOKS.call_once(|| {
             if let Ok(query) = std::env::var("OPENIFY_TEST_FIND") {
@@ -289,7 +289,7 @@ impl Shell {
     /// yukarı çıkarken raf kapalı kalır (onu tekerlek açar). gpui'nin
     /// `scroll_to_item`'ı listeyi raftan bağımsız kaydırıyordu: raf açıkken
     /// liste kayıyor, sonraki tekerlek bütün yolu listeye verip rafı hiç
-    /// kapatmıyordu (bkz. `kaydirma-sinama.ps1 -Scenario keys`). Üstelik o
+    /// kapatmıyordu. Üstelik o
     /// kaydırma ancak liste çizilirken uygulanıyordu. Liste henüz hiç
     /// çizilmediyse ona bırakılır (çizimdeki onarım değişmezi kurar).
     fn reveal_row(&mut self, ix: usize) {
@@ -403,7 +403,7 @@ impl Shell {
     /// değişince hemen doğru. Liste hiç çizilmediyse `None`.
     pub(super) fn list_extent(&self) -> Option<(f32, f32)> {
         let viewport = f32::from(self.library.scroll.0.borrow().last_item_size?.item.height);
-        Some((viewport, self.shown_rows() as f32 * ROW_HEIGHT + PILL_CLEARANCE))
+        Some((viewport, self.shown_rows() as f32 * ROW_HEIGHT + PILL_LIST_END))
     }
 
     /// Açık listede görünen satır sayısı (süzgeç açıksa eşleşenler).
@@ -856,8 +856,8 @@ impl Shell {
         .top_0()
         .left_0()
         .w_full()
-        .bottom(px(-PILL_CLEARANCE))
-        .pb(px(PILL_CLEARANCE))
+        .bottom(px(-PILL_LIST_END))
+        .pb(px(PILL_LIST_END))
         .into_any_element();
         // Satırların göründüğü alan: ekolayzer katmanı bunun dışına taşmasın.
         // Ölçü listeden sonra alınır (liste o sırada yerleşmiş olur): kaydırma
@@ -1598,7 +1598,7 @@ pub(super) fn skeleton_rows_at(album: bool, margin: f32) -> AnyElement {
 /// gitme, kaydırma çubuğu, pencere boyu, onarım) ve çizimde değiştikçe dosyaya bir satır
 /// yazılır: `t_ms,event,collapse,offset,detail`. Satırlar seyrek (yalnız
 /// olaylarda), her biri hemen diske gider: süreç öldürülse de iz eksiksiz.
-/// Değişken yoksa hiçbir şey yapmaz. Bkz. `scripts/kaydirma-sinama.ps1`.
+/// Değişken yoksa hiçbir şey yapmaz.
 pub(super) mod scroll_trace {
     use std::{cell::RefCell, fs::File, io::Write, time::Instant};
 

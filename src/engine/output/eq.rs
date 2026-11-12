@@ -1,4 +1,4 @@
-//! 10 bantlı ekolayzer (PLAN-MOTOR-CONNECT.md §4, 6.6): çıkışın ses iş
+//! 10 bantlı ekolayzer: çıkışın ses iş
 //! parçacığında, halkadan okunan ham karelere, zarf ve ses düzeyi ÖNCE
 //! uygulanır (`source.rs` → `shape`). Ses düzeyi ve zarf ekolayzırın
 //! durumunu bozmaz: iniş / çıkış, duraklatma, ses düzeyi yalnız sonra

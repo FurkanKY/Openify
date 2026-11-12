@@ -1275,7 +1275,7 @@ impl Shell {
         )
     }
 
-    /// Spotify Connect: telefondan çalma aktarmak için (varsayılan KAPALI,
+    /// Spotify Connect: telefondan çalma aktarmak için (varsayılan açık,
     /// deneysel). Açıkken telefonda görünen aygıt adı da ayarlanır.
     fn connect_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;

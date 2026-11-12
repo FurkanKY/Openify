@@ -1,5 +1,4 @@
-//! Sürücü geçişleri: `Local` ↔ `Spirc` ↔ `Remote` (PLAN-MOTOR-CONNECT.md §0.1,
-//! 7.5, 7.6). "Kim başlattıysa o sürer."
+//! Sürücü geçişleri: `Local` ↔ `Spirc` ↔ `Remote`. "Kim başlattıysa o sürer."
 //!
 //! | olay                                  | Local            | Spirc                       | Remote                  |
 //! |---------------------------------------|------------------|-----------------------------|-------------------------|

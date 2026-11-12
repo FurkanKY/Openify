@@ -14,7 +14,7 @@
 //!   - yalnız ekrana gelen sayfa için istenir; alt sayfalar (tür sayfaları)
 //!     tıklanınca, önceden alma yok;
 //!   - aynı anahtar için aynı anda tek istek (`wire.rs`);
-//!   - önbellek (`pages.db`, `explore:*`): ana sayfa akışı 6 sa, tür karoları
+//!   - önbellek (`pages.db`, `explore:<dil>:*`): ana sayfa akışı 6 sa, tür karoları
 //!     24 sa, yeni çıkanlar / listeler 6 sa, tür sayfası 24 sa taze; bayat
 //!     olan 7 güne kadar gösterilir (arkadan tazelenir);
 //!   - 2 sn'de en çok bir istek (benzer sanatçılar ve aramayla ortak kapı), 429'da
@@ -29,6 +29,8 @@ use anyhow::{Result, bail};
 use librespot::core::session::Session;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
+
+use crate::i18n::{self, Lang};
 
 use super::{
     cache::Db,
@@ -68,13 +70,17 @@ pub enum ExploreKey {
 }
 
 impl ExploreKey {
-    fn cache_key(&self) -> String {
+    /// Önbellek anahtarı dile bağlıdır (`explore:<dil>:...`): Spotify liste adlarını,
+    /// bölüm başlıklarını ve açıklamaları `accept-language`'a göre yerelleştirir;
+    /// arayüz dili değişince önceki dilin sayfası gösterilmez, yenisi istenir.
+    pub(crate) fn cache_key(&self, lang: Lang) -> String {
+        let lang = lang.code();
         match self {
-            Self::Home => "explore:home".into(),
-            Self::Categories => "explore:categories".into(),
-            Self::NewReleases => "explore:new-releases".into(),
-            Self::Charts => "explore:charts".into(),
-            Self::Category(uri) => format!("explore:category:{uri}"),
+            Self::Home => format!("explore:{lang}:home"),
+            Self::Categories => format!("explore:{lang}:categories"),
+            Self::NewReleases => format!("explore:{lang}:new-releases"),
+            Self::Charts => format!("explore:{lang}:charts"),
+            Self::Category(uri) => format!("explore:{lang}:category:{uri}"),
         }
     }
 
@@ -192,11 +198,11 @@ pub fn freshness(key: &ExploreKey, age_ms: i64) -> Freshness {
 
 /// Önbellekteki veri ve tazeliği; yoksa ya da 7 günden eskiyse `None`.
 pub fn cached(cache: &PageCache, key: &ExploreKey) -> Option<(ExploreData, Freshness)> {
-    cached_at(cache, key, now_ms())
+    cached_at(cache, key, now_ms(), i18n::lang())
 }
 
-fn cached_at(cache: &PageCache, key: &ExploreKey, now: i64) -> Option<(ExploreData, Freshness)> {
-    let ck = key.cache_key();
+fn cached_at(cache: &PageCache, key: &ExploreKey, now: i64, lang: Lang) -> Option<(ExploreData, Freshness)> {
+    let ck = key.cache_key(lang);
     let (data, age) = if matches!(key, ExploreKey::Categories) {
         let hit = cache.get::<CategoryList>(Kind::Explore, &ck, now).ok()??;
         (ExploreData::Categories(hit.page), hit.age_ms)
@@ -210,8 +216,8 @@ fn cached_at(cache: &PageCache, key: &ExploreKey, now: i64) -> Option<(ExploreDa
     }
 }
 
-fn store(cache: &PageCache, key: &ExploreKey, data: &ExploreData) -> Result<()> {
-    let ck = key.cache_key();
+fn store(cache: &PageCache, key: &ExploreKey, data: &ExploreData, lang: Lang) -> Result<()> {
+    let ck = key.cache_key(lang);
     match data {
         ExploreData::Feed(f) => cache.put(&ck, f, now_ms())?,
         ExploreData::Categories(c) => cache.put(&ck, c, now_ms())?,
@@ -494,6 +500,8 @@ async fn fetch(session: &Session, db: Option<&Db>, op: &pathfinder::Operation, v
 /// Veriyi indirir ve önbelleğe yazar. Hata önbelleğe yazılmaz.
 pub async fn load(session: &Session, db: Option<&Db>, cache: &PageCache, key: &ExploreKey) -> Result<ExploreData> {
     let started = std::time::Instant::now();
+    // İstek başlarken etkin dil: yanıt bu dilde istenir ve bu dilin anahtarına yazılır.
+    let lang = i18n::lang();
     let data = match key {
         ExploreKey::Home => {
             let v = fetch(session, db, &HOME, home_variables()).await?;
@@ -519,7 +527,7 @@ pub async fn load(session: &Session, db: Option<&Db>, cache: &PageCache, key: &E
             ExploreData::Feed(Arc::new(parse_browse(&v)?))
         }
     };
-    store(cache, key, &data)?;
+    store(cache, key, &data, lang)?;
     log::debug!("keşfet {key:?}: {} ms", started.elapsed().as_millis());
     Ok(data)
 }
@@ -672,17 +680,33 @@ mod tests {
     fn cache_round_trip_uses_per_key_type() {
         let cache = PageCache::open_in_memory().unwrap();
         let feed = Arc::new(parse_browse(&charts()).unwrap());
-        store(&cache, &ExploreKey::Charts, &ExploreData::Feed(feed.clone())).unwrap();
+        store(&cache, &ExploreKey::Charts, &ExploreData::Feed(feed.clone()), Lang::Tr).unwrap();
         let list = Arc::new(parse_categories(&categories()).unwrap());
-        store(&cache, &ExploreKey::Categories, &ExploreData::Categories(list.clone())).unwrap();
-        let (data, state) = cached_at(&cache, &ExploreKey::Charts, now_ms() + HOUR_MS).unwrap();
+        store(&cache, &ExploreKey::Categories, &ExploreData::Categories(list.clone()), Lang::Tr).unwrap();
+        let (data, state) = cached_at(&cache, &ExploreKey::Charts, now_ms() + HOUR_MS, Lang::Tr).unwrap();
         assert_eq!(state, Freshness::Fresh);
         assert!(matches!(data, ExploreData::Feed(f) if *f == *feed));
-        let (data, _) = cached_at(&cache, &ExploreKey::Categories, now_ms() + 30 * HOUR_MS).unwrap();
+        let (data, _) = cached_at(&cache, &ExploreKey::Categories, now_ms() + 30 * HOUR_MS, Lang::Tr).unwrap();
         assert!(matches!(data, ExploreData::Categories(c) if *c == *list));
         // 7 günden eski: gösterilmez.
-        assert!(cached_at(&cache, &ExploreKey::Charts, now_ms() + 8 * DAY_MS).is_none());
+        assert!(cached_at(&cache, &ExploreKey::Charts, now_ms() + 8 * DAY_MS, Lang::Tr).is_none());
         // Hiç yazılmamış anahtar.
-        assert!(cached_at(&cache, &ExploreKey::Home, now_ms()).is_none());
+        assert!(cached_at(&cache, &ExploreKey::Home, now_ms(), Lang::Tr).is_none());
+    }
+
+    #[test]
+    fn cache_is_separate_per_interface_language() {
+        let cache = PageCache::open_in_memory().unwrap();
+        let feed = Arc::new(parse_browse(&charts()).unwrap());
+        store(&cache, &ExploreKey::Charts, &ExploreData::Feed(feed), Lang::Tr).unwrap();
+        let now = now_ms() + HOUR_MS;
+        assert!(cached_at(&cache, &ExploreKey::Charts, now, Lang::Tr).is_some());
+        // Dil değişince Türkçe sayfa İngilizce arayüzde gösterilmez.
+        assert!(cached_at(&cache, &ExploreKey::Charts, now, Lang::En).is_none());
+        assert_ne!(ExploreKey::Home.cache_key(Lang::En), ExploreKey::Home.cache_key(Lang::Tr));
+        assert_ne!(
+            ExploreKey::Category("spotify:page:x".into()).cache_key(Lang::En),
+            ExploreKey::Category("spotify:page:x".into()).cache_key(Lang::Tr)
+        );
     }
 }

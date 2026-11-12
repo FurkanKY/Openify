@@ -1,0 +1,87 @@
+name: Release
+
+# Builds the installer from a version tag and attaches it to a DRAFT release.
+# Nothing is published automatically: review the draft on GitHub, then publish it.
+#
+#   git tag v0.1.1 && git push origin v0.1.1
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build (e.g. v0.1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  VPK_VERSION: "1.2.161" # must match the velopack crate in Cargo.toml
+
+jobs:
+  release:
+    name: Build and package (Windows)
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Check tag matches Cargo.toml
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          if ("v$v" -ne $env:TAG) { throw "Tag $env:TAG does not match Cargo.toml version $v" }
+
+      - name: Install vpk
+        run: dotnet tool install vpk --version ${{ env.VPK_VERSION }} --tool-path .tools/vpk
+
+      - name: Test
+        run: cargo test --release --locked
+
+      # The previous release's full package lets vpk build a delta update, and it is
+      # attached again so the rollback feed (releases/latest/download) still has it.
+      - name: Fetch previous release package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force target/velopack | Out-Null
+          $prev = gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName'
+          if ($prev -and $prev -ne $env:TAG) {
+            gh release download $prev --pattern '*-full.nupkg' --pattern 'releases.win.json' --dir target/velopack
+            "Previous release: $prev"
+          } else { "No previous release" }
+
+      - name: Build and pack
+        shell: pwsh
+        run: ./scripts/surum-hazirla.ps1
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Set-Location target/velopack
+          Get-ChildItem -File | Where-Object Extension -in '.exe','.zip','.nupkg' |
+            Select-Object -ExpandProperty Name | Sort-Object |
+            ForEach-Object { "{0}  {1}" -f (Get-FileHash $_ -Algorithm SHA256).Hash.ToLower(), $_ } |
+            Set-Content -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+
+      - name: Create draft release
+        shell: pwsh
+        run: |
+          Set-Location target/velopack
+          $files = @(Get-ChildItem -File | Where-Object { $_.Extension -in '.exe','.zip','.nupkg' -or $_.Name -in 'releases.win.json','SHA256SUMS.txt' } | Select-Object -ExpandProperty Name)
+          gh release create $env:TAG --draft --verify-tag --title "Openify $($env:TAG.TrimStart('v'))" --generate-notes @files

@@ -259,7 +259,7 @@ fn gate_drops_stale_packets_until_marker_then_confirmation() {
 
 /// Spirc (Spotify Connect) telefondan gelen ses düzeyini `VolumeChanged` ile
 /// bildirir. Sayısı işaretin sayısına denk gelse bile kapıyı açmamalı ve
-/// duraklatmanın susturmasını kaldırmamalı (7.3: işaret `SessionClientChanged`).
+/// duraklatmanın susturmasını kaldırmamalı (işaret `SessionClientChanged`).
 #[test]
 fn a_volume_event_with_the_same_number_never_counts_as_the_marker() {
     let mut rig = Rig::new();
@@ -733,7 +733,7 @@ fn default_device_switch_hands_over_without_gap_or_overlap() {
     assert!(out.iter().any(|s| s.1 == 0.5), "yeni aygıt tam sese çıkmadı");
 }
 
-// ── Altın test (PLAN-MOTOR-CONNECT.md §4, 6.0) ──────────────────────
+// ── Altın test ──────────────────────────────────────────────────────
 
 /// FNV-1a 64.
 struct Fnv(u64);

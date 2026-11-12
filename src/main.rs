@@ -6,7 +6,7 @@
 //!   openify <şarkı bağlantısı>    pencere açmadan terminalde çalar
 //!   openify logout                kayıtlı Spotify girişini siler
 //!   openify connect-spike         Spotify Connect canlı denemesi (yalnız `--features connect-spike`
-//!                                 derlemesinde; bkz. CONNECT-DENEME.md)
+//!                                 derlemesinde)
 
 // Release derlemede arka planda boş bir konsol penceresi açılmasın.
 // Terminalden çalıştırıldığında çıktılar yine görünür (attach_console).

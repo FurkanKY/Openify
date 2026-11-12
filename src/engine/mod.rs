@@ -302,7 +302,7 @@ pub enum Command {
     StartLogin,
     /// Tarayıcıda girişi bekleyen süreci bırak (`Event::NeedsLogin`'e döner).
     CancelLogin,
-    /// Spotify Connect (varsayılan KAPALI, bkz. `connect.rs`): aç / kapat,
+    /// Spotify Connect (varsayılan AÇIK, bkz. `connect.rs`): aç / kapat,
     /// aygıt adı, "buraya aktar". Bağlantı gerekmez; durum
     /// `PlaybackEvent::Connect` ile gelir.
     Connect(ConnectCommand),
@@ -676,7 +676,7 @@ struct Engine {
     karaoke: (bool, f32),
     /// Sayfalar ve yazma kuyruğu (bkz. `wire.rs`).
     wire: wire::Wire,
-    /// Spotify Connect yaşam döngüsü (varsayılan kapalı; bkz. `connect.rs`).
+    /// Spotify Connect yaşam döngüsü (varsayılan açık; bkz. `connect.rs`).
     connect: connect::ConnectHost,
 }
 

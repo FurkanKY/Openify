@@ -1,5 +1,4 @@
-//! Oturum yönetimi: Spotify oturumunun yaşam döngüsü (PLAN-MOTOR-CONNECT.md
-//! §5, 7.2).
+//! Oturum yönetimi: Spotify oturumunun yaşam döngüsü.
 //!
 //! `SessionHost` bağlantının DURUMUNU tutar (bağlı oturum, bağlantı / giriş
 //! durumu, yeniden bağlanma sayaçları, hesap türü denetimi); karar verilen
@@ -13,8 +12,8 @@
 //! (açılış, giriş, ses çıkışı sonradan gelmiş, hesap sonradan Premium'a
 //! dönmüş); çalar ve çıkış kurulur. `Replace`: oturum düşmüştü ya da
 //! reddedilmişti; çalar korunur, yeni oturumu alır (`rebind`), eskisi kapanır.
-//! Spotify Connect (7.4+) buraya bağlanacak: her takılan oturum için tek yerde
-//! bir Spirc başlatılıp bırakılacak.
+//! Spotify Connect buraya bağlanır (`connect.rs`): her takılan oturum için tek yerde
+//! bir Spirc başlatılıp bırakılır.
 //!
 //! Durumlar ve geçişler `login.rs`'te; kurtarma ilkesi (geri çekilme, hangi
 //! hatada ne yapılır) `recovery.rs`'te.
@@ -247,7 +246,7 @@ impl Engine {
         }
         self.wire_connected();
         self.refresh_library();
-        // Spotify Connect (varsayılan kapalı: hiçbir şey yapmaz).
+        // Spotify Connect (kapalıysa hiçbir şey yapmaz; varsayılan açık).
         self.connect_on_install();
         Some(player_events)
     }

@@ -16,6 +16,7 @@ Thanks for helping. Openify is a native Windows Spotify client written in Rust
 - Never post tokens or your Spotify credentials. Openify never needs them in an
   issue.
 - Feature requests: describe the problem first, the solution second.
+- Security problems: do not open a public issue; see [SECURITY.md](SECURITY.md).
 
 ## Pull requests
 

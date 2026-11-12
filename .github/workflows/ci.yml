@@ -23,8 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The crate uses edition 2024 (Rust 1.85+). There is no rust-toolchain
-      # file, so CI tracks stable.
+      # The crate uses edition 2024 (Rust 1.85+). rust-toolchain.toml pins the
+      # same channel (stable), so local builds and CI use the same toolchain.
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy

@@ -38,7 +38,7 @@ body:
       description: |
         Attach `openify.log` (and any `crash-*.txt`) from `%LOCALAPPDATA%\Openify`
         (paste that path into the Explorer address bar), by dragging the files into this box.
-        Skim the log before posting.
+        Skim the log before posting. The logs may contain Turkish text, that's fine.
     validations:
       required: true
   - type: dropdown

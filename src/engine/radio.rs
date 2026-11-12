@@ -16,8 +16,8 @@
 //! yanıtın biçimi bilgiye dayanır; bu yüzden çözümleme eksik / garip alana
 //! toleranslıdır (şarkı listesi `tracks` / `mediaItems` / `items`, bir şarkı
 //! düz adres ya da nesne olabilir; yalnız `spotify:track:` adresleri alınır,
-//! tekrarlar atılır). Canlı yanıtla doğrulanmadı: sahibinin elle koşacağı
-//! `live_radio` sınaması var (`#[ignore]`).
+//! tekrarlar atılır). 12 Kasım'da gerçek hesapla bir kez koşturuldu
+//! (`live_radio` sınaması, `#[ignore]`, yalnız hesap sahibi koşar): yanıt çözümlendi.
 //!
 //! Uç TEK sabit (`STATION_BASE`). İstek, token, kapı (aralık, 429, devre
 //! kesici), 401'de token yenileme ve 5xx yeniden denemesi `pathfinder.rs`'in

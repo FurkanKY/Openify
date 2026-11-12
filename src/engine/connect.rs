@@ -1,5 +1,5 @@
-//! Spotify Connect: arayüz sözleşmesi, Spirc yaşam döngüsü ve çalara bağlama
-//! (PLAN-MOTOR-CONNECT.md §5 7.4, §7). Sürücü mantığı `playback/connect.rs`te.
+//! Spotify Connect: arayüz sözleşmesi, Spirc yaşam döngüsü ve çalara bağlama.
+//! Sürücü mantığı `playback/connect.rs`te.
 //!
 //! **Varsayılan AÇIK** (13 Kasım'dan beri; `Settings::connect_enabled`): kapalıyken Spirc hiç
 //! kurulmaz, oturum bugünkü gibi rastgele aygıt kimliğiyle açılır, hiçbir
@@ -37,7 +37,7 @@ use tokio::task::JoinHandle;
 
 use super::{Engine, Internal, OutputCtl};
 
-// ── Arayüz sözleşmesi (PLAN §7) ─────────────────────────────────────────
+// ── Arayüz sözleşmesi ─────────────────────────────────────────
 
 /// Arayüzün Connect komutları (`Command::Connect`).
 #[derive(Debug, Clone, PartialEq)]

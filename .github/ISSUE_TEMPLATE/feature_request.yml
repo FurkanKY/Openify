@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an idea or an improvement
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. Please search the existing issues first. Describe the
+        problem before the solution: what are you trying to do, and what gets in
+        the way today?
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Who runs into it, and when?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+      description: A rough idea is enough. Sketches or screenshots help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Other ways to solve it, or how you work around it now.
+    validations:
+      required: false
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else
+      description: Links, how other apps do it, or constraints (for example if it would need an endpoint Spotify does not document).
+    validations:
+      required: false

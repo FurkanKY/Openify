@@ -37,8 +37,8 @@ use tokio::sync::{Notify, oneshot};
 // Neden kendi Client ID'miz değil: librespot Windows'ta Spotify'ın iç servislerine
 // (şarkı bilgisi, ses dosyası) oturumun Client ID'siyle gidiyor. Bu servisler
 // geliştirici uygulamalarının ID'lerini reddediyor (400 Bad Request).
-// Kendi Client ID'miz (.env içindeki OPENIFY_CLIENT_ID) ileride Web API için
-// (kütüphane, arama, playlist) kullanılacak.
+// Bu yüzden uygulamada ayrı bir geliştirici Client ID'si, `.env` dosyası ya da
+// ortam değişkeni yok; derlemek için hiçbir anahtar gerekmez.
 const SPOTIFY_DESKTOP_CLIENT_ID: &str = "65b708073fc0480ea92a077233ca87bd";
 const SPOTIFY_DESKTOP_REDIRECT_URI: &str = "http://127.0.0.1:8898/login";
 /// Yukarıdaki yönlendirme adresinin yerel dinleyicisi (iptalde serbest bırakılır).
