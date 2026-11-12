@@ -468,7 +468,7 @@ impl Shell {
         // Sağ: ses. Sessizken çubuk boşalmaz: önceki düzey soluk görünür,
         // sesi açınca nereye döneceği belli.
         let volume_icon = match m.volume {
-            v if v == 0.0 => "volume-x",
+            0.0 => "volume-x",
             v if v < 0.5 => "volume-1",
             _ => "volume-2",
         };
@@ -501,10 +501,6 @@ impl Shell {
             )
         };
         let mute = icon_button("mute", volume_icon, look(&nav.mute, true), accent)
-            .when(live, |el| {
-                el.track_focus(&nav.mute)
-                    .on_click(cx.listener(|this, _, _, cx| this.toggle_mute(cx)))
-            })
             .tooltip(Tooltip::text(
                 if m.volume == 0.0 {
                     t!(Unmute)
@@ -512,7 +508,11 @@ impl Shell {
                     t!(Mute)
                 },
                 Some("Ctrl Shift ↓"),
-            ));
+            ))
+            .when(live, |el| {
+                el.track_focus(&nav.mute)
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_mute(cx)))
+            });
         // Dar hapta ses çubuğu yok: sessize al düğmesinin üstünde tekerlek
         // sesi değiştirir (Ctrl+↑ / ↓ de).
         let mute = mute.when(live && !wide, |el| {

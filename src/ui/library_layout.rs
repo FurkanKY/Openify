@@ -204,7 +204,7 @@ impl Shell {
     pub(super) fn set_folder_open(&mut self, key: &str, open: bool, cx: &mut Context<Self>) {
         let id = folder_id(key).to_string();
         let ids = &mut self.prefs.library_open_folders;
-        if ids.iter().any(|k| *k == id) == open {
+        if ids.contains(&id) == open {
             return;
         }
         if open {

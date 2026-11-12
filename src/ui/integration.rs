@@ -448,10 +448,10 @@ mod imp {
     /// 2. kalan pencerelerin kareler arasında tutulan boş kapasitesi ve
     ///    elemanlar arenası bırakılır (`Window::release_memory`, gpui yaması);
     /// 3. NT yığınları sıkıştırılır.
-    /// Gösterilince hiçbirine ihtiyaç yok: çizim kaynakları gpui yamasıyla
-    /// zaten geri gelir, pencere yeniden kurulur.
-    /// Geliştirme kancası: `OPENIFY_TRIM_SKIP="popups,gpui,heap"` parçaları
-    /// atlar (hangisinin ne kazandırdığını ölçmek için).
+    ///    Gösterilince hiçbirine ihtiyaç yok: çizim kaynakları gpui yamasıyla
+    ///    zaten geri gelir, pencere yeniden kurulur.
+    ///    Geliştirme kancası: `OPENIFY_TRIM_SKIP="popups,gpui,heap"` parçaları
+    ///    atlar (hangisinin ne kazandırdığını ölçmek için).
     fn trim_memory(this: &WeakEntity<Shell>, cx: &mut AsyncApp) {
         let Ok((hidden, menu, palette)) = this.update(cx, |s, _| {
             (s.desk.hidden, s.desk.menu_window, s.desk.palette_window)

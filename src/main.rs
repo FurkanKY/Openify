@@ -16,6 +16,13 @@
     all(not(debug_assertions), not(feature = "connect-spike")),
     windows_subsystem = "windows"
 )]
+// gpui render yardimcilari cok parametre alir; ic ice tuple tipleri ve enum boyutlari
+// sicak yolda degil (yapisal lintler bilincli olarak kapali).
+#![allow(
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    clippy::large_enum_variant
+)]
 
 mod auth;
 mod autostart;
@@ -71,19 +78,6 @@ fn test_watchdog() {
 /// `OPENIFY_TEST_EXIT_AFTER` değeri; yoksa ya da bozuksa 15 dk.
 fn test_exit_after(value: Option<&str>) -> u64 {
     value.and_then(|v| v.trim().parse().ok()).unwrap_or(15 * 60)
-}
-
-#[cfg(test)]
-mod watchdog_tests {
-    use super::test_exit_after;
-
-    #[test]
-    fn exit_after_defaults_and_overrides() {
-        assert_eq!(test_exit_after(None), 900);
-        assert_eq!(test_exit_after(Some("bozuk")), 900);
-        assert_eq!(test_exit_after(Some(" 120 ")), 120);
-        assert_eq!(test_exit_after(Some("0")), 0);
-    }
 }
 
 fn main() -> Result<()> {
@@ -209,5 +203,18 @@ fn attach_console() {
     unsafe {
         use windows::Win32::System::Console::{ATTACH_PARENT_PROCESS, AttachConsole};
         let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+    }
+}
+
+#[cfg(test)]
+mod watchdog_tests {
+    use super::test_exit_after;
+
+    #[test]
+    fn exit_after_defaults_and_overrides() {
+        assert_eq!(test_exit_after(None), 900);
+        assert_eq!(test_exit_after(Some("bozuk")), 900);
+        assert_eq!(test_exit_after(Some(" 120 ")), 120);
+        assert_eq!(test_exit_after(Some("0")), 0);
     }
 }

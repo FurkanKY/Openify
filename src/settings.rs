@@ -430,10 +430,10 @@ impl Settings {
         }
         // Üzerine yazmadan önce mevcut dosya sağlamsa yedeği o olur (bozuk
         // bir dosya yedeği ezmez).
-        if let Ok(previous) = fs::read_to_string(&path) {
-            if Self::parse(&previous).is_ok() {
-                refresh_backup(&path, &previous);
-            }
+        if let Ok(previous) = fs::read_to_string(&path)
+            && Self::parse(&previous).is_ok()
+        {
+            refresh_backup(&path, &previous);
         }
         // Önce geçici dosyaya yaz, sonra yerine taşı: yazma yarıda kesilirse
         // eski ayarlar bozulmasın.

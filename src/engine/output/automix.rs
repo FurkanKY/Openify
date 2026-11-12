@@ -225,7 +225,7 @@ impl TailTrim {
         // Geçiş 1: hiçbir aralık `TRIM_KEEP`i aşmıyorsa paket aynen geçer.
         let mut run = self.run;
         let mut change = false;
-        for fr in samples.chunks_exact(2) {
+        for fr in samples.as_chunks::<2>().0 {
             if silent(fr) {
                 run += 1;
                 if run > TRIM_KEEP {
@@ -247,7 +247,7 @@ impl TailTrim {
         }
         let mut out = Vec::with_capacity(samples.len());
         let mut run = self.run;
-        for fr in samples.chunks_exact(2) {
+        for fr in samples.as_chunks::<2>().0 {
             if silent(fr) {
                 run += 1;
                 if run <= TRIM_KEEP {
@@ -292,7 +292,7 @@ impl LeadSkip {
             return samples;
         }
         let frames = (samples.len() / 2) as u64;
-        match samples.chunks_exact(2).position(|fr| !silent(fr)) {
+        match samples.as_chunks::<2>().0.iter().position(|fr| !silent(fr)) {
             Some(i) => {
                 self.dropped += i as u64;
                 self.done = true;

@@ -55,7 +55,7 @@ impl Taskbar {
         let list: ITaskbarList3 =
             unsafe { CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)? };
         unsafe { list.HrInit()? };
-        let icons = Icons::render(light).ok_or_else(|| windows::core::Error::from_win32())?;
+        let icons = Icons::render(light).ok_or_else(windows::core::Error::from_win32)?;
         Ok(Taskbar {
             list,
             icons,

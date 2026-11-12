@@ -181,7 +181,7 @@ impl Shell {
                 .scroll
                 .scroll_to_item_strict(0, ScrollStrategy::Top),
         }
-        self.trace_scroll("select", || format!("{}", id.key()));
+        self.trace_scroll("select", || id.key().to_string());
         // Geliştirme denemesi: OPENIFY_TEST_FIND="sorgu" ilk açılan listede
         // bulu açar, OPENIFY_TEST_SELECT="a-b" satırları seçer (Ctrl / Shift
         // tuşları pencereye iletiyle gönderilemiyor).
@@ -1427,27 +1427,27 @@ impl Shell {
         let _ = window;
         let accent = self.accent().text;
         let mut out = Vec::new();
-        if let CollectionId::Album(uri) = id {
-            if !compact {
-                let uri = uri.clone();
-                out.push(
-                    icon_button_tinted(
-                        "collection-save",
-                        "heart-fill",
-                        rgb(accent),
-                        Look::Live,
-                        accent,
-                    )
-                    .tooltip(super::components::Tooltip::text(
-                        t!(RemoveFromLibrary),
-                        None,
-                    ))
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        this.set_album_saved(uri.clone(), false, None, cx)
-                    }))
-                    .into_any_element(),
-                );
-            }
+        if let CollectionId::Album(uri) = id
+            && !compact
+        {
+            let uri = uri.clone();
+            out.push(
+                icon_button_tinted(
+                    "collection-save",
+                    "heart-fill",
+                    rgb(accent),
+                    Look::Live,
+                    accent,
+                )
+                .tooltip(super::components::Tooltip::text(
+                    t!(RemoveFromLibrary),
+                    None,
+                ))
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.set_album_saved(uri.clone(), false, None, cx)
+                }))
+                .into_any_element(),
+            );
         }
         if *id != CollectionId::Liked {
             let target = super::manage::CardTarget::Collection {

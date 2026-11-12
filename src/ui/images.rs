@@ -82,13 +82,13 @@ impl ImageStore {
         }
         let now = Instant::now();
         let asked_at = self.requested.borrow().get(url).copied();
-        if let Some(at) = asked_at {
-            if now.duration_since(at) < self.retry_after {
-                return None;
-            }
-            // Uzun süredir gelmedi: indirme büyük olasılıkla başarısız oldu.
-            // (Arada gelmişse aşağıdaki disk denetimi yakalar.)
+        if let Some(at) = asked_at
+            && now.duration_since(at) < self.retry_after
+        {
+            return None;
         }
+        // Uzun süredir gelmedi: indirme büyük olasılıkla başarısız oldu.
+        // (Arada gelmişse aşağıdaki disk denetimi yakalar.)
         if path.exists() {
             self.requested.borrow_mut().remove(url);
             self.ready.borrow_mut().insert(url.to_string());

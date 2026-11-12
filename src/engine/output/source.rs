@@ -254,10 +254,10 @@ impl RingSource {
     }
 
     /// 2. aşama: halkadan ham kareleri `buf`a, her karenin çarpanını `coef`a
-    /// koyar (`coef[i] = ses düzeyi_i × zarf_i`, f32 işlem sırası eskisiyle
-    /// aynı). Çekilen kare sayısı döner; ilk `n` kare gerçek, gerisi
-    /// `shape`te sıfırlanır. Ekolayzır yokken (`plan.direct`) kare başına
-    /// dal olmasın diye döngü iki kez derlenir: ham kare orada hemen çarpılır.
+    ///    koyar (`coef[i] = ses düzeyi_i × zarf_i`, f32 işlem sırası eskisiyle
+    ///    aynı). Çekilen kare sayısı döner; ilk `n` kare gerçek, gerisi
+    ///    `shape`te sıfırlanır. Ekolayzır yokken (`plan.direct`) kare başına
+    ///    dal olmasın diye döngü iki kez derlenir: ham kare orada hemen çarpılır.
     fn pull(&mut self, plan: &Plan) -> usize {
         // Halka tek yuvadayken (her zamanki durum) blok başına tek atomik okuma.
         // Yazar ikinci yuvaya geçtiyse (`big_from`) blok ya tümüyle birinde ya
@@ -391,9 +391,9 @@ impl RingSource {
     }
 
     /// 3. aşama: `buf`taki ilk `n` ham kareyi `coef` ile çarpar (varsa önce
-    /// ekolayzır, sonra karaoke, ham kareler üstünde), gerisini sıfırlar.
-    /// İkisi de yokken (`plan.direct`) çarpma `pull`da yapılmıştır, burada
-    /// yalnız kuyruk sıfırlanır.
+    ///    ekolayzır, sonra karaoke, ham kareler üstünde), gerisini sıfırlar.
+    ///    İkisi de yokken (`plan.direct`) çarpma `pull`da yapılmıştır, burada
+    ///    yalnız kuyruk sıfırlanır.
     fn shape(&mut self, plan: &Plan, n: usize) {
         if !plan.direct {
             if n > 0 {
@@ -404,7 +404,14 @@ impl RingSource {
                     self.karaoke.process(&mut self.buf, n);
                 }
             }
-            for (frame, c) in self.buf.chunks_exact_mut(CHANNELS).zip(&self.coef).take(n) {
+            for (frame, c) in self
+                .buf
+                .as_chunks_mut::<CHANNELS>()
+                .0
+                .iter_mut()
+                .zip(&self.coef)
+                .take(n)
+            {
                 frame[0] *= *c;
                 frame[1] *= *c;
             }

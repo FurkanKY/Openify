@@ -34,7 +34,7 @@ jobs:
         with:
           ref: ${{ env.TAG }}
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.99.1
       - uses: Swatinem/rust-cache@v2
 
       - uses: actions/setup-dotnet@v4

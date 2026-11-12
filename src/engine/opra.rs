@@ -825,7 +825,7 @@ this line is not json
         for p in &c.products {
             for q in &p.profiles {
                 n += 1;
-                if n % step != 0 {
+                if !n.is_multiple_of(step) {
                     continue;
                 }
                 let f = super::super::equalizer::fit(&q.bands);

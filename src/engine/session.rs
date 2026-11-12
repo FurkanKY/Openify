@@ -405,10 +405,10 @@ impl Engine {
     /// Giriş / Premium gerekiyor ve önbellekte kütüphane yok: arayüz boş
     /// bir "yükleniyor" yerine nedenini göstersin.
     fn library_unavailable(&self) {
-        if self.library.is_none() {
-            if let Some(error) = self.host.link.library_error() {
-                self.emit(Event::LibraryFailed(error.into()));
-            }
+        if self.library.is_none()
+            && let Some(error) = self.host.link.library_error()
+        {
+            self.emit(Event::LibraryFailed(error.into()));
         }
     }
 

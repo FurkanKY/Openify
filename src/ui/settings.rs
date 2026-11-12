@@ -1472,7 +1472,7 @@ impl Shell {
                 (AUTOMIX_KEY, t!(AutoMixName)),
             ],
             crossfade_choice(p),
-            |p, k| pick_crossfade(p, k),
+            pick_crossfade,
             window,
             cx,
         );

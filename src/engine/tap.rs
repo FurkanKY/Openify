@@ -357,7 +357,7 @@ mod tests {
         write_all(&mut sink, &vec![0.0; 4096 * 2]);
         pull(&mut src, 200);
         let q = ctl.queued_frames();
-        assert!(q <= 4096 && q >= 4096 - 200, "eski ses kuyrukta: {q}");
+        assert!((4096 - 200..=4096).contains(&q), "eski ses kuyrukta: {q}");
         assert_eq!(ctl.levels().last_entry().unwrap().1, [0.0; 3]);
     }
 

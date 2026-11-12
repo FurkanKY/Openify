@@ -1380,6 +1380,7 @@ fn eq_disabled_after_use_returns_to_exact_passthrough() {
 /// sapar.
 #[test]
 fn band_gain_at_center_within_0_2_db() {
+    #[allow(clippy::needless_range_loop)] // bant indeksi okunur kalsın
     for band in 0..BANDS {
         for g in [6.0f32, -6.0, 12.0, -12.0] {
             // Otomatik ön kazanç −g (g > 0): elle +g vererek 0 dB'e getir.
@@ -1661,11 +1662,11 @@ fn karaoke_drive(
             blk[f * 2] = l;
             blk[f * 2 + 1] = r;
         }
-        inp.extend(blk.chunks_exact(2).map(|c| (c[0], c[1])));
+        inp.extend(blk.as_chunks::<2>().0.iter().map(|c| (c[0], c[1])));
         if k.running() {
             k.process(&mut blk, BLOCK);
         }
-        out.extend(blk.chunks_exact(2).map(|c| (c[0], c[1])));
+        out.extend(blk.as_chunks::<2>().0.iter().map(|c| (c[0], c[1])));
     }
     (inp, out, k)
 }

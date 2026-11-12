@@ -102,7 +102,7 @@ pub fn parse(value: &Value) -> Vec<Friend> {
     };
     let mut friends: Vec<Friend> = list.iter().filter_map(parse_friend).collect();
     // Kararlı sıralama: aynı anlıklar yanıttaki sırada kalır.
-    friends.sort_by(|a, b| b.timestamp_ms.cmp(&a.timestamp_ms));
+    friends.sort_by_key(|f| std::cmp::Reverse(f.timestamp_ms));
     let mut seen = HashSet::new();
     friends.retain(|f| seen.insert(f.user_uri.clone()));
     friends.truncate(MAX_FRIENDS);

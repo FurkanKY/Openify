@@ -398,10 +398,10 @@ impl Shell {
                 self.sui.eq.catalog = Some(catalog);
                 self.sui.eq.load = Load::Idle;
                 self.sui.eq.refresh_hits();
-                if let Some(n) = self.sui.eq.test_pick.take() {
-                    if let Some(hit) = self.sui.eq.hits.get(n).copied() {
-                        self.eq_pick(hit, cx);
-                    }
+                if let Some(n) = self.sui.eq.test_pick.take()
+                    && let Some(hit) = self.sui.eq.hits.get(n).copied()
+                {
+                    self.eq_pick(hit, cx);
                 }
             }
             Msg::Failed(e) if e == epoch && self.sui.eq.catalog.is_none() => {

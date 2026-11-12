@@ -362,6 +362,7 @@ fn solve<const N: usize>(mut a: [[f64; N]; N], mut b: [f64; N]) -> Option<[f64; 
         b.swap(col, piv);
         for row in col + 1..N {
             let k = a[row][col] / a[col][col];
+            #[allow(clippy::needless_range_loop)] // matris indeksi okunur kalsın
             for c in col..N {
                 a[row][c] -= k * a[col][c];
             }

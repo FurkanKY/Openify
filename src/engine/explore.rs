@@ -20,8 +20,8 @@
 //!   - 2 sn'de en çok bir istek (benzer sanatçılar ve aramayla ortak kapı), 429'da
 //!     Retry-After kadar istek yok, yeniden deneme yok, üst üste iki 429'da
 //!     bu oturumda Spotify yolu kapalı (devre kesici).
-//! Hata ekranda söylenmez: bayat önbellek varsa o, yoksa sayfa boş / çevrimdışı
-//! durumunu gösterir.
+//!     Hata ekranda söylenmez: bayat önbellek varsa o, yoksa sayfa boş / çevrimdışı
+//!     durumunu gösterir.
 
 use std::{collections::HashSet, sync::Arc};
 

@@ -51,7 +51,7 @@ Requirements: Windows 10 or 11 (64-bit), a Spotify Premium account and a working
 
 ## Build from source
 
-You need Windows 10 or 11, [Rust](https://rustup.rs) (stable, 1.85 or newer), the MSVC build tools (Visual Studio Build Tools with the "Desktop development with C++" workload) and Git.
+You need Windows 10 or 11, [Rust](https://rustup.rs) (rustup installs the pinned version from `rust-toolchain.toml` on the first build), the MSVC build tools (Visual Studio Build Tools with the "Desktop development with C++" workload) and Git.
 
 ```powershell
 git clone https://github.com/FurkanKY/Openify.git

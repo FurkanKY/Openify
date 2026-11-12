@@ -732,7 +732,7 @@ pub fn resolve_rows(
             rows.push((ix as u32, uri.clone()));
         }
     }
-    rows.sort_by(|a, b| b.0.cmp(&a.0));
+    rows.sort_by_key(|r| std::cmp::Reverse(r.0));
     rows
 }
 

@@ -610,7 +610,7 @@ fn no_room_left_falls_back_to_the_gapless_append() {
     assert_eq!(x.ctl.transition(), None);
     assert_eq!(x.out[(eot as usize).saturating_sub(10)], A as f32);
     // Kuyruk kısmen boşaldıysa A hâlâ kendi sesinde; B tam sınırda ya da (xrun varsa) sonrasında.
-    assert!(x.out[eot as usize..].iter().any(|v| *v == B as f32));
+    assert!(x.out[eot as usize..].contains(&(B as f32)));
 }
 
 // ── Duraklat / sar / aygıt değişimi: bindirmenin ortasında ──────────────
@@ -800,7 +800,7 @@ fn seek_in_the_middle_of_the_overlap_discards_the_mix_and_starts_clean() {
         "eski karışımdan artık: {:?}",
         x.out.iter().find(|v| **v > 0.125)
     );
-    assert!(x.out.iter().any(|v| *v == 0.125));
+    assert!(x.out.contains(&0.125));
 }
 
 #[test]
@@ -1162,7 +1162,7 @@ fn ring_memory_cost_stays_within_the_budget() {
         "bellek: çalışırken 12 sn → +{:.3} MiB",
         grown as f64 / (1 << 20) as f64
     );
-    assert!(grown >= 8 << 20 && grown < (8 << 20) + 4096);
+    assert!((8 << 20..(8 << 20) + 4096).contains(&grown));
 }
 
 /// Ölçüm (çıta: EQ kapalı `fill` ≤ +%5): yuva seçimli `fill` ile öncesinin

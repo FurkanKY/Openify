@@ -306,7 +306,7 @@ pub struct OutputCtl {
     /// açılınca ikinci, daha büyük bir yuva (`big`) eklenebilir (bkz. `reserve`).
     ring: RingBuf,
     /// 2. yuva: motor iş parçacığında ayrılır (`reserve`), bir kez konur.
-    /// Ses iş parçacığı yalnız `get` çağırır (atomik okuma).
+    ///    Ses iş parçacığı yalnız `get` çağırır (atomik okuma).
     big: OnceLock<RingBuf>,
     /// `big`e geçişin ilk karesi (`u64::MAX`: geçilmedi). Bu kareden öncesi 1.
     /// yuvada, sonrası `big`de; yazar koyar (bkz. `Writer::grow`), ses iş
@@ -1145,7 +1145,7 @@ fn trace_loop(
                 row(&mut w, ctl.now_ns(), "tick", f64::NAN);
                 next_tick += TRACE_TICK;
                 ticks += 1;
-                if ticks % 10 == 0 {
+                if ticks.is_multiple_of(10) {
                     let _ = w.flush();
                 }
             }

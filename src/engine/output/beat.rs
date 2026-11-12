@@ -259,7 +259,7 @@ impl BeatTap {
         if !self.active {
             return;
         }
-        for fr in samples.chunks_exact(2) {
+        for fr in samples.as_chunks::<2>().0 {
             let (l, r) = (fr[0] as f32, fr[1] as f32);
             let m = 0.5 * (l + r);
             self.lp_low += A_LOW * (m - self.lp_low);

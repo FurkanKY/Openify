@@ -682,14 +682,11 @@ impl Shell {
         if item.disabled {
             return;
         }
-        match action {
-            // Son arama: yazıya dönüşür, sonuçlar gelir.
-            Action::Search(q) => {
-                self.palette.query = q;
-                self.on_query_changed(cx);
-                return;
-            }
-            _ => {}
+        // Son arama: yazıya dönüşür, sonuçlar gelir.
+        if let Action::Search(q) = action {
+            self.palette.query = q;
+            self.on_query_changed(cx);
+            return;
         }
         // Tehlikeli işlem ilk Enter'da çalışmaz: satır onay ister.
         if item.danger && self.palette.confirm != Some(index) {
@@ -733,11 +730,11 @@ impl Shell {
                 self.select_collection(id, cx);
             }
             Action::PlayTrack(uri) => {
-                if let Ok(uri) = librespot::core::SpotifyUri::from_uri(&uri) {
-                    if self.ready_to_play(cx) {
-                        self.state.notice = None;
-                        self.engine.send(Command::Load(uri));
-                    }
+                if let Ok(uri) = librespot::core::SpotifyUri::from_uri(&uri)
+                    && self.ready_to_play(cx)
+                {
+                    self.state.notice = None;
+                    self.engine.send(Command::Load(uri));
                 }
             }
             Action::Search(_) => {}

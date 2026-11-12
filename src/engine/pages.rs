@@ -17,8 +17,8 @@
 //!   - sanatçı: 6 saat taze, sonra "bayat" (yine anında gösterilir, arkadan tazelenir)
 //!   - albüm:   7 gün taze
 //!   - 60 günden eski sayfa hiç döndürülmez (ve `prune` siler)
-//! Bayat sayfa gösterilirken arka planda `load_*` çağrılır; içerik aynıysa
-//! `changed == false` döner ve arayüz yeniden çizmez (zıplama yok).
+//!     Bayat sayfa gösterilirken arka planda `load_*` çağrılır; içerik aynıysa
+//!     `changed == false` döner ve arayüz yeniden çizmez (zıplama yok).
 
 use std::{
     any::Any,
@@ -305,10 +305,10 @@ impl PageCache {
             })
         };
         // Bellek: çözümleme yok.
-        if let Some(e) = self.mem().get(key) {
-            if let Ok(page) = e.value.clone().downcast::<T>() {
-                return Ok(hit(e.fetched_ms, page));
-            }
+        if let Some(e) = self.mem().get(key)
+            && let Ok(page) = e.value.clone().downcast::<T>()
+        {
+            return Ok(hit(e.fetched_ms, page));
         }
         let row: Option<(i64, String)> = self
             .r()
@@ -338,14 +338,14 @@ impl PageCache {
         page: Arc<T>,
     ) {
         let mut mem = self.mem();
-        if mem.len() >= MEMORY_CAP && !mem.contains_key(key) {
-            if let Some(oldest) = mem
+        if mem.len() >= MEMORY_CAP
+            && !mem.contains_key(key)
+            && let Some(oldest) = mem
                 .iter()
                 .min_by_key(|(_, e)| e.fetched_ms)
                 .map(|(k, _)| k.clone())
-            {
-                mem.remove(&oldest);
-            }
+        {
+            mem.remove(&oldest);
         }
         mem.insert(
             key.to_string(),
@@ -576,14 +576,16 @@ enum ReleaseGroup {
 
 impl ArtistPlan {
     fn new(artist: &Artist, country: &str) -> Self {
-        let mut plan = Self::default();
-        plan.top_uris = artist
-            .top_tracks
-            .for_country(country)
-            .iter()
-            .take(TOP_TRACKS)
-            .filter_map(|u| u.to_uri().ok())
-            .collect();
+        let mut plan = Self {
+            top_uris: artist
+                .top_tracks
+                .for_country(country)
+                .iter()
+                .take(TOP_TRACKS)
+                .filter_map(|u| u.to_uri().ok())
+                .collect(),
+            ..Self::default()
+        };
         let collect = |it: &mut dyn Iterator<Item = &SpotifyUri>| -> Vec<String> {
             it.filter_map(|u| u.to_uri().ok()).collect()
         };
@@ -684,7 +686,7 @@ fn assemble_artist(
 
 /// En yeni yıl önde; aynı yılda sıra korunur (kararlı sıralama).
 fn sort_releases(list: &mut [AlbumCard]) {
-    list.sort_by(|a, b| b.year.cmp(&a.year));
+    list.sort_by_key(|a| std::cmp::Reverse(a.year));
 }
 
 pub(super) fn artist_portrait(artist: &Artist) -> String {

@@ -2338,7 +2338,7 @@ mod tests {
         assert_eq!(narrow.title_h, T_HEADLINE.line);
         assert_eq!(narrow.total, S7 + T_HEADLINE.line + S2 + T_BODY.line + S6);
         // Kapaksız başlık kapaklıdan (S5) daha aşağıdan başlar; iskelet de.
-        assert!(PLAIN_HEADER_TOP > S5);
+        const _: () = assert!(PLAIN_HEADER_TOP > S5);
     }
 
     /// Kapak karesi yok: bölüm başlığı satırı gerçek `section_title` kadar

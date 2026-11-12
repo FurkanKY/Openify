@@ -454,7 +454,7 @@ impl Eq {
         for &b in &idx[..na] {
             for v in self.z[b].iter_mut().flatten() {
                 let a = v.abs();
-                if !(a >= FLUSH_BELOW && a <= FLUSH_ABOVE) {
+                if !(FLUSH_BELOW..=FLUSH_ABOVE).contains(&a) {
                     *v = 0.0;
                 }
             }

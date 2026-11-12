@@ -354,10 +354,10 @@ fn writer(db: Arc<Db>, rx: Receiver<Msg>) {
         while let Ok(more) = rx.try_recv() {
             handle(more);
         }
-        if let Some(state) = state {
-            if let Err(e) = db.save_playback(&state, blob.as_deref()) {
-                log::warn!("Kaldığı yer kaydedilemedi: {e:#}");
-            }
+        if let Some(state) = state
+            && let Err(e) = db.save_playback(&state, blob.as_deref())
+        {
+            log::warn!("Kaldığı yer kaydedilemedi: {e:#}");
         }
         for ack in acks {
             let _ = ack.send(());

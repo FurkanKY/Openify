@@ -815,11 +815,10 @@ impl Shell {
         self.all.total = cards.len() + artists.len();
         let kind = self.all.kind;
         // İçine girilmiş klasör kütüphaneden kalktıysa (tazeleme) köke dön.
-        if let Some(folder) = &self.all.folder {
-            if !matches!(&self.library.library, Loadable::Loaded(l) if l.meta.folders.iter().any(|f| &f.key == folder))
-            {
-                self.all.folder = None;
-            }
+        if let Some(folder) = &self.all.folder
+            && !matches!(&self.library.library, Loadable::Loaded(l) if l.meta.folders.iter().any(|f| &f.key == folder))
+        {
+            self.all.folder = None;
         }
         // Klasörlü kütüphane, süzgeç ve yazı yokken ağaç olarak (klasörler iç içe).
         if self.tree_mode() {

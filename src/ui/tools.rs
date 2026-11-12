@@ -1611,6 +1611,6 @@ mod tests {
     #[test]
     fn bulk_thresholds_are_ordered() {
         assert_eq!(BULK_CONFIRM, 50);
-        assert!(MAX_SORT_MOVES > BULK_CONFIRM);
+        const _: () = assert!(MAX_SORT_MOVES > BULK_CONFIRM);
     }
 }

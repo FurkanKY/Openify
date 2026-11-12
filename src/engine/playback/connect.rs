@@ -28,6 +28,7 @@ use super::{
 use crate::engine::{ConnectDriver, ConnectPort, ConnectStatus, Event, QueueState, RemoteNow};
 
 /// Spotify Connect tarafının `Playback`teki durumu.
+#[derive(Default)]
 pub(in crate::engine) struct Link {
     /// Çalışan Spirc (yok: kapalı / henüz başlamadı / bitti).
     pub port: Option<Arc<dyn ConnectPort>>,
@@ -40,18 +41,6 @@ pub(in crate::engine) struct Link {
     /// Arayüze son bildirilen durum (aynısı yeniden gitmesin; başlangıç
     /// değeri varsayılan: Connect kapalıyken arayüze hiçbir şey gitmez).
     shown: ConnectStatus,
-}
-
-impl Default for Link {
-    fn default() -> Self {
-        Self {
-            port: None,
-            self_id: String::new(),
-            name: String::new(),
-            cluster: None,
-            shown: ConnectStatus::default(),
-        }
-    }
 }
 
 /// Kümede başka bir aygıt çalıyorsa (kimliği, adı).

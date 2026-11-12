@@ -66,10 +66,10 @@ fn spawn_writer(path: PathBuf, rows: Arc<Mutex<String>>) {
                     let rows = rows.lock().unwrap_or_else(|e| e.into_inner());
                     (rows.len() != written).then(|| (rows.len(), rows.clone()))
                 };
-                if let Some((len, text)) = snapshot {
-                    if std::fs::write(&path, text).is_ok() {
-                        written = len;
-                    }
+                if let Some((len, text)) = snapshot
+                    && std::fs::write(&path, text).is_ok()
+                {
+                    written = len;
                 }
             }
         });

@@ -198,10 +198,10 @@ fn best_below(
         } else {
             Some(keys[i].clone())
         };
-        if let Some(k) = k {
-            if best.as_ref().is_none_or(|b| k < *b) {
-                best = Some(k);
-            }
+        if let Some(k) = k
+            && best.as_ref().is_none_or(|b| k < *b)
+        {
+            best = Some(k);
         }
     }
     best

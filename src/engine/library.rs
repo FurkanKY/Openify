@@ -475,11 +475,9 @@ pub async fn refresh_library(
         meta.creators.insert(entry.uri.clone(), creator.to_string());
         let id = CollectionId::Playlist(entry.uri);
         let unchanged = db.revision(&id)?.as_deref() == Some(entry.revision.as_slice());
-        if unchanged {
-            if let Some(item) = previous_items.get(&id) {
-                slots.push(Some(item.clone()));
-                continue;
-            }
+        if unchanged && let Some(item) = previous_items.get(&id) {
+            slots.push(Some(item.clone()));
+            continue;
         }
         if entry.owner == "spotify" {
             spotify_owned.push((slots.len(), id, entry.revision, entry.image));
@@ -591,7 +589,7 @@ fn plan_followed(items: &[CollectionItem], known: &[LibraryItem]) -> (Vec<String
         .filter(|i| i.uri.starts_with("spotify:artist:") && !i.is_removed)
         .filter(|i| seen.insert(i.uri.as_str()))
         .collect();
-    sorted.sort_by(|a, b| b.added_at.cmp(&a.added_at));
+    sorted.sort_by_key(|i| std::cmp::Reverse(i.added_at));
     let order: Vec<String> = sorted.into_iter().map(|i| i.uri.clone()).collect();
     let have: std::collections::HashSet<&str> = known.iter().map(|k| k.id.key()).collect();
     let missing = order
@@ -649,7 +647,7 @@ fn liked_entries(items: Vec<CollectionItem>) -> Vec<Entry> {
         .into_iter()
         .filter(|i| i.uri.starts_with("spotify:track:"))
         .collect();
-    items.sort_by(|a, b| b.added_at.cmp(&a.added_at));
+    items.sort_by_key(|i| std::cmp::Reverse(i.added_at));
     items
         .into_iter()
         .map(|i| entry_at(i.uri, i64::from(i.added_at) * 1000))

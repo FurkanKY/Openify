@@ -1,5 +1,5 @@
-# Same toolchain as CI (.github/workflows/ci.yml): the latest stable Rust.
-# The crate uses edition 2024, so Rust 1.85 or newer is required.
+# Same toolchain as CI (.github/workflows/ci.yml and release.yml). Pinned so a new
+# stable release cannot add clippy lints that break CI; bump it on purpose.
 [toolchain]
-channel = "stable"
-components = ["clippy"]
+channel = "1.99.1"
+components = ["clippy", "rustfmt"]

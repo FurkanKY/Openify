@@ -5,7 +5,7 @@
 //! rengi seçilir. Sonuç iki renge çevrilir:
 //!   - `text`: koyu zeminde okunacak kadar açık vurgu (çalan şarkı, çubuk)
 //!   - `glow`: başlıktaki ışıma için koyu, doygun ton
-//! Kapak gri tonluysa (siyah-beyaz fotoğraf vb.) `None`: varsayılan vurgu kalır.
+//!     Kapak gri tonluysa (siyah-beyaz fotoğraf vb.) `None`: varsayılan vurgu kalır.
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Accent {

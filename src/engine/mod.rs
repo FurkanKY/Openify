@@ -1150,11 +1150,10 @@ impl Engine {
                 | Command::Play
                 | Command::Next
                 | Command::Previous
-        ) {
-            if let Some(block) = self.host.link.playback_block() {
-                self.emit(Event::PlaybackBlocked(block));
-                return;
-            }
+        ) && let Some(block) = self.host.link.playback_block()
+        {
+            self.emit(Event::PlaybackBlocked(block));
+            return;
         }
 
         // Geri kalanı çalarla ilgili: bağlanmadıysak sonraya bırak.

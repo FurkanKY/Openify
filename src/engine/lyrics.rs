@@ -488,10 +488,10 @@ pub fn parse_lrclib(raw: &str) -> Option<Lyrics> {
     }
     if let Some(synced) = rec.synced.as_deref().filter(|s| !s.trim().is_empty()) {
         let lines = parse_lrc(synced);
-        if let Some(l) = finish(Source::Lrclib, SyncKind::Line, None, Vec::new(), lines) {
-            if l.sync == SyncKind::Line {
-                return Some(l);
-            }
+        if let Some(l) = finish(Source::Lrclib, SyncKind::Line, None, Vec::new(), lines)
+            && l.sync == SyncKind::Line
+        {
+            return Some(l);
         }
     }
     let plain = rec.plain.as_deref().filter(|s| !s.trim().is_empty())?;

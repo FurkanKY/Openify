@@ -82,9 +82,8 @@ impl Playback {
             return;
         };
         self.restored = None;
-        if self.load_uri(&uri, 0, true) {
-            cx.queue_changed();
-        } else if !self.advance(cx, Advance::Next, true) {
+        // Yüklenemezse sıradakine geçilir; ikisi de değişen kuyruğu duyurur.
+        if self.load_uri(&uri, 0, true) || !self.advance(cx, Advance::Next, true) {
             cx.queue_changed();
         }
     }
@@ -120,9 +119,7 @@ impl Playback {
             self.restored = None;
             return;
         };
-        if self.load_uri(&uri, position_ms, true) {
-            self.restored = None;
-        } else if !self.advance(cx, Advance::Next, true) {
+        if self.load_uri(&uri, position_ms, true) || !self.advance(cx, Advance::Next, true) {
             self.restored = None;
         }
     }

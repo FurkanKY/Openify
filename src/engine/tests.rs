@@ -29,7 +29,7 @@ fn audio_settings_reach_the_player_config() {
 fn track_uri(i: usize) -> String {
     format!(
         "spotify:track:{}",
-        &["2WUy2Uywcj5cP0IXQagO3z", "4uLU6hMCjMI75M1A2tKUQC"][i % 2]
+        ["2WUy2Uywcj5cP0IXQagO3z", "4uLU6hMCjMI75M1A2tKUQC"][i % 2]
     )
 }
 
@@ -358,7 +358,7 @@ fn rule_row(i: usize) -> TrackRow {
     TrackRow {
         uri: rule_uri(i),
         name: format!("Şarkı {i}"),
-        artists: if i % 3 == 0 {
+        artists: if i.is_multiple_of(3) {
             "Engelli".into()
         } else {
             "Başka".into()

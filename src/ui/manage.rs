@@ -1184,7 +1184,7 @@ impl Shell {
         if rows.is_empty() {
             return;
         }
-        rows.sort_by(|a, b| b.0.cmp(&a.0));
+        rows.sort_by_key(|r| std::cmp::Reverse(r.0));
         let ops: Vec<Edit> = rows
             .iter()
             .map(|(ix, r)| {

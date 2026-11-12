@@ -477,39 +477,38 @@ impl Shell {
         // çalarken arayüzün çizim yükünü Spotify'a dokunmadan ölçmek için.
         // `OPENIFY_TEST_FAKE_ROW=n`: ilki yerine n. şarkı (farklı kapaklarla
         // hapın ışığını sınamak için).
-        if std::env::var_os("OPENIFY_TEST_FAKE_PLAY").is_some() {
-            if let Some(t) = shell
+        if std::env::var_os("OPENIFY_TEST_FAKE_PLAY").is_some()
+            && let Some(t) = shell
                 .library
                 .tracks(&CollectionId::Liked)
                 .and_then(|t| t.get(fake_row()))
                 .cloned()
-            {
-                let now = Instant::now();
-                shell.state.apply(
-                    engine::Event::TrackChanged(engine::TrackInfo {
-                        uri: t.uri.clone(),
-                        name: t.name.clone(),
-                        artists: t.artists.clone(),
-                        duration_ms: t.duration_ms,
-                        cover_url: None,
-                    }),
-                    now,
-                );
-                shell.state.apply(
-                    engine::Event::QueueChanged(engine::QueueState {
-                        context: Some(CollectionId::Liked),
-                        index: 0,
-                        has_next: true,
-                        has_previous: false,
-                    }),
-                    now,
-                );
-                shell
-                    .state
-                    .apply(engine::Event::Playing { position_ms: 0 }, now);
-                shell.update_ticker(cx);
-                shell.sync_system(true);
-            }
+        {
+            let now = Instant::now();
+            shell.state.apply(
+                engine::Event::TrackChanged(engine::TrackInfo {
+                    uri: t.uri.clone(),
+                    name: t.name.clone(),
+                    artists: t.artists.clone(),
+                    duration_ms: t.duration_ms,
+                    cover_url: None,
+                }),
+                now,
+            );
+            shell.state.apply(
+                engine::Event::QueueChanged(engine::QueueState {
+                    context: Some(CollectionId::Liked),
+                    index: 0,
+                    has_next: true,
+                    has_previous: false,
+                }),
+                now,
+            );
+            shell
+                .state
+                .apply(engine::Event::Playing { position_ms: 0 }, now);
+            shell.update_ticker(cx);
+            shell.sync_system(true);
         }
         // Sınama kancaları `OPENIFY_TEST_PRIVATE` / `OPENIFY_TEST_RADIO_JSON` (bkz. `listening`).
         shell.init_listening_fixtures();

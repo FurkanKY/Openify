@@ -707,10 +707,10 @@ impl Queue {
                 played[f] = true;
             }
             for h in &self.history {
-                if let Origin::Context(i) = h.origin {
-                    if i < n {
-                        played[i] = true;
-                    }
+                if let Origin::Context(i) = h.origin
+                    && i < n
+                {
+                    played[i] = true;
                 }
             }
             let rest: Vec<usize> = (0..n).filter(|i| !played[*i]).collect();
@@ -1142,10 +1142,10 @@ impl Queue {
 
     /// Şarkı kendiliğinden bitti: tekrar "tek"se aynı şarkı, değilse sıradaki.
     pub fn next_auto(&mut self) -> Option<String> {
-        if self.repeat == RepeatMode::One {
-            if let Some(cur) = &self.current {
-                return Some(cur.uri.clone());
-            }
+        if self.repeat == RepeatMode::One
+            && let Some(cur) = &self.current
+        {
+            return Some(cur.uri.clone());
         }
         self.next()
     }

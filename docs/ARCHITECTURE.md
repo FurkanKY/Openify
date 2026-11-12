@@ -671,7 +671,7 @@ re-apply the patches from the `OPENIFY:` markers and update the `OPENIFY.md`.
 
 ## 10. Build, run, test
 
-Requirements: Windows 10/11, Rust stable (edition 2024, 1.85 or newer), the
+Requirements: Windows 10/11, Rust (the version pinned in rust-toolchain.toml), the
 Windows SDK (for `rc.exe`, used by `build.rs` to embed the icon). No `.env` or
 secrets: the Spotify client id used for login is a public constant in
 `src/auth.rs`.

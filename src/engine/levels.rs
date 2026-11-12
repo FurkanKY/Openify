@@ -10,10 +10,11 @@
 //! # Bantlar
 //!
 //! 4. derece Butterworth (24 dB/oktav) süzgeçlerle üç bant, kesişimler
-//! 200 Hz ve 3 kHz:
+//!    200 Hz ve 3 kHz:
 //!   - bas   : alçak geçiren 200 Hz,
 //!   - orta  : yüksek geçiren 200 Hz + alçak geçiren 3 kHz,
 //!   - tiz   : yüksek geçiren 3 kHz.
+//!
 //! Dik eğim şart: 60 Hz'lik saf bir sinüs orta banda -42 dB sızar (taban
 //! çubuğun altında kalır); 2. derece süzgeç -21 dB sızıp orta çubuğu da
 //! kaldırırdı. İki kanal ayrı süzülür, güçleri ortalanır (karşı fazlı
@@ -478,7 +479,7 @@ impl Analyzer {
     fn run(&mut self, frames: &[f64]) {
         for (c, ch) in self.ch.iter_mut().enumerate() {
             let mut a = [0.0f64; BANDS];
-            for frame in frames.chunks_exact(2) {
+            for frame in frames.as_chunks::<2>().0 {
                 let x = frame[c] + ANTI_DENORMAL;
                 let b = step(&self.low_lp[0], &mut ch.bass[0], x);
                 let b = step(&self.low_lp[1], &mut ch.bass[1], b);
@@ -492,6 +493,7 @@ impl Analyzer {
                 a[1] += m * m;
                 a[2] += t * t;
             }
+            #[allow(clippy::needless_range_loop)] // bant indeksi okunur kalsın
             for k in 0..BANDS {
                 self.acc[k] += a[k];
             }
@@ -578,7 +580,7 @@ impl Publisher {
                 v[0], v[1], v[2]
             );
             self.trace_rows += 1;
-            if self.trace_rows % 64 == 0 {
+            if self.trace_rows.is_multiple_of(64) {
                 let _ = w.flush();
             }
         }
@@ -926,9 +928,10 @@ mod tests {
         let levels = AudioLevels::new();
         let mut p = publisher(&levels);
         let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let seen = Arc::new(std::sync::atomic::AtomicU64::new(0));
         let readers: Vec<_> = (0..3)
             .map(|_| {
-                let (l, stop) = (levels.clone(), stop.clone());
+                let (l, stop, seen) = (levels.clone(), stop.clone(), seen.clone());
                 std::thread::spawn(move || {
                     let mut reads = 0u64;
                     while !stop.load(Ordering::Relaxed) {
@@ -941,14 +944,22 @@ mod tests {
                             );
                         }
                         reads += 1;
+                        seen.fetch_add(1, Ordering::Relaxed);
                     }
                     reads
                 })
             })
             .collect();
-        for i in 0..200_000i64 {
+        // Yazar, okuyucular gerçekten koşana dek sürer (yüklü makinede
+        // iş parçacıkları geç başlayabilir); üst sınır 10 sn.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        let mut i = 0i64;
+        while i < 200_000
+            || (seen.load(Ordering::Relaxed) < 10_000 && std::time::Instant::now() < deadline)
+        {
             let v = (i % 256) as f32 / 255.0;
-            p.push(i * 600_000, [v, v, v], 0);
+            p.push((i % 200_000) * 600_000, [v, v, v], 0);
+            i += 1;
         }
         stop.store(true, Ordering::Relaxed);
         let total: u64 = readers.into_iter().map(|r| r.join().unwrap()).sum();

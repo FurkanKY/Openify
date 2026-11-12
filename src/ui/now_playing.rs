@@ -431,17 +431,17 @@ impl Shell {
             } => {
                 self.compute_backdrop(track_uri.clone(), bytes.clone(), cx);
             }
-            engine::Event::Lyrics { uri, lyrics } => {
-                if self.state.track.as_ref().is_some_and(|t| &t.uri == uri) {
-                    self.now.lyrics = match lyrics {
-                        Some(l) => LyricsStatus::Ready(l.clone()),
-                        None => LyricsStatus::Missing,
-                    };
-                    self.now.lyrics_uri = Some(uri.clone());
-                    self.now.side_scroll.reset();
-                    self.now.full_scroll.reset();
-                    self.maybe_prefetch_next();
-                }
+            engine::Event::Lyrics { uri, lyrics }
+                if self.state.track.as_ref().is_some_and(|t| &t.uri == uri) =>
+            {
+                self.now.lyrics = match lyrics {
+                    Some(l) => LyricsStatus::Ready(l.clone()),
+                    None => LyricsStatus::Missing,
+                };
+                self.now.lyrics_uri = Some(uri.clone());
+                self.now.side_scroll.reset();
+                self.now.full_scroll.reset();
+                self.maybe_prefetch_next();
             }
             _ => {}
         }

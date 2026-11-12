@@ -160,7 +160,7 @@ static ROLLED_BACK: Mutex<Option<String>> = Mutex::new(None);
 /// 1. açılışı sağlık kaydına yazar (bkz. `health`);
 /// 2. indirilmiş bir güncelleme varsa uygular ve yeniden açar (süreç çıkar);
 /// 3. sürüm art arda sağlıklı olamadıysa en son sağlıklı sürüme döner.
-/// Kurulu değilse hemen döner, hiçbir dosyaya dokunmaz.
+///    Kurulu değilse hemen döner, hiçbir dosyaya dokunmaz.
 pub fn startup() {
     let Ok(manager) = UpdateManager::new(HttpSource::new(""), None, None) else {
         return;
@@ -198,15 +198,15 @@ fn register_start(current: &str) -> health::Action {
     };
     let before = health::load_from(&path);
     let (after, action) = health::on_start(&before, current);
-    if after != before {
-        if let Err(e) = health::save_to(&path, &after) {
-            log::warn!("güncelleme: sağlık kaydı yazılamadı: {e}");
-        }
+    if after != before
+        && let Err(e) = health::save_to(&path, &after)
+    {
+        log::warn!("güncelleme: sağlık kaydı yazılamadı: {e}");
     }
-    if let Some(bad) = after.blocked.as_deref().filter(|b| is_newer(b, current)) {
-        if let Ok(mut r) = ROLLED_BACK.lock() {
-            *r = Some(bad.to_string());
-        }
+    if let Some(bad) = after.blocked.as_deref().filter(|b| is_newer(b, current))
+        && let Ok(mut r) = ROLLED_BACK.lock()
+    {
+        *r = Some(bad.to_string());
     }
     action
 }
@@ -233,10 +233,10 @@ fn update_state(change: impl FnOnce(&health::State, &str) -> health::State) {
     };
     let before = health::load_from(&path);
     let after = change(&before, current);
-    if after != before {
-        if let Err(e) = health::save_to(&path, &after) {
-            log::warn!("güncelleme: sağlık kaydı yazılamadı: {e}");
-        }
+    if after != before
+        && let Err(e) = health::save_to(&path, &after)
+    {
+        log::warn!("güncelleme: sağlık kaydı yazılamadı: {e}");
     }
 }
 
@@ -296,12 +296,11 @@ fn rollback(manager: &UpdateManager, to: Option<String>, bad: String) {
     ROLLING_BACK.store(true, Ordering::SeqCst);
     if let (Some(good), Some(root), Some(dir)) =
         (to.as_deref(), install_root(), health::backup_dir())
+        && let Some(backup) = health::find_package(&dir, good)
     {
-        if let Some(backup) = health::find_package(&dir, good) {
-            match health::stage_backup(&backup, &root.join("packages")) {
-                Ok(file) => apply_rollback(manager, &file, good, &bad),
-                Err(e) => log::warn!("güncelleme: yedek hazırlanamadı: {e}"),
-            }
+        match health::stage_backup(&backup, &root.join("packages")) {
+            Ok(file) => apply_rollback(manager, &file, good, &bad),
+            Err(e) => log::warn!("güncelleme: yedek hazırlanamadı: {e}"),
         }
     }
     // Buraya gelindiyse yerel yoldan uygulanamadı (yedek yok / uygulama hata verdi).
@@ -429,10 +428,10 @@ pub fn status() -> Status {
         return Status::NotInstalled;
     }
     let status = STATUS.lock().map(|s| s.clone()).unwrap_or(Status::Waiting);
-    if matches!(status, Status::Waiting | Status::UpToDate) {
-        if let Some(bad) = ROLLED_BACK.lock().ok().and_then(|r| r.clone()) {
-            return Status::RolledBack(bad);
-        }
+    if matches!(status, Status::Waiting | Status::UpToDate)
+        && let Some(bad) = ROLLED_BACK.lock().ok().and_then(|r| r.clone())
+    {
+        return Status::RolledBack(bad);
     }
     status
 }

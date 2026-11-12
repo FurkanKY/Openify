@@ -850,7 +850,7 @@ fn fetch_hires(source: &str, fake: bool) -> Option<Arc<RenderImage>> {
         return None;
     }
     let mut pixels = image::load_from_memory(&bytes).ok()?.into_rgba8();
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         pixel.swap(0, 2);
     }
     Some(Arc::new(RenderImage::new(vec![image::Frame::new(pixels)])))

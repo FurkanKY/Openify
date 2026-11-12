@@ -363,7 +363,7 @@ impl Karaoke {
         // Denormal ve patlama kesme.
         for v in c.states() {
             let abs = v.abs();
-            if !(abs >= FLUSH_BELOW && abs <= FLUSH_ABOVE) {
+            if !(FLUSH_BELOW..=FLUSH_ABOVE).contains(&abs) {
                 *v = 0.0;
             }
         }

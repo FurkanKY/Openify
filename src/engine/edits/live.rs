@@ -267,7 +267,7 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
     assert_eq!(copies(&st.uris), 2);
     println!("    kopya eklendi: [{}]", short(&st.uris, &names));
     post_playlist_changes(s, &pl, |st| {
-        Some(changes_remove(&st.revision, &[x.clone()]))
+        Some(changes_remove(&st.revision, std::slice::from_ref(&x)))
     })
     .await
     .expect("anahtarla çıkarma isteği");

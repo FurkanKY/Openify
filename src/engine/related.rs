@@ -14,7 +14,7 @@
 //!   - bu yolda en çok 2 sn'de bir istek (`pathfinder::Gate`, aramayla ortak);
 //!     429'da Retry-After kadar hiç istek yok, yeniden deneme yok; üst üste
 //!     iki 429 → bu oturumda Spotify yolu kapalı (devre kesici).
-//! Hata ekranda söylenmez: bayat önbellek varsa o, yoksa bölüm yok.
+//!     Hata ekranda söylenmez: bayat önbellek varsa o, yoksa bölüm yok.
 //!
 //! Yedek: Spotify yolu ölüyse (devre açık, sorgu artık yok ya da 403) Deezer'ın
 //! herkese açık API'si: sanatçının popüler şarkısının ISRC'si (TRACK_V4) →
