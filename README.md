@@ -4,6 +4,8 @@ A fast, quiet, native Spotify client for Windows. It plays music through your ow
 
 ![Library](docs/screenshots/library.png)
 
+![Openify in use: command palette, an album, playback](docs/screenshots/demo.gif)
+
 > **Status:** early (0.1). Friend activity and artist following are **experimental**: they have had only limited testing against a live account and may break. [Download the installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) or [build it from source](#build-from-source).
 
 ## What it is
@@ -32,8 +34,10 @@ The screenshots show Spotify's own public playlists and albums with a sample pro
 | A Spotify playlist with the floating player | Full-screen lyrics with translation |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Library tools](docs/screenshots/tools.png) |
 | Equalizer and headphone profile | Duplicate finder in the library tools |
-| ![Album](docs/screenshots/album.png) | |
-| An album page | |
+| ![Album](docs/screenshots/album.png) | ![Command palette](docs/screenshots/palette.png) |
+| An album page | Command palette (Ctrl+K) |
+| ![Now playing](docs/screenshots/now-playing.png) | |
+| Now playing panel | |
 
 ## Install
 

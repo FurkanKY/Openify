@@ -406,10 +406,15 @@ impl Shell {
                 let _ = this.update(cx, |shell, cx| {
                     shell.palette.seq += 1;
                     shell.palette.spotify = Spotify::Loading;
-                    shell.engine.send(Command::Search {
-                        seq: shell.palette.seq,
-                        query,
-                    });
+                    // Ekran sınaması (`OPENIFY_TEST_SEARCH_JSON`): kayıtlı yanıt, Spotify'a gitmeden.
+                    if let Some(saved) = crate::engine::test_palette_search_results() {
+                        shell.on_search_results(shell.palette.seq, Ok(Arc::new(saved)));
+                    } else {
+                        shell.engine.send(Command::Search {
+                            seq: shell.palette.seq,
+                            query,
+                        });
+                    }
                     cx.notify();
                 });
             }));

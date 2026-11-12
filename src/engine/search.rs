@@ -111,6 +111,17 @@ pub fn test_results() -> Option<SearchResults> {
     Some(results)
 }
 
+/// Geliştirme kancası: palet aramasının Spotify sonuçları da aynı kayıtlı
+/// yanıttan gelir (`OPENIFY_TEST_SEARCH_JSON`); resim adresleri olduğu gibi
+/// kalır (önbellekteki kapaklar çıksın). Yalnız sınama koşusunda.
+pub fn test_palette_results() -> Option<SearchResults> {
+    if !crate::crash::is_test_run() {
+        return None;
+    }
+    let path = std::env::var_os("OPENIFY_TEST_SEARCH_JSON")?;
+    from_json(&std::fs::read_to_string(path).ok()?)
+}
+
 /// Kayıtlı bir `searchDesktop` yanıtını çözer (testler ve geliştirme kancası).
 pub fn from_json(text: &str) -> Option<SearchResults> {
     Some(parse_results(&serde_json::from_str(text).ok()?))
