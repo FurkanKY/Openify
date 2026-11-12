@@ -24,16 +24,16 @@ Openify is a desktop player written in Rust. The interface is drawn with [gpui](
 
 ## Screenshots
 
-All screenshots use a demo library with made-up artists, albums and friends.
+The screenshots show Spotify's own public playlists and albums with a sample profile.
 
 | | |
 |---|---|
 | ![Playlist](docs/screenshots/playlist.png) | ![Lyrics](docs/screenshots/lyrics.png) |
-| A playlist with the floating player | Full-screen lyrics with translation |
+| A Spotify playlist with the floating player | Full-screen lyrics with translation |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Library tools](docs/screenshots/tools.png) |
 | Equalizer and headphone profile | Duplicate finder in the library tools |
-| ![Friend activity](docs/screenshots/friends.png) | |
-| Friend activity panel | |
+| ![Album](docs/screenshots/album.png) | |
+| An album page | |
 
 ## Install
 

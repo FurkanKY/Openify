@@ -1,0 +1,127 @@
+{
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      {
+        "startTimeMs": "4000",
+        "endTimeMs": "8500",
+        "words": "Amazing grace, how sweet the sound",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "8500",
+        "endTimeMs": "13000",
+        "words": "That saved a wretch like me",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "13000",
+        "endTimeMs": "17500",
+        "words": "I once was lost, but now am found",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "17500",
+        "endTimeMs": "21500",
+        "words": "Was blind, but now I see",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "21500",
+        "endTimeMs": "24000",
+        "words": "",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "24000",
+        "endTimeMs": "28500",
+        "words": "'Twas grace that taught my heart to fear",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "28500",
+        "endTimeMs": "33000",
+        "words": "And grace my fears relieved",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "33000",
+        "endTimeMs": "37500",
+        "words": "How precious did that grace appear",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "37500",
+        "endTimeMs": "41500",
+        "words": "The hour I first believed",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "41500",
+        "endTimeMs": "44000",
+        "words": "",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "44000",
+        "endTimeMs": "48500",
+        "words": "Through many dangers, toils and snares",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "48500",
+        "endTimeMs": "53000",
+        "words": "I have already come",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "53000",
+        "endTimeMs": "57500",
+        "words": "'Tis grace hath brought me safe thus far",
+        "syllables": []
+      },
+      {
+        "startTimeMs": "57500",
+        "endTimeMs": "62000",
+        "words": "And grace will lead me home",
+        "syllables": []
+      }
+    ],
+    "provider": "public-domain",
+    "providerLyricsId": "readme-amazing-grace",
+    "providerDisplayName": "Public domain",
+    "syncLyricsUri": "",
+    "isDenseTypeface": false,
+    "alternatives": [
+      {
+        "language": "tr",
+        "lines": [
+          "Ne harika lütuf, ne tatlı bir ses",
+          "Benim gibi bir zavallıyı kurtaran",
+          "Bir zamanlar kayıptım, şimdi bulundum",
+          "Kördüm, şimdi görüyorum",
+          "",
+          "Yüreğime korkuyu öğreten de lütuftu",
+          "Korkularımı dindiren de lütuf",
+          "O lütuf ne kadar değerli göründü",
+          "İlk inandığım o saatte",
+          "",
+          "Nice tehlikeden, zahmetten ve tuzaktan",
+          "Geçip geldim şimdiye dek",
+          "Beni buraya kadar sağ getiren lütuf",
+          "Beni eve götürecek olan da lütuf"
+        ]
+      }
+    ],
+    "language": "en",
+    "isRtlLanguage": false,
+    "fullscreenAction": "FULLSCREEN_LYRICS",
+    "showUpsell": false
+  },
+  "colors": {
+    "background": -12427381,
+    "text": -16777216,
+    "highlightText": -1
+  },
+  "hasVocalRemoval": false
+}
