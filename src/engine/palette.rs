@@ -66,7 +66,11 @@ fn rgb_to_hsl(r: u8, g: u8, b: u8) -> (f32, f32, f32) {
         return (0.0, 0.0, l);
     }
     let d = max - min;
-    let s = if l > 0.5 { d / (2.0 - max - min) } else { d / (max + min) };
+    let s = if l > 0.5 {
+        d / (2.0 - max - min)
+    } else {
+        d / (max + min)
+    };
     let h = if max == r {
         (g - b) / d + if g < b { 6.0 } else { 0.0 }
     } else if max == g {
@@ -111,7 +115,11 @@ mod tests {
         let h = hue_of(accent.text);
         assert!((250.0..300.0).contains(&h), "mor bekleniyordu, ton {h}");
         // Metin vurgusu koyu zeminde okunacak kadar açık.
-        let (_, _, l) = rgb_to_hsl((accent.text >> 16) as u8, (accent.text >> 8) as u8, accent.text as u8);
+        let (_, _, l) = rgb_to_hsl(
+            (accent.text >> 16) as u8,
+            (accent.text >> 8) as u8,
+            accent.text as u8,
+        );
         assert!(l > 0.6);
     }
 

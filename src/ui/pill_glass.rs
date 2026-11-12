@@ -84,11 +84,16 @@ impl Shell {
         }
         lights.seq += 1;
         let seq = lights.seq;
-        lights.previous = lights.current.replace(Light { image, at: Instant::now() });
+        lights.previous = lights.current.replace(Light {
+            image,
+            at: Instant::now(),
+        });
         // Geçiş bitince eskisi bellekten (doku atlasından) atılır.
         if lights.previous.is_some() {
             cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(accent_fade() + Duration::from_millis(100)).await;
+                cx.background_executor()
+                    .timer(accent_fade() + Duration::from_millis(100))
+                    .await;
                 let _ = this.update(cx, |shell, cx| {
                     let lights = &mut shell.now.full.pill_light;
                     if lights.seq == seq
@@ -134,8 +139,18 @@ impl Shell {
         }
         // İç halka her yanda, ışık çizgisi yalnız üstte (yuvarlak uçlarda
         // incelerek söner: gpui kenarı köşede kalınlıklar arasında geçirir).
-        layers.push(layer().border_1().border_color(veil(PILL_RING)).into_any_element());
-        layers.push(layer().border_t_1().border_color(veil(PILL_HIGHLIGHT)).into_any_element());
+        layers.push(
+            layer()
+                .border_1()
+                .border_color(veil(PILL_RING))
+                .into_any_element(),
+        );
+        layers.push(
+            layer()
+                .border_t_1()
+                .border_color(veil(PILL_HIGHLIGHT))
+                .into_any_element(),
+        );
         layers
     }
 }
@@ -191,7 +206,10 @@ fn light_pixels(bytes: &[u8]) -> Option<Vec<[u8; 3]>> {
 fn light_grid(bytes: &[u8]) -> Option<Vec<([f32; 3], f32)>> {
     let source = image::load_from_memory(bytes).ok()?.to_rgb8();
     let small = image::imageops::resize(&source, GRID as u32, GRID as u32, FilterType::Triangle);
-    let mut buf: Vec<[f32; 3]> = small.pixels().map(|p| [p[0] as f32, p[1] as f32, p[2] as f32]).collect();
+    let mut buf: Vec<[f32; 3]> = small
+        .pixels()
+        .map(|p| [p[0] as f32, p[1] as f32, p[2] as f32])
+        .collect();
     // Güçlü bulanıklık: kapak hapta yatayda ~15 kat, dikeyde ~2 kat
     // gerilir; ince ayrıntı (ör. ortadaki kırmızı bir tekne) yatay bir
     // şerit olarak görünüyordu. Geriye kapağın birkaç geniş renk lekesi kalır.
@@ -221,7 +239,9 @@ fn light_grid(bytes: &[u8]) -> Option<Vec<([f32; 3], f32)>> {
                     return (color, 0.);
                 }
                 let mut amount = LIGHT_MAX_MIX;
-                while amount > 0. && lum([0, 1, 2].map(|k| glass[k] + (color[k] - glass[k]) * amount)) > CAP {
+                while amount > 0.
+                    && lum([0, 1, 2].map(|k| glass[k] + (color[k] - glass[k]) * amount)) > CAP
+                {
                     amount -= 0.01;
                 }
                 (color, amount.max(0.))
@@ -237,20 +257,35 @@ fn sample(grid: &[([f32; 3], f32)], u: f32, v: f32) -> ([f32; 3], f32) {
     let (tx, ty) = (u.fract(), v.fract());
     let at = |x: usize, y: usize| grid[y * GRID + x];
     let lerp = |a: ([f32; 3], f32), b: ([f32; 3], f32), t: f32| {
-        ([0, 1, 2].map(|k| a.0[k] + (b.0[k] - a.0[k]) * t), a.1 + (b.1 - a.1) * t)
+        (
+            [0, 1, 2].map(|k| a.0[k] + (b.0[k] - a.0[k]) * t),
+            a.1 + (b.1 - a.1) * t,
+        )
     };
-    lerp(lerp(at(x0, y0), at(x1, y0), tx), lerp(at(x0, y1), at(x1, y1), tx), ty)
+    lerp(
+        lerp(at(x0, y0), at(x1, y0), tx),
+        lerp(at(x0, y1), at(x1, y1), tx),
+        ty,
+    )
 }
 
 fn unpack(c: u32) -> [f32; 3] {
-    [((c >> 16) & 0xFF) as f32, ((c >> 8) & 0xFF) as f32, (c & 0xFF) as f32]
+    [
+        ((c >> 16) & 0xFF) as f32,
+        ((c >> 8) & 0xFF) as f32,
+        (c & 0xFF) as f32,
+    ]
 }
 
 /// Kesirli kanallarla (0–255) WCAG göreli parlaklık.
 fn lum(c: [f32; 3]) -> f32 {
     let lin = |v: f32| {
         let v = (v / 255.).clamp(0., 1.);
-        if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
     };
     0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2])
 }
@@ -264,7 +299,11 @@ fn rgb_to_hsl(c: [f32; 3]) -> (f32, f32, f32) {
     if d < 1e-6 {
         return (0., 0., l);
     }
-    let s = if l > 0.5 { d / (2. - max - min) } else { d / (max + min) };
+    let s = if l > 0.5 {
+        d / (2. - max - min)
+    } else {
+        d / (max + min)
+    };
     let h = if max == r {
         (g - b) / d + if g < b { 6. } else { 0. }
     } else if max == g {
@@ -354,7 +393,11 @@ mod tests {
             let (mut secondary, mut labels) = (f32::MAX, f32::MAX);
             for (i, p) in pixels.iter().enumerate() {
                 let c = pack(*p);
-                assert!(luminance(c) <= PILL_LIGHT_MAX_LUMINANCE, "{name}: {c:06X} {:.4}", luminance(c));
+                assert!(
+                    luminance(c) <= PILL_LIGHT_MAX_LUMINANCE,
+                    "{name}: {c:06X} {:.4}",
+                    luminance(c)
+                );
                 secondary = secondary.min(contrast(mix(c, TEXT, 0.64), c));
                 if i % W >= TIMES_FROM {
                     labels = labels.min(contrast(mix(c, TEXT, LABEL_ALPHA), c));
@@ -372,18 +415,30 @@ mod tests {
         let at = |pixels: &[[u8; 3]], x: usize, y: usize| pixels[y * W + x];
         let blue = light_pixels(&jpeg(64, 64, |_, _| [30, 60, 255])).unwrap();
         let near = at(&blue, LIGHT_X as usize + 40, H / 2);
-        assert!(near[2] as i32 - near[0] as i32 >= 40, "mavi ışık yok: {near:?}");
+        assert!(
+            near[2] as i32 - near[0] as i32 >= 40,
+            "mavi ışık yok: {near:?}"
+        );
         let glass = unpack(mix(PILL_GLASS_TOP, PILL_GLASS_BOTTOM, 0.5 + 0.5 / H as f32));
-        for pixels in [&blue, &light_pixels(&jpeg(64, 64, |_, _| [6, 6, 8])).unwrap()] {
+        for pixels in [
+            &blue,
+            &light_pixels(&jpeg(64, 64, |_, _| [6, 6, 8])).unwrap(),
+        ] {
             let far = at(pixels, W - 40, H / 2);
             for k in 0..3 {
-                assert!((far[k] as f32 - glass[k]).abs() <= 1.5, "sağ uç camda değil: {far:?}");
+                assert!(
+                    (far[k] as f32 - glass[k]).abs() <= 1.5,
+                    "sağ uç camda değil: {far:?}"
+                );
             }
         }
         let black = light_pixels(&jpeg(64, 64, |_, _| [6, 6, 8])).unwrap();
         let center = at(&black, LIGHT_X as usize + 40, H / 2);
         for k in 0..3 {
-            assert!((center[k] as f32 - glass[k]).abs() <= 1.5, "siyah kapak ışık verdi: {center:?}");
+            assert!(
+                (center[k] as f32 - glass[k]).abs() <= 1.5,
+                "siyah kapak ışık verdi: {center:?}"
+            );
         }
     }
 
@@ -397,7 +452,10 @@ mod tests {
                 let h = hue as f32 * 10.;
                 let c = hsl_to_rgb(h, 0.8, 0.05 + light as f32 * 0.09).map(|v| v.round() as u8);
                 let fixed = pill_accent(pack(c));
-                assert!(contrast(fixed, PILL_LIGHT_REF) >= 4.5, "{c:?} → {fixed:06X}");
+                assert!(
+                    contrast(fixed, PILL_LIGHT_REF) >= 4.5,
+                    "{c:?} → {fixed:06X}"
+                );
             }
         }
     }

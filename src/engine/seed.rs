@@ -23,7 +23,12 @@ mod demo {
     };
 
     fn item(id: CollectionId, name: &str, subtitle: &str) -> LibraryItem {
-        LibraryItem { id, name: name.into(), subtitle: subtitle.into(), image: String::new() }
+        LibraryItem {
+            id,
+            name: name.into(),
+            subtitle: subtitle.into(),
+            image: String::new(),
+        }
     }
 
     fn track(n: u32, name: &str, artists: &str, album: &str, minutes: u32) -> TrackRow {
@@ -40,12 +45,24 @@ mod demo {
     #[test]
     #[ignore = "ekran sınaması için elle çalıştırılır (OPENIFY_SEED_DIR)"]
     fn seed_demo_library() {
-        let dir = std::path::PathBuf::from(std::env::var_os("OPENIFY_SEED_DIR").expect("OPENIFY_SEED_DIR verilmedi"));
+        let dir = std::path::PathBuf::from(
+            std::env::var_os("OPENIFY_SEED_DIR").expect("OPENIFY_SEED_DIR verilmedi"),
+        );
         std::fs::create_dir_all(&dir).unwrap();
         let playlist_key = |n: u32| format!("spotify:playlist:{n:022}");
-        let playlist = |n: u32, name: &str, subtitle: &str| item(CollectionId::Playlist(playlist_key(n)), name, subtitle);
-        let album = |n: u32, name: &str, subtitle: &str| item(CollectionId::Album(format!("spotify:album:{n:022}")), name, subtitle);
-        let artist = |n: u32, name: &str| crate::engine::library::artist_item(&format!("spotify:artist:{n:022}"), name, "");
+        let playlist = |n: u32, name: &str, subtitle: &str| {
+            item(CollectionId::Playlist(playlist_key(n)), name, subtitle)
+        };
+        let album = |n: u32, name: &str, subtitle: &str| {
+            item(
+                CollectionId::Album(format!("spotify:album:{n:022}")),
+                name,
+                subtitle,
+            )
+        };
+        let artist = |n: u32, name: &str| {
+            crate::engine::library::artist_item(&format!("spotify:artist:{n:022}"), name, "")
+        };
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_millis() as i64);
@@ -72,9 +89,24 @@ mod demo {
         let calisma = "spotify:start-group:2c3d4e5f6a7b8c9d:Çalışma".to_string();
         let meta = LibraryMeta {
             folders: vec![
-                Folder { key: yol.clone(), name: "Yol".into(), parent: None, at: 1 },
-                Folder { key: spor.clone(), name: "Spor".into(), parent: Some(yol.clone()), at: 3 },
-                Folder { key: calisma.clone(), name: "Çalışma".into(), parent: None, at: 4 },
+                Folder {
+                    key: yol.clone(),
+                    name: "Yol".into(),
+                    parent: None,
+                    at: 1,
+                },
+                Folder {
+                    key: spor.clone(),
+                    name: "Spor".into(),
+                    parent: Some(yol.clone()),
+                    at: 3,
+                },
+                Folder {
+                    key: calisma.clone(),
+                    name: "Çalışma".into(),
+                    parent: None,
+                    at: 4,
+                },
             ],
             parents: [
                 (playlist_key(2), yol.clone()),
@@ -93,10 +125,19 @@ mod demo {
                 (playlist_key(7), ago(120 * DAY)),
                 (playlist_key(8), ago(500 * DAY)),
                 (playlist_key(9), ago(30 * DAY)),
-                ("spotify:album:0000000000000000000001".to_string(), ago(20 * DAY)),
+                (
+                    "spotify:album:0000000000000000000001".to_string(),
+                    ago(20 * DAY),
+                ),
                 ("spotify:album:0000000000000000000002".to_string(), ago(2)),
-                ("spotify:album:0000000000000000000003".to_string(), ago(300 * DAY)),
-                ("spotify:album:0000000000000000000004".to_string(), ago(60 * DAY)),
+                (
+                    "spotify:album:0000000000000000000003".to_string(),
+                    ago(300 * DAY),
+                ),
+                (
+                    "spotify:album:0000000000000000000004".to_string(),
+                    ago(60 * DAY),
+                ),
             ]
             .into(),
             creators: [
@@ -122,14 +163,19 @@ mod demo {
                 album(4, "Sessiz Ev", "Deniz Aydın"),
             ],
             playlists,
-            artists: vec![artist(1, "Mavi Orman"), artist(2, "Deniz Aydın"), artist(3, "Kuzey")],
+            artists: vec![
+                artist(1, "Mavi Orman"),
+                artist(2, "Deniz Aydın"),
+                artist(3, "Kuzey"),
+            ],
             meta,
         };
         let db = Db::open(&dir.join("library.db")).unwrap();
         db.save_library(&library).unwrap();
         // Sabitlenenler: Odaklanma (klasördeki liste) ve bir albüm.
         db.set_pinned(&playlist_key(5), true, 1).unwrap();
-        db.set_pinned("spotify:album:0000000000000000000002", true, 2).unwrap();
+        db.set_pinned("spotify:album:0000000000000000000002", true, 2)
+            .unwrap();
 
         // Şarkılar ve eklenme anları: Beğenilenler ile "Gece sürüşü".
         let rows = [
@@ -146,21 +192,48 @@ mod demo {
         ];
         // Aynı şarkıların sürümleri (yinelenen bulucu): Remaster, Live, Radio Edit.
         let versions = [
-            track(11, "Sessiz Gece - 2011 Remaster", "Mavi Orman", "Uzun Yol (Deluxe)", 12),
-            track(12, "Bring Me to Life (Live)", "Evanescence", "Anywhere but Home", 40),
+            track(
+                11,
+                "Sessiz Gece - 2011 Remaster",
+                "Mavi Orman",
+                "Uzun Yol (Deluxe)",
+                12,
+            ),
+            track(
+                12,
+                "Bring Me to Life (Live)",
+                "Evanescence",
+                "Anywhere but Home",
+                40,
+            ),
             track(13, "Ayna - Radio Edit", "Deniz Aydın", "Sessiz Ev", 55),
             track(14, "Aurora", "Kuzey", "Kuzey Işıkları (Yeniden)", 18),
         ];
         let mut saved = rows.to_vec();
         saved.extend(versions.iter().cloned());
         db.save_tracks(&saved).unwrap();
-        let ages = [2, 5 * HOUR, DAY, 3 * DAY, 9 * DAY, 20 * DAY, 45 * DAY, 200 * DAY, 400 * DAY, 800 * DAY];
+        let ages = [
+            2,
+            5 * HOUR,
+            DAY,
+            3 * DAY,
+            9 * DAY,
+            20 * DAY,
+            45 * DAY,
+            200 * DAY,
+            400 * DAY,
+            800 * DAY,
+        ];
         let entries: Vec<Entry> = rows
             .iter()
             .zip(ages)
-            .map(|(r, a)| Entry { track: r.uri.clone(), added_at: Some(ago(a)) })
+            .map(|(r, a)| Entry {
+                track: r.uri.clone(),
+                added_at: Some(ago(a)),
+            })
             .collect();
-        db.save_collection_entries(&CollectionId::Liked, Some(b"1"), &entries).unwrap();
+        db.save_collection_entries(&CollectionId::Liked, Some(b"1"), &entries)
+            .unwrap();
         // "Gece sürüşü": aynı şarkı iki kez (Sessiz Gece, Ayna) ve sürümler (Remaster, Live, Radio Edit).
         let at = |m: i64| Some(ago(m));
         let night_rows = [
@@ -178,21 +251,35 @@ mod demo {
             (&versions[3], at(5)),
             (&rows[6], at(2)),
         ];
-        let night: Vec<Entry> =
-            night_rows.iter().map(|(r, added)| Entry { track: r.uri.clone(), added_at: *added }).collect();
-        db.save_collection_entries(&CollectionId::Playlist(playlist_key(1)), Some(b"1"), &night).unwrap();
+        let night: Vec<Entry> = night_rows
+            .iter()
+            .map(|(r, added)| Entry {
+                track: r.uri.clone(),
+                added_at: *added,
+            })
+            .collect();
+        db.save_collection_entries(&CollectionId::Playlist(playlist_key(1)), Some(b"1"), &night)
+            .unwrap();
         // "Eski favoriler": ikinci küçük liste (birleştirme için); Gece sürüşü ile ortak şarkılar var.
         let old: Vec<Entry> = [0usize, 2, 4, 5, 7, 9, 3, 1, 8]
             .iter()
             .enumerate()
-            .map(|(n, i)| Entry { track: rows[*i].uri.clone(), added_at: Some(ago((200 + 30 * n as i64) * DAY)) })
+            .map(|(n, i)| Entry {
+                track: rows[*i].uri.clone(),
+                added_at: Some(ago((200 + 30 * n as i64) * DAY)),
+            })
             .collect();
-        db.save_collection_entries(&CollectionId::Playlist(playlist_key(8)), Some(b"1"), &old).unwrap();
+        db.save_collection_entries(&CollectionId::Playlist(playlist_key(8)), Some(b"1"), &old)
+            .unwrap();
         // "Büyük karışık": 120 satır, 10 şarkı 12'şer kez (≥ 50 değişiklik: toplu işlem onayı).
         let big: Vec<Entry> = (0..120)
-            .map(|n| Entry { track: rows[(n * 7) % 10].uri.clone(), added_at: Some(ago(10 + n as i64 * 450)) })
+            .map(|n| Entry {
+                track: rows[(n * 7) % 10].uri.clone(),
+                added_at: Some(ago(10 + n as i64 * 450)),
+            })
             .collect();
-        db.save_collection_entries(&CollectionId::Playlist(playlist_key(9)), Some(b"1"), &big).unwrap();
+        db.save_collection_entries(&CollectionId::Playlist(playlist_key(9)), Some(b"1"), &big)
+            .unwrap();
 
         // Gizlenen şarkılar (radyo / gizleme sınaması): "Gece sürüşü"nde iki şarkı bu listede,
         // biri hiçbir yerde çalınmayacak (Beğenilenler'de de soluk görünür).
@@ -225,12 +312,15 @@ mod demo {
             let r = all[pick.min(all.len() - 1)];
             // Gün: bugünden 240 güne kadar (yakın günler daha sık); saat: akşam ağırlıklı.
             let days = next(240) * next(240) / 240;
-            let hour = [8u64, 9, 13, 17, 18, 19, 20, 20, 21, 21, 21, 22, 22, 23, 0, 12][next(16) as usize];
+            let hour = [
+                8u64, 9, 13, 17, 18, 19, 20, 20, 21, 21, 21, 22, 22, 23, 0, 12,
+            ][next(16) as usize];
             let minute = next(60);
             let day_ms = 24 * 60 * 60_000i64;
             let off = crate::engine::tools::civil::local_offset_minutes() * 60_000;
             let midnight = (now + off).div_euclid(day_ms) * day_ms - off;
-            let played_at = midnight - days as i64 * day_ms + (hour * 60 + minute) as i64 * 60_000 - n as i64;
+            let played_at =
+                midnight - days as i64 * day_ms + (hour * 60 + minute) as i64 * 60_000 - n as i64;
             let listened = (r.duration_ms as u64).min(30_000 + next(r.duration_ms as u64));
             db.record_play(&crate::engine::tools::stats::PlayRecord {
                 uri: r.uri.clone(),

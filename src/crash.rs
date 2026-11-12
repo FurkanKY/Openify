@@ -34,7 +34,8 @@ pub fn log_dir() -> Option<PathBuf> {
 /// Bu çalışma bir sınama koşusu mu? (`OPENIFY_TEST_DISPLAY` ya da
 /// `OPENIFY_SETTINGS_PATH` verilmiş.) Gerçek kullanıcı ikisini de vermez.
 pub fn is_test_run() -> bool {
-    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
+    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+        || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
 }
 
 /// Sınama koşusunda klasör açıkça verilmemişse kullanılan geçici kum havuzu
@@ -86,7 +87,13 @@ pub fn install_panic_hook() {
 }
 
 /// Çökme raporunun metni.
-pub fn format_report(thread: &str, location: &str, message: &str, backtrace: &str, unix_secs: u64) -> String {
+pub fn format_report(
+    thread: &str,
+    location: &str,
+    message: &str,
+    backtrace: &str,
+    unix_secs: u64,
+) -> String {
     // Geliştirici raporu (kullanıcıya gösterilmez): İngilizce etiketler.
     format!(
         "Openify crash report\n\
@@ -109,9 +116,17 @@ pub fn write_report(dir: &Path, report: &str, unix_secs: u64) -> std::io::Result
     let stamp = timestamp(unix_secs);
     let mut n = 1;
     let (path, mut file) = loop {
-        let name = if n == 1 { format!("crash-{stamp}.txt") } else { format!("crash-{stamp}-{n}.txt") };
+        let name = if n == 1 {
+            format!("crash-{stamp}.txt")
+        } else {
+            format!("crash-{stamp}-{n}.txt")
+        };
         let path = dir.join(name);
-        match fs::OpenOptions::new().write(true).create_new(true).open(&path) {
+        match fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
             Ok(file) => break (path, file),
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists && n < 100 => n += 1,
             Err(e) => return Err(e),
@@ -131,7 +146,9 @@ pub fn prune_reports(dir: &Path, keep: usize) {
         .flatten()
         .map(|e| e.path())
         .filter(|p| {
-            p.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.starts_with("crash-") && n.ends_with(".txt"))
+            p.file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with("crash-") && n.ends_with(".txt"))
         })
         .collect();
     // "-2" ekli ikinci rapor aynı saniyede ilkinden SONRA yazıldı: ada göre
@@ -145,7 +162,10 @@ pub fn prune_reports(dir: &Path, keep: usize) {
 
 /// Sıralama anahtarı: (damga, aynı saniyedeki sıra).
 fn report_order(path: &Path) -> (String, u32) {
-    let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+    let stem = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or_default();
     let rest = stem.strip_prefix("crash-").unwrap_or(stem);
     // YYYYMMDD-HHMMSS[-n]
     let mut parts = rest.splitn(3, '-');
@@ -156,7 +176,10 @@ fn report_order(path: &Path) -> (String, u32) {
 }
 
 fn unix_now() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
 }
 
 /// `YYYYMMDD-HHMMSS` (UTC).
@@ -164,7 +187,12 @@ pub fn timestamp(unix_secs: u64) -> String {
     let days = (unix_secs / 86_400) as i64;
     let rem = unix_secs % 86_400;
     let (y, m, d) = civil_from_days(days);
-    format!("{y:04}{m:02}{d:02}-{:02}{:02}{:02}", rem / 3600, (rem % 3600) / 60, rem % 60)
+    format!(
+        "{y:04}{m:02}{d:02}-{:02}{:02}{:02}",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
 }
 
 /// 1970-01-01'den gün sayısı → (yıl, ay, gün); Howard Hinnant'ın algoritması.
@@ -186,7 +214,8 @@ mod tests {
     use super::*;
 
     fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-crash-test-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-crash-test-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         dir
     }
@@ -215,7 +244,13 @@ mod tests {
 
     #[test]
     fn report_has_message_location_thread_and_backtrace() {
-        let r = format_report("openify-engine", "src/engine/mod.rs:1:2", "bir şey bozuldu", "  0: bir::işlev", 1_700_000_000);
+        let r = format_report(
+            "openify-engine",
+            "src/engine/mod.rs:1:2",
+            "bir şey bozuldu",
+            "  0: bir::işlev",
+            1_700_000_000,
+        );
         for needle in [
             "openify-engine",
             "src/engine/mod.rs:1:2",
@@ -266,7 +301,10 @@ mod tests {
             write_report(&dir, "daha yeni", 1_700_000_000 + i).unwrap();
         }
         assert!(!a.exists(), "en eski rapor silinmeli");
-        assert!(b.exists(), "aynı saniyenin ikinci raporu ondan eski olanlardan sonra silinir");
+        assert!(
+            b.exists(),
+            "aynı saniyenin ikinci raporu ondan eski olanlardan sonra silinir"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 

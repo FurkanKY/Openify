@@ -18,7 +18,7 @@ use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use super::{
     cache::Db,
-    output::{Analysis, Edge, ENV_SECS},
+    output::{Analysis, ENV_SECS, Edge},
 };
 
 /// Çözümleme algoritmasının sürümü: ölçüm sabitleri / yöntemi değişince artırılır.
@@ -76,8 +76,16 @@ fn from_row(r: &rusqlite::Row<'_>, at: usize) -> rusqlite::Result<Analysis> {
         total_ms: r.get::<_, i64>(at + 1)? as u32,
         lead_ms: r.get::<_, i64>(at + 2)? as u32,
         tail_ms: r.get::<_, i64>(at + 3)? as u32,
-        head: Edge { bpm: r.get::<_, f64>(at + 4)? as f32, conf: r.get::<_, f64>(at + 5)? as f32, beat_ms: r.get::<_, i64>(at + 6)? as u32 },
-        tail: Edge { bpm: r.get::<_, f64>(at + 7)? as f32, conf: r.get::<_, f64>(at + 8)? as f32, beat_ms: r.get::<_, i64>(at + 9)? as u32 },
+        head: Edge {
+            bpm: r.get::<_, f64>(at + 4)? as f32,
+            conf: r.get::<_, f64>(at + 5)? as f32,
+            beat_ms: r.get::<_, i64>(at + 6)? as u32,
+        },
+        tail: Edge {
+            bpm: r.get::<_, f64>(at + 7)? as f32,
+            conf: r.get::<_, f64>(at + 8)? as f32,
+            beat_ms: r.get::<_, i64>(at + 9)? as u32,
+        },
         head_env: env_from(r.get(at + 10)?),
         tail_env: env_from(r.get(at + 11)?),
     })
@@ -161,7 +169,9 @@ impl Db {
             "SELECT uri, {COLUMNS} FROM track_analysis WHERE algo = ?1 ORDER BY analyzed_at DESC LIMIT ?2"
         ))?;
         let rows = stmt
-            .query_map(params![ALGO, limit as i64], |r| Ok((r.get::<_, String>(0)?, from_row(r, 1)?)))?
+            .query_map(params![ALGO, limit as i64], |r| {
+                Ok((r.get::<_, String>(0)?, from_row(r, 1)?))
+            })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
@@ -170,20 +180,31 @@ impl Db {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::engine::{migrate, output::{HAS_HEAD, HAS_TAIL}};
+    use crate::engine::{
+        migrate,
+        output::{HAS_HEAD, HAS_TAIL},
+    };
 
     fn sample(flags: u8, seed: f32) -> Analysis {
         let mut a = Analysis::EMPTY;
         a.flags = flags;
         if flags & HAS_HEAD != 0 {
             a.lead_ms = 120;
-            a.head = Edge { bpm: 120.0 + seed, conf: 0.5, beat_ms: 210 };
+            a.head = Edge {
+                bpm: 120.0 + seed,
+                conf: 0.5,
+                beat_ms: 210,
+            };
             a.head_env = [-14 + seed as i8; ENV_SECS];
         }
         if flags & HAS_TAIL != 0 {
             a.total_ms = 200_000;
             a.tail_ms = 1_500;
-            a.tail = Edge { bpm: 128.0 + seed, conf: 0.7, beat_ms: 55 };
+            a.tail = Edge {
+                bpm: 128.0 + seed,
+                conf: 0.7,
+                beat_ms: 55,
+            };
             a.tail_env = [-20 + seed as i8; ENV_SECS];
         }
         a
@@ -197,7 +218,10 @@ mod tests {
         db.save_analysis("t:a", &a).unwrap();
         let back = db.analysis("t:a").unwrap().unwrap();
         assert_eq!(back.flags, a.flags);
-        assert_eq!((back.lead_ms, back.tail_ms, back.total_ms), (120, 1_500, 200_000));
+        assert_eq!(
+            (back.lead_ms, back.tail_ms, back.total_ms),
+            (120, 1_500, 200_000)
+        );
         assert!((back.head.bpm - 121.0).abs() < 1e-3 && (back.tail.conf - 0.7).abs() < 1e-3);
         assert_eq!((back.head.beat_ms, back.tail.beat_ms), (210, 55));
         assert_eq!(back.head_env, a.head_env);
@@ -211,8 +235,16 @@ mod tests {
         db.save_analysis("t:a", &sample(HAS_HEAD, 3.0)).unwrap();
         let a = db.analysis("t:a").unwrap().unwrap();
         assert_eq!(a.flags, HAS_HEAD | HAS_TAIL);
-        assert!((a.tail.bpm - 128.0).abs() < 1e-3, "son uç eskisi: {}", a.tail.bpm);
-        assert!((a.head.bpm - 123.0).abs() < 1e-3, "baş uç yeni: {}", a.head.bpm);
+        assert!(
+            (a.tail.bpm - 128.0).abs() < 1e-3,
+            "son uç eskisi: {}",
+            a.tail.bpm
+        );
+        assert!(
+            (a.head.bpm - 123.0).abs() < 1e-3,
+            "baş uç yeni: {}",
+            a.head.bpm
+        );
         // Yeni son uç eskisinin yerine geçer.
         db.save_analysis("t:a", &sample(HAS_TAIL, 5.0)).unwrap();
         let a = db.analysis("t:a").unwrap().unwrap();
@@ -226,11 +258,15 @@ mod tests {
     fn newest_first_and_capped() {
         let db = Db::open_in_memory().unwrap();
         for i in 0..5 {
-            db.save_analysis(&format!("t:{i}"), &sample(HAS_TAIL, i as f32)).unwrap();
+            db.save_analysis(&format!("t:{i}"), &sample(HAS_TAIL, i as f32))
+                .unwrap();
             std::thread::sleep(std::time::Duration::from_millis(2));
         }
         let all = db.load_analyses(3).unwrap();
-        assert_eq!(all.iter().map(|(u, _)| u.as_str()).collect::<Vec<_>>(), ["t:4", "t:3", "t:2"]);
+        assert_eq!(
+            all.iter().map(|(u, _)| u.as_str()).collect::<Vec<_>>(),
+            ["t:4", "t:3", "t:2"]
+        );
         // Tablo sınırı: KEEP_MAX'ten fazlası en eskiden atılır.
         {
             let conn = db.w();
@@ -243,9 +279,15 @@ mod tests {
             }
         }
         db.save_analysis("t:new", &sample(HAS_TAIL, 0.0)).unwrap();
-        let n: i64 = db.r().query_row("SELECT COUNT(*) FROM track_analysis", [], |r| r.get(0)).unwrap();
+        let n: i64 = db
+            .r()
+            .query_row("SELECT COUNT(*) FROM track_analysis", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, KEEP_MAX);
-        assert!(db.analysis("t:new").unwrap().is_some(), "en yeni satır atılmaz");
+        assert!(
+            db.analysis("t:new").unwrap().is_some(),
+            "en yeni satır atılmaz"
+        );
         assert!(db.analysis("bulk:0").unwrap().is_none(), "en eski atıldı");
     }
 
@@ -253,7 +295,9 @@ mod tests {
     fn rows_from_another_algorithm_version_are_ignored() {
         let db = Db::open_in_memory().unwrap();
         db.save_analysis("t:a", &sample(HAS_TAIL, 0.0)).unwrap();
-        db.w().execute("UPDATE track_analysis SET algo = ?1", [ALGO + 1]).unwrap();
+        db.w()
+            .execute("UPDATE track_analysis SET algo = ?1", [ALGO + 1])
+            .unwrap();
         assert_eq!(db.analysis("t:a").unwrap(), None);
         assert!(db.load_analyses(10).unwrap().is_empty());
         // Yeniden kaydedince satır güncel sürümle yazılır.
@@ -272,12 +316,20 @@ mod tests {
              PRAGMA user_version = 8;",
         )
         .unwrap();
-        let steps = [migrate::Step { to: 9, name: "track analysis", up: track_analysis_step }];
+        let steps = [migrate::Step {
+            to: 9,
+            name: "track analysis",
+            up: track_analysis_step,
+        }];
         let report = migrate::migrate(&mut conn, &steps).unwrap();
         assert_eq!((report.from, report.to), (8, 9));
-        let n: i64 = conn.query_row("SELECT COUNT(*) FROM hidden_songs", [], |r| r.get(0)).unwrap();
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM hidden_songs", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 1);
-        let n: i64 = conn.query_row("SELECT COUNT(*) FROM track_analysis", [], |r| r.get(0)).unwrap();
+        let n: i64 = conn
+            .query_row("SELECT COUNT(*) FROM track_analysis", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 0, "yeni tablo boş gelir");
         // Yeniden çalıştırmak zararsız.
         migrate::migrate(&mut conn, &steps).unwrap();

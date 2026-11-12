@@ -210,7 +210,8 @@ impl Mixer for OutMixer {
 
     fn set_volume(&self, volume: u16) {
         self.soft.set_volume(volume);
-        self.out.set_gain(self.soft.get_soft_volume().attenuation_factor() as f32);
+        self.out
+            .set_gain(self.soft.get_soft_volume().attenuation_factor() as f32);
     }
 
     fn get_soft_volume(&self) -> Box<dyn librespot::playback::mixer::VolumeGetter + Send> {
@@ -259,7 +260,14 @@ pub(in crate::engine) struct ConnectHost {
 
 impl ConnectHost {
     pub fn new() -> Self {
-        Self { enabled: false, name: crate::brand::APP_NAME.to_string(), life: Life::Off, epoch: 0, restart_asked: false, session_used: false }
+        Self {
+            enabled: false,
+            name: crate::brand::APP_NAME.to_string(),
+            life: Life::Off,
+            epoch: 0,
+            restart_asked: false,
+            session_used: false,
+        }
     }
 
     pub fn is_running(&self) -> bool {
@@ -343,10 +351,22 @@ impl ConnectHost {
 
 /// Arka planda biten Connect işleri (`Internal::Connect`).
 pub(super) enum ConnectInternal {
-    Started { epoch: u64, port: Arc<dyn ConnectPort>, self_id: String },
-    Failed { epoch: u64, error: String },
-    Event { epoch: u64, event: SpircEvent },
-    Ended { epoch: u64 },
+    Started {
+        epoch: u64,
+        port: Arc<dyn ConnectPort>,
+        self_id: String,
+    },
+    Failed {
+        epoch: u64,
+        error: String,
+    },
+    Event {
+        epoch: u64,
+        event: SpircEvent,
+    },
+    Ended {
+        epoch: u64,
+    },
 }
 
 /// Ad en çok bu kadar karakter (Spotify listesinde taşmasın; ayarlar da keser).
@@ -382,7 +402,12 @@ impl Engine {
     /// Spirc'in olması gereken durumuyla gerçek durumunu eşitler (oturum
     /// takılınca, açma / kapama komutunda).
     pub(super) fn connect_sync(&mut self) {
-        let ready = self.host.conn.is_some() && self.pb.deck.as_ref().is_some_and(|d| d.port.player().is_some());
+        let ready = self.host.conn.is_some()
+            && self
+                .pb
+                .deck
+                .as_ref()
+                .is_some_and(|d| d.port.player().is_some());
         let id_ok = match (&self.host.conn, session_device_id()) {
             (Some(conn), Some(want)) => conn.session.device_id() == want,
             _ => false,
@@ -440,8 +465,12 @@ impl Engine {
 
     /// Spirc'i arka planda kurar (`Spirc::with_session`, `openify-net`'te).
     fn launch_spirc(&mut self, epoch: u64) {
-        let (Some(conn), Some(deck)) = (&self.host.conn, &self.pb.deck) else { return };
-        let Some(player) = deck.port.player() else { return };
+        let (Some(conn), Some(deck)) = (&self.host.conn, &self.pb.deck) else {
+            return;
+        };
+        let Some(player) = deck.port.player() else {
+            return;
+        };
         let session = conn.session.clone();
         let out = deck.out.clone();
         let mixer: Arc<dyn Mixer> = Arc::new(OutMixer::new(deck.mixer(), out));
@@ -456,7 +485,10 @@ impl Engine {
         tokio::spawn(async move {
             let started = spawn_spirc(config, session, player, mixer, epoch, &internal).await;
             if let Err(error) = started {
-                let _ = internal.send(Internal::Connect(ConnectInternal::Failed { epoch, error: error.to_string() }));
+                let _ = internal.send(Internal::Connect(ConnectInternal::Failed {
+                    epoch,
+                    error: error.to_string(),
+                }));
             }
         });
     }
@@ -464,7 +496,11 @@ impl Engine {
     /// `Internal::Connect`.
     pub(super) fn on_connect_internal(&mut self, message: ConnectInternal) {
         match message {
-            ConnectInternal::Started { epoch, port, self_id } => {
+            ConnectInternal::Started {
+                epoch,
+                port,
+                self_id,
+            } => {
                 if !self.connect.started(epoch) {
                     // Bu arada oturum değişti / Connect kapandı.
                     port.shutdown();
@@ -517,13 +553,23 @@ async fn spawn_spirc(
         task.await;
         let _ = end.send(Internal::Connect(ConnectInternal::Ended { epoch }));
     });
-    let port: Arc<dyn ConnectPort> = Arc::new(SpircLink { spirc, task: Mutex::new(Some(handle)) });
+    let port: Arc<dyn ConnectPort> = Arc::new(SpircLink {
+        spirc,
+        task: Mutex::new(Some(handle)),
+    });
     // `Started` olaylardan ÖNCE gider (aynı kanal, sıra korunur).
-    let _ = internal.send(Internal::Connect(ConnectInternal::Started { epoch, port, self_id }));
+    let _ = internal.send(Internal::Connect(ConnectInternal::Started {
+        epoch,
+        port,
+        self_id,
+    }));
     let pump = internal.clone();
     tokio::spawn(async move {
         while let Some(event) = events.recv().await {
-            if pump.send(Internal::Connect(ConnectInternal::Event { epoch, event })).is_err() {
+            if pump
+                .send(Internal::Connect(ConnectInternal::Event { epoch, event }))
+                .is_err()
+            {
                 break;
             }
         }

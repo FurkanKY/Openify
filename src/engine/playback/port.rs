@@ -48,14 +48,22 @@ pub(in crate::engine) trait PlayerPort: Send {
 #[derive(Debug, Clone)]
 pub(in crate::engine) enum PlayerSignal {
     Loading,
-    Playing { position_ms: u32 },
-    Paused { position_ms: u32 },
-    Position { position_ms: u32 },
+    Playing {
+        position_ms: u32,
+    },
+    Paused {
+        position_ms: u32,
+    },
+    Position {
+        position_ms: u32,
+    },
     /// Sıradaki şarkıyı önyüklemenin zamanı (`TimeToPreloadNextTrack`).
     PreloadDue,
     EndOfTrack,
     /// Şarkı çalınamadı; `uri`: hangi şarkı (adresi çözülemediyse `None`).
-    Unavailable { uri: Option<String> },
+    Unavailable {
+        uri: Option<String>,
+    },
     TrackChanged(TrackInfo),
     /// Başka bir cihaz (telefon) bu aygıtı sürmeye başladı / bıraktı. Bant
     /// içi: Spirc etkinleşirken / etkinlikten çıkarken çaldan geçen
@@ -72,12 +80,13 @@ impl PlayerSignal {
             PlayerEvent::Loading { .. } => Self::Loading,
             PlayerEvent::Playing { position_ms, .. } => Self::Playing { position_ms },
             PlayerEvent::Paused { position_ms, .. } => Self::Paused { position_ms },
-            PlayerEvent::Seeked { position_ms, .. } | PlayerEvent::PositionCorrection { position_ms, .. } => {
-                Self::Position { position_ms }
-            }
+            PlayerEvent::Seeked { position_ms, .. }
+            | PlayerEvent::PositionCorrection { position_ms, .. } => Self::Position { position_ms },
             PlayerEvent::TimeToPreloadNextTrack { .. } => Self::PreloadDue,
             PlayerEvent::EndOfTrack { .. } => Self::EndOfTrack,
-            PlayerEvent::Unavailable { track_id, .. } => Self::Unavailable { uri: track_id.to_uri().ok() },
+            PlayerEvent::Unavailable { track_id, .. } => Self::Unavailable {
+                uri: track_id.to_uri().ok(),
+            },
             PlayerEvent::TrackChanged { audio_item } => Self::TrackChanged(track_info(&audio_item)),
             PlayerEvent::SessionConnected { .. } => Self::RemoteAttached,
             PlayerEvent::SessionDisconnected { .. } => Self::RemoteDetached,

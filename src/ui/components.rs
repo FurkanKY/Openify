@@ -11,14 +11,15 @@
 use std::{cell::Cell, rc::Rc};
 
 use gpui::{
-    AnyElement, AnyView, App, Bounds, Div, ElementId, FontWeight, IntoElement, ParentElement, Pixels,
-    Point, Render, Rgba, SharedString, Stateful, Styled, Window, canvas, div, point, prelude::*, px, rgb,
+    AnyElement, AnyView, App, Bounds, Div, ElementId, FontWeight, IntoElement, ParentElement,
+    Pixels, Point, Render, Rgba, SharedString, Stateful, Styled, Window, canvas, div, point,
+    prelude::*, px, rgb,
 };
 
 use super::text::line_with_tip;
 use super::theme::*;
 use super::tween::{HoverFill, hover_fill};
-use crate::{t};
+use crate::t;
 
 /// Bir bileşenin hangi durumda çizileceği.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -32,7 +33,13 @@ pub enum Look {
 }
 
 impl Look {
-    pub const ALL: [Look; 5] = [Look::Live, Look::Hover, Look::Pressed, Look::Focus, Look::Disabled];
+    pub const ALL: [Look; 5] = [
+        Look::Live,
+        Look::Hover,
+        Look::Pressed,
+        Look::Focus,
+        Look::Disabled,
+    ];
 
     pub fn name(self) -> &'static str {
         match self {
@@ -102,13 +109,24 @@ fn states(el: Stateful<Div>, look: Look, hover: Rgba, pressed: Rgba) -> Stateful
 /// olarak eklenir (içeriğin altında kalsın). `rest_alpha`: bileşenin kendi
 /// zemininin saydamlığı (0 = yok ya da opak). Vitrinde zorlanan durumlarda
 /// (`Look::Hover` …) katman yok, renk `states`ten düz gelir.
-fn layer(look: Look, hover: Rgba, pressed: Rgba, rest_alpha: f32, radius: f32) -> Option<HoverFill> {
+fn layer(
+    look: Look,
+    hover: Rgba,
+    pressed: Rgba,
+    rest_alpha: f32,
+    radius: f32,
+) -> Option<HoverFill> {
     matches!(look, Look::Live | Look::Focus).then(|| hover_fill(hover, pressed, rest_alpha, radius))
 }
 
 /// Ton katmanı durumları (zemini saydam öğeler: simge düğmesi, menü öğesi).
 fn veil_states(el: Stateful<Div>, look: Look, accent: u32) -> Stateful<Div> {
-    states(ring(el, look, accent), look, veil(VEIL_HOVER), veil(VEIL_PRESSED))
+    states(
+        ring(el, look, accent),
+        look,
+        veil(VEIL_HOVER),
+        veil(VEIL_PRESSED),
+    )
 }
 
 /// `veil_states`in katmanı.
@@ -208,10 +226,18 @@ pub fn primary_button_sized(
     accent: u32,
     small: bool,
 ) -> Stateful<Div> {
-    let fill = if look.enabled() { accent } else { mix(accent, BG, 0.6) };
+    let fill = if look.enabled() {
+        accent
+    } else {
+        mix(accent, BG, 0.6)
+    };
     let el = div()
         .id(id)
-        .h(px(if small { PRIMARY_HEIGHT_SMALL } else { PRIMARY_HEIGHT }))
+        .h(px(if small {
+            PRIMARY_HEIGHT_SMALL
+        } else {
+            PRIMARY_HEIGHT
+        }))
         .pl(px(if small { S3 } else { S4 }))
         .pr(px(if small { S4 } else { S5 }))
         .flex_shrink_0()
@@ -223,11 +249,22 @@ pub fn primary_button_sized(
         .text_color(rgb(BG))
         .type_role(if small { T_SECONDARY } else { T_BODY })
         .font_weight(FontWeight::SEMIBOLD)
-        .children(layer(look, rgb(mix(accent, 0xFFFFFF, 0.16)), rgb(mix(accent, 0x000000, 0.14)), 0., FULL))
+        .children(layer(
+            look,
+            rgb(mix(accent, 0xFFFFFF, 0.16)),
+            rgb(mix(accent, 0x000000, 0.14)),
+            0.,
+            FULL,
+        ))
         .child(icon(icon_name, if small { 14. } else { 16. }, rgb(BG)))
         .child(label.into());
     let el = outer_ring(el, look, accent);
-    states(el, look, rgb(mix(accent, 0xFFFFFF, 0.16)), rgb(mix(accent, 0x000000, 0.14)))
+    states(
+        el,
+        look,
+        rgb(mix(accent, 0xFFFFFF, 0.16)),
+        rgb(mix(accent, 0x000000, 0.14)),
+    )
 }
 
 /// Süzgeç hapı ("Hepsi", "Albümler"): 32 px, yuvarlak. Kapalıyken ton
@@ -240,9 +277,21 @@ pub fn chip(
     accent: u32,
 ) -> Stateful<Div> {
     let fill = if on {
-        layer(look, rgb(mix(0xFFFFFF, accent, 0.14)), rgb(mix(TEXT, BG, 0.22)), 0., FULL)
+        layer(
+            look,
+            rgb(mix(0xFFFFFF, accent, 0.14)),
+            rgb(mix(TEXT, BG, 0.22)),
+            0.,
+            FULL,
+        )
     } else {
-        layer(look, veil(VEIL_SELECTED), veil(VEIL_PRESSED), VEIL_HOVER, FULL)
+        layer(
+            look,
+            veil(VEIL_SELECTED),
+            veil(VEIL_PRESSED),
+            VEIL_HOVER,
+            FULL,
+        )
     };
     let el = div()
         .id(id)
@@ -262,7 +311,12 @@ pub fn chip(
             .font_weight(FontWeight::SEMIBOLD);
         let el = outer_ring(el, look, accent);
         // Beyaz zeminde ton katmanı görünmez: çal düğmesi gibi ısınır / grileşir.
-        states(el, look, rgb(mix(0xFFFFFF, accent, 0.14)), rgb(mix(TEXT, BG, 0.22)))
+        states(
+            el,
+            look,
+            rgb(mix(0xFFFFFF, accent, 0.14)),
+            rgb(mix(TEXT, BG, 0.22)),
+        )
     } else {
         let el = el
             .bg(veil(VEIL_HOVER))
@@ -289,12 +343,27 @@ pub fn play_button(
         .items_center()
         .justify_center()
         .bg(if look.enabled() { text() } else { veil(0.24) })
-        .children(layer(look, rgb(mix(0xFFFFFF, accent, 0.14)), rgb(mix(TEXT, BG, 0.22)), 0., FULL))
-        .child(icon(if playing { "pause-fill" } else { "play-fill" }, 18., rgb(BG)));
+        .children(layer(
+            look,
+            rgb(mix(0xFFFFFF, accent, 0.14)),
+            rgb(mix(TEXT, BG, 0.22)),
+            0.,
+            FULL,
+        ))
+        .child(icon(
+            if playing { "pause-fill" } else { "play-fill" },
+            18.,
+            rgb(BG),
+        ));
     // Beyaz zeminde ton katmanı görünmez: üzerine gelince kapağın rengine
     // hafifçe ısınır, basınca grileşir.
     let el = outer_ring(el, look, accent);
-    states(el, look, rgb(mix(0xFFFFFF, accent, 0.14)), rgb(mix(TEXT, BG, 0.22)))
+    states(
+        el,
+        look,
+        rgb(mix(0xFFFFFF, accent, 0.14)),
+        rgb(mix(TEXT, BG, 0.22)),
+    )
 }
 
 /// İkincil düğme: ince kenarlı, saydam zeminli ("Yeniden dene").
@@ -323,7 +392,11 @@ pub fn secondary_button(
         .children(veil_layer(look, FULL))
         .child(icon(icon_name, 14., color))
         .child(label.into());
-    let el = if look == Look::Focus { el.border_color(rgb(accent)) } else { el };
+    let el = if look == Look::Focus {
+        el.border_color(rgb(accent))
+    } else {
+        el
+    };
     states(el, look, veil(VEIL_HOVER), veil(VEIL_PRESSED))
 }
 
@@ -358,7 +431,11 @@ pub fn ghost_button(
         .children(veil_layer(look, FULL))
         .child(icon(icon_name, 14., color))
         .child(label.into());
-    let el = if look == Look::Focus { el.border_1().border_color(rgb(accent)) } else { el };
+    let el = if look == Look::Focus {
+        el.border_1().border_color(rgb(accent))
+    } else {
+        el
+    };
     states(el, look, veil(VEIL_HOVER), veil(VEIL_PRESSED))
 }
 
@@ -374,7 +451,10 @@ pub fn switch(id: impl Into<ElementId>, on: bool, look: Look, accent: u32) -> St
         (true, false) => (rgb(TRACK), soft()),
     };
     let (hover, pressed) = if on {
-        (rgb(mix(accent, 0xFFFFFF, 0.16)), rgb(mix(accent, 0x000000, 0.14)))
+        (
+            rgb(mix(accent, 0xFFFFFF, 0.16)),
+            rgb(mix(accent, 0x000000, 0.14)),
+        )
     } else {
         (veil(VEIL_SELECTED), veil(VEIL_PRESSED))
     };
@@ -440,7 +520,12 @@ pub fn segment(
             .font_weight(FontWeight::MEDIUM)
             .children(veil_layer(look, FULL))
             .child(label.into());
-        states(ring(el, look, accent), look, veil(VEIL_HOVER), veil(VEIL_PRESSED))
+        states(
+            ring(el, look, accent),
+            look,
+            veil(VEIL_HOVER),
+            veil(VEIL_PRESSED),
+        )
     }
 }
 
@@ -464,13 +549,33 @@ pub fn select_field(
         .gap(px(S2))
         .bg(shade(SHADE_INPUT))
         .border_1()
-        .border_color(if open || look == Look::Focus { rgb(accent) } else { veil(LINE_INPUT) })
+        .border_color(if open || look == Look::Focus {
+            rgb(accent)
+        } else {
+            veil(LINE_INPUT)
+        })
         .type_role(T_SECONDARY)
         .text_color(color)
-        .child(div().flex_1().min_w_0().flex().child(line_with_tip("select-value", value.into()).flex().min_w_0()))
-        .child(icon("chevron-down", 14., if look.enabled() { muted() } else { disabled() }));
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .child(line_with_tip("select-value", value.into()).flex().min_w_0()),
+        )
+        .child(icon(
+            "chevron-down",
+            14.,
+            if look.enabled() { muted() } else { disabled() },
+        ));
     if look.enabled() {
-        el.cursor_pointer().hover(|s| s.bg(shade(SHADE_INPUT_HOVER)).border_color(if open { rgb(accent) } else { veil(LINE_HOVER) }))
+        el.cursor_pointer().hover(|s| {
+            s.bg(shade(SHADE_INPUT_HOVER)).border_color(if open {
+                rgb(accent)
+            } else {
+                veil(LINE_HOVER)
+            })
+        })
     } else {
         el
     }
@@ -568,14 +673,33 @@ pub fn full_state(
                 .text_center()
                 .child(title.into()),
         )
-        .child(div().type_role(T_BODY).text_color(muted()).text_center().child(body.into()));
+        .child(
+            div()
+                .type_role(T_BODY)
+                .text_color(muted())
+                .text_center()
+                .child(body.into()),
+        );
     let steps = div()
         .flex()
         .flex_col()
         .items_center()
         .gap(px(S4))
-        .child(div().flex().items_center().justify_center().gap(px(S3)).children(actions))
-        .children(note.map(|n| div().type_role(T_SECONDARY).text_color(label()).text_center().child(n)));
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_center()
+                .gap(px(S3))
+                .children(actions),
+        )
+        .children(note.map(|n| {
+            div()
+                .type_role(T_SECONDARY)
+                .text_color(label())
+                .text_center()
+                .child(n)
+        }));
     div()
         .flex()
         .flex_col()
@@ -602,7 +726,11 @@ pub fn explain_error(error: &str) -> (&'static str, &'static str, &'static str) 
     if e.starts_with("auth:") {
         ("user", t!(LibNeedsLoginTitle), t!(LibNeedsLoginBody))
     } else if e.starts_with("premium:") {
-        ("circle-alert", t!(PillNeedsPremiumTitle), t!(LibNeedsPremiumBody))
+        (
+            "circle-alert",
+            t!(PillNeedsPremiumTitle),
+            t!(LibNeedsPremiumBody),
+        )
     } else if is_forbidden(&e) {
         ("circle-alert", t!(ErrForbiddenTitle), t!(ErrForbiddenBody))
     } else if e.contains("dns")
@@ -707,7 +835,13 @@ pub struct MenuItem {
 
 impl MenuItem {
     pub fn new(label: impl Into<SharedString>) -> Self {
-        MenuItem { icon: None, label: label.into(), shortcut: None, danger: false, look: Look::Live }
+        MenuItem {
+            icon: None,
+            label: label.into(),
+            shortcut: None,
+            danger: false,
+            look: Look::Live,
+        }
     }
 
     pub fn icon(mut self, name: &'static str) -> Self {
@@ -799,9 +933,19 @@ pub fn menu_item(i: usize, item: MenuItem, accent: u32) -> Stateful<Div> {
                 .children(item.icon.map(|name| icon(name, 16., color))),
         )
         // Uzun liste ya da sanatçı adı (alt menü) kısalırsa tamamı ipucunda.
-        .child(div().flex_1().min_w_0().flex().child(line_with_tip("label", item.label).flex().min_w_0()))
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .child(line_with_tip("label", item.label).flex().min_w_0()),
+        )
         .children(item.shortcut.map(|keys| {
-            div().type_role(T_LABEL).tabular().text_color(label()).child(keys)
+            div()
+                .type_role(T_LABEL)
+                .tabular()
+                .text_color(label())
+                .child(keys)
         }));
     veil_states(el, item.look, accent)
 }
@@ -813,7 +957,10 @@ mod tests {
 
     #[test]
     fn menu_opens_below_the_button_and_not_over_it() {
-        let button = Bounds { origin: point(px(300.), px(180.)), size: size(px(36.), px(36.)) };
+        let button = Bounds {
+            origin: point(px(300.), px(180.)),
+            size: size(px(36.), px(36.)),
+        };
         let click = point(px(320.), px(200.));
         let at = menu_below(Some(button), click);
         assert_eq!(at, point(px(300.), px(180. + 36. + S1)));

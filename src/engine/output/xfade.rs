@@ -101,18 +101,29 @@ pub struct TransitionSpec {
 
 impl TransitionSpec {
     /// Bindirme yok.
-    pub const NONE: Self = Self { overlap: 0, curve: Curve::EqualPower, auto: false };
+    pub const NONE: Self = Self {
+        overlap: 0,
+        curve: Curve::EqualPower,
+        auto: false,
+    };
 
     /// `ms` milisaniyelik bindirme (en çok `MAX_OVERLAP_MS`).
     pub fn from_ms(ms: u32, curve: Curve) -> Self {
         let ms = ms.min(MAX_OVERLAP_MS);
-        Self { overlap: (ms as u64 * RATE as u64 / 1000) as u32, curve, auto: false }
+        Self {
+            overlap: (ms as u64 * RATE as u64 / 1000) as u32,
+            curve,
+            auto: false,
+        }
     }
 
     /// AutoMix isteği: `ms` planlanan bindirme (çözümleme yokken sabit, şarkı sonu
     /// payının derinliği), eşit güç.
     pub fn automix(ms: u32) -> Self {
-        Self { auto: true, ..Self::from_ms(ms, Curve::EqualPower) }
+        Self {
+            auto: true,
+            ..Self::from_ms(ms, Curve::EqualPower)
+        }
     }
 
     pub fn is_none(&self) -> bool {
@@ -120,7 +131,9 @@ impl TransitionSpec {
     }
 
     pub(super) fn pack(self) -> u64 {
-        (self.overlap as u64 & OVERLAP_MASK) | ((self.curve.bits() & 3) << OVERLAP_BITS) | ((self.auto as u64) << (OVERLAP_BITS + 2))
+        (self.overlap as u64 & OVERLAP_MASK)
+            | ((self.curve.bits() & 3) << OVERLAP_BITS)
+            | ((self.auto as u64) << (OVERLAP_BITS + 2))
     }
 
     pub(super) fn unpack(bits: u64) -> Self {
@@ -150,6 +163,9 @@ impl Transition {
     /// `overlap` 0 ise geçiş yok.
     pub(super) fn unpack(bits: u64) -> Option<Self> {
         let overlap = (bits & OVERLAP_MASK) as u32;
-        (overlap > 0).then_some(Self { start: bits >> OVERLAP_BITS, overlap })
+        (overlap > 0).then_some(Self {
+            start: bits >> OVERLAP_BITS,
+            overlap,
+        })
     }
 }

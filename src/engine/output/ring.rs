@@ -17,8 +17,16 @@ pub(super) struct RingBuf {
 impl RingBuf {
     /// `frames`: kapasite (kare); 2'nin kuvveti olmalı. Bütün hücreler 0.
     pub fn new(frames: u64) -> Self {
-        assert!(frames.is_power_of_two(), "halka kapasitesi 2'nin kuvveti olmalı");
-        Self { cells: (0..frames as usize * CHANNELS).map(|_| AtomicU32::new(0)).collect(), mask: frames - 1 }
+        assert!(
+            frames.is_power_of_two(),
+            "halka kapasitesi 2'nin kuvveti olmalı"
+        );
+        Self {
+            cells: (0..frames as usize * CHANNELS)
+                .map(|_| AtomicU32::new(0))
+                .collect(),
+            mask: frames - 1,
+        }
     }
 
     /// Kapasite (kare).
@@ -30,7 +38,10 @@ impl RingBuf {
     #[inline]
     pub fn load(&self, frame: u64) -> (f32, f32) {
         let cell = ((frame & self.mask) as usize) * CHANNELS;
-        (f32::from_bits(self.cells[cell].load(Relaxed)), f32::from_bits(self.cells[cell + 1].load(Relaxed)))
+        (
+            f32::from_bits(self.cells[cell].load(Relaxed)),
+            f32::from_bits(self.cells[cell + 1].load(Relaxed)),
+        )
     }
 
     /// Testler / ölçüm: ham hücreler.

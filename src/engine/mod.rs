@@ -17,25 +17,25 @@ mod cache;
 mod connect;
 mod conns;
 mod credits;
-mod levels;
-mod library;
-mod lyrics;
-mod pages;
-mod related;
 mod edits;
 pub mod equalizer;
 mod explore;
 mod friends;
 mod hidden;
+mod levels;
+mod library;
 mod listening;
 mod login;
+mod lyrics;
 pub mod opra;
+mod pages;
+mod related;
 pub use login::{LoginFailReason, PlayBlock};
 mod migrate;
 mod output;
 pub mod palette;
-mod playback;
 mod pathfinder;
+mod playback;
 mod queue;
 mod radio;
 mod recovery;
@@ -43,13 +43,12 @@ mod resume;
 mod rules;
 mod search;
 mod seed;
-mod session;
 mod seed_readme;
+mod session;
 mod tap;
 pub mod tools;
 mod traits;
 mod wire;
-
 
 use std::{
     collections::{HashMap, HashSet},
@@ -68,26 +67,32 @@ use librespot::{
 };
 use tokio::sync::mpsc;
 
-pub use library::{CollectionId, Library, LibraryItem, LibraryMeta, TrackRow, artist_item, folder_id, mosaic_urls};
-pub use levels::AudioLevels;
 pub use cache::cover_path;
-pub use output::{MAX_OVERLAP_MS, OutputCtl};
-pub use connect::{ConnectCommand, ConnectDriver, ConnectStatus, RemoteNow, apply_connect_identity};
+pub use connect::{
+    ConnectCommand, ConnectDriver, ConnectStatus, RemoteNow, apply_connect_identity,
+};
 use connect::{ConnectInternal, ConnectPort};
+pub use levels::AudioLevels;
+pub use library::{
+    CollectionId, Library, LibraryItem, LibraryMeta, TrackRow, artist_item, folder_id, mosaic_urls,
+};
+pub use output::{MAX_OVERLAP_MS, OutputCtl};
 pub use queue::{QueueEntry, QueueSource, QueueView, RepeatMode};
 // Dinleme çekirdeği (bkz. `radio.rs`, `hidden.rs`, `listening.rs`).
 pub use hidden::{HiddenList, HiddenSong};
-pub use radio::{RadioInfo, parse as parse_radio, seed_ok as radio_seed_ok, test_fixture as radio_test_fixture};
+pub use radio::{
+    RadioInfo, parse as parse_radio, seed_ok as radio_seed_ok, test_fixture as radio_test_fixture,
+};
 pub use rules::{BLOCKED_MAX, Rules, Traits, fold as fold_name};
-pub use search::{SearchHit, SearchResults, test_results as test_search_results};
 #[cfg(test)]
 pub use search::from_json as search_from_json;
+pub use search::{SearchHit, SearchResults, test_results as test_search_results};
 // Sayfalar ve kütüphane yazmaları (Adım 12–13, bkz. `wire.rs`).
 pub use edits::{AddPosition, EditOp, FailKind, new_temp_id, same_edit};
 pub use pages::{AlbumCard, AlbumPage, ArtistCard, ArtistPage, ReleaseKind, TrackLinks, home};
 pub use wire::{
-    FailedEdit, edit_failed_notice, LibraryCommand, LibraryEvent, cached_album, cached_artist, patch_library,
-    patch_tracks, touched_collection,
+    FailedEdit, LibraryCommand, LibraryEvent, cached_album, cached_artist, edit_failed_notice,
+    patch_library, patch_tracks, touched_collection,
 };
 // Benzer sanatçılar (Adım 12, 7 Kasım; bkz. `related.rs`).
 pub use related::RelatedList;
@@ -96,7 +101,9 @@ pub use wire::suggested_artists;
 pub use friends::{Friend, FriendsFailure, PlayPlan, parse as parse_friends, play_plan};
 // Keşfet ve Ana sayfa (Adım 12, 7 Kasım; bkz. `explore.rs`).
 pub use explore::{CardKind, CategoryList, ExploreCard, ExploreData, ExploreKey, Feed};
-pub use lyrics::{LyricLine, Lyrics, Source as LyricsSource, SyncKind, parse_spotify as parse_spotify_lyrics};
+pub use lyrics::{
+    LyricLine, Lyrics, Source as LyricsSource, SyncKind, parse_spotify as parse_spotify_lyrics,
+};
 // Şarkı künyesi (bkz. `credits.rs`).
 pub use credits::{Credits, CreditsFailure, RoleKind as CreditRoleKind, parse as parse_credits};
 
@@ -120,9 +127,11 @@ pub fn has_output_device() -> bool {
 }
 
 // Ayarlar sayfası (Adım 15): çıkış aygıtı ve önbellek.
+use crate::t;
 pub use cache::{CLEARABLE, clear_subdirs, clearing_allowed, dir_size, settings_cache_dir};
-pub use output::{default_output_device_name, output_device_names, set_preferred_device as set_output_device};
-use crate::{t};
+pub use output::{
+    default_output_device_name, output_device_names, set_preferred_device as set_output_device,
+};
 
 /// Ayarlardan: ses kalitesi (96 / 160 / 320 kbps) ve ses düzeyi eşitleme.
 /// Çalışırken de çağrılabilir; etkisi sıradaki şarkıdan başlar (bkz.
@@ -207,16 +216,26 @@ pub enum Command {
     OpenCollection(CollectionId),
     /// Yüklenmiş bir listeyi `index`'teki şarkıdan çalmaya başla; şarkı
     /// bitince listede sıradakine geçilir.
-    PlayCollection { id: CollectionId, index: usize },
+    PlayCollection {
+        id: CollectionId,
+        index: usize,
+    },
     /// Bir sanatçının (ya da başka bir Spotify bağlamının) şarkılarını çal.
     PlayContext(String),
     /// Arkadaş etkinliğinden: bağlamı (liste, albüm, sanatçı) `track` şarkısından
     /// başlayarak çal. `hint`: şarkının bağlamdaki sırası (aynı şarkı birden
     /// çok yerdeyse en yakını seçilir). Bağlam alınamazsa ya da şarkı içinde
     /// yoksa yalnız şarkı çalınır (bkz. `friends::start_position`).
-    PlayContextAt { uri: String, track: String, hint: Option<usize> },
+    PlayContextAt {
+        uri: String,
+        track: String,
+        hint: Option<usize>,
+    },
     /// Spotify'ın tamamında ara; sonuç `SearchResults` ile, aynı `seq` ile gelir.
-    Search { seq: u64, query: String },
+    Search {
+        seq: u64,
+        query: String,
+    },
     /// Kütüphaneyi hemen Spotify'dan tazele.
     RefreshLibrary,
     /// Bu resimleri indir; hazır olanlar `ImageReady` ile bildirilir.
@@ -247,12 +266,19 @@ pub enum Command {
     /// kazancı (31,5 Hz … 16 kHz, dB) ve elle ön kazanç (dB). Bağlantı
     /// gerekmez: motor ayarı tutar, çıkış kurulunca (ve her yeniden
     /// kurulunca) uygular; duyulan değişim 8 blokta süzülür.
-    SetEq { enabled: bool, gains_db: [f32; 10], preamp_db: f32 },
+    SetEq {
+        enabled: bool,
+        gains_db: [f32; 10],
+        preamp_db: f32,
+    },
     /// Karaoke / vokal azaltma (bkz. `output/karaoke.rs`): açık mı ve orta
     /// kanalın konuşma bandı ne kadar bastırılsın (0..1). Bağlantı gerekmez:
     /// motor ayarı tutar, çıkış kurulunca uygular; açma / kapama / miktar
     /// değişimi birkaç blokta süzülür (tıkırtı yok). Mono kaynakta etkisizdir.
-    SetKaraoke { enabled: bool, amount: f32 },
+    SetKaraoke {
+        enabled: bool,
+        amount: f32,
+    },
 
     // ── Sıra, karıştırma, tekrar (bkz. `queue.rs`). Hepsi bağlanmadan da
     // çalışır (yalnız sırayı düzenler); sıra değişince `QueueChanged` ve
@@ -293,7 +319,10 @@ pub enum Command {
     /// akışı başlat (bkz. `radio.rs`). `title`: sıra başlığında görünecek ad
     /// (tohumun adı; boşsa Spotify'ın istasyon başlığı). Salt okuma; başarısız
     /// olursa bir `Problem` bildirimi gelir.
-    StartRadio { seed: String, title: String },
+    StartRadio {
+        seed: String,
+        title: String,
+    },
     /// Sayfalar ve kütüphane yazmaları (bkz. `wire.rs`).
     Library(LibraryCommand),
     /// Kullanıcı "Giriş yap"a bastı: tarayıcıda Spotify girişini aç. Yalnız
@@ -343,7 +372,9 @@ pub struct Restored {
 #[derive(Debug, Clone)]
 pub enum Event {
     Connecting,
-    Connected { username: String },
+    Connected {
+        username: String,
+    },
     /// Spotify'a ulaşılamıyor (ağ yok): çevrimdışı; motor geri çekilmeyle
     /// kendiliğinden yeniden dener.
     ConnectFailed(String),
@@ -368,12 +399,24 @@ pub enum Event {
     PlaybackBlocked(PlayBlock),
     LibraryLoaded(Library),
     LibraryFailed(String),
-    CollectionLoaded { id: CollectionId, tracks: Arc<Vec<TrackRow>> },
-    CollectionFailed { id: CollectionId, error: String },
+    CollectionLoaded {
+        id: CollectionId,
+        tracks: Arc<Vec<TrackRow>>,
+    },
+    CollectionFailed {
+        id: CollectionId,
+        error: String,
+    },
     /// Yerel arama için kütüphanedeki bütün şarkılar.
     SearchIndex(Arc<Vec<TrackRow>>),
-    SearchResults { seq: u64, results: Arc<SearchResults> },
-    SearchFailed { seq: u64, error: String },
+    SearchResults {
+        seq: u64,
+        results: Arc<SearchResults>,
+    },
+    SearchFailed {
+        seq: u64,
+        error: String,
+    },
     /// Çalma sırası değişti: hangi listenin kaçıncı şarkısı çalıyor.
     QueueChanged(QueueState),
     /// Yeni şarkının bilgileri geldi (kapak ayrıca `Cover` ile gelir).
@@ -387,12 +430,21 @@ pub enum Event {
     /// İstenen resim diske indi (`cache::cover_path` ile bulunur).
     ImageReady(String),
     /// `FetchLyrics` cevabı; hiçbir kaynakta söz yoksa `None`.
-    Lyrics { uri: String, lyrics: Option<Arc<lyrics::Lyrics>> },
+    Lyrics {
+        uri: String,
+        lyrics: Option<Arc<lyrics::Lyrics>>,
+    },
     Loading,
-    Playing { position_ms: u32 },
-    Paused { position_ms: u32 },
+    Playing {
+        position_ms: u32,
+    },
+    Paused {
+        position_ms: u32,
+    },
     /// Çalma sürerken konum değişti (sarma ya da düzeltme).
-    Position { position_ms: u32 },
+    Position {
+        position_ms: u32,
+    },
     /// Sıradaki şarkı kalmadı.
     Ended,
     /// Spotify şarkıyı vermedi ve atlanacak başka şarkı yok.
@@ -400,7 +452,10 @@ pub enum Event {
     /// Spotify bağlantısı koptu; kayıtlı girişle yeniden bağlanılıyor.
     Reconnecting,
     /// Kullanıcıya gösterilecek kısa bilgi.
-    Notice { kind: NoticeKind, message: String },
+    Notice {
+        kind: NoticeKind,
+        message: String,
+    },
     /// Spotify'a bağlanıldı ama ses çıkışı (hoparlör, kulaklık) bulunamadı.
     NoAudioOutput,
     /// Sayfalar, şarkı bağları ve yazma kuyruğunun durumu (bkz. `wire.rs`).
@@ -457,13 +512,19 @@ pub struct EngineHandle {
 
 impl EngineHandle {
     pub fn send(&self, command: Command) {
-        let sent = self.commands.lock().map(|tx| tx.send(command).is_ok()).unwrap_or(false);
+        let sent = self
+            .commands
+            .lock()
+            .map(|tx| tx.send(command).is_ok())
+            .unwrap_or(false);
         // Komut kanalı kapalı = motor iş parçacığı yok. Çökme yolu zaten
         // haber verdiyse (`stopped`) bir daha söyleme; vermediyse (iş
         // parçacığı başka biçimde bitti) arayüz sessiz zombi kalmasın.
         if !sent && !self.stopped.swap(true, std::sync::atomic::Ordering::SeqCst) {
             log::error!("Motor komut kanalı kapalı: motor durmuş");
-            let _ = self.event_tx.try_send(Event::EngineStopped("command channel closed".into()));
+            let _ = self
+                .event_tx
+                .try_send(Event::EngineStopped("command channel closed".into()));
         }
     }
 
@@ -480,7 +541,8 @@ impl EngineHandle {
         if let Ok(mut tx) = self.commands.lock() {
             *tx = command_tx;
         }
-        self.stopped.store(false, std::sync::atomic::Ordering::SeqCst);
+        self.stopped
+            .store(false, std::sync::atomic::Ordering::SeqCst);
         spawn_engine(
             command_rx,
             self.event_tx.clone(),
@@ -496,7 +558,11 @@ impl EngineHandle {
     /// saniyelerin de kaybolmamasını sağlar.
     pub fn flush_state(&self) {
         let (tx, rx) = std::sync::mpsc::channel();
-        let sent = self.commands.lock().map(|c| c.send(Command::Flush(tx)).is_ok()).unwrap_or(false);
+        let sent = self
+            .commands
+            .lock()
+            .map(|c| c.send(Command::Flush(tx)).is_ok())
+            .unwrap_or(false);
         if sent {
             let _ = rx.recv_timeout(std::time::Duration::from_millis(1500));
         }
@@ -532,7 +598,13 @@ pub fn start() -> EngineHandle {
     let (playback_tx, playback_rx) = async_channel::unbounded();
     let levels = AudioLevels::new();
     let stopped = Arc::new(std::sync::atomic::AtomicBool::new(false));
-    spawn_engine(command_rx, event_tx.clone(), playback_tx.clone(), levels.clone(), stopped.clone());
+    spawn_engine(
+        command_rx,
+        event_tx.clone(),
+        playback_tx.clone(),
+        levels.clone(),
+        stopped.clone(),
+    );
 
     EngineHandle {
         commands: std::sync::Mutex::new(command_tx),
@@ -581,7 +653,13 @@ fn spawn_engine(
                     .enable_all()
                     .build()
                     .expect("motor için tokio başlatılamadı");
-                runtime.block_on(run(command_rx, event_tx, playback_tx, background.handle().clone(), levels));
+                runtime.block_on(run(
+                    command_rx,
+                    event_tx,
+                    playback_tx,
+                    background.handle().clone(),
+                    levels,
+                ));
                 drop(background);
             }));
             if let Err(payload) = outcome {
@@ -608,7 +686,11 @@ enum Internal {
     },
     Context(anyhow::Result<Vec<SpotifyUri>>),
     /// `PlayContextAt` cevabı: bağlamın şarkıları (alınamadıysa hata).
-    ContextAt { track: String, hint: Option<usize>, result: anyhow::Result<Vec<SpotifyUri>> },
+    ContextAt {
+        track: String,
+        hint: Option<usize>,
+        result: anyhow::Result<Vec<SpotifyUri>>,
+    },
     Reconnected(Result<Session, auth::ConnectError>),
     /// Tarayıcı girişinin sonucu (bkz. `Engine::start_login`).
     LoginDone(Result<Session, auth::LoginError>),
@@ -697,7 +779,10 @@ async fn run(
     let (internal_tx, mut internal_rx) = mpsc::unbounded_channel();
     let mut engine = Engine::new(bg, db, events.clone(), playback, internal_tx, levels);
     engine.open_wire();
-    log::debug!("aşama {} ms: sayfa önbelleği ve yazma kuyruğu açıldı", crate::since_start());
+    log::debug!(
+        "aşama {} ms: sayfa önbelleği ve yazma kuyruğu açıldı",
+        crate::since_start()
+    );
     // Yerel olarak gizlenen şarkılar: kaldığı yer geri yüklenmeden önce bilinmeli.
     engine.init_hidden();
 
@@ -709,7 +794,10 @@ async fn run(
     // Açılışta seçili gelen liste (beğenilenler) hemen arkasından: arayüz
     // ilk karesinde gösterebilsin. Arama dizini ondan sonra, arka planda.
     engine.open_collection(CollectionId::Liked);
-    log::debug!("aşama {} ms: açılış listesi gönderildi", crate::since_start());
+    log::debug!(
+        "aşama {} ms: açılış listesi gönderildi",
+        crate::since_start()
+    );
     engine.send_search_index();
     engine.set_link(login::LinkState::Connecting);
     // Bağlanamazsa (internet yok) artan aralıklarla yeniden dener (bkz.
@@ -718,7 +806,8 @@ async fn run(
     // Kayıtlı giriş yoksa ya da reddedildiyse DENEMEZ ve tarayıcıyı da açmaz:
     // `NeedsLogin` olur, kullanıcının "Giriş yap"ını (`Command::StartLogin`)
     // bekler.
-    type Connecting = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Session, auth::ConnectError>>>>;
+    type Connecting =
+        std::pin::Pin<Box<dyn std::future::Future<Output = Result<Session, auth::ConnectError>>>>;
     let mut connect: Connecting = Box::pin(first_connect());
     let mut failures = 0u32;
     let session = loop {
@@ -857,7 +946,10 @@ impl Engine {
             saved_gen: None,
             pending: Vec::new(),
             user_refresh: false,
-            pb: Playback::new(Gate::new(events_tx, playback_tx), librespot::playback::config::live::key_failures()),
+            pb: Playback::new(
+                Gate::new(events_tx, playback_tx),
+                librespot::playback::config::live::key_failures(),
+            ),
             levels,
             eq: equalizer::EqSetting::default(),
             karaoke: (false, 1.0),
@@ -930,13 +1022,21 @@ impl Engine {
     /// Tutulan ekolayzer ayarını çıkışa verir (çıkış yoksa bağlanınca).
     fn apply_eq(&self) {
         if let Some(deck) = &self.pb.deck {
-            deck.out.set_eq(self.eq.enabled, self.eq.gains_db, self.eq.preamp_db);
+            deck.out
+                .set_eq(self.eq.enabled, self.eq.gains_db, self.eq.preamp_db);
         }
     }
 
     /// Karaoke ayarını tutar ve (çıkış varsa) uygular.
     fn set_karaoke(&mut self, enabled: bool, amount: f32) {
-        self.karaoke = (enabled, if amount.is_finite() { amount.clamp(0.0, 1.0) } else { 0.0 });
+        self.karaoke = (
+            enabled,
+            if amount.is_finite() {
+                amount.clamp(0.0, 1.0)
+            } else {
+                0.0
+            },
+        );
         self.apply_karaoke();
     }
 
@@ -949,7 +1049,9 @@ impl Engine {
 
     fn on_command(&mut self, command: Command) {
         // Boşluksuz geçiş duyulmadan: komut arayüzün gösterdiği şarkıya göre.
-        let Some(command) = self.with_pb(|pb, cx| pb.handover_command(cx, command)) else { return };
+        let Some(command) = self.with_pb(|pb, cx| pb.handover_command(cx, command)) else {
+            return;
+        };
         match command {
             Command::OpenCollection(id) => return self.open_collection(id),
             // Sayfalar ve yazmalar bağlantıyı kendileri bekler (bkz. `wire.rs`).
@@ -957,8 +1059,19 @@ impl Engine {
             Command::SetVolume(v) => return self.transport(TransportCmd::SetVolume(v)),
             Command::SetCrossfade(ms) => return self.with_pb(|pb, cx| pb.set_crossfade(cx, ms)),
             Command::SetAutoMix(on) => return self.set_automix(on),
-            Command::SetEq { enabled, gains_db, preamp_db } => {
-                return self.set_eq(equalizer::EqSetting { enabled, gains_db, preamp_db }.sanitized());
+            Command::SetEq {
+                enabled,
+                gains_db,
+                preamp_db,
+            } => {
+                return self.set_eq(
+                    equalizer::EqSetting {
+                        enabled,
+                        gains_db,
+                        preamp_db,
+                    }
+                    .sanitized(),
+                );
             }
             Command::SetKaraoke { enabled, amount } => return self.set_karaoke(enabled, amount),
             Command::Connect(c) => return self.on_connect_command(c),
@@ -1005,7 +1118,9 @@ impl Engine {
             }
             // Geri yüklenen şarkı çalara yüklü değil: sarma yalnız kayıtlı
             // konumu değiştirir, duraklatma zaten duraklatılmış.
-            Command::Seek(ms) if self.pb.restored.is_some() => return self.transport(TransportCmd::Seek(ms)),
+            Command::Seek(ms) if self.pb.restored.is_some() => {
+                return self.transport(TransportCmd::Seek(ms));
+            }
             Command::Pause if self.pb.restored.is_some() => return,
             // Giriş: tarayıcı yalnız bu komutlarla (kullanıcı eylemi) açılır.
             Command::StartLogin => return self.start_login(),
@@ -1013,7 +1128,9 @@ impl Engine {
             // "Yeniden dene" / "Yenile": giriş gerekiyorsa girişi başlatır; süren
             // girişi bozmaz; çalarsız motor (çevrimdışı, ücretsiz hesap, ses
             // çıkışı yok) yeniden bağlanıp dener.
-            Command::RefreshLibrary if self.host.link.can_start_login() => return self.start_login(),
+            Command::RefreshLibrary if self.host.link.can_start_login() => {
+                return self.start_login();
+            }
             Command::RefreshLibrary if self.host.link == login::LinkState::LoggingIn => return,
             Command::RefreshLibrary if self.host.conn.is_none() => return self.retry_connect(),
             _ => {}
@@ -1058,7 +1175,11 @@ impl Engine {
                 let uris = tracks.iter().map(|t| t.uri.clone()).collect();
                 self.start_queue(Some(id), uris, Some(tracks), index);
             }
-            Command::PlayTracks { context, tracks, index } => {
+            Command::PlayTracks {
+                context,
+                tracks,
+                index,
+            } => {
                 let uris = tracks.iter().map(|t| t.uri.clone()).collect();
                 self.start_queue(context, uris, Some(tracks), index);
             }
@@ -1134,10 +1255,7 @@ impl Engine {
             }
             Internal::Library(Err(e)) => {
                 if std::mem::take(&mut self.user_refresh) {
-                    self.notice(
-                        NoticeKind::Problem,
-                        t!(NoticeRefreshFailed),
-                    );
+                    self.notice(NoticeKind::Problem, t!(NoticeRefreshFailed));
                 }
                 // Önbellekten bir kütüphane gösteriliyorsa onunla devam et.
                 if self.library.is_none() {
@@ -1164,23 +1282,25 @@ impl Engine {
             Internal::Synced(id) => self.invalidate(id),
             Internal::Radio(batch) => self.on_radio_batch(batch),
             Internal::Filled => self.send_search_index(),
-            Internal::Search { seq, result } => {
-                match result {
-                    Ok(results) => self.emit(Event::SearchResults {
-                        seq,
-                        results: Arc::new(results),
-                    }),
-                    Err(e) => self.emit(Event::SearchFailed {
-                        seq,
-                        error: format!("{e:#}"),
-                    }),
-                }
-            }
+            Internal::Search { seq, result } => match result {
+                Ok(results) => self.emit(Event::SearchResults {
+                    seq,
+                    results: Arc::new(results),
+                }),
+                Err(e) => self.emit(Event::SearchFailed {
+                    seq,
+                    error: format!("{e:#}"),
+                }),
+            },
             Internal::Context(Ok(uris)) => {
                 let uris = uris.iter().filter_map(|u| u.to_uri().ok()).collect();
                 self.start_queue(None, uris, None, 0);
             }
-            Internal::ContextAt { track, hint, result } => {
+            Internal::ContextAt {
+                track,
+                hint,
+                result,
+            } => {
                 let all: Vec<String> = match result {
                     Ok(uris) => uris.iter().filter_map(|u| u.to_uri().ok()).collect(),
                     Err(e) => {
@@ -1220,7 +1340,10 @@ impl Engine {
     }
 
     fn notice(&self, kind: NoticeKind, message: &str) {
-        self.emit(Event::Notice { kind, message: message.into() });
+        self.emit(Event::Notice {
+            kind,
+            message: message.into(),
+        });
     }
 
     /// Arama dizinini (bütün listelerdeki şarkılar) arka planda okur.
@@ -1230,12 +1353,13 @@ impl Engine {
     fn send_search_index(&self) {
         let Some(db) = self.db.clone() else { return };
         let events = self.events.clone();
-        self.bg.spawn_blocking(move || match db.all_library_tracks() {
-            Ok(tracks) => {
-                let _ = events.try_send(Event::SearchIndex(Arc::new(tracks)));
-            }
-            Err(e) => log::warn!("Arama dizini okunamadı: {e:#}"),
-        });
+        self.bg
+            .spawn_blocking(move || match db.all_library_tracks() {
+                Ok(tracks) => {
+                    let _ = events.try_send(Event::SearchIndex(Arc::new(tracks)));
+                }
+                Err(e) => log::warn!("Arama dizini okunamadı: {e:#}"),
+            });
     }
 
     /// Hash, yeniden keşif ve kapı `pathfinder` istemcisinde.
@@ -1297,7 +1421,11 @@ impl Engine {
                     .collect::<Vec<_>>())
             }
             .await;
-            let _ = internal.send(Internal::ContextAt { track, hint, result });
+            let _ = internal.send(Internal::ContextAt {
+                track,
+                hint,
+                result,
+            });
         });
     }
 
@@ -1311,7 +1439,9 @@ impl Engine {
     }
 
     fn on_player_event(&mut self, event: PlayerEvent) {
-        let Some(signal) = PlayerSignal::from_librespot(event) else { return };
+        let Some(signal) = PlayerSignal::from_librespot(event) else {
+            return;
+        };
         self.with_pb(|pb, cx| pb.on_signal(cx, signal));
     }
 
@@ -1330,14 +1460,23 @@ impl Engine {
             return;
         }
         let (info, traits) = self.rule_data(&uris, rows.is_some());
-        let Some(uri) = self
-            .queue
-            .restart_with(context, uris, rows, index, fresh_seed(), KEEP_USER_QUEUE, info, traits)
-        else {
+        let Some(uri) = self.queue.restart_with(
+            context,
+            uris,
+            rows,
+            index,
+            fresh_seed(),
+            KEEP_USER_QUEUE,
+            info,
+            traits,
+        ) else {
             return;
         };
         self.fill_traits();
-        self.transport(TransportCmd::Start { uri, position_ms: 0 });
+        self.transport(TransportCmd::Start {
+            uri,
+            position_ms: 0,
+        });
     }
 
     /// Kullanıcı sırasına ekle (`front`: sonra çal). Çözülemeyen adresler
@@ -1363,7 +1502,10 @@ impl Engine {
         }
         let items = rows
             .into_iter()
-            .map(|t| UserItem { uri: t.uri.clone(), track: Some(t) })
+            .map(|t| UserItem {
+                uri: t.uri.clone(),
+                track: Some(t),
+            })
             .collect();
         if front {
             self.queue.play_next(items);
@@ -1386,18 +1528,28 @@ impl Engine {
     /// verilmediyse önbellekten; bulunamayan şarkı boş satırdır, elenmez) ve
     /// özellikler (açık söz / popülerlik; önbellekte olmayan bilinmiyor).
     /// Önbellek okuması motor iş parçacığında, birkaç milisaniye.
-    fn rule_data(&mut self, uris: &[String], have_rows: bool) -> (Option<Arc<Vec<TrackRow>>>, Vec<Traits>) {
+    fn rule_data(
+        &mut self,
+        uris: &[String],
+        have_rows: bool,
+    ) -> (Option<Arc<Vec<TrackRow>>>, Vec<Traits>) {
         let Some(db) = self.db.clone().filter(|_| !self.rules.is_empty()) else {
             return (None, Vec::new());
         };
         let info = (!have_rows).then(|| {
             let found = db.tracks(uris).unwrap_or_default();
-            Arc::new(uris.iter().map(|u| found.get(u).cloned().unwrap_or_else(|| blank_row(u))).collect::<Vec<_>>())
+            Arc::new(
+                uris.iter()
+                    .map(|u| found.get(u).cloned().unwrap_or_else(|| blank_row(u)))
+                    .collect::<Vec<_>>(),
+            )
         });
         let traits = if self.rules.needs_traits() {
             let found = db.track_traits(uris).unwrap_or_default();
             self.traits_known.extend(found.keys().cloned());
-            uris.iter().map(|u| found.get(u).copied().unwrap_or_default()).collect()
+            uris.iter()
+                .map(|u| found.get(u).copied().unwrap_or_default())
+                .collect()
         } else {
             Vec::new()
         };
@@ -1447,9 +1599,13 @@ impl Engine {
         if !self.rules.skip_explicit || self.traits_filling {
             return;
         }
-        let (Some(db), Some(conn)) = (self.db.clone(), &self.host.conn) else { return };
+        let (Some(db), Some(conn)) = (self.db.clone(), &self.host.conn) else {
+            return;
+        };
         let known = &self.traits_known;
-        let missing = self.queue.untraited_upcoming(&|u| known.contains(u), TRAITS_FILL_BATCH);
+        let missing = self
+            .queue
+            .untraited_upcoming(&|u| known.contains(u), TRAITS_FILL_BATCH);
         if missing.is_empty() {
             return;
         }
@@ -1461,7 +1617,9 @@ impl Engine {
             let rows = library::fetch_tracks(&session, missing.clone()).await;
             // `save_tracks` bu şarkıların özelliklerini de yazar (bkz. `traits.rs`).
             let found = tokio::task::spawn_blocking(move || {
-                if !rows.is_empty() && let Err(e) = db.save_tracks(&rows) {
+                if !rows.is_empty()
+                    && let Err(e) = db.save_tracks(&rows)
+                {
                     log::warn!("Tamamlanan şarkı bilgileri yazılamadı: {e:#}");
                 }
                 db.track_traits(&missing).unwrap_or_default()
@@ -1725,7 +1883,13 @@ impl Engine {
             .then(|| self.queue.current_row())
             .flatten()
             .or_else(|| self.meta.get(uri).cloned())
-            .or_else(|| self.db.as_ref()?.tracks(&[uri.to_owned()]).ok()?.remove(uri));
+            .or_else(|| {
+                self.db
+                    .as_ref()?
+                    .tracks(&[uri.to_owned()])
+                    .ok()?
+                    .remove(uri)
+            });
         let info = match (&self.pb.track_info, row.as_ref()) {
             (Some(t), _) if t.uri == uri && !t.name.is_empty() => t.clone(),
             (_, Some(r)) => TrackInfo {

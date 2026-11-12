@@ -77,7 +77,10 @@ fn never_returns_none_and_underrun_is_counted_once() {
     rig.write(&dc(2048, 0.25));
     let got = rig.pull(4096);
     assert!(got[1000].0 > 0.24, "çalmadı: {:?}", got[1000]);
-    assert!(got[3000..].iter().all(|s| *s == (0.0, 0.0)), "veri bitince sıfır");
+    assert!(
+        got[3000..].iter().all(|s| *s == (0.0, 0.0)),
+        "veri bitince sıfır"
+    );
     assert_eq!(rig.ctl.xruns(), 0, "veri gelmeden xrun sayılmaz");
     // Kesinti bitti: bir xrun, hedef büyüdü.
     let before = rig.ctl.target_frames();
@@ -125,7 +128,10 @@ fn write_fills_to_target_blocks_then_releases() {
         done += 1;
     }
     let queued = ctl.queued_frames();
-    assert!(queued > target && queued <= target + 1024, "kuyruk {queued}, hedef {target}");
+    assert!(
+        queued > target && queued <= target + 1024,
+        "kuyruk {queued}, hedef {target}"
+    );
     assert!(done < 40, "yazar beklemedi");
     let waiting = (0..200).any(|_| {
         thread::sleep(Duration::from_millis(1));
@@ -197,7 +203,10 @@ fn fades_have_no_discontinuity() {
     rig.w.sync();
     out.extend(rig.pull(1000));
     let eps = 1.0 / FADE_FRAMES as f32 + 1e-4;
-    let max = out.windows(2).map(|p| (p[1].0 - p[0].0).abs()).fold(0.0, f32::max);
+    let max = out
+        .windows(2)
+        .map(|p| (p[1].0 - p[0].0).abs())
+        .fold(0.0, f32::max);
     assert!(max <= eps, "en büyük adım {max} > {eps}");
     assert!(out.iter().any(|s| s.0 == 1.0) && out.last().unwrap().0 == 0.0);
 }
@@ -211,22 +220,38 @@ fn flush_drops_queue_and_new_audio_follows() {
     rig.ctl.flush();
     // Yazar onaylamadan: iniş, sonra sessizlik; eski ses atılmayı bekler.
     let b = rig.pull(3000);
-    assert!(b[BLOCK + FADE_FRAMES as usize..].iter().all(|s| *s == (0.0, 0.0)));
-    assert_eq!(rig.ctl.queued_frames(), 0, "bekleyen flush: kuyruk 0 sayılır");
+    assert!(
+        b[BLOCK + FADE_FRAMES as usize..]
+            .iter()
+            .all(|s| *s == (0.0, 0.0))
+    );
+    assert_eq!(
+        rig.ctl.queued_frames(),
+        0,
+        "bekleyen flush: kuyruk 0 sayılır"
+    );
     // Yazar onaylar (olay kanalı yok: kapı açık), yeni ses yazılır.
     rig.write(&ramp(1_000_000, 5000));
     let c = rig.pull(3000);
     let first = c.iter().position(|s| s.0 != 0.0).unwrap();
     let id = id_of(c[first + FADE_FRAMES as usize].0);
-    assert!(id >= 1_000_000 && id < 1_000_000 + 2 * FADE_FRAMES as u64, "eski ses çaldı: {id}");
+    assert!(
+        id >= 1_000_000 && id < 1_000_000 + 2 * FADE_FRAMES as u64,
+        "eski ses çaldı: {id}"
+    );
     // (Ses iş parçacığının o an doldurduğu blok da okunmuş sayılır.)
     let expect = 5000 - (3000 - first) as u64;
     let q = rig.ctl.queued_frames();
-    assert!(q <= expect && q + BLOCK as u64 > expect, "kuyruk {q}, beklenen ~{expect}");
+    assert!(
+        q <= expect && q + BLOCK as u64 > expect,
+        "kuyruk {q}, beklenen ~{expect}"
+    );
 }
 
 fn uri() -> SpotifyUri {
-    SpotifyUri::Track { id: SpotifyId::from_base62("2WUy2Uywcj5cP0IXQagO3z").unwrap() }
+    SpotifyUri::Track {
+        id: SpotifyId::from_base62("2WUy2Uywcj5cP0IXQagO3z").unwrap(),
+    }
 }
 
 #[test]
@@ -238,7 +263,8 @@ fn gate_drops_stale_packets_until_marker_then_confirmation() {
     rig.write(&ramp(0, 5000));
     rig.pull(2000);
     // Flush'tan ÖNCE işlenmiş eski bir komutun olayı kanalda bekliyor.
-    tx.send(PlayerEvent::PlayRequestIdChanged { play_request_id: 7 }).unwrap();
+    tx.send(PlayerEvent::PlayRequestIdChanged { play_request_id: 7 })
+        .unwrap();
     let mark = rig.ctl.flush();
     // Çalar sarmayı işlemeden eski konumdan bir paket daha yazar: atılır.
     rig.write(&ramp(5000, 1024));
@@ -247,13 +273,21 @@ fn gate_drops_stale_packets_until_marker_then_confirmation() {
     rig.write(&ramp(6024, 1024));
     assert_eq!(rig.w.written(), 5000, "eski paket kuyruğa girdi");
     // Sarma işlendi: yeni ses.
-    tx.send(PlayerEvent::Seeked { play_request_id: 7, track_id: uri(), position_ms: 90_000 }).unwrap();
+    tx.send(PlayerEvent::Seeked {
+        play_request_id: 7,
+        track_id: uri(),
+        position_ms: 90_000,
+    })
+    .unwrap();
     rig.write(&ramp(2_000_000, 4000));
     assert_eq!(rig.w.written(), 9000);
     let out = rig.pull(6000);
     let ids: Vec<u64> = out.iter().filter_map(|s| id_env(*s)).collect();
     let fade_end = 2000 + (BLOCK + FADE_FRAMES as usize) as u64;
-    assert!(ids.iter().all(|i| *i < fade_end || *i >= 2_000_000), "eski ses sızdı");
+    assert!(
+        ids.iter().all(|i| *i < fade_end || *i >= 2_000_000),
+        "eski ses sızdı"
+    );
     assert!(ids.iter().any(|i| *i >= 2_000_000 + 3000));
 }
 
@@ -270,11 +304,23 @@ fn a_volume_event_with_the_same_number_never_counts_as_the_marker() {
     rig.pull(2000);
     let mark = rig.ctl.flush();
     // Aynı sayıyı taşıyan gerçek bir ses düzeyi olayı (telefon ses düzeyini oynattı).
-    tx.send(PlayerEvent::VolumeChanged { volume: mark as u16 }).unwrap();
+    tx.send(PlayerEvent::VolumeChanged {
+        volume: mark as u16,
+    })
+    .unwrap();
     // Komutun sonucu (işaret hiç gelmedi): eski ses hâlâ atılmalı.
-    tx.send(PlayerEvent::Seeked { play_request_id: 7, track_id: uri(), position_ms: 90_000 }).unwrap();
+    tx.send(PlayerEvent::Seeked {
+        play_request_id: 7,
+        track_id: uri(),
+        position_ms: 90_000,
+    })
+    .unwrap();
     rig.write(&ramp(5000, 1024));
-    assert_eq!(rig.w.written(), 5000, "ses düzeyi olayı işaret sayıldı, kapı erken açıldı");
+    assert_eq!(
+        rig.w.written(),
+        5000,
+        "ses düzeyi olayı işaret sayıldı, kapı erken açıldı"
+    );
     // Gerçek işaret (başka bir kimlikle gelen aynı sayı da sayılmaz) ardından sonuç.
     tx.send(PlayerEvent::SessionClientChanged {
         client_id: "baska-istemci".into(),
@@ -284,9 +330,18 @@ fn a_volume_event_with_the_same_number_never_counts_as_the_marker() {
     })
     .unwrap();
     rig.write(&ramp(6024, 1024));
-    assert_eq!(rig.w.written(), 5000, "başka istemcinin olayı işaret sayıldı");
+    assert_eq!(
+        rig.w.written(),
+        5000,
+        "başka istemcinin olayı işaret sayıldı"
+    );
     tx.send(mark_event(mark)).unwrap();
-    tx.send(PlayerEvent::Seeked { play_request_id: 7, track_id: uri(), position_ms: 90_000 }).unwrap();
+    tx.send(PlayerEvent::Seeked {
+        play_request_id: 7,
+        track_id: uri(),
+        position_ms: 90_000,
+    })
+    .unwrap();
     rig.write(&ramp(2_000_000, 1024));
     assert_eq!(rig.w.written(), 6024, "gerçek işaret ve sonuç kapıyı açar");
 }
@@ -305,7 +360,11 @@ fn marks_beyond_sixteen_bits_round_trip_through_the_event() {
         client_brand_name: String::new(),
         client_model_name: String::new(),
     };
-    assert_eq!(mark_of(&other), None, "yalnız openify-mark kimliği işarettir");
+    assert_eq!(
+        mark_of(&other),
+        None,
+        "yalnız openify-mark kimliği işarettir"
+    );
     let junk = PlayerEvent::SessionClientChanged {
         client_id: MARK_CLIENT_ID.into(),
         client_name: "sayı değil".into(),
@@ -326,13 +385,23 @@ fn duck_cleared_when_player_starts_playing_after_marker() {
     rig.ctl.attach_events(rx);
     rig.w.start();
     // Eski bir Playing olayı (işaretten önce) susturmayı kaldırmaz.
-    tx.send(PlayerEvent::Playing { play_request_id: 1, track_id: uri(), position_ms: 0 }).unwrap();
+    tx.send(PlayerEvent::Playing {
+        play_request_id: 1,
+        track_id: uri(),
+        position_ms: 0,
+    })
+    .unwrap();
     let mark = rig.ctl.duck();
     rig.w.sync();
     assert!(rig.ctl.duck.load(SeqCst));
     // Duraklatma çalarda boşa düştü, sıradaki şarkı çalmaya başladı.
     tx.send(mark_event(mark)).unwrap();
-    tx.send(PlayerEvent::Playing { play_request_id: 2, track_id: uri(), position_ms: 0 }).unwrap();
+    tx.send(PlayerEvent::Playing {
+        play_request_id: 2,
+        track_id: uri(),
+        position_ms: 0,
+    })
+    .unwrap();
     rig.w.sync();
     assert!(!rig.ctl.duck.load(SeqCst));
 }
@@ -348,12 +417,19 @@ fn volume_ramps_in_ten_ms_and_mute_is_exact_zero() {
     // Rampa: 441 karede tek yönlü, adım küçük; sonrası tam 0,8 × 0,25.
     let l: Vec<f32> = out.iter().map(|s| s.0).collect();
     assert!(l.windows(2).all(|p| p[1] <= p[0] + 1e-6));
-    assert!(l.windows(2).all(|p| (p[1] - p[0]).abs() < 0.8 * 0.75 / 400.0));
+    assert!(
+        l.windows(2)
+            .all(|p| (p[1] - p[0]).abs() < 0.8 * 0.75 / 400.0)
+    );
     assert!((l[GAIN_RAMP_FRAMES as usize + 64] - 0.2).abs() < 1e-6);
     assert!((l[100] - 0.2).abs() > 0.05, "rampa yok");
     rig.ctl.set_gain(0.0);
     let out = rig.pull(1000);
-    assert!(out[GAIN_RAMP_FRAMES as usize + 64..].iter().all(|s| *s == (0.0, 0.0)));
+    assert!(
+        out[GAIN_RAMP_FRAMES as usize + 64..]
+            .iter()
+            .all(|s| *s == (0.0, 0.0))
+    );
 }
 
 #[test]
@@ -377,8 +453,14 @@ fn audible_position_corrects_for_queued_audio() {
     let heard_ms = (heard_frames * 1000 / RATE as u64) as i64;
     let pos = rig.ctl.audible_position_ms(reported) as i64;
     // (Ms'ye yuvarlamalar: en çok 2 ms.)
-    assert!((pos - heard_ms).abs() <= 2, "konum {pos}, duyulan {heard_ms}");
-    assert!((early as i64 - heard_ms).abs() <= 2, "erken {early}, duyulan {heard_ms}");
+    assert!(
+        (pos - heard_ms).abs() <= 2,
+        "konum {pos}, duyulan {heard_ms}"
+    );
+    assert!(
+        (early as i64 - heard_ms).abs() <= 2,
+        "erken {early}, duyulan {heard_ms}"
+    );
     // Devamda aynı konum.
     rig.w.start();
     assert!((rig.ctl.audible_position_ms(reported) as i64 - heard_ms).abs() <= 2);
@@ -424,7 +506,11 @@ fn anchor_predicts_pull_time_of_queued_frames() {
 fn audible_track_clock_follows_the_device() {
     let mut rig = Rig::new();
     rig.w.start();
-    assert_eq!(rig.ctl.audible_track_ms(), None, "şarkı başlamadan bilinmiyor");
+    assert_eq!(
+        rig.ctl.audible_track_ms(),
+        None,
+        "şarkı başlamadan bilinmiyor"
+    );
     rig.ctl.set_track_base(0);
     rig.write(&dc(30_000, 0.1));
     for _ in 0..20 {
@@ -436,12 +522,19 @@ fn audible_track_clock_follows_the_device() {
         (r - base) * 1000. / RATE as f64 - device_ms
     };
     let got = rig.ctl.audible_track_ms().expect("saat") as f64;
-    assert!((got - expect(&rig, 0.)).abs() <= 12., "duyulan {got}, beklenen {}", expect(&rig, 0.));
+    assert!(
+        (got - expect(&rig, 0.)).abs() <= 12.,
+        "duyulan {got}, beklenen {}",
+        expect(&rig, 0.)
+    );
     // Boşluksuz geçiş: sıradaki şarkı yazılmaya başladı (30 000. kareden),
     // önceki şarkının sonu hâlâ kuyrukta: yeni şarkının saati eksi.
     rig.ctl.set_track_base(0);
     let got = rig.ctl.audible_track_ms().expect("saat") as f64;
-    assert!(got < 0. && (got - expect(&rig, 30_000.)).abs() <= 12., "geçişte {got}");
+    assert!(
+        got < 0. && (got - expect(&rig, 30_000.)).abs() <= 12.,
+        "geçişte {got}"
+    );
     // Sarma (flush) sürerken bilinmiyor; yazar onaylayınca da yeni konum
     // gelene dek.
     rig.ctl.flush();
@@ -517,10 +610,21 @@ fn boundary_stall(tail: bool, stall_ms: u64) -> u64 {
 #[test]
 fn tail_buffer_hides_a_three_second_stall_at_the_boundary() {
     // Pay açık: 3 sn (ve çıta 3,5 sn) takılma duyulmaz.
-    assert_eq!(boundary_stall(true, 3000), 0, "payla 3 sn takılma xrun verdi");
-    assert_eq!(boundary_stall(true, 3500), 0, "payla 3,5 sn takılma xrun verdi");
+    assert_eq!(
+        boundary_stall(true, 3000),
+        0,
+        "payla 3 sn takılma xrun verdi"
+    );
+    assert_eq!(
+        boundary_stall(true, 3500),
+        0,
+        "payla 3,5 sn takılma xrun verdi"
+    );
     // Pay yok (eski davranış, 120 ms): aynı takılma kesinti yapar.
-    assert!(boundary_stall(false, 3000) >= 1, "paysız 3 sn takılma xrun vermedi");
+    assert!(
+        boundary_stall(false, 3000) >= 1,
+        "paysız 3 sn takılma xrun vermedi"
+    );
 }
 
 #[test]
@@ -549,7 +653,11 @@ fn tail_buffer_returns_to_normal_target_after_new_track_refills() {
         fill(&mut rig, &mut next);
         rig.callback();
     }
-    assert!(rig.ctl.queued_raw() <= normal + 1024, "kuyruk erimedi: {}", rig.ctl.queued_raw());
+    assert!(
+        rig.ctl.queued_raw() <= normal + 1024,
+        "kuyruk erimedi: {}",
+        rig.ctl.queued_raw()
+    );
     assert_eq!(rig.ctl.xruns(), 0);
 }
 
@@ -567,23 +675,38 @@ fn deep_queue_keeps_user_actions_instant() {
     rig.ctl.duck();
     let out = rig.pull(2000);
     let silent = out.iter().position(|s| *s == (0.0, 0.0)).unwrap();
-    assert!(silent <= BLOCK + FADE_FRAMES as usize, "duraklat {silent} kare sürdü");
+    assert!(
+        silent <= BLOCK + FADE_FRAMES as usize,
+        "duraklat {silent} kare sürdü"
+    );
     assert!(rig.ctl.queued_frames() + BLOCK as u64 + FADE_FRAMES as u64 >= queued);
     rig.ctl.unduck();
     rig.pull(2000);
     // Ses düzeyi: 10 ms'lik rampayla, kuyruğun önünde değil.
     rig.ctl.set_gain(0.0);
     let out = rig.pull(1000);
-    assert!(out[GAIN_RAMP_FRAMES as usize + BLOCK..].iter().all(|s| *s == (0.0, 0.0)), "ses düzeyi gecikti");
+    assert!(
+        out[GAIN_RAMP_FRAMES as usize + BLOCK..]
+            .iter()
+            .all(|s| *s == (0.0, 0.0)),
+        "ses düzeyi gecikti"
+    );
     rig.ctl.set_gain(1.0);
     // Sar / şarkı değiştir: 4 sn'lik eski ses beklemeden atılır.
     rig.ctl.flush();
     assert_eq!(rig.ctl.queued_frames(), 0);
     let out = rig.pull(2000);
-    assert!(out[BLOCK + FADE_FRAMES as usize..].iter().all(|s| *s == (0.0, 0.0)));
+    assert!(
+        out[BLOCK + FADE_FRAMES as usize..]
+            .iter()
+            .all(|s| *s == (0.0, 0.0))
+    );
     rig.write(&ramp(5_000_000, 4096));
     let out = rig.pull(3000);
-    let first = out.iter().find_map(|s| id_env(*s)).expect("yeni ses çalmadı");
+    let first = out
+        .iter()
+        .find_map(|s| id_env(*s))
+        .expect("yeni ses çalmadı");
     assert!(first >= 5_000_000, "eski ses çaldı: {first}");
 }
 
@@ -626,9 +749,14 @@ fn handover_becomes_audible_when_the_boundary_is_heard() {
         }
         for _ in 0..10 {
             match rig.ctl.handover_state() {
-                Handover::Audible { .. } if seen.is_none() => seen = Some(rig.clock.load(SeqCst) as f64),
+                Handover::Audible { .. } if seen.is_none() => {
+                    seen = Some(rig.clock.load(SeqCst) as f64)
+                }
                 Handover::Pending { .. } => {
-                    let old = rig.ctl.handover_old_ms(false).expect("önceki şarkının konumu");
+                    let old = rig
+                        .ctl
+                        .handover_old_ms(false)
+                        .expect("önceki şarkının konumu");
                     assert!(old + 1 >= last_old, "önceki şarkının konumu geri gitti");
                     last_old = old;
                 }
@@ -640,12 +768,21 @@ fn handover_becomes_audible_when_the_boundary_is_heard() {
             break;
         }
     }
-    let (truth, seen) = (truth.expect("sınır çekilmedi"), seen.expect("sınır duyulmadı"));
+    let (truth, seen) = (
+        truth.expect("sınır çekilmedi"),
+        seen.expect("sınır duyulmadı"),
+    );
     let err_ms = (seen - truth) / 1e6;
-    assert!(err_ms.abs() <= 3.0, "sınır {err_ms:.2} ms sapmayla bildirildi");
+    assert!(
+        err_ms.abs() <= 3.0,
+        "sınır {err_ms:.2} ms sapmayla bildirildi"
+    );
     // Önceki şarkının son konumu sınıra (boundary karesi) yakın.
     let end_ms = boundary * 1000 / RATE as u64;
-    assert!((last_old as i64 - end_ms as i64).abs() <= 12, "önceki şarkı {last_old} ms, sonu {end_ms} ms");
+    assert!(
+        (last_old as i64 - end_ms as i64).abs() <= 12,
+        "önceki şarkı {last_old} ms, sonu {end_ms} ms"
+    );
     // Sarma (flush) geçişi iptal eder.
     rig.ctl.begin_handover();
     rig.ctl.flush();
@@ -660,11 +797,17 @@ fn stall_hook_sleeps_before_first_packet_of_new_track() {
     w.sync();
     let t = Instant::now();
     w.push(&dc(1024, 0.1)).unwrap();
-    assert!(t.elapsed() < Duration::from_millis(30), "şarkı ortasında uyudu");
+    assert!(
+        t.elapsed() < Duration::from_millis(30),
+        "şarkı ortasında uyudu"
+    );
     w.first_write_pending = true;
     let t = Instant::now();
     w.push(&dc(1024, 0.1)).unwrap();
-    assert!(t.elapsed() >= Duration::from_millis(60), "yeni şarkıda uyumadı");
+    assert!(
+        t.elapsed() >= Duration::from_millis(60),
+        "yeni şarkıda uyumadı"
+    );
 }
 
 // ── Aygıt ───────────────────────────────────────────────────────────
@@ -683,14 +826,21 @@ fn device_loss_stops_writer_at_once_and_reopen_resumes_exactly() {
     rig.ctl.signal_device_lost("sınama");
     let t = Instant::now();
     assert!(rig.w.wait().is_err());
-    assert!(t.elapsed() < Duration::from_millis(50), "yazar {:?} bekledi", t.elapsed());
+    assert!(
+        t.elapsed() < Duration::from_millis(50),
+        "yazar {:?} bekledi",
+        t.elapsed()
+    );
     assert_eq!(rig.ctl.take_device_notice(), Some(DeviceNotice::Lost));
     // Çalar duraklar; aygıt öldü, iniş olmayacak: konum = son çekilen kare.
     rig.w.stop();
     let reported = (19 * 1024 * 1000 / RATE as u64) as u32;
     let read = rig.ctl.read.load(SeqCst);
     let paused = rig.ctl.audible_position_ms(reported);
-    assert!((paused as i64 - (read * 1000 / RATE as u64) as i64).abs() <= 1, "duraklatma {paused}");
+    assert!(
+        (paused as i64 - (read * 1000 / RATE as u64) as i64).abs() <= 1,
+        "duraklatma {paused}"
+    );
     // Ölü aygıtın kaynağı artık çağrılmıyor. Çal: o anki varsayılan açılır.
     let mut device = Device::headless(rig.ctl.clone());
     device.ensure_for_start().unwrap();
@@ -701,7 +851,9 @@ fn device_loss_stops_writer_at_once_and_reopen_resumes_exactly() {
     // (Ölü akış yeniden açarken kapandı, eski kaynak bir daha çağrılmaz.)
     // Yeni aygıtın kaynağı tam kaldığı kareden, girişle sürer.
     let mut src = RingSource::new(rig.ctl.clone());
-    let out: Vec<(f32, f32)> = (0..1000).map(|_| (src.next().unwrap(), src.next().unwrap())).collect();
+    let out: Vec<(f32, f32)> = (0..1000)
+        .map(|_| (src.next().unwrap(), src.next().unwrap()))
+        .collect();
     let first = out.iter().find_map(|s| id_env(*s)).expect("çalmadı");
     assert_eq!(first, read, "kaldığı kareden sürmedi");
     assert_eq!(rig.ctl.xruns(), 0);
@@ -720,17 +872,25 @@ fn default_device_switch_hands_over_without_gap_or_overlap() {
     // Geçiş: eski kaynak 8 ms'lik inişle bırakır…
     rig.ctl.source_gen.store(2, SeqCst);
     let fade: Vec<(f32, f32)> = rig.pull(1000);
-    assert!(rig.ctl.released_gen.load(SeqCst) >= 1, "eski kaynak bırakmadı");
+    assert!(
+        rig.ctl.released_gen.load(SeqCst) >= 1,
+        "eski kaynak bırakmadı"
+    );
     let tail = fade.iter().filter(|s| s.1 > 0.0).count();
     assert!(tail <= BLOCK + FADE_FRAMES as usize, "iniş {tail} kare");
     assert!(fade.last().unwrap().1 == 0.0);
     ids.extend(fade.into_iter().filter_map(id_env));
     assert!(rig.ctl.read.load(SeqCst) >= read);
     // …yenisi aynı kareden girişle sürer: atlanan / yinelenen kare yok.
-    let out: Vec<(f32, f32)> = (0..3000).map(|_| (new.next().unwrap(), new.next().unwrap())).collect();
+    let out: Vec<(f32, f32)> = (0..3000)
+        .map(|_| (new.next().unwrap(), new.next().unwrap()))
+        .collect();
     ids.extend(out.iter().filter_map(|s| id_env(*s)));
     assert!(ids.windows(2).all(|p| p[1] == p[0] + 1), "sıra bozuldu");
-    assert!(out.iter().any(|s| s.1 == 0.5), "yeni aygıt tam sese çıkmadı");
+    assert!(
+        out.iter().any(|s| s.1 == 0.5),
+        "yeni aygıt tam sese çıkmadı"
+    );
 }
 
 // ── Altın test ──────────────────────────────────────────────────────
@@ -793,7 +953,15 @@ impl Scn {
         ctl.attach_events(rx);
         let src = RingSource::new(ctl.clone());
         let w = Writer::new(ctl.clone());
-        Scn { ctl, clock, src, w, tx, noise: Noise(0x9E37_79B9_7F4A_7C15), h: Fnv::new() }
+        Scn {
+            ctl,
+            clock,
+            src,
+            w,
+            tx,
+            noise: Noise(0x9E37_79B9_7F4A_7C15),
+            h: Fnv::new(),
+        }
     }
 
     fn eat(h: &mut Fnv, src: &mut RingSource, frames: usize) {
@@ -908,7 +1076,12 @@ fn golden_scenario(prep: impl FnOnce(&Arc<OutputCtl>)) -> u64 {
     s.tx.send(mark_event(mark)).unwrap();
     s.write(777); // işaret var, komut sonucu yok: atılır
     assert_eq!(s.w.written(), written, "eski paket kuyruğa girdi");
-    s.tx.send(PlayerEvent::Seeked { play_request_id: 1, track_id: uri(), position_ms: 12_345 }).unwrap();
+    s.tx.send(PlayerEvent::Seeked {
+        play_request_id: 1,
+        track_id: uri(),
+        position_ms: 12_345,
+    })
+    .unwrap();
     for _ in 0..3 {
         s.write(1024);
     }
@@ -976,7 +1149,12 @@ fn golden_scenario(prep: impl FnOnce(&Arc<OutputCtl>)) -> u64 {
     s.pull(800);
     s.w.sync();
     s.tx.send(mark_event(mark)).unwrap();
-    s.tx.send(PlayerEvent::Seeked { play_request_id: 2, track_id: uri(), position_ms: 500 }).unwrap();
+    s.tx.send(PlayerEvent::Seeked {
+        play_request_id: 2,
+        track_id: uri(),
+        position_ms: 500,
+    })
+    .unwrap();
     for _ in 0..4 {
         s.write(1024);
     }
@@ -1017,7 +1195,11 @@ const GOLDEN: u64 = 0x0ee8402968c4d7f3;
 #[test]
 fn golden_output_is_bit_stable() {
     let got = golden_scenario(|_| {});
-    assert_eq!(got, golden_scenario(|_| {}), "senaryo kendi içinde belirli değil");
+    assert_eq!(
+        got,
+        golden_scenario(|_| {}),
+        "senaryo kendi içinde belirli değil"
+    );
     assert_eq!(got, GOLDEN, "altın özet değişti: {got:#018x}");
 }
 /// Ölçüm düzeneği: halka gürültüyle tam dolu, çıkış çalıyor.
@@ -1025,7 +1207,9 @@ fn bench_rig() -> Rig {
     let mut rig = Rig::new();
     rig.w.start();
     let mut noise = Noise(0x1234_5678_9ABC_DEF1);
-    let big: Vec<f64> = (0..CAP_FRAMES as usize * 2).map(|_| noise.next() * 0.8).collect();
+    let big: Vec<f64> = (0..CAP_FRAMES as usize * 2)
+        .map(|_| noise.next() * 0.8)
+        .collect();
     rig.w.sync();
     rig.w.push(&big).unwrap();
     rig.pull(2000);
@@ -1062,7 +1246,9 @@ fn median_min(mut v: Vec<f64>) -> (f64, f64) {
 fn fill_cost_bench() {
     const BLOCKS: usize = 400_000;
     let mut rig = bench_rig();
-    let runs: Vec<f64> = (0..9).map(|_| fill_ns(&mut rig, BLOCKS, RingSource::fill)).collect();
+    let runs: Vec<f64> = (0..9)
+        .map(|_| fill_ns(&mut rig, BLOCKS, RingSource::fill))
+        .collect();
     let (med, min) = median_min(runs);
     println!("fill_cost: ortanca {med:.1} ns/blok (en az {min:.1}; 9 koşu)");
 }
@@ -1136,7 +1322,10 @@ fn db(ratio: f64) -> f64 {
 #[test]
 fn eq_off_is_bit_identical() {
     let got = golden_scenario(|ctl| ctl.set_eq(false, EQ_GAINS, 3.0));
-    assert_eq!(got, GOLDEN, "kapalı ekolayzır çıkışı değiştirdi: {got:#018x}");
+    assert_eq!(
+        got, GOLDEN,
+        "kapalı ekolayzır çıkışı değiştirdi: {got:#018x}"
+    );
 }
 
 /// Açık ama bütün bantlar 0 dB ve ön kazanç 0 dB: dal hiç çalışmaz, çıkış
@@ -1144,7 +1333,10 @@ fn eq_off_is_bit_identical() {
 #[test]
 fn all_zero_gains_bypass_exactly() {
     let got = golden_scenario(|ctl| ctl.set_eq(true, [0.0; BANDS], 0.0));
-    assert_eq!(got, GOLDEN, "sıfır kazançlı ekolayzır çıkışı değiştirdi: {got:#018x}");
+    assert_eq!(
+        got, GOLDEN,
+        "sıfır kazançlı ekolayzır çıkışı değiştirdi: {got:#018x}"
+    );
     let ctl = EqCtl::new();
     ctl.set(true, &[0.0; BANDS], 0.0);
     let mut eq = Eq::new();
@@ -1174,7 +1366,11 @@ fn eq_disabled_after_use_returns_to_exact_passthrough() {
     let out = rig.pull(1984);
     for (i, s) in out.iter().enumerate() {
         let frame = r + i as u64;
-        assert_eq!(s.0.to_bits(), ((frame as f64 / 1e6) as f32).to_bits(), "kare {frame}");
+        assert_eq!(
+            s.0.to_bits(),
+            ((frame as f64 / 1e6) as f32).to_bits(),
+            "kare {frame}"
+        );
         assert_eq!(s.1, 0.5);
     }
 }
@@ -1187,9 +1383,14 @@ fn band_gain_at_center_within_0_2_db() {
     for band in 0..BANDS {
         for g in [6.0f32, -6.0, 12.0, -12.0] {
             // Otomatik ön kazanç −g (g > 0): elle +g vererek 0 dB'e getir.
-            let (pin, pout, _) = eq_measure(gains_at(band, g), g.max(0.0), CENTERS_HZ[band] as f64, 0.1);
+            let (pin, pout, _) =
+                eq_measure(gains_at(band, g), g.max(0.0), CENTERS_HZ[band] as f64, 0.1);
             let got = db(pout / pin);
-            assert!((got - g as f64).abs() <= 0.2, "bant {band} ({} Hz), {g} dB: ölçülen {got:.3} dB", CENTERS_HZ[band]);
+            assert!(
+                (got - g as f64).abs() <= 0.2,
+                "bant {band} ({} Hz), {g} dB: ölçülen {got:.3} dB",
+                CENTERS_HZ[band]
+            );
         }
     }
 }
@@ -1216,7 +1417,10 @@ fn eq_is_applied_in_the_signal_path() {
         energy
     };
     let gain = db(run(true) / run(false));
-    assert!((gain - 12.0).abs() <= 0.3, "yol boyunca kazanç {gain:.2} dB");
+    assert!(
+        (gain - 12.0).abs() <= 0.3,
+        "yol boyunca kazanç {gain:.2} dB"
+    );
 }
 
 /// Ayar iki iş parçacığı arasında asla yırtık görünmez: yazar bütün
@@ -1231,7 +1435,10 @@ fn coef_update_is_never_torn() {
     let writer = thread::spawn(move || {
         for k in 1..=N {
             let v = k as f32;
-            let p = Params { coef: [[v; 5]; BANDS], pre: v };
+            let p = Params {
+                coef: [[v; 5]; BANDS],
+                pre: v,
+            };
             w.publish(k % 2 == 1, &p);
         }
         d.store(true, SeqCst);
@@ -1245,7 +1452,10 @@ fn coef_update_is_never_torn() {
                 return;
             }
             let v = p.pre;
-            assert!(p.coef.iter().flatten().all(|x| *x == v), "yırtık okuma: {p:?}");
+            assert!(
+                p.coef.iter().flatten().all(|x| *x == v),
+                "yırtık okuma: {p:?}"
+            );
             assert_eq!(enabled, (v as u32) % 2 == 1, "açık bayrağı başka sürümden");
             reads += 1;
         }
@@ -1280,9 +1490,16 @@ fn coef_glides_over_eight_blocks_without_a_click() {
             assert!(eq.settled(), "{} blokta oturmadı", blk + 1);
         }
     }
-    let max_step = out.windows(2).map(|p| (p[1] - p[0]).abs()).fold(0.0f32, f32::max);
+    let max_step = out
+        .windows(2)
+        .map(|p| (p[1] - p[0]).abs())
+        .fold(0.0f32, f32::max);
     assert!(max_step < 0.005, "çıkış sıçradı: {max_step}");
-    assert!((out.last().unwrap() - 0.25).abs() < 0.01, "son değer {}", out.last().unwrap());
+    assert!(
+        (out.last().unwrap() - 0.25).abs() < 0.01,
+        "son değer {}",
+        out.last().unwrap()
+    );
 }
 
 /// Kuyruk atılınca (flush) ekolayzırın durumu sıfırlanır: eski sesin
@@ -1306,7 +1523,10 @@ fn eq_state_resets_on_flush() {
     // Yeni (sıfır) ses: çınlama olmamalı, tam sıfır.
     rig.write(&dc(4096, 0.0));
     let out = rig.pull(3000);
-    assert!(out.iter().all(|s| *s == (0.0, 0.0)), "eski durum yeni sese sızdı");
+    assert!(
+        out.iter().all(|s| *s == (0.0, 0.0)),
+        "eski durum yeni sese sızdı"
+    );
 }
 
 /// Otomatik ön kazanç: bileşik yanıtın gerçek tepesi kadar kısar (en büyük
@@ -1320,7 +1540,10 @@ fn preamp_prevents_clipping() {
     let p = Params::from_gains(&g, 0.0);
     let peak = super::eq::peak_response_db(&g);
     let got_db = 20.0 * (p.pre as f64).log10();
-    assert!((got_db + peak).abs() < 1e-3, "otomatik pay {got_db} dB, tepe {peak} dB");
+    assert!(
+        (got_db + peak).abs() < 1e-3,
+        "otomatik pay {got_db} dB, tepe {peak} dB"
+    );
     // Uzak iki bantta tepe en büyük banttan çok az fazladır.
     assert!((12.0..12.2).contains(&peak), "tepe {peak} dB");
     // Artı bant yoksa ön kazanç 1,0 (kısma yok).
@@ -1356,7 +1579,10 @@ fn eq_flushes_denormals() {
         let mut z = [0.0f32; BLOCK * CHANNELS];
         eq.process(&mut z, BLOCK);
         let m = eq.min_nonzero_state();
-        assert!(m.is_infinite() || m >= f32::MIN_POSITIVE, "denormal durum {m:e}");
+        assert!(
+            m.is_infinite() || m >= f32::MIN_POSITIVE,
+            "denormal durum {m:e}"
+        );
     }
     assert!(eq.state_is_zero(), "durum hiç sıfırlanmadı");
 }
@@ -1404,7 +1630,10 @@ fn eq_cost_bench() {
     }
     let (am, an) = median_min(a);
     let (bm, bn) = median_min(b);
-    println!("eq_cost: fill EQ kapalı {am:.0} ns/blok (en az {an:.0}); EQ açık {bm:.0} ns/blok (en az {bn:.0}); EQ'nun payı {:.0} ns/blok", bm - am);
+    println!(
+        "eq_cost: fill EQ kapalı {am:.0} ns/blok (en az {an:.0}); EQ açık {bm:.0} ns/blok (en az {bn:.0}); EQ'nun payı {:.0} ns/blok",
+        bm - am
+    );
     assert!(on.src.eq.running());
 }
 
@@ -1464,8 +1693,14 @@ const K_FRAMES: usize = 2 * RATE as usize;
 
 /// `freq` Hz'te sol kanalın çıkış / giriş gücü (dB), ikinci saniyede.
 fn karaoke_change_db(inp: &[(f32, f32)], out: &[(f32, f32)], freq: f64) -> f64 {
-    let p_in = tone_power(inp[K_SKIP..K_SKIP + RATE as usize].iter().map(|s| s.0), freq);
-    let p_out = tone_power(out[K_SKIP..K_SKIP + RATE as usize].iter().map(|s| s.0), freq);
+    let p_in = tone_power(
+        inp[K_SKIP..K_SKIP + RATE as usize].iter().map(|s| s.0),
+        freq,
+    );
+    let p_out = tone_power(
+        out[K_SKIP..K_SKIP + RATE as usize].iter().map(|s| s.0),
+        freq,
+    );
     db(p_out / p_in)
 }
 
@@ -1485,7 +1720,10 @@ fn karaoke_off_is_bit_identical() {
     let got = golden_scenario(|ctl| ctl.set_karaoke(false, 1.0));
     assert_eq!(got, GOLDEN, "kapalı karaoke çıkışı değiştirdi: {got:#018x}");
     let got = golden_scenario(|ctl| ctl.set_karaoke(true, 0.0));
-    assert_eq!(got, GOLDEN, "miktarı 0 olan karaoke çıkışı değiştirdi: {got:#018x}");
+    assert_eq!(
+        got, GOLDEN,
+        "miktarı 0 olan karaoke çıkışı değiştirdi: {got:#018x}"
+    );
     // Açıkken altın senaryo (stereo girişte) gerçekten değişir: dal çalışıyor.
     let on = golden_scenario(|ctl| ctl.set_karaoke(true, 1.0));
     assert_ne!(on, GOLDEN, "açık karaoke hiçbir şeyi değiştirmedi");
@@ -1496,13 +1734,18 @@ fn karaoke_off_is_bit_identical() {
 #[test]
 fn karaoke_cuts_the_center_and_spares_the_side() {
     for hz in [250.0, 400.0, 1000.0, 3000.0, 5000.0] {
-        let (inp, out, k) = karaoke_drive(K_FRAMES, center_and_side(hz, 7000.0), |_, c| c.set(true, 1.0));
+        let (inp, out, k) = karaoke_drive(K_FRAMES, center_and_side(hz, 7000.0), |_, c| {
+            c.set(true, 1.0)
+        });
         assert!(!k.is_mono());
         let cut = karaoke_change_db(&inp, &out, hz);
         println!("karaoke: merkez {hz:>6} Hz → {cut:+.1} dB");
         assert!(cut <= -15.0, "{hz} Hz merkez yalnız {cut:.1} dB azaldı");
         let side = karaoke_change_db(&inp, &out, 7000.0);
-        assert!(side.abs() <= 1.0, "{hz} Hz merkezle yan ton {side:+.2} dB oynadı");
+        assert!(
+            side.abs() <= 1.0,
+            "{hz} Hz merkezle yan ton {side:+.2} dB oynadı"
+        );
     }
 }
 
@@ -1518,9 +1761,14 @@ fn karaoke_leaves_pure_side_tones_alone() {
         let (inp, out, _) = karaoke_drive(K_FRAMES, side_only, |_, c| c.set(true, 1.0));
         let d = karaoke_change_db(&inp, &out, hz);
         assert!(d.abs() <= 1.0, "yalnız yan {hz} Hz {d:+.2} dB oynadı");
-        let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(440.0, hz), |_, c| c.set(true, 1.0));
+        let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(440.0, hz), |_, c| {
+            c.set(true, 1.0)
+        });
         let d = karaoke_change_db(&inp, &out, hz);
-        assert!(d.abs() <= 1.0, "orta 440 Hz varken yan {hz} Hz {d:+.2} dB oynadı");
+        assert!(
+            d.abs() <= 1.0,
+            "orta 440 Hz varken yan {hz} Hz {d:+.2} dB oynadı"
+        );
     }
 }
 
@@ -1528,7 +1776,9 @@ fn karaoke_leaves_pure_side_tones_alone() {
 #[test]
 fn karaoke_keeps_the_bass() {
     for hz in [40.0, 60.0, 80.0] {
-        let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(hz, 7000.0), |_, c| c.set(true, 1.0));
+        let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(hz, 7000.0), |_, c| {
+            c.set(true, 1.0)
+        });
         let d = karaoke_change_db(&inp, &out, hz);
         println!("karaoke: bas {hz:>4} Hz → {d:+.2} dB");
         assert!(d.abs() <= 1.0, "{hz} Hz bas {d:+.2} dB oynadı");
@@ -1538,9 +1788,14 @@ fn karaoke_keeps_the_bass() {
 /// Miktar orantılıdır: yarı miktar merkezi yaklaşık yarı genlikte (−6 dB) bırakır.
 #[test]
 fn karaoke_amount_scales_the_cut() {
-    let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(1000.0, 7000.0), |_, c| c.set(true, 0.5));
+    let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(1000.0, 7000.0), |_, c| {
+        c.set(true, 0.5)
+    });
     let d = karaoke_change_db(&inp, &out, 1000.0);
-    assert!((d + 6.0).abs() <= 0.5, "yarı miktar {d:.2} dB (beklenen ≈ −6)");
+    assert!(
+        (d + 6.0).abs() <= 0.5,
+        "yarı miktar {d:.2} dB (beklenen ≈ −6)"
+    );
 }
 
 /// Mono kaynak (L = R) hiç değişmez: bit bit aynı, karışım hiç yükselmez.
@@ -1576,7 +1831,11 @@ fn karaoke_mono_detection_follows_the_side_level() {
     // Mono başlayıp stereo olan kaynakta karaoke sonradan devreye girer.
     let switch = |n: usize| {
         let c = sin_at(500.0, 0.3, n);
-        let s = if n >= K_SKIP / 2 { sin_at(3100.0, 0.2, n) } else { 0.0 };
+        let s = if n >= K_SKIP / 2 {
+            sin_at(3100.0, 0.2, n)
+        } else {
+            0.0
+        };
         (c + s, c - s)
     };
     let (_, _, k) = karaoke_drive(K_SKIP * 3 / 2, switch, |_, c| c.set(true, 1.0));
@@ -1619,7 +1878,10 @@ fn karaoke_transitions_do_not_click() {
         (c + s, c - s)
     };
     // Kuramsal en büyük örnek farkı: Σ genlik · 2π f / fs.
-    let bound: f64 = tones.iter().map(|(f, a)| a * 2.0 * std::f64::consts::PI * f / RATE as f64).sum();
+    let bound: f64 = tones
+        .iter()
+        .map(|(f, a)| a * 2.0 * std::f64::consts::PI * f / RATE as f64)
+        .sum();
     let blocks_per_s = RATE as usize / BLOCK;
     let script = move |b: usize, c: &KaraokeCtl| match b {
         x if x == blocks_per_s / 2 => c.set(true, 1.0),
@@ -1632,10 +1894,15 @@ fn karaoke_transitions_do_not_click() {
     let (_, out, mut k) = karaoke_drive(RATE as usize * 5, input, script);
     let mut worst = 0.0f32;
     for w in out.windows(2) {
-        worst = worst.max((w[1].0 - w[0].0).abs()).max((w[1].1 - w[0].1).abs());
+        worst = worst
+            .max((w[1].0 - w[0].0).abs())
+            .max((w[1].1 - w[0].1).abs());
     }
     println!("karaoke geçiş: en büyük örnek farkı {worst:.5} (girişin kuramsal sınırı {bound:.5})");
-    assert!(f64::from(worst) <= bound * 1.05 + 0.002, "geçişte sıçrama: {worst} > {bound}");
+    assert!(
+        f64::from(worst) <= bound * 1.05 + 0.002,
+        "geçişte sıçrama: {worst} > {bound}"
+    );
     // Duyarlılık: giriş eğimi küçük olduğundan anlık bir kuru→ıslak geçiş bu sınırı aşardı.
     assert!(bound < 0.04, "test girişinin eğimi büyümüş: {bound}");
     // Miktar 0'a inince dal durdu (kuru, durum sıfır).
@@ -1645,9 +1912,21 @@ fn karaoke_transitions_do_not_click() {
 /// Açma rampası gerçekten rampa: `KARAOKE_GLIDE` blokta tam ıslak.
 #[test]
 fn karaoke_engages_over_the_glide() {
-    let (_, _, k) = karaoke_drive(BLOCK * (KARAOKE_GLIDE as usize / 2), center_and_side(1000.0, 7000.0), |_, c| c.set(true, 1.0));
-    assert!(k.engage() > 0.4 && k.engage() < 0.6, "yarı yolda karışım {}", k.engage());
-    let (_, _, k) = karaoke_drive(BLOCK * (KARAOKE_GLIDE as usize + 1), center_and_side(1000.0, 7000.0), |_, c| c.set(true, 1.0));
+    let (_, _, k) = karaoke_drive(
+        BLOCK * (KARAOKE_GLIDE as usize / 2),
+        center_and_side(1000.0, 7000.0),
+        |_, c| c.set(true, 1.0),
+    );
+    assert!(
+        k.engage() > 0.4 && k.engage() < 0.6,
+        "yarı yolda karışım {}",
+        k.engage()
+    );
+    let (_, _, k) = karaoke_drive(
+        BLOCK * (KARAOKE_GLIDE as usize + 1),
+        center_and_side(1000.0, 7000.0),
+        |_, c| c.set(true, 1.0),
+    );
     assert_eq!(k.engage(), 1.0);
 }
 
@@ -1660,7 +1939,10 @@ fn karaoke_state_resets_on_flush() {
     rig.w.start();
     let stereo: Vec<f64> = (0..8192)
         .flat_map(|n| {
-            let (c, s) = (sin_at(1000.0, 0.25, n) as f64, sin_at(7000.0, 0.25, n) as f64);
+            let (c, s) = (
+                sin_at(1000.0, 0.25, n) as f64,
+                sin_at(7000.0, 0.25, n) as f64,
+            );
             [c + s, c - s]
         })
         .collect();
@@ -1676,7 +1958,10 @@ fn karaoke_state_resets_on_flush() {
     assert!(rig.src.karaoke.state_is_zero(), "flush durumu sıfırlamadı");
     rig.write(&dc(4096, 0.0));
     let out = rig.pull(3000);
-    assert!(out.iter().all(|s| *s == (0.0, 0.0)), "eski durum yeni sese sızdı");
+    assert!(
+        out.iter().all(|s| *s == (0.0, 0.0)),
+        "eski durum yeni sese sızdı"
+    );
 }
 
 /// Tüm yol: halkadan okuyan kaynakta karaoke açılıp kapanınca, kapanma bitince
@@ -1697,7 +1982,11 @@ fn karaoke_disabled_after_use_returns_to_exact_passthrough() {
     let out = rig.pull(1984);
     for (i, s) in out.iter().enumerate() {
         let frame = r + i as u64;
-        assert_eq!(s.0.to_bits(), ((frame as f64 / 1e6) as f32).to_bits(), "kare {frame}");
+        assert_eq!(
+            s.0.to_bits(),
+            ((frame as f64 / 1e6) as f32).to_bits(),
+            "kare {frame}"
+        );
         assert_eq!(s.1, 0.5);
     }
 }
@@ -1707,7 +1996,12 @@ fn karaoke_disabled_after_use_returns_to_exact_passthrough() {
 fn karaoke_setting_is_sanitised() {
     let ctl = KaraokeCtl::new();
     let mut k = Karaoke::new();
-    for (enabled, amount, running) in [(true, f32::NAN, false), (true, -4.0, false), (true, 9.0, true), (false, 1.0, false)] {
+    for (enabled, amount, running) in [
+        (true, f32::NAN, false),
+        (true, -4.0, false),
+        (true, 9.0, true),
+        (false, 1.0, false),
+    ] {
         ctl.set(enabled, amount);
         k.poll(&ctl);
         // Önceki çağrıdan kalan karışım yok (process çağrılmadı): yalnız derinlik.
@@ -1764,5 +2058,8 @@ fn karaoke_cost_bench() {
         "karaoke_cost: fill karaoke kapalı {am:.0} ns/blok (en az {an:.0}); açık {bm:.0} ns/blok (en az {bn:.0}); karaoke'nin payı {:.0} ns/blok",
         bm - am
     );
-    assert!(on.src.karaoke.running() && on.src.karaoke.engage() > 0.99, "dal tam ıslak çalışmadı");
+    assert!(
+        on.src.karaoke.running() && on.src.karaoke.engage() > 0.99,
+        "dal tam ıslak çalışmadı"
+    );
 }

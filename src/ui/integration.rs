@@ -41,7 +41,11 @@ mod imp {
         /// Ana pencereyi tepsiye gizle.
         Hide,
         /// Ana pencereyi göster; `front` ise öne al.
-        Show { front: bool, at: Instant, why: &'static str },
+        Show {
+            front: bool,
+            at: Instant,
+            why: &'static str,
+        },
         /// Tepsi menüsünü bu ekran noktasında aç.
         OpenMenu { x: i32, y: i32, at: Instant },
         /// Her yerden paleti aç.
@@ -131,7 +135,9 @@ mod imp {
             let later = ops.clone();
             if start_hidden {
                 cx.spawn(async move |_, cx| {
-                    cx.background_executor().timer(std::time::Duration::from_millis(250)).await;
+                    cx.background_executor()
+                        .timer(std::time::Duration::from_millis(250))
+                        .await;
                     let _ = later.try_send(Op::InstallRest);
                     let _ = later.try_send(Op::StartHidden);
                 })
@@ -148,10 +154,12 @@ mod imp {
                 ));
                 while let Some(msg) = stream.next().await {
                     let ops = match msg {
-                        Msg::System(s) => match this.update(cx, |shell, cx| shell.on_system_event(s, cx)) {
-                            Ok(ops) => ops,
-                            Err(_) => break,
-                        },
+                        Msg::System(s) => {
+                            match this.update(cx, |shell, cx| shell.on_system_event(s, cx)) {
+                                Ok(ops) => ops,
+                                Err(_) => break,
+                            }
+                        }
                         Msg::Op(op) => vec![op],
                     };
                     for op in ops {
@@ -194,7 +202,9 @@ mod imp {
         /// Kapat (X) pencereyi gizlesin mi? Tepsi simgesi yoksa gizlenen
         /// pencereye dönülemezdi: o zaman uygulama kapanır.
         fn hide_on_close(&self) -> bool {
-            !self.quitting && self.close_to_tray && self.integration.as_ref().is_some_and(|i| i.tray_active())
+            !self.quitting
+                && self.close_to_tray
+                && self.integration.as_ref().is_some_and(|i| i.tray_active())
         }
 
         pub fn set_close_to_tray(&mut self, on: bool) {
@@ -256,7 +266,10 @@ mod imp {
         fn now_playing(&mut self) -> NowPlaying {
             let can_play = self.startable_collection().is_some();
             let Some(track) = self.state.track.clone() else {
-                return NowPlaying { can_play, ..Default::default() };
+                return NowPlaying {
+                    can_play,
+                    ..Default::default()
+                };
             };
             let status = match self.state.status {
                 Status::Idle => PlayStatus::Stopped,
@@ -295,7 +308,9 @@ mod imp {
                 return Some(row);
             }
             self.library.collections.values().find_map(|c| match c {
-                super::super::library::Loadable::Loaded(tracks) => tracks.iter().find(|r| r.uri == uri),
+                super::super::library::Loadable::Loaded(tracks) => {
+                    tracks.iter().find(|r| r.uri == uri)
+                }
                 _ => None,
             })
         }
@@ -339,17 +354,25 @@ mod imp {
                     log::info!("sistem: medya kontrolünden sarma {ms} ms");
                     vec![]
                 }
-                SystemEvent::Show => vec![Op::Show { front: true, at: s.at, why: "tepsi / ikinci açılış" }],
+                SystemEvent::Show => vec![Op::Show {
+                    front: true,
+                    at: s.at,
+                    why: "tepsi / ikinci açılış",
+                }],
                 SystemEvent::TrayMenu { x, y } => vec![Op::OpenMenu { x, y, at: s.at }],
                 SystemEvent::Hotkey => {
                     log::info!("sistem: her yerden palet kısayolu");
                     // Palet zaten kendi penceresinde açıksa kısayol kapatır.
-                    if self.desk.palette_window.is_some() && self.palette.open && self.palette.detached {
+                    if self.desk.palette_window.is_some()
+                        && self.palette.open
+                        && self.palette.detached
+                    {
                         self.close_palette(cx);
                         return vec![];
                     }
                     // Openify zaten öndeyse palet pencerenin içinde açılır.
-                    let front = !self.desk.hidden && self.desk.hwnd.is_some_and(system::is_foreground);
+                    let front =
+                        !self.desk.hidden && self.desk.hwnd.is_some_and(system::is_foreground);
                     if front {
                         self.open_palette(cx);
                         vec![]
@@ -370,7 +393,9 @@ mod imp {
             let playing = matches!(self.state.status, Status::Playing | Status::Loading);
             match button {
                 MediaButton::Play if !playing => self.toggle_play(cx),
-                MediaButton::Pause | MediaButton::Stop if playing => self.engine.send(Command::Pause),
+                MediaButton::Pause | MediaButton::Stop if playing => {
+                    self.engine.send(Command::Pause)
+                }
                 MediaButton::Toggle => self.toggle_play(cx),
                 MediaButton::Next => self.next(cx),
                 MediaButton::Previous => self.previous(cx),
@@ -408,7 +433,10 @@ mod imp {
     }
 
     fn popup_hwnd<V: 'static>(handle: Option<WindowHandle<V>>, cx: &mut AsyncApp) -> Option<HWND> {
-        handle?.update(cx, |_, window, _| windows_titlebar::hwnd(window)).ok().flatten()
+        handle?
+            .update(cx, |_, window, _| windows_titlebar::hwnd(window))
+            .ok()
+            .flatten()
     }
 
     /// Gizliyken bellek (çıta < 80 MB, en ağır durumda bile):
@@ -425,15 +453,19 @@ mod imp {
     /// Geliştirme kancası: `OPENIFY_TRIM_SKIP="popups,gpui,heap"` parçaları
     /// atlar (hangisinin ne kazandırdığını ölçmek için).
     fn trim_memory(this: &WeakEntity<Shell>, cx: &mut AsyncApp) {
-        let Ok((hidden, menu, palette)) = this.update(cx, |s, _| (s.desk.hidden, s.desk.menu_window, s.desk.palette_window))
-        else {
+        let Ok((hidden, menu, palette)) = this.update(cx, |s, _| {
+            (s.desk.hidden, s.desk.menu_window, s.desk.palette_window)
+        }) else {
             return;
         };
         if !hidden {
             return;
         }
         // Açılır pencere ekrandaysa dokunma (kapanınca yeniden denenir).
-        let shown = [popup_hwnd(menu, cx), popup_hwnd(palette, cx)].into_iter().flatten().any(system::is_visible);
+        let shown = [popup_hwnd(menu, cx), popup_hwnd(palette, cx)]
+            .into_iter()
+            .flatten()
+            .any(system::is_visible);
         if shown {
             return;
         }
@@ -470,7 +502,6 @@ mod imp {
             t.elapsed().as_secs_f64() * 1000.
         );
     }
-
 
     /// Pencere işleri: gpui güncellemesinin dışında (bkz. modül notu).
     fn run(op: Op, this: &WeakEntity<Shell>, cx: &mut AsyncApp) {
@@ -539,12 +570,26 @@ mod imp {
             }
             Op::StartHidden => {
                 let tray = this
-                    .update(cx, |shell, _| shell.desk.integration.as_ref().is_some_and(|i| i.tray_active()))
+                    .update(cx, |shell, _| {
+                        shell
+                            .desk
+                            .integration
+                            .as_ref()
+                            .is_some_and(|i| i.tray_active())
+                    })
                     .unwrap_or(false);
                 if tray {
                     run(Op::Hide, this, cx);
                 } else {
-                    run(Op::Show { front: true, at: Instant::now(), why: "gizli açılış, tepsi yok" }, this, cx);
+                    run(
+                        Op::Show {
+                            front: true,
+                            at: Instant::now(),
+                            why: "gizli açılış, tepsi yok",
+                        },
+                        this,
+                        cx,
+                    );
                 }
             }
             Op::Info(text) => {
@@ -573,7 +618,12 @@ mod imp {
     pub struct Desk;
 
     impl Desk {
-        pub fn new(_: &mut Window, _: &mut Context<Shell>, _: &crate::settings::Settings, _: bool) -> Self {
+        pub fn new(
+            _: &mut Window,
+            _: &mut Context<Shell>,
+            _: &crate::settings::Settings,
+            _: bool,
+        ) -> Self {
             Desk
         }
 

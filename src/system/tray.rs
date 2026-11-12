@@ -28,7 +28,12 @@ impl Tray {
     pub fn add(hwnd: HWND, light: bool) -> Option<Self> {
         let size = icons::small_icon_size();
         let icon = icons::render(icons::tray_svg(size), size, icons::ink(light))?;
-        let mut tray = Tray { hwnd, icon, tip: crate::brand::APP_NAME.into(), added: false };
+        let mut tray = Tray {
+            hwnd,
+            icon,
+            tip: crate::brand::APP_NAME.into(),
+            added: false,
+        };
         tray.readd();
         tray.added.then_some(tray)
     }

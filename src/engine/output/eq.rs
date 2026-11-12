@@ -45,7 +45,9 @@ use super::RATE;
 
 pub const BANDS: usize = 10;
 /// Bant merkezleri (Hz).
-pub const CENTERS_HZ: [f32; BANDS] = [31.5, 63.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0];
+pub const CENTERS_HZ: [f32; BANDS] = [
+    31.5, 63.0, 125.0, 250.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0, 16000.0,
+];
 /// Her bantın kalite çarpanı.
 const Q: f64 = 1.41;
 /// Katsayıların hedefe vardığı blok sayısı.
@@ -73,7 +75,10 @@ pub struct Params {
 }
 
 impl Params {
-    pub const IDENT: Params = Params { coef: [IDENT; BANDS], pre: 1.0 };
+    pub const IDENT: Params = Params {
+        coef: [IDENT; BANDS],
+        pre: 1.0,
+    };
 
     /// Kazançlardan (dB) katsayıları ve otomatik ön kazancı hesaplar (motor
     /// iş parçacığında: sin / cos / pow burada). Otomatik pay, bileşik
@@ -92,7 +97,11 @@ impl Params {
         }
         let boost = peak_response_db(&g).max(0.0) as f32;
         let pre_db = sane_db(preamp_db) - boost;
-        p.pre = if pre_db == 0.0 { 1.0 } else { 10f64.powf(pre_db as f64 / 20.0) as f32 };
+        p.pre = if pre_db == 0.0 {
+            1.0
+        } else {
+            10f64.powf(pre_db as f64 / 20.0) as f32
+        };
         p
     }
 
@@ -102,18 +111,31 @@ impl Params {
 
     /// Hangi bantlar birim değil (bit i = bant i).
     fn active_mask(&self) -> u16 {
-        (0..BANDS).fold(0u16, |m, i| if self.coef[i] != IDENT { m | 1 << i } else { m })
+        (0..BANDS).fold(
+            0u16,
+            |m, i| if self.coef[i] != IDENT { m | 1 << i } else { m },
+        )
     }
 }
 
 fn sane_db(db: f32) -> f32 {
-    if db.is_finite() { db.clamp(-MAX_DB, MAX_DB) } else { 0.0 }
+    if db.is_finite() {
+        db.clamp(-MAX_DB, MAX_DB)
+    } else {
+        0.0
+    }
 }
 
 /// RBJ tepe (peaking) süzgeci; merkezde kazanç tam `gain_db`.
 fn peaking(f0: f64, gain_db: f64) -> Coef {
     let c = peaking_f64(f0, gain_db);
-    [c[0] as f32, c[1] as f32, c[2] as f32, c[3] as f32, c[4] as f32]
+    [
+        c[0] as f32,
+        c[1] as f32,
+        c[2] as f32,
+        c[3] as f32,
+        c[4] as f32,
+    ]
 }
 
 /// `peaking`in çift duyarlıklı hâli (b0, b1, b2, a1, a2; a0'a bölünmüş).
@@ -148,7 +170,9 @@ pub fn band_response_db(band: usize, gain_db: f64, freq: f64) -> f64 {
 
 /// On bandın bileşik genlik yanıtı (dB) `freq` Hz'te (ön kazanç yok).
 pub fn response_db(gains_db: &[f32; BANDS], freq: f64) -> f64 {
-    (0..BANDS).map(|b| band_response_db(b, sane_db(gains_db[b]) as f64, freq)).sum()
+    (0..BANDS)
+        .map(|b| band_response_db(b, sane_db(gains_db[b]) as f64, freq))
+        .sum()
 }
 
 /// Bileşik yanıtın 20 Hz – 20 kHz arasındaki en büyük değeri (dB): 1/12
@@ -177,7 +201,10 @@ pub fn peak_response_db(gains_db: &[f32; BANDS]) -> f64 {
     }
     // Altın oran: [best_f / step, best_f * step] içinde (log ekseninde).
     const PHI: f64 = 0.618_033_988_749_895;
-    let (mut lo, mut hi) = ((best_f / step).max(10.0).ln(), (best_f * step).min(24_000.0).ln());
+    let (mut lo, mut hi) = (
+        (best_f / step).max(10.0).ln(),
+        (best_f * step).min(24_000.0).ln(),
+    );
     let at = |x: f64| response_db(gains_db, x.exp());
     let (mut x1, mut x2) = (hi - PHI * (hi - lo), lo + PHI * (hi - lo));
     let (mut f1, mut f2) = (at(x1), at(x2));
@@ -237,7 +264,10 @@ impl EqCtl {
                 s = self.seq.load(Relaxed);
                 continue;
             }
-            match self.seq.compare_exchange_weak(s, s.wrapping_add(1), Relaxed, Relaxed) {
+            match self
+                .seq
+                .compare_exchange_weak(s, s.wrapping_add(1), Relaxed, Relaxed)
+            {
                 Ok(_) => break,
                 Err(now) => s = now,
             }
@@ -311,7 +341,10 @@ impl Eq {
             seen: 0,
             target: Params::IDENT,
             cur: Params::IDENT,
-            step: Params { coef: [[0.0; 5]; BANDS], pre: 0.0 },
+            step: Params {
+                coef: [[0.0; 5]; BANDS],
+                pre: 0.0,
+            },
             left: 0,
             active: 0,
             running: false,
@@ -335,7 +368,9 @@ impl Eq {
 
     #[cold]
     fn take(&mut self, ctl: &EqCtl) {
-        let Some((seq, enabled, p)) = ctl.read() else { return };
+        let Some((seq, enabled, p)) = ctl.read() else {
+            return;
+        };
         self.seen = seq;
         self.target = if enabled { p } else { Params::IDENT };
         if self.target == self.cur {
@@ -439,7 +474,13 @@ impl Eq {
     /// Testler: en küçük sıfırdan farklı durum büyüklüğü.
     #[cfg(test)]
     pub fn min_nonzero_state(&self) -> f32 {
-        self.z.iter().flatten().flatten().map(|v| v.abs()).filter(|a| *a != 0.0).fold(f32::INFINITY, f32::min)
+        self.z
+            .iter()
+            .flatten()
+            .flatten()
+            .map(|v| v.abs())
+            .filter(|a| *a != 0.0)
+            .fold(f32::INFINITY, f32::min)
     }
 
     /// Testler: geçerli katsayılar hedefte mi.

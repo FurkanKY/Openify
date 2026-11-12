@@ -48,12 +48,24 @@ pub struct Rules {
 }
 
 impl Rules {
-    pub fn new<'a>(dedupe_versions: bool, skip_explicit: bool, blocked: impl IntoIterator<Item = &'a str>) -> Self {
-        let mut blocked: Vec<String> = blocked.into_iter().map(fold).filter(|n| !n.is_empty()).collect();
+    pub fn new<'a>(
+        dedupe_versions: bool,
+        skip_explicit: bool,
+        blocked: impl IntoIterator<Item = &'a str>,
+    ) -> Self {
+        let mut blocked: Vec<String> = blocked
+            .into_iter()
+            .map(fold)
+            .filter(|n| !n.is_empty())
+            .collect();
         blocked.sort();
         blocked.dedup();
         blocked.truncate(BLOCKED_MAX);
-        Self { dedupe_versions, skip_explicit, blocked }
+        Self {
+            dedupe_versions,
+            skip_explicit,
+            blocked,
+        }
     }
 
     /// Hiçbir şeyi süzmeyen (karıştırmadan bağımsız) kural yok mu?
@@ -85,7 +97,9 @@ impl Rules {
             return false;
         }
         let hay = format!(", {}, ", fold(artists));
-        self.blocked.iter().any(|b| hay.contains(&format!(", {b}, ")))
+        self.blocked
+            .iter()
+            .any(|b| hay.contains(&format!(", {b}, ")))
     }
 
     /// Bu şarkı (kullanıcı seçmedikçe) çalınmayacak mı?
@@ -134,7 +148,9 @@ fn is_noise(content: &str) -> bool {
         .split(|c: char| !c.is_alphanumeric())
         .filter(|t| !t.is_empty())
         .collect();
-    let Some(first) = tokens.first() else { return false };
+    let Some(first) = tokens.first() else {
+        return false;
+    };
     match *first {
         // Katkı sanatçıları: içerik bütünüyle ad.
         "feat" | "ft" | "featuring" | "with" | "prod" => true,
@@ -176,7 +192,18 @@ const NOISE_MARKERS: [&str; 15] = [
 
 /// Not içinde yer alabilen ama tek başına not saymayan sözcükler.
 const NOISE_FILLER: [&str; 12] = [
-    "digital", "digitally", "edition", "expanded", "mix", "track", "the", "and", "from", "cut", "re", "master",
+    "digital",
+    "digitally",
+    "edition",
+    "expanded",
+    "mix",
+    "track",
+    "the",
+    "and",
+    "from",
+    "cut",
+    "re",
+    "master",
 ];
 
 /// "Live" ile birlikte ayrı bir sürüm bildiren sözcükler.
@@ -300,7 +327,10 @@ pub fn song_key(title: &str, artists: &str) -> Option<String> {
     if letters < 2
         || name.chars().all(|c| !c.is_alphabetic())
         || GENERIC_TITLES.contains(&name.as_str())
-        || GENERIC_TITLES.iter().any(|g| name.strip_prefix(g).is_some_and(|rest| rest.trim().chars().all(|c| c.is_ascii_digit())))
+        || GENERIC_TITLES.iter().any(|g| {
+            name.strip_prefix(g)
+                .is_some_and(|rest| rest.trim().chars().all(|c| c.is_ascii_digit()))
+        })
     {
         return None;
     }
@@ -341,7 +371,10 @@ pub fn select(
     let kept: Vec<usize> = candidates
         .iter()
         .copied()
-        .filter(|&i| rows.get(i).is_none_or(|r| !rules.excludes(r, traits.get(i))))
+        .filter(|&i| {
+            rows.get(i)
+                .is_none_or(|r| !rules.excludes(r, traits.get(i)))
+        })
         .collect();
     if !dedupe || !rules.dedupe_versions {
         return kept;
@@ -355,12 +388,25 @@ pub fn select(
     }
     type Clusters = HashMap<String, Vec<Cluster>>;
     /// Kaydı anahtarın ilk uyumlu kümesine koyar (yoksa yeni küme); kümenin sırası.
-    fn place(clusters: &mut Clusters, key: String, duration: u32, heard: bool, member: Option<usize>) -> usize {
+    fn place(
+        clusters: &mut Clusters,
+        key: String,
+        duration: u32,
+        heard: bool,
+        member: Option<usize>,
+    ) -> usize {
         let list = clusters.entry(key).or_default();
-        let at = list.iter().position(|c| durations_compatible(c.duration, duration)).unwrap_or_else(|| {
-            list.push(Cluster { duration, heard: false, members: Vec::new() });
-            list.len() - 1
-        });
+        let at = list
+            .iter()
+            .position(|c| durations_compatible(c.duration, duration))
+            .unwrap_or_else(|| {
+                list.push(Cluster {
+                    duration,
+                    heard: false,
+                    members: Vec::new(),
+                });
+                list.len() - 1
+            });
         list[at].heard |= heard;
         list[at].members.extend(member);
         at
@@ -377,7 +423,9 @@ pub fn select(
     // Her aday: (küme anahtarı, kümedeki sıra) ya da kümesiz.
     let mut slot: Vec<Option<(String, usize)>> = Vec::with_capacity(kept.len());
     for (pos, &i) in kept.iter().enumerate() {
-        let key = rows.get(i).and_then(|r| song_key(&r.name, &r.artists).map(|k| (k, r.duration_ms)));
+        let key = rows
+            .get(i)
+            .and_then(|r| song_key(&r.name, &r.artists).map(|k| (k, r.duration_ms)));
         slot.push(key.map(|(k, d)| {
             let at = place(&mut clusters, k.clone(), d, false, Some(pos));
             (k, at)
@@ -393,7 +441,11 @@ pub fn select(
                 // Çalınmış şarkının sürümü: hiçbiri kalmaz. Yoksa en popüler
                 // (eşitse en öndeki) kalır.
                 !c.heard
-                    && c.members.iter().copied().max_by_key(|&m| (popularity(m), std::cmp::Reverse(m))) == Some(pos)
+                    && c.members
+                        .iter()
+                        .copied()
+                        .max_by_key(|&m| (popularity(m), std::cmp::Reverse(m)))
+                        == Some(pos)
             }
         })
         .map(|(_, &i)| i)
@@ -494,7 +546,10 @@ mod tests {
             assert_ne!(norm(t), "wonderwall", "{t} ayrı sürüm sayılmalı");
         }
         assert_ne!(norm("Wonderwall (Remix)"), norm("Wonderwall (Acoustic)"));
-        assert_eq!(norm("Wonderwall (Remix) - Remastered"), norm("Wonderwall (Remix)"));
+        assert_eq!(
+            norm("Wonderwall (Remix) - Remastered"),
+            norm("Wonderwall (Remix)")
+        );
     }
 
     #[test]
@@ -503,10 +558,16 @@ mod tests {
         assert_eq!(norm("Live and Let Die"), "live and let die");
         assert_eq!(norm("Live Forever - Remastered"), "live forever");
         assert_eq!(norm("Feat. Nobody"), "feat. nobody");
-        assert_eq!(norm("With or Without You - Remastered 2007"), "with or without you");
+        assert_eq!(
+            norm("With or Without You - Remastered 2007"),
+            "with or without you"
+        );
         assert_eq!(norm("Edit"), "edit");
         assert_eq!(norm("Remastered"), "remastered");
-        assert_eq!(norm("Bohemian Rhapsody - Remastered 2011"), "bohemian rhapsody");
+        assert_eq!(
+            norm("Bohemian Rhapsody - Remastered 2011"),
+            "bohemian rhapsody"
+        );
         // "With" yalnız parantez içinde katkıdır.
         assert_eq!(norm("Under Pressure (With David Bowie)"), "under pressure");
         assert_eq!(norm("Songs for the Deaf"), "songs for the deaf");
@@ -522,7 +583,22 @@ mod tests {
 
     #[test]
     fn unbalanced_brackets_and_odd_input_do_not_panic() {
-        for t in ["", " ", "(", ")", "((", "(Live", "Song (Live))", "[]", "()", " - ", "- -", "Song - ", "Song (feat. A (B))", "💿"] {
+        for t in [
+            "",
+            " ",
+            "(",
+            ")",
+            "((",
+            "(Live",
+            "Song (Live))",
+            "[]",
+            "()",
+            " - ",
+            "- -",
+            "Song - ",
+            "Song (feat. A (B))",
+            "💿",
+        ] {
             let _ = norm(t);
         }
         assert_eq!(norm("(Remastered)"), "");
@@ -534,14 +610,26 @@ mod tests {
     fn real_world_titles() {
         // Spotify'daki gerçek yazımlar.
         assert_eq!(norm("Smells Like Teen Spirit"), "smells like teen spirit");
-        assert_eq!(norm("Bohemian Rhapsody - Remastered 2011"), norm("Bohemian Rhapsody (Live Aid)"));
-        assert_eq!(norm("Sweet Child O' Mine - Live"), norm("Sweet Child O’ Mine"));
-        assert_eq!(norm("Blinding Lights"), norm("Blinding Lights - Radio Edit"));
+        assert_eq!(
+            norm("Bohemian Rhapsody - Remastered 2011"),
+            norm("Bohemian Rhapsody (Live Aid)")
+        );
+        assert_eq!(
+            norm("Sweet Child O' Mine - Live"),
+            norm("Sweet Child O’ Mine")
+        );
+        assert_eq!(
+            norm("Blinding Lights"),
+            norm("Blinding Lights - Radio Edit")
+        );
         assert_eq!(norm("Shape of You (feat. Ed Sheeran)"), "shape of you");
         assert_eq!(norm("Yesterday - Remastered 2009"), "yesterday");
         assert_eq!(norm("Love Me Do - Mono / Remastered"), "love me do");
         assert_eq!(norm("Fix You - Live from Rome"), "fix you");
-        assert_eq!(norm("Mr. Brightside (Jacques Lu Cont's Thin White Duke Mix)"), "mr. brightside (jacques lu cont's thin white duke mix)");
+        assert_eq!(
+            norm("Mr. Brightside (Jacques Lu Cont's Thin White Duke Mix)"),
+            "mr. brightside (jacques lu cont's thin white duke mix)"
+        );
         assert_eq!(norm("Song 2 - Remastered 2012"), "song 2");
         assert_ne!(norm("Song 2"), norm("Song 1"));
         assert_eq!(norm("Aşk (Remastered 2020)"), "aşk");
@@ -555,9 +643,15 @@ mod tests {
         let b = song_key("Hey Jude", "the beatles").unwrap();
         assert_eq!(a, b);
         // Yalnız ilk sanatçı: katkı sanatçısı değişse de aynı şarkı.
-        assert_eq!(song_key("Despacito", "Luis Fonsi, Daddy Yankee"), song_key("Despacito (feat. Daddy Yankee)", "Luis Fonsi"));
+        assert_eq!(
+            song_key("Despacito", "Luis Fonsi, Daddy Yankee"),
+            song_key("Despacito (feat. Daddy Yankee)", "Luis Fonsi")
+        );
         // Farklı ana sanatçı: farklı şarkı (cover).
-        assert_ne!(song_key("Hurt", "Nine Inch Nails"), song_key("Hurt", "Johnny Cash"));
+        assert_ne!(
+            song_key("Hurt", "Nine Inch Nails"),
+            song_key("Hurt", "Johnny Cash")
+        );
     }
 
     #[test]
@@ -570,7 +664,10 @@ mod tests {
         assert_eq!(song_key("7", "Catfish"), None);
         assert_eq!(song_key("(Remastered)", "Queen"), None);
         assert_eq!(song_key("Hey Jude", ""), None);
-        assert!(song_key("Intro to Everything", "Drake").is_some(), "yalnız tam ad genel sayılır");
+        assert!(
+            song_key("Intro to Everything", "Drake").is_some(),
+            "yalnız tam ad genel sayılır"
+        );
     }
 
     // ── kurallar ──
@@ -590,7 +687,10 @@ mod tests {
         assert!(!Rules::default().blocks("Drake"));
         assert_eq!(r.blocked_count(), 2);
         // Tekrarlar ve boşlar atılır.
-        assert_eq!(Rules::new(false, false, ["A", "a", " ", ""]).blocked_count(), 1);
+        assert_eq!(
+            Rules::new(false, false, ["A", "a", " ", ""]).blocked_count(),
+            1
+        );
     }
 
     #[test]
@@ -607,11 +707,23 @@ mod tests {
     #[test]
     fn explicit_filter_needs_a_known_flag() {
         let rows = vec![row("a", "x", 1), row("b", "x", 1), row("c", "x", 1)];
-        let traits = vec![Traits { explicit: true, popularity: 0 }, Traits::default()];
+        let traits = vec![
+            Traits {
+                explicit: true,
+                popularity: 0,
+            },
+            Traits::default(),
+        ];
         let rules = Rules::new(false, true, []);
         // 2. şarkının özelliği bilinmiyor: düşmez.
-        assert_eq!(select(&rows, &traits, &rules, false, &[], &[0, 1, 2]), [1, 2]);
-        assert_eq!(select(&rows, &traits, &Rules::default(), false, &[], &[0, 1, 2]), [0, 1, 2]);
+        assert_eq!(
+            select(&rows, &traits, &rules, false, &[], &[0, 1, 2]),
+            [1, 2]
+        );
+        assert_eq!(
+            select(&rows, &traits, &Rules::default(), false, &[], &[0, 1, 2]),
+            [0, 1, 2]
+        );
     }
 
     fn versions() -> (Vec<TrackRow>, Vec<Traits>) {
@@ -623,8 +735,14 @@ mod tests {
             row("Hey Jude", "Wilson Pickett", 260_000),                // 4 (cover)
             row("Hey Jude (Acoustic)", "The Beatles", 200_000),        // 5 (ayrı)
         ];
-        let pop = |p| Traits { explicit: false, popularity: p };
-        (rows, vec![pop(60), pop(70), pop(90), pop(10), pop(30), pop(20)])
+        let pop = |p| Traits {
+            explicit: false,
+            popularity: p,
+        };
+        (
+            rows,
+            vec![pop(60), pop(70), pop(90), pop(10), pop(30), pop(20)],
+        )
     }
 
     #[test]
@@ -638,7 +756,10 @@ mod tests {
         assert_eq!(kept, [1, 2, 4, 5]);
         // Kapalıysa hiçbiri düşmez.
         assert_eq!(select(&rows, &traits, &rules, false, &[], &all), all);
-        assert_eq!(select(&rows, &traits, &Rules::default(), true, &[], &all), all);
+        assert_eq!(
+            select(&rows, &traits, &Rules::default(), true, &[], &all),
+            all
+        );
     }
 
     #[test]
@@ -661,28 +782,58 @@ mod tests {
     #[test]
     fn dedupe_runs_after_the_explicit_filter() {
         // Popüler olan açık sürüm, "açıkları atla" açıkken yerini temiz sürüme bırakır.
-        let rows = vec![row("Song (Explicit)", "A", 200_000), row("Song (Clean)", "A", 200_000), row("Other", "B", 1)];
-        let traits = vec![Traits { explicit: true, popularity: 90 }, Traits { explicit: false, popularity: 50 }, Traits::default()];
+        let rows = vec![
+            row("Song (Explicit)", "A", 200_000),
+            row("Song (Clean)", "A", 200_000),
+            row("Other", "B", 1),
+        ];
+        let traits = vec![
+            Traits {
+                explicit: true,
+                popularity: 90,
+            },
+            Traits {
+                explicit: false,
+                popularity: 50,
+            },
+            Traits::default(),
+        ];
         let rules = Rules::new(true, true, []);
-        assert_eq!(select(&rows, &traits, &rules, true, &[], &[0, 1, 2]), [1, 2]);
+        assert_eq!(
+            select(&rows, &traits, &rules, true, &[], &[0, 1, 2]),
+            [1, 2]
+        );
         let rules = Rules::new(true, false, []);
-        assert_eq!(select(&rows, &traits, &rules, true, &[], &[0, 1, 2]), [0, 2]);
+        assert_eq!(
+            select(&rows, &traits, &rules, true, &[], &[0, 1, 2]),
+            [0, 2]
+        );
     }
 
     #[test]
     fn dedupe_respects_duration_sanity() {
         // Aynı ad + sanatçı ama süre iki katından fazla ayrışıyor: farklı kayıt.
-        let rows = vec![row("Bloom", "Radiohead", 210_000), row("Bloom", "Radiohead", 30_000)];
+        let rows = vec![
+            row("Bloom", "Radiohead", 210_000),
+            row("Bloom", "Radiohead", 30_000),
+        ];
         let rules = Rules::new(true, false, []);
         assert_eq!(select(&rows, &[], &rules, true, &[], &[0, 1]), [0, 1]);
         // Süre bilinmiyorsa eşleşmeyi engellemez.
-        let rows = vec![row("Bloom", "Radiohead", 0), row("Bloom", "Radiohead", 210_000)];
+        let rows = vec![
+            row("Bloom", "Radiohead", 0),
+            row("Bloom", "Radiohead", 210_000),
+        ];
         assert_eq!(select(&rows, &[], &rules, true, &[], &[0, 1]), [0]);
     }
 
     #[test]
     fn blocked_artists_leave_the_pool_even_when_deduping() {
-        let rows = vec![row("A", "Drake", 1), row("B", "Future, Drake", 1), row("C", "Other", 1)];
+        let rows = vec![
+            row("A", "Drake", 1),
+            row("B", "Future, Drake", 1),
+            row("C", "Other", 1),
+        ];
         let rules = Rules::new(true, false, ["drake"]);
         assert_eq!(select(&rows, &[], &rules, true, &[], &[0, 1, 2]), [2]);
     }
@@ -700,12 +851,28 @@ mod tests {
     /// bütün bir kümeyi yok etmez.
     #[test]
     fn select_is_an_ordered_subset_and_never_empties_a_group() {
-        let titles = ["Song", "Song - Live", "Song (Remastered)", "Other", "Third (feat. X)", "Third", "Intro", "Intro"];
+        let titles = [
+            "Song",
+            "Song - Live",
+            "Song (Remastered)",
+            "Other",
+            "Third (feat. X)",
+            "Third",
+            "Intro",
+            "Intro",
+        ];
         let artists = ["A", "A", "A", "B", "C", "C", "A", "A"];
-        let rows: Vec<TrackRow> = titles.iter().zip(artists).enumerate().map(|(i, (t, a))| row(t, a, 200_000 + i as u32)).collect();
+        let rows: Vec<TrackRow> = titles
+            .iter()
+            .zip(artists)
+            .enumerate()
+            .map(|(i, (t, a))| row(t, a, 200_000 + i as u32))
+            .collect();
         let mut state = 7u64;
         let mut next = || {
-            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            state = state
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
             (state >> 33) as usize
         };
         for _ in 0..300 {
@@ -716,19 +883,39 @@ mod tests {
                 cands.swap(i, next() % (i + 1));
             }
             cands.truncate(n);
-            let traits: Vec<Traits> = (0..rows.len()).map(|_| Traits { explicit: next() % 3 == 0, popularity: (next() % 100) as u8 }).collect();
-            let rules = Rules::new(true, next() % 2 == 0, if next() % 2 == 0 { vec!["b"] } else { vec![] });
+            let traits: Vec<Traits> = (0..rows.len())
+                .map(|_| Traits {
+                    explicit: next() % 3 == 0,
+                    popularity: (next() % 100) as u8,
+                })
+                .collect();
+            let rules = Rules::new(
+                true,
+                next() % 2 == 0,
+                if next() % 2 == 0 { vec!["b"] } else { vec![] },
+            );
             let kept = select(&rows, &traits, &rules, true, &[], &cands);
             // alt küme ve sıra korunumu
             let mut it = cands.iter();
-            assert!(kept.iter().all(|k| it.any(|c| c == k)), "{cands:?} → {kept:?}");
+            assert!(
+                kept.iter().all(|k| it.any(|c| c == k)),
+                "{cands:?} → {kept:?}"
+            );
             // süzme sonrası boş küme yok: süzülmeyen her anahtar grubundan biri kalır
-            let survivors: Vec<usize> = cands.iter().copied().filter(|&i| !rules.excludes(&rows[i], traits.get(i))).collect();
+            let survivors: Vec<usize> = cands
+                .iter()
+                .copied()
+                .filter(|&i| !rules.excludes(&rows[i], traits.get(i)))
+                .collect();
             for &s in &survivors {
                 let key = song_key(&rows[s].name, &rows[s].artists);
-                let same = |i: &usize| key.is_some() && song_key(&rows[*i].name, &rows[*i].artists) == key;
+                let same =
+                    |i: &usize| key.is_some() && song_key(&rows[*i].name, &rows[*i].artists) == key;
                 if key.is_some() {
-                    assert!(kept.iter().any(same), "grup tamamen yok oldu: {survivors:?} → {kept:?}");
+                    assert!(
+                        kept.iter().any(same),
+                        "grup tamamen yok oldu: {survivors:?} → {kept:?}"
+                    );
                 } else {
                     assert!(kept.contains(&s), "anahtarsız şarkı düştü");
                 }

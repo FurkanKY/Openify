@@ -85,7 +85,13 @@ impl Gate {
     /// `old_uri`); bırakma iş parçacığı açılmaz.
     #[cfg(test)]
     pub(in crate::engine) fn hold_for_test(&self, out: Arc<OutputCtl>, old_uri: Option<String>) {
-        *self.lock() = Some(Hold { id: 0, out, held: Vec::new(), playing: None, old_uri });
+        *self.lock() = Some(Hold {
+            id: 0,
+            out,
+            held: Vec::new(),
+            playing: None,
+            old_uri,
+        });
     }
 
     /// Sınama: tutmayı bırak (`hold_for_test`'in tersi).

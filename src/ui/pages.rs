@@ -27,7 +27,8 @@ use gpui::{
 use super::{
     ScrollBar, Shell,
     components::{
-        Look, PRIMARY_HEIGHT, Tooltip, anchor_probe, chip, explain_error, icon_button, icon_button_tinted, menu_below, primary_button, secondary_button, state_view,
+        Look, PRIMARY_HEIGHT, Tooltip, anchor_probe, chip, explain_error, icon_button,
+        icon_button_tinted, menu_below, primary_button, secondary_button, state_view,
     },
     cover_image,
     history::{History, Route},
@@ -184,12 +185,23 @@ fn plain_header_geometry(compact: bool) -> PlainHeader {
     let title_top = PLAIN_HEADER_TOP;
     let meta_top = title_top + title_h + S2;
     let meta_h = T_BODY.line;
-    PlainHeader { title_top, title_h, meta_top, meta_h, total: meta_top + meta_h + S6 }
+    PlainHeader {
+        title_top,
+        title_h,
+        meta_top,
+        meta_h,
+        total: meta_top + meta_h + S6,
+    }
 }
 
 /// İskelet çubuğu (yazı ya da düğme yerinde ton katmanı).
 fn skeleton_bar(w: f32, h: f32) -> Div {
-    div().w(px(w)).h(px(h)).flex_none().rounded(px(R_XS)).bg(veil(VEIL_HOVER))
+    div()
+        .w(px(w))
+        .h(px(h))
+        .flex_none()
+        .rounded(px(R_XS))
+        .bg(veil(VEIL_HOVER))
 }
 
 /// Yerel saat (selamlama için); Windows dışında öğle sayılır.
@@ -208,8 +220,14 @@ pub(super) fn local_hour() -> u16 {
 /// Kartın kapağı.
 #[derive(Clone)]
 pub(super) enum Art {
-    Image { url: String, icon: &'static str },
-    Collection { id: CollectionId, image: String },
+    Image {
+        url: String,
+        icon: &'static str,
+    },
+    Collection {
+        id: CollectionId,
+        image: String,
+    },
     /// Birbirinin ardına dizilmiş birkaç kapak (ana sayfada günlük karışımlar
     /// tek kart): en çok üç, öndeki ilk.
     Stack(Vec<String>),
@@ -245,7 +263,10 @@ fn album_card(a: &AlbumCard) -> CardSpec {
         key: a.uri.clone(),
         title: a.name.clone(),
         subtitle,
-        art: Art::Image { url: a.image.clone(), icon: "disc-3" },
+        art: Art::Image {
+            url: a.image.clone(),
+            icon: "disc-3",
+        },
         round: false,
         target: CardTarget::Album {
             uri: a.uri.clone(),
@@ -264,7 +285,10 @@ pub(super) fn artist_card(a: &ArtistCard) -> CardSpec {
         key: a.uri.clone(),
         title: a.name.clone(),
         subtitle: t!(Artist).into(),
-        art: Art::Image { url: a.image.clone(), icon: "user" },
+        art: Art::Image {
+            url: a.image.clone(),
+            icon: "user",
+        },
         round: true,
         target: CardTarget::Artist(a.uri.clone()),
     }
@@ -282,21 +306,33 @@ pub(super) fn page_enter(id: ElementId, content: Div) -> AnyElement {
         return content.into_any_element();
     }
     content
-        .with_animation(id, gpui::Animation::new(motion()).with_easing(gpui::ease_out_quint()), |el, d| {
-            el.opacity(d).mt(px(S2 * (1. - d)))
-        })
+        .with_animation(
+            id,
+            gpui::Animation::new(motion()).with_easing(gpui::ease_out_quint()),
+            |el, d| el.opacity(d).mt(px(S2 * (1. - d))),
+        )
         .into_any_element()
 }
 
 pub(super) fn collection_card(i: &LibraryItem) -> CardSpec {
-    let title = if i.id == CollectionId::Liked { t!(LikedSongs).to_string() } else { i.name.clone() };
+    let title = if i.id == CollectionId::Liked {
+        t!(LikedSongs).to_string()
+    } else {
+        i.name.clone()
+    };
     CardSpec {
         key: i.id.key().to_string(),
         title: title.clone(),
         subtitle: crate::i18n::canon::localize(&i.subtitle).into_owned(),
-        art: Art::Collection { id: i.id.clone(), image: i.image.clone() },
+        art: Art::Collection {
+            id: i.id.clone(),
+            image: i.image.clone(),
+        },
         round: false,
-        target: CardTarget::Collection { id: i.id.clone(), title },
+        target: CardTarget::Collection {
+            id: i.id.clone(),
+            title,
+        },
     }
 }
 
@@ -387,7 +423,8 @@ impl Shell {
                 if !matches!(self.pages.artists.get(uri), Some(PageLoad::Ready(_))) {
                     self.pages.artists.insert(uri.clone(), PageLoad::Loading);
                 }
-                self.engine.send(Command::Library(LibraryCommand::OpenArtist(uri.clone())));
+                self.engine
+                    .send(Command::Library(LibraryCommand::OpenArtist(uri.clone())));
                 // Sayfa bellekte hazırsa (önbelleğe yazılmamış olsa da) benzerleri.
                 if let Some(PageLoad::Ready(page)) = self.pages.artists.get(uri) {
                     let page = page.clone();
@@ -399,25 +436,38 @@ impl Shell {
                 if !matches!(self.pages.albums.get(uri), Some(PageLoad::Ready(_))) {
                     self.pages.albums.insert(uri.clone(), PageLoad::Loading);
                 }
-                self.engine.send(Command::Library(LibraryCommand::OpenAlbum(uri.clone())));
+                self.engine
+                    .send(Command::Library(LibraryCommand::OpenAlbum(uri.clone())));
             }
             Route::Settings => self.enter_settings(cx),
             Route::Tools => self.enter_tools(cx),
             Route::Home => self.ask_explore(&[crate::engine::ExploreKey::Home]),
             Route::Explore => self.enter_explore(cx),
-            Route::Category(uri) => self.ask_explore(&[crate::engine::ExploreKey::Category(uri.clone())]),
+            Route::Category(uri) => {
+                self.ask_explore(&[crate::engine::ExploreKey::Category(uri.clone())])
+            }
             Route::Search(query) => {
-                let have = self.pages.search.as_ref().is_some_and(|s| &s.query == query && !matches!(s.results, PageLoad::Failed(_)));
+                let have = self.pages.search.as_ref().is_some_and(|s| {
+                    &s.query == query && !matches!(s.results, PageLoad::Failed(_))
+                });
                 if !have {
                     self.pages.seq += 1;
                     let seq = self.pages.seq;
-                    self.pages.search =
-                        Some(SearchPage { query: query.clone(), seq, results: PageLoad::Loading, kind: Default::default() });
+                    self.pages.search = Some(SearchPage {
+                        query: query.clone(),
+                        seq,
+                        results: PageLoad::Loading,
+                        kind: Default::default(),
+                    });
                     // Ekran sınaması (`OPENIFY_TEST_SEARCH_JSON`): kayıtlı yanıt, Spotify'a gitmeden.
                     if let Some(saved) = crate::engine::test_search_results() {
                         self.on_page_search(seq, Ok(Arc::new(saved)));
                     } else {
-                        self.engine.send(Command::Library(LibraryCommand::SearchAll { seq, query: query.clone() }));
+                        self.engine
+                            .send(Command::Library(LibraryCommand::SearchAll {
+                                seq,
+                                query: query.clone(),
+                            }));
                     }
                 }
             }
@@ -432,7 +482,9 @@ impl Shell {
     }
 
     pub(super) fn store_artist(&mut self, uri: String, page: Arc<ArtistPage>) {
-        self.pages.lists.insert(format!("top:{uri}"), Arc::new(page.top_tracks.clone()));
+        self.pages
+            .lists
+            .insert(format!("top:{uri}"), Arc::new(page.top_tracks.clone()));
         self.want_related(&uri, &page);
         self.pages.artists.insert(uri, PageLoad::Ready(page));
     }
@@ -442,18 +494,21 @@ impl Shell {
     /// Spotify'a giden istek az kalsın). Önbellekteyse bu karede gösterilir;
     /// taze değilse motor arkadan ister. Sayfa ilk ekranı beklemez.
     fn want_related(&mut self, uri: &str, page: &ArtistPage) {
-        if !page.related.is_empty() || !matches!(self.pages.history.current(), Route::Artist(u) if u == uri) {
+        if !page.related.is_empty()
+            || !matches!(self.pages.history.current(), Route::Artist(u) if u == uri)
+        {
             return;
         }
         if !self.pages.asked_related.insert(uri.to_string()) {
             return;
         }
         // Önbellekteki benzerleri motor hemen yollar, taze değilse arkadan da ister.
-        self.engine.send(Command::Library(LibraryCommand::OpenRelated {
-            uri: uri.to_string(),
-            name: page.name.clone(),
-            top_track: page.top_tracks.first().map(|t| t.uri.clone()),
-        }));
+        self.engine
+            .send(Command::Library(LibraryCommand::OpenRelated {
+                uri: uri.to_string(),
+                name: page.name.clone(),
+                top_track: page.top_tracks.first().map(|t| t.uri.clone()),
+            }));
     }
 
     /// Deezer kartına tıklandı: Spotify adresi biliniyorsa oraya, değilse
@@ -469,19 +524,28 @@ impl Shell {
             .map(|a| a.name.clone());
         if let Some(name) = name {
             self.pages.resolving = Some(from.clone());
-            self.engine.send(Command::Library(LibraryCommand::ResolveArtist { from, name }));
+            self.engine
+                .send(Command::Library(LibraryCommand::ResolveArtist {
+                    from,
+                    name,
+                }));
         }
     }
 
     fn store_album(&mut self, uri: String, page: Arc<AlbumPage>) {
-        self.pages.lists.insert(format!("album:{uri}"), Arc::new(page.tracks.clone()));
+        self.pages
+            .lists
+            .insert(format!("album:{uri}"), Arc::new(page.tracks.clone()));
         // Albümdeki şarkıların bağı bilinir: albüm burası, sanatçılar başlıktaki.
         for t in &page.tracks {
-            self.pages.links.entry(t.uri.clone()).or_insert_with(|| TrackLinks {
-                uri: t.uri.clone(),
-                album: Some((uri.clone(), page.name.clone())),
-                artists: Vec::new(),
-            });
+            self.pages
+                .links
+                .entry(t.uri.clone())
+                .or_insert_with(|| TrackLinks {
+                    uri: t.uri.clone(),
+                    album: Some((uri.clone(), page.name.clone())),
+                    artists: Vec::new(),
+                });
         }
         // Albümün sanatçısının diğer albümleri sayfanın altında görünür:
         // sanatçı sayfası (bir kez, oturumda) arkadan istenir.
@@ -508,9 +572,19 @@ impl Shell {
 
     /// Satırdaki `i`. sanatçıya git (bağ bilinmiyorsa önce istenir).
     pub(super) fn open_artist_of(&mut self, row: &TrackRow, i: usize, cx: &mut Context<Self>) {
-        match self.pages.links.get(&row.uri).filter(|l| !l.artists.is_empty()) {
+        match self
+            .pages
+            .links
+            .get(&row.uri)
+            .filter(|l| !l.artists.is_empty())
+        {
             Some(l) => {
-                let uri = l.artists.get(i).or(l.artists.first()).map(|a| a.0.clone()).unwrap_or_default();
+                let uri = l
+                    .artists
+                    .get(i)
+                    .or(l.artists.first())
+                    .map(|a| a.0.clone())
+                    .unwrap_or_default();
                 self.navigate(Route::Artist(uri), cx);
             }
             None => {
@@ -534,12 +608,18 @@ impl Shell {
     /// soru bağlantıdan önce kalmış ya da cevapsız kalmış olabilir).
     fn force_links(&self, uri: String) {
         self.pages.asked_links.borrow_mut().insert(uri.clone());
-        self.engine.send(Command::Library(LibraryCommand::ResolveLinks(vec![uri])));
+        self.engine
+            .send(Command::Library(LibraryCommand::ResolveLinks(vec![uri])));
     }
 
     /// Adın üzerine gelindi: sayfasını şimdiden iste (bir kez).
     pub(super) fn prefetch_artist_of(&mut self, row: &TrackRow, i: usize) {
-        match self.pages.links.get(&row.uri).and_then(|l| l.artists.get(i).or(l.artists.first()).cloned()) {
+        match self
+            .pages
+            .links
+            .get(&row.uri)
+            .and_then(|l| l.artists.get(i).or(l.artists.first()).cloned())
+        {
             Some((uri, _)) => self.prefetch(uri),
             None => self.ask_links(vec![row.uri.clone()]),
         }
@@ -547,7 +627,14 @@ impl Shell {
 
     pub(super) fn prefetch_album_of(&mut self, row: &TrackRow) {
         match self.pages.links.get(&row.uri).and_then(|l| l.album.clone()) {
-            Some((uri, _)) if self.library.item(&CollectionId::Album(uri.clone())).is_none() => self.prefetch(uri),
+            Some((uri, _))
+                if self
+                    .library
+                    .item(&CollectionId::Album(uri.clone()))
+                    .is_none() =>
+            {
+                self.prefetch(uri)
+            }
             Some(_) => {}
             None => self.ask_links(vec![row.uri.clone()]),
         }
@@ -555,15 +642,20 @@ impl Shell {
 
     pub(super) fn prefetch(&mut self, uri: String) {
         if self.pages.prefetched.insert(uri.clone()) {
-            self.engine.send(Command::Library(LibraryCommand::Prefetch(uri)));
+            self.engine
+                .send(Command::Library(LibraryCommand::Prefetch(uri)));
         }
     }
 
     fn ask_links(&self, uris: Vec<String>) {
         let mut asked = self.pages.asked_links.borrow_mut();
-        let uris: Vec<String> = uris.into_iter().filter(|u| asked.insert(u.clone())).collect();
+        let uris: Vec<String> = uris
+            .into_iter()
+            .filter(|u| asked.insert(u.clone()))
+            .collect();
         if !uris.is_empty() {
-            self.engine.send(Command::Library(LibraryCommand::ResolveLinks(uris)));
+            self.engine
+                .send(Command::Library(LibraryCommand::ResolveLinks(uris)));
         }
     }
 
@@ -600,18 +692,29 @@ impl Shell {
                 }
             }
             ListKey::Page(key) => {
-                let Some(tracks) = self.pages.lists.get(key).cloned() else { return };
+                let Some(tracks) = self.pages.lists.get(key).cloned() else {
+                    return;
+                };
                 let Some(track) = tracks.get(ix) else { return };
                 if !self.ready_to_play(cx) {
                     return;
                 }
-                let context = key.strip_prefix("album:").map(|uri| CollectionId::Album(uri.to_string()));
+                let context = key
+                    .strip_prefix("album:")
+                    .map(|uri| CollectionId::Album(uri.to_string()));
                 if let Some(id) = &context {
                     self.note_played(id);
                 }
                 self.state.notice = None;
-                self.state.pending = Some(PendingTrack { name: track.name.clone(), image: track.image.clone() });
-                self.engine.send(Command::PlayTracks { context, tracks, index: ix });
+                self.state.pending = Some(PendingTrack {
+                    name: track.name.clone(),
+                    image: track.image.clone(),
+                });
+                self.engine.send(Command::PlayTracks {
+                    context,
+                    tracks,
+                    index: ix,
+                });
                 cx.notify();
             }
         }
@@ -675,7 +778,9 @@ impl Shell {
             LibraryEvent::Friends(list) => self.on_friends(list, cx),
             LibraryEvent::FriendsFailed(why) => self.on_friends_failed(why, cx),
             LibraryEvent::Credits { uri, result } => self.on_credits(uri, result, cx),
-            LibraryEvent::EditStatus { pending, failed } => self.on_edit_status(pending, failed, cx),
+            LibraryEvent::EditStatus { pending, failed } => {
+                self.on_edit_status(pending, failed, cx)
+            }
             LibraryEvent::Created { temp, uri } => self.on_created(temp, uri, cx),
             LibraryEvent::AddedDates { id, dates } => {
                 self.library.added.insert(id, dates);
@@ -690,13 +795,20 @@ impl Shell {
     }
 
     /// Tam arama sonucu geldi mi (paletinki değil)? Geldiyse `true`.
-    pub(super) fn on_page_search(&mut self, seq: u64, result: Result<Arc<SearchResults>, String>) -> bool {
+    pub(super) fn on_page_search(
+        &mut self,
+        seq: u64,
+        result: Result<Arc<SearchResults>, String>,
+    ) -> bool {
         let Some(search) = self.pages.search.as_mut().filter(|s| s.seq == seq) else {
             return seq >= SEARCH_SEQ_BASE;
         };
         search.results = match result {
             Ok(r) => {
-                self.pages.lists.insert(format!("search:{}", search.query), Arc::new(r.tracks.clone()));
+                self.pages.lists.insert(
+                    format!("search:{}", search.query),
+                    Arc::new(r.tracks.clone()),
+                );
                 PageLoad::Ready(r)
             }
             Err(e) => PageLoad::Failed(e),
@@ -739,7 +851,13 @@ impl Shell {
         to - from
     }
 
-    fn wheel_page(&mut self, delta: ScrollDelta, line_height: Pixels, viewport: f32, cx: &mut Context<Self>) -> bool {
+    fn wheel_page(
+        &mut self,
+        delta: ScrollDelta,
+        line_height: Pixels,
+        viewport: f32,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if let Some(handled) = self.wheel_gate(cx) {
             return handled;
         }
@@ -774,7 +892,8 @@ impl Shell {
         let back = h.can_back();
         let forward = h.can_forward();
         let (back_stop, back_look) = self.stop_look("nav-back", super::tab::BACK, back, window, cx);
-        let (forward_stop, forward_look) = self.stop_look("nav-forward", super::tab::FORWARD, forward, window, cx);
+        let (forward_stop, forward_look) =
+            self.stop_look("nav-forward", super::tab::FORWARD, forward, window, cx);
         div()
             .flex_none()
             .h_full()
@@ -786,13 +905,17 @@ impl Shell {
                 icon_button("nav-back", "arrow-left", back_look, accent)
                     .tooltip(Tooltip::text(t!(Back), Some("Alt ←")))
                     .when_some(back_stop, |el, h| el.track_focus(&h))
-                    .when(back, |el| el.on_click(cx.listener(|this, _, _, cx| this.go_back(cx)))),
+                    .when(back, |el| {
+                        el.on_click(cx.listener(|this, _, _, cx| this.go_back(cx)))
+                    }),
             )
             .child(
                 icon_button("nav-forward", "arrow-right", forward_look, accent)
                     .tooltip(Tooltip::text(t!(Forward), Some("Alt →")))
                     .when_some(forward_stop, |el, h| el.track_focus(&h))
-                    .when(forward, |el| el.on_click(cx.listener(|this, _, _, cx| this.go_forward(cx)))),
+                    .when(forward, |el| {
+                        el.on_click(cx.listener(|this, _, _, cx| this.go_forward(cx)))
+                    }),
             )
             .into_any_element()
     }
@@ -802,7 +925,9 @@ impl Shell {
     pub(super) fn render_page(&mut self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         // Profil menüsündeki "Hakkında": Ayarlar'ın en altına (gpui konumu
         // sayfanın sonuna kırpar).
-        if matches!(self.pages.history.current(), Route::Settings) && std::mem::take(&mut self.sui.jump_about) {
+        if matches!(self.pages.history.current(), Route::Settings)
+            && std::mem::take(&mut self.sui.jump_about)
+        {
             self.pages.restore = Some(100_000.);
         }
         // Geri / ileride bırakılan konum: içerik çizildikten sonra (sınırlar
@@ -820,7 +945,10 @@ impl Shell {
             && *r == route
             && self.page_ready(&route)
         {
-            log::debug!("sayfa çizildi: {:.1} ms ({route:?})", at.elapsed().as_secs_f64() * 1000.);
+            log::debug!(
+                "sayfa çizildi: {:.1} ms ({route:?})",
+                at.elapsed().as_secs_f64() * 1000.
+            );
             self.pages.opened_at = None;
         }
         let content = match &route {
@@ -843,8 +971,15 @@ impl Shell {
         match route {
             Route::Artist(u) => matches!(self.pages.artists.get(u), Some(PageLoad::Ready(_))),
             Route::Album(u) => matches!(self.pages.albums.get(u), Some(PageLoad::Ready(_))),
-            Route::Search(_) => self.pages.search.as_ref().is_some_and(|s| matches!(s.results, PageLoad::Ready(_))),
-            Route::Category(u) => self.pages.explore.ready(&crate::engine::ExploreKey::Category(u.clone())),
+            Route::Search(_) => self
+                .pages
+                .search
+                .as_ref()
+                .is_some_and(|s| matches!(s.results, PageLoad::Ready(_))),
+            Route::Category(u) => self
+                .pages
+                .explore
+                .ready(&crate::engine::ExploreKey::Category(u.clone())),
             _ => true,
         }
     }
@@ -861,13 +996,18 @@ impl Shell {
             .size_full()
             .overflow_y_scroll()
             .track_scroll(&base)
-            .child(page_enter(ElementId::Name(format!("page-enter-{route:?}").into()), content));
+            .child(page_enter(
+                ElementId::Name(format!("page-enter-{route:?}").into()),
+                content,
+            ));
         let this = cx.entity().downgrade();
         let wheel = super::smooth_scroll::wheel_zone(move |ev, bounds, view, window, cx| {
             let line_height = window.line_height();
             let viewport = f32::from(bounds.size.height);
             let handled = this
-                .update(cx, |shell, cx| shell.wheel_page(ev.delta, line_height, viewport, cx))
+                .update(cx, |shell, cx| {
+                    shell.wheel_page(ev.delta, line_height, viewport, cx)
+                })
                 .unwrap_or(false);
             if handled {
                 cx.notify(view);
@@ -876,11 +1016,14 @@ impl Shell {
         });
         // Ekolayzer katmanı sayfanın dışına taşmasın.
         let viewport = self.list_viewport.clone();
-        let measure = gpui::canvas(move |bounds, _, _| viewport.set(Some(bounds)), |_, _, _, _| {})
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full();
+        let measure = gpui::canvas(
+            move |bounds, _, _| viewport.set(Some(bounds)),
+            |_, _, _, _| {},
+        )
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full();
         div()
             .relative()
             .group("page-scroll")
@@ -915,7 +1058,13 @@ impl Shell {
     }
 
     /// Başlık bloğu: kapak, ad, meta, eylemler. Bütün sayfalarda aynı.
-    pub(super) fn page_header(&self, art: Option<AnyElement>, title: &str, meta: AnyElement, actions: Vec<AnyElement>) -> Div {
+    pub(super) fn page_header(
+        &self,
+        art: Option<AnyElement>,
+        title: &str,
+        meta: AnyElement,
+        actions: Vec<AnyElement>,
+    ) -> Div {
         div()
             .px(px(self.margin()))
             .pt(px(if art.is_some() { S5 } else { PLAIN_HEADER_TOP }))
@@ -939,21 +1088,49 @@ impl Shell {
                             .type_role(title_role(self.compact()))
                             .font_weight(FontWeight::EXTRA_BOLD)
                             .text_color(text())
-                            .child(line_with_tip("page-heading", title.to_string()).flex().min_w_0()),
+                            .child(
+                                line_with_tip("page-heading", title.to_string())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
-                    .child(div().flex().min_w_0().type_role(T_BODY).text_color(muted()).child(meta))
+                    .child(
+                        div()
+                            .flex()
+                            .min_w_0()
+                            .type_role(T_BODY)
+                            .text_color(muted())
+                            .child(meta),
+                    )
                     .when(!actions.is_empty(), |el| {
-                        el.child(div().pt(px(S2)).flex().items_center().gap(px(S3)).children(actions))
+                        el.child(
+                            div()
+                                .pt(px(S2))
+                                .flex()
+                                .items_center()
+                                .gap(px(S3))
+                                .children(actions),
+                        )
                     }),
             )
     }
 
     fn header_art_side(&self) -> f32 {
-        if self.compact() { HEADER_ART_COMPACT } else { HEADER_ART }
+        if self.compact() {
+            HEADER_ART_COMPACT
+        } else {
+            HEADER_ART
+        }
     }
 
     /// Bölüm başlığı; uzun bölümde "Tümünü göster" / "Daha az".
-    pub(super) fn section_title(&self, key: &str, title: &str, toggle: bool, cx: &mut Context<Self>) -> Div {
+    pub(super) fn section_title(
+        &self,
+        key: &str,
+        title: &str,
+        toggle: bool,
+        cx: &mut Context<Self>,
+    ) -> Div {
         self.section_title_hint(key, title, None, toggle, cx)
     }
 
@@ -980,24 +1157,39 @@ impl Shell {
         let heading = match hint {
             None => div().child(heading),
             Some(hint) => div().flex().flex_col().gap(px(S0)).child(heading).child(
-                div().type_role(T_SECONDARY).text_color(muted()).child(hint.to_string()),
+                div()
+                    .type_role(T_SECONDARY)
+                    .text_color(muted())
+                    .child(hint.to_string()),
             ),
         };
         // Ana sayfada "Çok dinlediklerin" rafının sağında, son çalınanlar
         // sayfasına geçen "Son çalınanlar" çipi ("hepsini gör").
         let see_all = key == "home#often" && !self.recent.is_empty();
         let toggle_chip = toggle.then(|| {
-            chip(ElementId::Name(format!("more-{key}").into()), if expanded { t!(ShowLess) } else { t!(ShowAll) }, false, Look::Live, accent)
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    if !this.pages.expanded.remove(&key_owned) {
-                        this.pages.expanded.insert(key_owned.clone());
-                    }
-                    cx.notify();
-                }))
+            chip(
+                ElementId::Name(format!("more-{key}").into()),
+                if expanded { t!(ShowLess) } else { t!(ShowAll) },
+                false,
+                Look::Live,
+                accent,
+            )
+            .on_click(cx.listener(move |this, _, _, cx| {
+                if !this.pages.expanded.remove(&key_owned) {
+                    this.pages.expanded.insert(key_owned.clone());
+                }
+                cx.notify();
+            }))
         });
         let recent_chip = see_all.then(|| {
-            chip(ElementId::Name("see-all-recent".into()), t!(RecentPageTitle), false, Look::Live, accent)
-                .on_click(cx.listener(|this, _, _, cx| this.navigate(Route::Recent, cx)))
+            chip(
+                ElementId::Name("see-all-recent".into()),
+                t!(RecentPageTitle),
+                false,
+                Look::Live,
+                accent,
+            )
+            .on_click(cx.listener(|this, _, _, cx| this.navigate(Route::Recent, cx)))
         });
         div()
             .px(px(self.margin()))
@@ -1009,18 +1201,35 @@ impl Shell {
             .justify_between()
             .child(heading)
             .when(toggle || see_all, |el| {
-                el.child(div().flex().items_center().gap(px(S2)).children(toggle_chip).children(recent_chip))
+                el.child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap(px(S2))
+                        .children(toggle_chip)
+                        .children(recent_chip),
+                )
             })
     }
 
     /// Kart bölümü: başlık ve bir satır kart (açılınca hepsi). Boşsa hiç yok.
-    pub(super) fn card_section(&self, key: String, title: &str, cards: Vec<CardSpec>, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(super) fn card_section(
+        &self,
+        key: String,
+        title: &str,
+        cards: Vec<CardSpec>,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         if cards.is_empty() {
             return None;
         }
         let (cols, width) = self.grid();
         let expanded = self.pages.expanded.contains(&key);
-        let shown = if expanded { cards.len() } else { cards.len().min(cols) };
+        let shown = if expanded {
+            cards.len()
+        } else {
+            cards.len().min(cols)
+        };
         let mut grid = div().px(px(self.margin())).flex().flex_col().gap(px(S5));
         for row in cards[..shown].chunks(cols) {
             let mut line = div().flex().gap(px(CARD_GAP));
@@ -1038,11 +1247,20 @@ impl Shell {
         )
     }
 
-    pub(super) fn page_card(&self, card: &CardSpec, width: f32, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn page_card(
+        &self,
+        card: &CardSpec,
+        width: f32,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let radius = if card.round { width / 2. } else { R_LG };
         let art = match &card.art {
-            Art::Image { url, icon } => cover_image(&self.images, url, &card.title, width, radius, icon),
-            Art::Collection { id, image } => self.collection_art(id, &card.title, image, width, radius),
+            Art::Image { url, icon } => {
+                cover_image(&self.images, url, &card.title, width, radius, icon)
+            }
+            Art::Collection { id, image } => {
+                self.collection_art(id, &card.title, image, width, radius)
+            }
             Art::Stack(urls) => self.stack_art(urls, &card.title, width, radius),
         };
         let group: SharedString = "page-card".into();
@@ -1050,7 +1268,14 @@ impl Shell {
         let menu = card.target.clone();
         let hover_uri = match &card.target {
             CardTarget::Artist(uri) => Some(uri.clone()),
-            CardTarget::Album { uri, .. } if self.library.item(&CollectionId::Album(uri.clone())).is_none() => Some(uri.clone()),
+            CardTarget::Album { uri, .. }
+                if self
+                    .library
+                    .item(&CollectionId::Album(uri.clone()))
+                    .is_none() =>
+            {
+                Some(uri.clone())
+            }
             _ => None,
         };
         let playing = matches!(&card.target, CardTarget::Collection { id, .. } if self.state.queue.context.as_ref() == Some(id) && self.state.is_playing());
@@ -1084,7 +1309,12 @@ impl Shell {
                     .size(px(width))
                     .child(art)
                     // Kapağın üstünde ton katmanı, 140 ms geçişle (`tween`).
-                    .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., radius))
+                    .child(super::tween::hover_fill(
+                        veil(VEIL_HOVER),
+                        veil(VEIL_PRESSED),
+                        0.,
+                        radius,
+                    ))
                     .when(playing, |el| {
                         el.child(
                             div()
@@ -1112,14 +1342,28 @@ impl Shell {
                             .type_role(T_BODY)
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(text())
-                            .child(line_with_tip(ElementId::Name(format!("ct-{}", card.key).into()), card.title.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip(
+                                    ElementId::Name(format!("ct-{}", card.key).into()),
+                                    card.title.clone(),
+                                )
+                                .flex()
+                                .min_w_0(),
+                            ),
                     )
                     .child(
                         div()
                             .flex()
                             .type_role(T_SECONDARY)
                             .text_color(muted())
-                            .child(line_with_tip(ElementId::Name(format!("cs-{}", card.key).into()), card.subtitle.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip(
+                                    ElementId::Name(format!("cs-{}", card.key).into()),
+                                    card.subtitle.clone(),
+                                )
+                                .flex()
+                                .min_w_0(),
+                            ),
                     ),
             )
             .into_any_element()
@@ -1141,7 +1385,14 @@ impl Shell {
                     .left(px(depth as f32 * S3))
                     .top(px((layers - 1 - depth) as f32 * S3))
                     .opacity(opacity)
-                    .child(cover_image(&self.images, url, name, inner, radius, "list-music")),
+                    .child(cover_image(
+                        &self.images,
+                        url,
+                        name,
+                        inner,
+                        radius,
+                        "list-music",
+                    )),
             );
         }
         stack.into_any_element()
@@ -1168,7 +1419,10 @@ impl Shell {
         let album = album_artists.is_some();
         // Geniş albüm sayfası: farklı sanatçılı şarkı varsa sanatçılar sütunda.
         let artist_column = album_artists.is_some_and(|a| {
-            self.window_width >= ALBUM_ARTIST_COLUMN_FROM && tracks.iter().any(|t| !super::library::same_artists(a, &t.artists))
+            self.window_width >= ALBUM_ARTIST_COLUMN_FROM
+                && tracks
+                    .iter()
+                    .any(|t| !super::library::same_artists(a, &t.artists))
         });
         let playing_uri = self.state.track.as_ref().map(|t| t.uri.as_str());
         let mut rows = div().flex().flex_col();
@@ -1177,28 +1431,34 @@ impl Shell {
                 Some(p) => p == ix,
                 None => playing_uri == Some(track.uri.as_str()),
             };
-            rows = rows.child(self.song_row(
-                RowSpec {
-                    list: key.clone(),
-                    ix,
-                    show_cover: !album,
-                    show_album: !album,
-                    hide_artist: artist_column || album_artists.is_some_and(|a| super::library::same_artists(a, &track.artists)),
-                    artist_column,
-                    playing,
-                    selected: self.is_selected(&key, ix),
-                    look: Look::Live,
-                    reorder: false,
-                    added: None,
-                },
-                track,
-                cx,
-            ));
+            rows = rows.child(
+                self.song_row(
+                    RowSpec {
+                        list: key.clone(),
+                        ix,
+                        show_cover: !album,
+                        show_album: !album,
+                        hide_artist: artist_column
+                            || album_artists
+                                .is_some_and(|a| super::library::same_artists(a, &track.artists)),
+                        artist_column,
+                        playing,
+                        selected: self.is_selected(&key, ix),
+                        look: Look::Live,
+                        reorder: false,
+                        added: None,
+                    },
+                    track,
+                    cx,
+                ),
+            );
         }
         let toggle = limit.is_some_and(|n| tracks.len() > n);
         div()
             .pb(px(S6))
-            .when_some(title, |el, t| el.child(self.section_title(list, t, toggle, cx)))
+            .when_some(title, |el, t| {
+                el.child(self.section_title(list, t, toggle, cx))
+            })
             .child(rows)
             .into_any_element()
     }
@@ -1206,19 +1466,32 @@ impl Shell {
     /// Sayfa alınamadı: durum görünümü, listedeki ve "Tümü"deki gibi hapın
     /// üstünde kalan alanın ortasında. (Önce sabit 420 px'lik kutunun
     /// ortasındaydı: 760 px'lik pencerede üst kenara yapışık duruyordu.)
-    pub(super) fn page_error(&self, error: &str, retry: Route, window: &Window, cx: &mut Context<Self>) -> Div {
+    pub(super) fn page_error(
+        &self,
+        error: &str,
+        retry: Route,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Div {
         let (icon_name, title, message) = explain_error(error);
         let accent = self.accent().text;
         // Kutu kaydırma alanı (başlık çubuğunun altı) boyunda, kaydırma yok;
         // `page_frame` bu kutuya üstte S2, altta hap payı + S5 iç boşluk
         // veriyor: ortalama hapın üstünde kalan alanda olur.
         let height = f32::from(window.viewport_size().height) - super::TITLEBAR_HEIGHT;
-        div().h(px(height)).flex().items_center().justify_center().child(
-            state_view(icon_name, title, message).child(
-                secondary_button("page-retry", "refresh-cw", t!(Retry), Look::Live, accent)
-                    .on_click(cx.listener(move |this, _, _, cx| this.show_route(retry.clone(), None, cx))),
-            ),
-        )
+        div()
+            .h(px(height))
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(
+                state_view(icon_name, title, message).child(
+                    secondary_button("page-retry", "refresh-cw", t!(Retry), Look::Live, accent)
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.show_route(retry.clone(), None, cx)
+                        })),
+                ),
+            )
     }
 
     /// Yüklenirken: başlık, satırlar ve bir sıra kart aynı ölçülerde.
@@ -1249,7 +1522,13 @@ impl Shell {
                     .gap(px(S2))
                     .child(div().h(px(g.title_h)).child(skeleton_bar(280., g.title_h)))
                     // Meta satırı 20 px'lik yazı satırı; çubuk onun ortasında.
-                    .child(div().h(px(g.meta_h)).flex().items_center().child(skeleton_bar(180., 10.))),
+                    .child(
+                        div()
+                            .h(px(g.meta_h))
+                            .flex()
+                            .items_center()
+                            .child(skeleton_bar(180., 10.)),
+                    ),
             );
         // Gerçek `section_title` (ipucusuz): 48 px, başlık altta (24 px'lik satır).
         let section = section_title.then(|| {
@@ -1259,9 +1538,20 @@ impl Shell {
                 .h(px(S7))
                 .flex()
                 .items_end()
-                .child(div().h(px(T_TITLE.line)).flex().items_center().child(skeleton_bar(140., 18.)))
+                .child(
+                    div()
+                        .h(px(T_TITLE.line))
+                        .flex()
+                        .items_center()
+                        .child(skeleton_bar(140., 18.)),
+                )
         });
-        div().flex().flex_col().child(header).children(section).child(self.skeleton_cards())
+        div()
+            .flex()
+            .flex_col()
+            .child(header)
+            .children(section)
+            .child(self.skeleton_cards())
     }
 
     /// Bir sıra kart iskeleti (kapak karesi, iki satır yazı).
@@ -1294,13 +1584,26 @@ impl Shell {
             .flex()
             .items_end()
             .gap(px(S5))
-            .child(div().size(px(side)).flex_none().rounded(px(if round { side / 2. } else { R_LG })).bg(veil(VEIL_HOVER)))
+            .child(
+                div()
+                    .size(px(side))
+                    .flex_none()
+                    .rounded(px(if round { side / 2. } else { R_LG }))
+                    .bg(veil(VEIL_HOVER)),
+            )
             .child(
                 div()
                     .flex()
                     .flex_col()
                     .gap(px(S3))
-                    .child(bar(280., if self.compact() { T_HEADLINE.size } else { T_DISPLAY.size }))
+                    .child(bar(
+                        280.,
+                        if self.compact() {
+                            T_HEADLINE.size
+                        } else {
+                            T_DISPLAY.size
+                        },
+                    ))
                     .child(bar(180., 10.))
                     .child(div().pt(px(S2)).child(bar(96., 40.).rounded_full())),
             );
@@ -1310,7 +1613,11 @@ impl Shell {
             .flex_col()
             .child(header)
             .when(rows, |el| {
-                el.child(div().pb(px(S6)).child(skeleton_rows_at(album, self.margin())))
+                el.child(
+                    div()
+                        .pb(px(S6))
+                        .child(skeleton_rows_at(album, self.margin())),
+                )
             })
             .when(!album, |el| el.child(cards))
     }
@@ -1319,11 +1626,20 @@ impl Shell {
         let _ = window;
         let page = match self.pages.artists.get(uri) {
             Some(PageLoad::Ready(p)) => p.clone(),
-            Some(PageLoad::Failed(e)) => return self.page_error(e, Route::Artist(uri.to_string()), window, cx),
+            Some(PageLoad::Failed(e)) => {
+                return self.page_error(e, Route::Artist(uri.to_string()), window, cx);
+            }
             _ => return self.page_skeleton(true, true),
         };
         let side = self.header_art_side();
-        let art = cover_image(&self.images, &page.image, &page.name, side, side / 2., "user");
+        let art = cover_image(
+            &self.images,
+            &page.image,
+            &page.name,
+            side,
+            side / 2.,
+            "user",
+        );
         let mut meta_parts = Vec::new();
         if !page.albums.is_empty() {
             meta_parts.push(tp!(ArtistAlbumCount, page.albums.len()));
@@ -1334,8 +1650,15 @@ impl Shell {
         let meta = div()
             .flex()
             .min_w_0()
-            .child(div().font_weight(FontWeight::SEMIBOLD).text_color(text()).child(t!(Artist)))
-            .when(!meta_parts.is_empty(), |el| el.child(format!(" · {}", meta_parts.join(" · "))))
+            .child(
+                div()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(text())
+                    .child(t!(Artist)),
+            )
+            .when(!meta_parts.is_empty(), |el| {
+                el.child(format!(" · {}", meta_parts.join(" · ")))
+            })
             .into_any_element();
         let list = format!("top:{uri}");
         let accent = self.accent().text;
@@ -1361,7 +1684,11 @@ impl Shell {
             secondary_button(
                 "artist-follow",
                 if followed { "user-check" } else { "user-plus" },
-                if followed { t!(ArtistFollowing) } else { t!(ArtistFollow) },
+                if followed {
+                    t!(ArtistFollowing)
+                } else {
+                    t!(ArtistFollow)
+                },
                 Look::Live,
                 accent,
             )
@@ -1380,16 +1707,29 @@ impl Shell {
                 .tooltip(Tooltip::text(t!(MoreTip), None))
                 .child(more_probe)
                 .on_click(cx.listener(move |this, ev: &gpui::ClickEvent, _, cx| {
-                    this.open_card_menu(menu_target.clone(), menu_below(more_anchor.get(), ev.position()), cx);
+                    this.open_card_menu(
+                        menu_target.clone(),
+                        menu_below(more_anchor.get(), ev.position()),
+                        cx,
+                    );
                 }))
                 .into_any_element(),
         ];
-        let mut body = div()
-            .flex()
-            .flex_col()
-            .child(self.page_header(Some(art), &page.name, meta, actions));
+        let mut body =
+            div()
+                .flex()
+                .flex_col()
+                .child(self.page_header(Some(art), &page.name, meta, actions));
         if !page.top_tracks.is_empty() {
-            body = body.child(self.track_section(&list, Some(t!(PagePopular)), &page.top_tracks, Some(TOP_FEW), None, None, cx));
+            body = body.child(self.track_section(
+                &list,
+                Some(t!(PagePopular)),
+                &page.top_tracks,
+                Some(TOP_FEW),
+                None,
+                None,
+                cx,
+            ));
         }
         let sections: [(&str, &str, &Vec<AlbumCard>); 4] = [
             ("albums", t!(KindAlbums), &page.albums),
@@ -1413,15 +1753,22 @@ impl Shell {
 
     fn album_body(&self, uri: &str, window: &Window, cx: &mut Context<Self>) -> Div {
         let compact = self.compact();
-        let side = if compact { ALBUM_ART_COMPACT } else { ALBUM_ART };
+        let side = if compact {
+            ALBUM_ART_COMPACT
+        } else {
+            ALBUM_ART
+        };
         let page = match self.pages.albums.get(uri) {
             Some(PageLoad::Ready(p)) => p.clone(),
-            Some(PageLoad::Failed(e)) => return self.page_error(e, Route::Album(uri.to_string()), window, cx),
+            Some(PageLoad::Failed(e)) => {
+                return self.page_error(e, Route::Album(uri.to_string()), window, cx);
+            }
             _ => return self.page_skeleton_sized(false, true, side, true),
         };
         let art = cover_image(&self.images, &page.image, &page.name, side, R_LG, "disc-3");
         let names: Vec<&str> = page.artists.iter().map(|a| a.name.as_str()).collect();
-        let artist_uris: Rc<Vec<String>> = Rc::new(page.artists.iter().map(|a| a.uri.clone()).collect());
+        let artist_uris: Rc<Vec<String>> =
+            Rc::new(page.artists.iter().map(|a| a.uri.clone()).collect());
         let this = cx.entity().downgrade();
         let uris = artist_uris.clone();
         let on_click: super::link_text::SpanHandler = Rc::new(move |i, _, cx| {
@@ -1456,8 +1803,17 @@ impl Shell {
             .type_role(if compact { T_BODY } else { T_TITLE })
             .font_weight(FontWeight::SEMIBOLD)
             .text_color(text())
-            .child(link_line("album-artists", &names, on_click, Some(on_hover)).flex().min_w_0());
-        let meta = div().flex().min_w_0().type_role(T_SECONDARY).text_color(muted()).child(rest.join(" · "));
+            .child(
+                link_line("album-artists", &names, on_click, Some(on_hover))
+                    .flex()
+                    .min_w_0(),
+            );
+        let meta = div()
+            .flex()
+            .min_w_0()
+            .type_role(T_SECONDARY)
+            .text_color(muted())
+            .child(rest.join(" · "));
         let accent = self.accent().text;
         let list = format!("album:{uri}");
         let list_key = ListKey::Page(list.clone());
@@ -1469,25 +1825,45 @@ impl Shell {
             image: page.image.clone(),
         };
         let uri_owned = uri.to_string();
-        let menu_target = CardTarget::Album { uri: uri.to_string(), item: Some(card.clone()) };
+        let menu_target = CardTarget::Album {
+            uri: uri.to_string(),
+            item: Some(card.clone()),
+        };
         let (more_probe, more_anchor) = anchor_probe();
         let actions = vec![
             primary_button("album-play", "play-fill", t!(Play), Look::Live, accent)
                 .on_click(cx.listener(move |this, _, _, cx| this.play_in(&list_key, 0, cx)))
                 .into_any_element(),
-            icon_button_tinted("album-save", if saved { "heart-fill" } else { "heart" }, if saved { rgb(accent) } else { soft() }, Look::Live, accent)
-                .tooltip(Tooltip::text(if saved { t!(RemoveFromLibrary) } else { t!(AddToLibrary) }, None))
-                .on_click(cx.listener(move |this, _, _, cx| {
-                    let on = !this.album_saved(&uri_owned);
-                    this.set_album_saved(uri_owned.clone(), on, Some(card.clone()), cx);
-                }))
-                .into_any_element(),
+            icon_button_tinted(
+                "album-save",
+                if saved { "heart-fill" } else { "heart" },
+                if saved { rgb(accent) } else { soft() },
+                Look::Live,
+                accent,
+            )
+            .tooltip(Tooltip::text(
+                if saved {
+                    t!(RemoveFromLibrary)
+                } else {
+                    t!(AddToLibrary)
+                },
+                None,
+            ))
+            .on_click(cx.listener(move |this, _, _, cx| {
+                let on = !this.album_saved(&uri_owned);
+                this.set_album_saved(uri_owned.clone(), on, Some(card.clone()), cx);
+            }))
+            .into_any_element(),
             icon_button("album-more", "ellipsis", Look::Live, accent)
                 .relative()
                 .tooltip(Tooltip::text(t!(MoreTip), None))
                 .child(more_probe)
                 .on_click(cx.listener(move |this, ev: &gpui::ClickEvent, _, cx| {
-                    this.open_card_menu(menu_target.clone(), menu_below(more_anchor.get(), ev.position()), cx);
+                    this.open_card_menu(
+                        menu_target.clone(),
+                        menu_below(more_anchor.get(), ev.position()),
+                        cx,
+                    );
                 }))
                 .into_any_element(),
         ];
@@ -1513,15 +1889,27 @@ impl Shell {
                             .type_role(if compact { T_HEADLINE } else { T_DISPLAY })
                             .font_weight(FontWeight::EXTRA_BOLD)
                             .text_color(text())
-                            .child(line_with_tip("page-heading", page.name.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip("page-heading", page.name.clone())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
                     .child(artists_line)
                     .child(meta)
-                    .child(div().pt(px(S2)).flex().items_center().gap(px(S3)).children(actions)),
+                    .child(
+                        div()
+                            .pt(px(S2))
+                            .flex()
+                            .items_center()
+                            .gap(px(S3))
+                            .children(actions),
+                    ),
             );
         // Albüm sayfasından çalınca albüm "çalan liste" olur: satır vurgusu sırayla.
-        let playing_ix = (self.state.queue.context.as_ref() == Some(&CollectionId::Album(uri.to_string())))
-            .then_some(self.state.queue.index);
+        let playing_ix = (self.state.queue.context.as_ref()
+            == Some(&CollectionId::Album(uri.to_string())))
+        .then_some(self.state.queue.index);
         let artists_text = names.join(", ");
         // Sanatçının diğer albümleri: sanatçı sayfası bellekteyse (albüm
         // gelince arkadan istenir, bkz. `store_album`).
@@ -1533,26 +1921,45 @@ impl Shell {
                 _ => None,
             })
             .map(|(name, p)| {
-                let cards: Vec<CardSpec> =
-                    p.albums.iter().chain(&p.singles).filter(|c| c.uri != uri).map(album_card).collect();
+                let cards: Vec<CardSpec> = p
+                    .albums
+                    .iter()
+                    .chain(&p.singles)
+                    .filter(|c| c.uri != uri)
+                    .map(album_card)
+                    .collect();
                 (name, cards)
             });
         let mut body = div()
             .flex()
             .flex_col()
             .child(header)
-            .child(
-                div()
-                    .w_full()
-                    .flex()
-                    .flex_col()
-                    .child(self.track_section(&list, None, &page.tracks, None, Some(&artists_text), playing_ix, cx)),
-            )
+            .child(div().w_full().flex().flex_col().child(self.track_section(
+                &list,
+                None,
+                &page.tracks,
+                None,
+                Some(&artists_text),
+                playing_ix,
+                cx,
+            )))
             .when(!page.label.is_empty(), |el| {
-                el.child(div().px(px(self.margin())).pb(px(S6)).type_role(T_LABEL).text_color(label()).child(format!("© {}", page.label)))
+                el.child(
+                    div()
+                        .px(px(self.margin()))
+                        .pb(px(S6))
+                        .type_role(T_LABEL)
+                        .text_color(label())
+                        .child(format!("© {}", page.label)),
+                )
             });
         if let Some((name, cards)) = more {
-            body = body.children(self.card_section(format!("{uri}#more"), &tf!(PageMoreFrom, name), cards, cx));
+            body = body.children(self.card_section(
+                format!("{uri}#more"),
+                &tf!(PageMoreFrom, name),
+                cards,
+                cx,
+            ));
         }
         body
     }
@@ -1563,22 +1970,37 @@ impl Shell {
         };
         let results = match &search.results {
             PageLoad::Ready(r) => r.clone(),
-            PageLoad::Failed(e) => return self.page_error(e, Route::Search(query.to_string()), window, cx),
+            PageLoad::Failed(e) => {
+                return self.page_error(e, Route::Search(query.to_string()), window, cx);
+            }
             PageLoad::Loading => {
                 let meta = div().child(t!(SearchSearching)).into_any_element();
                 return div()
                     .flex()
                     .flex_col()
                     .child(self.page_header(None, &format!("“{query}”"), meta, Vec::new()))
-                    .child(div().pb(px(S6)).child(skeleton_rows_at(false, self.margin())));
+                    .child(
+                        div()
+                            .pb(px(S6))
+                            .child(skeleton_rows_at(false, self.margin())),
+                    );
             }
         };
         let kind = search.kind;
         let total = results.total();
         let meta = div()
-            .child(if total == 0 { t!(SearchNoResults).to_string() } else { tp!(SearchResults, total) })
+            .child(if total == 0 {
+                t!(SearchNoResults).to_string()
+            } else {
+                tp!(SearchResults, total)
+            })
             .into_any_element();
-        let mut body = div().flex().flex_col().child(self.page_header(None, &format!("“{query}”"), meta, Vec::new()));
+        let mut body = div().flex().flex_col().child(self.page_header(
+            None,
+            &format!("“{query}”"),
+            meta,
+            Vec::new(),
+        ));
         // Hiç sonuç yoksa süzülecek bir şey de yok: çip sırası görünmez.
         if total == 0 {
             return body;
@@ -1593,27 +2015,62 @@ impl Shell {
         match kind.show(Section::Songs) {
             Show::Hidden => {}
             Show::Few if !results.tracks.is_empty() => {
-                body = body.child(self.track_section(&format!("search:{query}"), Some(t!(SectionSongs)), &results.tracks, Some(SEARCH_FEW), None, None, cx));
+                body = body.child(self.track_section(
+                    &format!("search:{query}"),
+                    Some(t!(SectionSongs)),
+                    &results.tracks,
+                    Some(SEARCH_FEW),
+                    None,
+                    None,
+                    cx,
+                ));
             }
             Show::Full if !results.tracks.is_empty() => {
-                body = body.child(self.track_section(&format!("search:{query}"), None, &results.tracks, None, None, None, cx));
+                body = body.child(self.track_section(
+                    &format!("search:{query}"),
+                    None,
+                    &results.tracks,
+                    None,
+                    None,
+                    None,
+                    cx,
+                ));
             }
             Show::Few | Show::Full => {}
         }
-        let hit_card = |h: &crate::engine::SearchHit, round: bool, target: CardTarget, icon: &'static str| CardSpec {
+        let hit_card = |h: &crate::engine::SearchHit,
+                        round: bool,
+                        target: CardTarget,
+                        icon: &'static str| CardSpec {
             key: h.uri.clone(),
             title: h.name.clone(),
             subtitle: crate::i18n::canon::localize(&h.subtitle).into_owned(),
-            art: Art::Image { url: h.image.clone(), icon },
+            art: Art::Image {
+                url: h.image.clone(),
+                icon,
+            },
             round,
             target,
         };
-        let artists: Vec<CardSpec> =
-            results.artists.iter().map(|h| hit_card(h, true, CardTarget::Artist(h.uri.clone()), "user")).collect();
+        let artists: Vec<CardSpec> = results
+            .artists
+            .iter()
+            .map(|h| hit_card(h, true, CardTarget::Artist(h.uri.clone()), "user"))
+            .collect();
         let albums: Vec<CardSpec> = results
             .albums
             .iter()
-            .map(|h| hit_card(h, false, CardTarget::Album { uri: h.uri.clone(), item: None }, "disc-3"))
+            .map(|h| {
+                hit_card(
+                    h,
+                    false,
+                    CardTarget::Album {
+                        uri: h.uri.clone(),
+                        item: None,
+                    },
+                    "disc-3",
+                )
+            })
             .collect();
         let playlists: Vec<CardSpec> = results
             .playlists
@@ -1622,16 +2079,40 @@ impl Shell {
                 hit_card(
                     h,
                     false,
-                    CardTarget::Collection { id: CollectionId::Playlist(h.uri.clone()), title: h.name.clone() },
+                    CardTarget::Collection {
+                        id: CollectionId::Playlist(h.uri.clone()),
+                        title: h.name.clone(),
+                    },
                     "list-music",
                 )
             })
             .collect();
         let titled = |title: &'static str| kind.titled().then_some(title);
         body = body
-            .children(self.kind_section(kind, Section::Artists, format!("search:{query}#artists"), t!(SectionArtists), artists, cx))
-            .children(self.kind_section(kind, Section::Albums, format!("search:{query}#albums"), t!(KindAlbums), albums, cx))
-            .children(self.kind_section(kind, Section::Playlists, format!("search:{query}#playlists"), t!(KindLists), playlists, cx));
+            .children(self.kind_section(
+                kind,
+                Section::Artists,
+                format!("search:{query}#artists"),
+                t!(SectionArtists),
+                artists,
+                cx,
+            ))
+            .children(self.kind_section(
+                kind,
+                Section::Albums,
+                format!("search:{query}#albums"),
+                t!(KindAlbums),
+                albums,
+                cx,
+            ))
+            .children(self.kind_section(
+                kind,
+                Section::Playlists,
+                format!("search:{query}#playlists"),
+                t!(KindLists),
+                playlists,
+                cx,
+            ));
         // Podcast, bölüm ve profil: uygulamada sayfa yok, kart Spotify'da açılır.
         body.children(self.ext_section(
             format!("search:{query}#podcasts"),
@@ -1673,10 +2154,31 @@ impl Shell {
                         .child(
                             div()
                                 .flex()
-                                .child(icon_button(("g-nav-back", look as usize), "arrow-left", look, accent).tooltip(Tooltip::text("Geri", Some("Alt ←"))))
-                                .child(icon_button(("g-nav-home", look as usize), "house", look, accent).tooltip(Tooltip::text("Ana sayfa", Some("Alt Home")))),
+                                .child(
+                                    icon_button(
+                                        ("g-nav-back", look as usize),
+                                        "arrow-left",
+                                        look,
+                                        accent,
+                                    )
+                                    .tooltip(Tooltip::text("Geri", Some("Alt ←"))),
+                                )
+                                .child(
+                                    icon_button(
+                                        ("g-nav-home", look as usize),
+                                        "house",
+                                        look,
+                                        accent,
+                                    )
+                                    .tooltip(Tooltip::text("Ana sayfa", Some("Alt Home"))),
+                                ),
                         )
-                        .child(div().type_role(T_LABEL).text_color(label()).child(look.name())),
+                        .child(
+                            div()
+                                .type_role(T_LABEL)
+                                .text_color(label())
+                                .child(look.name()),
+                        ),
                 );
             }
             row
@@ -1684,9 +2186,20 @@ impl Shell {
         let (_, width) = self.grid();
         let sample = |n: usize, round: bool| CardSpec {
             key: format!("g-card-{n}"),
-            title: if round { "Sezen Aksu".into() } else { "Deniz ve Mehtap".into() },
-            subtitle: if round { "Sanatçı".into() } else { "1999 · Albüm".into() },
-            art: Art::Image { url: String::new(), icon: if round { "user" } else { "disc-3" } },
+            title: if round {
+                "Sezen Aksu".into()
+            } else {
+                "Deniz ve Mehtap".into()
+            },
+            subtitle: if round {
+                "Sanatçı".into()
+            } else {
+                "1999 · Albüm".into()
+            },
+            art: Art::Image {
+                url: String::new(),
+                icon: if round { "user" } else { "disc-3" },
+            },
             round,
             target: CardTarget::Artist(String::new()),
         };
@@ -1695,32 +2208,81 @@ impl Shell {
             .gap(px(CARD_GAP))
             .child(self.page_card(&sample(1, false), width, cx))
             .child(self.page_card(&sample(2, true), width, cx));
-        let meta = div().child("Sanatçı · 12 albüm · 30 tekli ve EP").into_any_element();
+        let meta = div()
+            .child("Sanatçı · 12 albüm · 30 tekli ve EP")
+            .into_any_element();
         let header = self.page_header(
-            Some(cover_image(&self.images, "", "", self.header_art_side(), self.header_art_side() / 2., "user")),
+            Some(cover_image(
+                &self.images,
+                "",
+                "",
+                self.header_art_side(),
+                self.header_art_side() / 2.,
+                "user",
+            )),
             "Sezen Aksu",
             meta,
-            vec![primary_button("g-page-play", "play-fill", "Çal", Look::Live, accent).into_any_element()],
+            vec![
+                primary_button("g-page-play", "play-fill", "Çal", Look::Live, accent)
+                    .into_any_element(),
+            ],
         );
         div()
             .flex()
             .flex_col()
             .gap(px(S5))
-            .child(div().font_family(font()).type_role(T_TITLE).font_weight(FontWeight::EXTRA_BOLD).child("Gezinme ve sayfalar (Adım 12)"))
-            .child(div().type_role(T_LABEL).text_color(label()).child("Başlık çubuğu: geri / ileri / ana sayfa, beş durum"))
+            .child(
+                div()
+                    .font_family(font())
+                    .type_role(T_TITLE)
+                    .font_weight(FontWeight::EXTRA_BOLD)
+                    .child("Gezinme ve sayfalar (Adım 12)"),
+            )
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child("Başlık çubuğu: geri / ileri / ana sayfa, beş durum"),
+            )
             .child(nav)
-            .child(div().type_role(T_LABEL).text_color(label()).child("Sayfa başlık bloğu"))
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child("Sayfa başlık bloğu"),
+            )
             .child(div().mx(px(-self.margin())).child(header))
-            .child(div().type_role(T_LABEL).text_color(label()).child("Sayfa kartı (albüm, sanatçı); üzerine gelince ton katmanı"))
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child("Sayfa kartı (albüm, sanatçı); üzerine gelince ton katmanı"),
+            )
             .child(cards)
-            .child(div().type_role(T_LABEL).text_color(label()).child("Yükleniyor: sayfa iskeleti (aynı ölçüler)"))
-            .child(div().mx(px(-self.margin())).h(px(420.)).overflow_hidden().child(self.page_skeleton(true, false)))
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child("Yükleniyor: sayfa iskeleti (aynı ölçüler)"),
+            )
+            .child(
+                div()
+                    .mx(px(-self.margin()))
+                    .h(px(420.))
+                    .overflow_hidden()
+                    .child(self.page_skeleton(true, false)),
+            )
             .into_any_element()
     }
     // i18n-skip-end: geliştirme vitrini (OPENIFY_GALLERY), kullanıcıya görünmez
 
     /// Satırdaki sanatçı adları: her biri tıklanabilir (sayfasına gider).
-    pub(super) fn artist_links(&self, id: ElementId, track: &TrackRow, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn artist_links(
+        &self,
+        id: ElementId,
+        track: &TrackRow,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let names = split_names(&track.artists);
         let row = track.clone();
         let this = cx.entity().downgrade();
@@ -1737,7 +2299,12 @@ impl Shell {
     }
 
     /// Satırdaki albüm adı: tıklanabilir.
-    pub(super) fn album_link(&self, id: ElementId, track: &TrackRow, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn album_link(
+        &self,
+        id: ElementId,
+        track: &TrackRow,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let row = track.clone();
         let this = cx.entity().downgrade();
         let on_click: super::link_text::SpanHandler = Rc::new(move |_, _, cx| {

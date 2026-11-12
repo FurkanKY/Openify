@@ -41,13 +41,14 @@ use std::{
     time::Duration,
 };
 
-use velopack::{UpdateCheck, UpdateInfo, UpdateManager, VelopackApp, VelopackAsset, sources::HttpSource};
-use crate::{t};
+use crate::t;
+use velopack::{
+    UpdateCheck, UpdateInfo, UpdateManager, VelopackApp, VelopackAsset, sources::HttpSource,
+};
 
 /// Varsayılan kaynak: kod deposunun kendi Releases sayfasındaki son sürüm
 /// (ayrı bir sürüm deposu yok).
-pub const DEFAULT_FEED: &str =
-    "https://github.com/FurkanKY/Openify/releases/latest/download";
+pub const DEFAULT_FEED: &str = "https://github.com/FurkanKY/Openify/releases/latest/download";
 
 /// Açılıştan ilk denetime kadar beklenen süre (açılışı ve ilk kareyi hiç
 /// etkilemesin, ağ çalışması çalmayla yarışmasın).
@@ -110,19 +111,30 @@ pub fn hooks() {
 /// sınama kaldırmasından etkilenmesin.
 #[cfg(windows)]
 fn remove_cache() {
-    let Some(cache) = dirs::cache_dir().map(|d| d.join("Openify")) else { return };
+    let Some(cache) = dirs::cache_dir().map(|d| d.join("Openify")) else {
+        return;
+    };
     let Some(root) = install_root() else { return };
     if root != cache {
         return;
     }
     const VELOPACK: [&str; 5] = ["current", "packages", "Update.exe", "sq.version", ".betaId"];
-    let Ok(entries) = std::fs::read_dir(&cache) else { return };
+    let Ok(entries) = std::fs::read_dir(&cache) else {
+        return;
+    };
     for entry in entries.flatten() {
-        if VELOPACK.iter().any(|n| entry.file_name().eq_ignore_ascii_case(n)) {
+        if VELOPACK
+            .iter()
+            .any(|n| entry.file_name().eq_ignore_ascii_case(n))
+        {
             continue;
         }
         let path = entry.path();
-        let _ = if path.is_dir() { std::fs::remove_dir_all(&path) } else { std::fs::remove_file(&path) };
+        let _ = if path.is_dir() {
+            std::fs::remove_dir_all(&path)
+        } else {
+            std::fs::remove_file(&path)
+        };
     }
 }
 
@@ -150,7 +162,9 @@ static ROLLED_BACK: Mutex<Option<String>> = Mutex::new(None);
 /// 3. sürüm art arda sağlıklı olamadıysa en son sağlıklı sürüme döner.
 /// Kurulu değilse hemen döner, hiçbir dosyaya dokunmaz.
 pub fn startup() {
-    let Ok(manager) = UpdateManager::new(HttpSource::new(""), None, None) else { return };
+    let Ok(manager) = UpdateManager::new(HttpSource::new(""), None, None) else {
+        return;
+    };
     let current = manager.get_current_version().to_string();
     let _ = CURRENT.set(current.clone());
     let action = register_start(&current);
@@ -164,7 +178,9 @@ pub fn startup() {
 
 /// Bekleyen güncellemeyi uygular (kara listedeyse uygulamaz).
 fn apply_pending(manager: &UpdateManager) {
-    let Some(pending) = manager.get_update_pending_restart() else { return };
+    let Some(pending) = manager.get_update_pending_restart() else {
+        return;
+    };
     if is_blocked(&pending.Version) {
         log::info!("güncelleme: {} kara listede, uygulanmıyor", pending.Version);
         return;
@@ -177,7 +193,9 @@ fn apply_pending(manager: &UpdateManager) {
 
 /// Bu açılışı kaydeder ve alınacak kararı döner.
 fn register_start(current: &str) -> health::Action {
-    let Some(path) = health::state_path() else { return health::Action::None };
+    let Some(path) = health::state_path() else {
+        return health::Action::None;
+    };
     let before = health::load_from(&path);
     let (after, action) = health::on_start(&before, current);
     if after != before {
@@ -194,7 +212,10 @@ fn register_start(current: &str) -> health::Action {
 }
 
 fn is_newer(candidate: &str, current: &str) -> bool {
-    match (semver::Version::parse(candidate), semver::Version::parse(current)) {
+    match (
+        semver::Version::parse(candidate),
+        semver::Version::parse(current),
+    ) {
         (Ok(a), Ok(b)) => a > b,
         _ => false,
     }
@@ -207,7 +228,9 @@ fn is_blocked(version: &str) -> bool {
 
 /// Durum dosyasını okuyup değiştirir; değiştiyse yazar.
 fn update_state(change: impl FnOnce(&health::State, &str) -> health::State) {
-    let (Some(current), Some(path)) = (CURRENT.get(), health::state_path()) else { return };
+    let (Some(current), Some(path)) = (CURRENT.get(), health::state_path()) else {
+        return;
+    };
     let before = health::load_from(&path);
     let after = change(&before, current);
     if after != before {
@@ -233,19 +256,24 @@ fn arm_health() {
     if CURRENT.get().is_none() {
         return;
     }
-    let _ = std::thread::Builder::new().name("openify-update-health".into()).spawn(|| {
-        std::thread::sleep(health::HEALTHY_AFTER);
-        mark_healthy();
-    });
+    let _ = std::thread::Builder::new()
+        .name("openify-update-health".into())
+        .spawn(|| {
+            std::thread::sleep(health::HEALTHY_AFTER);
+            mark_healthy();
+        });
 }
 
 /// Güncellemeden önce şimdiki (sağlıklı kanıtlı) sürümün tam paketini yedekler:
 /// `download_updates` eski paketleri siler, geri dönüş için bir kopya kalsın.
 /// Başarısızlık güncellemeyi engellemez.
 fn backup_current_package() {
-    let (Some(current), Some(path), Some(root), Some(dir)) =
-        (CURRENT.get(), health::state_path(), install_root(), health::backup_dir())
-    else {
+    let (Some(current), Some(path), Some(root), Some(dir)) = (
+        CURRENT.get(),
+        health::state_path(),
+        install_root(),
+        health::backup_dir(),
+    ) else {
         return;
     };
     if !health::should_backup(&health::load_from(&path), current) {
@@ -253,7 +281,9 @@ fn backup_current_package() {
     }
     match health::backup_package(&root.join("packages"), &dir, current) {
         Ok(true) => log::debug!("güncelleme: {current} paketi geri dönüş için yedeklendi"),
-        Ok(false) => log::info!("güncelleme: {current} paketi packages klasöründe yok, yedeklenemedi"),
+        Ok(false) => {
+            log::info!("güncelleme: {current} paketi packages klasöründe yok, yedeklenemedi")
+        }
         Err(e) => log::warn!("güncelleme: yedek alınamadı: {e}"),
     }
 }
@@ -264,7 +294,9 @@ fn backup_current_package() {
 fn rollback(manager: &UpdateManager, to: Option<String>, bad: String) {
     log::warn!("güncelleme: {bad} sağlıklı açılamadı, önceki sürüme dönülüyor");
     ROLLING_BACK.store(true, Ordering::SeqCst);
-    if let (Some(good), Some(root), Some(dir)) = (to.as_deref(), install_root(), health::backup_dir()) {
+    if let (Some(good), Some(root), Some(dir)) =
+        (to.as_deref(), install_root(), health::backup_dir())
+    {
         if let Some(backup) = health::find_package(&dir, good) {
             match health::stage_backup(&backup, &root.join("packages")) {
                 Ok(file) => apply_rollback(manager, &file, good, &bad),
@@ -278,12 +310,14 @@ fn rollback(manager: &UpdateManager, to: Option<String>, bad: String) {
         return;
     };
     let current = manager.get_current_version().to_string();
-    let spawned = std::thread::Builder::new().name("openify-update-rollback".into()).spawn(move || {
-        if let Err(e) = rollback_from_feed(&url, to.as_deref(), &bad, &current) {
-            log::info!("güncelleme: kaynaktan geri dönüş olmadı: {e}");
-        }
-        ROLLING_BACK.store(false, Ordering::SeqCst);
-    });
+    let spawned = std::thread::Builder::new()
+        .name("openify-update-rollback".into())
+        .spawn(move || {
+            if let Err(e) = rollback_from_feed(&url, to.as_deref(), &bad, &current) {
+                log::info!("güncelleme: kaynaktan geri dönüş olmadı: {e}");
+            }
+            ROLLING_BACK.store(false, Ordering::SeqCst);
+        });
     if spawned.is_err() {
         ROLLING_BACK.store(false, Ordering::SeqCst);
     }
@@ -292,7 +326,8 @@ fn rollback(manager: &UpdateManager, to: Option<String>, bad: String) {
 /// Kaynaktan, ağla: bilinen sağlıklı sürümün (ya da bir öncekinin) tam paketini
 /// indirir ve uygular. Kaynakta o sürümün paketi durmuyorsa hata döner.
 fn rollback_from_feed(url: &str, to: Option<&str>, bad: &str, current: &str) -> Result<(), String> {
-    let manager = UpdateManager::new(HttpSource::new(url), None, None).map_err(|e| e.to_string())?;
+    let manager =
+        UpdateManager::new(HttpSource::new(url), None, None).map_err(|e| e.to_string())?;
     let feed = manager.get_release_feed().map_err(|e| e.to_string())?;
     let fulls: Vec<String> = feed
         .Assets
@@ -300,7 +335,8 @@ fn rollback_from_feed(url: &str, to: Option<&str>, bad: &str, current: &str) -> 
         .filter(|a| a.Type.eq_ignore_ascii_case("Full"))
         .map(|a| a.Version.clone())
         .collect();
-    let target = health::pick_rollback_target(&fulls, to, current).ok_or("no rollback target in the feed")?;
+    let target = health::pick_rollback_target(&fulls, to, current)
+        .ok_or("no rollback target in the feed")?;
     let asset = feed
         .Assets
         .iter()
@@ -315,7 +351,9 @@ fn rollback_from_feed(url: &str, to: Option<&str>, bad: &str, current: &str) -> 
     };
     log::info!("güncelleme: {target} kaynaktan indiriliyor (geri dönüş)");
     // Eski paketleri (bozuk sürüm dahil) siler, yalnız bu kalır.
-    manager.download_updates(&info, None).map_err(|e| e.to_string())?;
+    manager
+        .download_updates(&info, None)
+        .map_err(|e| e.to_string())?;
     apply_rollback(&manager, &asset.FileName, &target, bad);
     Err("rollback was not applied".into())
 }
@@ -414,23 +452,25 @@ pub fn check_now(on_event: impl Fn(Event) + Send + 'static) {
         return;
     }
     set_status(Status::Checking);
-    let _ = std::thread::Builder::new().name("openify-update-now".into()).spawn(move || {
-        let Ok(manager) = UpdateManager::new(HttpSource::new(&url), None, None) else {
-            set_status(Status::Failed);
-            return;
-        };
-        match check_and_download(&manager) {
-            Ok(Some(version)) => {
-                set_status(Status::Ready(version.clone()));
-                on_event(Event::Ready { version });
-            }
-            Ok(None) => set_status(Status::UpToDate),
-            Err(e) => {
-                log::info!("güncelleme: denetim başarısız: {e}");
+    let _ = std::thread::Builder::new()
+        .name("openify-update-now".into())
+        .spawn(move || {
+            let Ok(manager) = UpdateManager::new(HttpSource::new(&url), None, None) else {
                 set_status(Status::Failed);
+                return;
+            };
+            match check_and_download(&manager) {
+                Ok(Some(version)) => {
+                    set_status(Status::Ready(version.clone()));
+                    on_event(Event::Ready { version });
+                }
+                Ok(None) => set_status(Status::UpToDate),
+                Err(e) => {
+                    log::info!("güncelleme: denetim başarısız: {e}");
+                    set_status(Status::Failed);
+                }
             }
-        }
-    });
+        });
 }
 
 /// Arka planda güncelleme denetimini başlatır. `on_event` bir arka plan
@@ -447,31 +487,33 @@ pub fn start(on_event: impl Fn(Event) + Send + 'static) {
         log::debug!("güncelleme: kurulu değil, denetim yok");
         return;
     };
-    let spawned = std::thread::Builder::new().name("openify-update".into()).spawn(move || {
-        std::thread::sleep(FIRST_CHECK_DELAY);
-        // Yedek ancak sürüm sağlıklı kanıtlandıktan sonra alınır; ilk denetim
-        // sağlık zamanlayıcısıyla yarışmasın.
-        mark_healthy();
-        let mut announced = None;
-        loop {
-            set_status(Status::Checking);
-            match check_and_download(&manager) {
-                Ok(Some(version)) => {
-                    set_status(Status::Ready(version.clone()));
-                    if announced.as_ref() != Some(&version) {
-                        announced = Some(version.clone());
-                        on_event(Event::Ready { version });
+    let spawned = std::thread::Builder::new()
+        .name("openify-update".into())
+        .spawn(move || {
+            std::thread::sleep(FIRST_CHECK_DELAY);
+            // Yedek ancak sürüm sağlıklı kanıtlandıktan sonra alınır; ilk denetim
+            // sağlık zamanlayıcısıyla yarışmasın.
+            mark_healthy();
+            let mut announced = None;
+            loop {
+                set_status(Status::Checking);
+                match check_and_download(&manager) {
+                    Ok(Some(version)) => {
+                        set_status(Status::Ready(version.clone()));
+                        if announced.as_ref() != Some(&version) {
+                            announced = Some(version.clone());
+                            on_event(Event::Ready { version });
+                        }
+                    }
+                    Ok(None) => set_status(Status::UpToDate),
+                    Err(e) => {
+                        log::info!("güncelleme: denetim başarısız: {e}");
+                        set_status(Status::Failed);
                     }
                 }
-                Ok(None) => set_status(Status::UpToDate),
-                Err(e) => {
-                    log::info!("güncelleme: denetim başarısız: {e}");
-                    set_status(Status::Failed);
-                }
+                std::thread::sleep(CHECK_EVERY);
             }
-            std::thread::sleep(CHECK_EVERY);
-        }
-    });
+        });
     if let Err(e) = spawned {
         log::warn!("güncelleme: iş parçacığı açılamadı: {e}");
     }

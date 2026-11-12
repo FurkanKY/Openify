@@ -2,8 +2,8 @@
 //! zarf, evre ve geçerlilik; `#[ignore]` ölçüm (çözümleme işlemci maliyeti).
 //! Yazarın AutoMix davranışı (sessizlik atlama, planlı bindirme) `xfade_tests.rs`'te.
 
-use super::beat::{Analysis, BeatTap, ENV_SECS, ENV_UNKNOWN, HAS_HEAD, HAS_TAIL, HOP_RATE};
 use super::RATE;
+use super::beat::{Analysis, BeatTap, ENV_SECS, ENV_UNKNOWN, HAS_HEAD, HAS_TAIL, HOP_RATE};
 
 const FS: f64 = RATE as f64;
 
@@ -148,7 +148,11 @@ fn tempo_is_within_one_bpm_for_clicks_and_drums() {
                 assert!(
                     (edge.bpm as f64 - bpm).abs() <= 1.0,
                     "{} {bpm} BPM: {name} ucu {:.2} BPM okudu (güven {:.2})",
-                    if matches!(pattern, Pattern::Clicks) { "tıkırtı" } else { "davul" },
+                    if matches!(pattern, Pattern::Clicks) {
+                        "tıkırtı"
+                    } else {
+                        "davul"
+                    },
                     edge.bpm,
                     edge.conf
                 );
@@ -194,12 +198,19 @@ fn beat_phase_matches_the_grid_within_thirty_ms() {
 #[test]
 fn unrhythmic_audio_has_low_confidence() {
     let mut noise = Noise(7);
-    let song: Vec<f64> = (0..(40.0 * FS) as usize).flat_map(|_| {
-        let x = 0.1 * noise.next();
-        [x, x]
-    }).collect();
+    let song: Vec<f64> = (0..(40.0 * FS) as usize)
+        .flat_map(|_| {
+            let x = 0.1 * noise.next();
+            [x, x]
+        })
+        .collect();
     let a = analyse(&song, true, true).expect("gürültü de içeriktir");
-    assert!(a.head.conf < 0.3 && a.tail.conf < 0.3, "gürültüde güven {:.2} / {:.2}", a.head.conf, a.tail.conf);
+    assert!(
+        a.head.conf < 0.3 && a.tail.conf < 0.3,
+        "gürültüde güven {:.2} / {:.2}",
+        a.head.conf,
+        a.tail.conf
+    );
     // Sabit ton: vuruş yok.
     let tone: Vec<f64> = (0..(40.0 * FS) as usize)
         .flat_map(|i| {
@@ -208,7 +219,11 @@ fn unrhythmic_audio_has_low_confidence() {
         })
         .collect();
     let a = analyse(&tone, true, true).unwrap();
-    assert!(a.head.bpm == 0.0 || a.head.conf < 0.3, "sabit tonda tempo: {:?}", a.head);
+    assert!(
+        a.head.bpm == 0.0 || a.head.conf < 0.3,
+        "sabit tonda tempo: {:?}",
+        a.head
+    );
     // Tam sessizlik: müzik yok, çözümleme yok.
     assert!(analyse(&silence(30.0), true, true).is_none());
 }
@@ -234,7 +249,11 @@ fn lead_and_tail_silence_are_found_within_fifty_ms() {
             a.tail_ms
         );
         let total = (lead + 40.0 + tail) * 1000.0;
-        assert!((a.total_ms as f64 - total).abs() <= 20.0, "toplam {} ms, beklenen {total}", a.total_ms);
+        assert!(
+            (a.total_ms as f64 - total).abs() <= 20.0,
+            "toplam {} ms, beklenen {total}",
+            a.total_ms
+        );
     }
 }
 
@@ -249,7 +268,11 @@ fn fade_out_end_is_where_the_level_drops_below_minus_sixty_db() {
     let mono: Vec<f64> = (0..((body + fade) * FS) as usize)
         .map(|i| {
             let t = i as f64 / FS;
-            let env = if t > body { (-(t - body) / tau).exp() } else { 1.0 };
+            let env = if t > body {
+                (-(t - body) / tau).exp()
+            } else {
+                1.0
+            };
             0.4 * env * (2.0 * std::f64::consts::PI * 440.0 * t).sin()
         })
         .collect();
@@ -265,8 +288,17 @@ fn fade_out_end_is_where_the_level_drops_below_minus_sixty_db() {
     );
     // Zarf: son saniye gövdeden çok daha alçak, sönme uzunluğu birkaç saniye.
     let view = a.tail_view().unwrap();
-    assert!(view.ramp_s >= 4 && view.ramp_s <= 12, "sönme uzunluğu {} sn", view.ramp_s);
-    assert!(a.tail_env[0] < a.tail_env[ENV_SECS - 1] - 12, "son saniye {} dB, 20 sn önce {} dB", a.tail_env[0], a.tail_env[ENV_SECS - 1]);
+    assert!(
+        view.ramp_s >= 4 && view.ramp_s <= 12,
+        "sönme uzunluğu {} sn",
+        view.ramp_s
+    );
+    assert!(
+        a.tail_env[0] < a.tail_env[ENV_SECS - 1] - 12,
+        "son saniye {} dB, 20 sn önce {} dB",
+        a.tail_env[0],
+        a.tail_env[ENV_SECS - 1]
+    );
 }
 
 /// Sert bitiş / sert başlangıç: sönme ve giriş 0.
@@ -290,7 +322,11 @@ fn slow_intro_is_measured() {
     }
     let a = analyse(&stereo(&mono), true, true).unwrap();
     let view = a.head_view().unwrap();
-    assert!((4..=9).contains(&view.ramp_s), "giriş uzunluğu {} sn", view.ramp_s);
+    assert!(
+        (4..=9).contains(&view.ramp_s),
+        "giriş uzunluğu {} sn",
+        view.ramp_s
+    );
 }
 
 // ── Zarf ────────────────────────────────────────────────────────────────
@@ -314,7 +350,10 @@ fn envelope_reads_decibels_per_second() {
     let short: Vec<f64> = tone[..(10.0 * FS) as usize * 2].to_vec();
     let a = analyse(&short, true, true).expect("10 sn yeterli");
     assert!(a.head_env[..9].iter().all(|v| *v != ENV_UNKNOWN));
-    assert!(a.head_env[12..].iter().all(|v| *v == ENV_UNKNOWN), "dolmayan saniyeler bilinmiyor");
+    assert!(
+        a.head_env[12..].iter().all(|v| *v == ENV_UNKNOWN),
+        "dolmayan saniyeler bilinmiyor"
+    );
 }
 
 // ── Geçerlilik ──────────────────────────────────────────────────────────
@@ -343,7 +382,10 @@ fn only_continuous_listening_gives_valid_edges() {
         tap.feed(chunk);
     }
     let a = tap.finish(true).unwrap().1;
-    assert_eq!(a.flags, HAS_TAIL, "sarmadan sonra baş geçersiz, son geçerli");
+    assert_eq!(
+        a.flags, HAS_TAIL,
+        "sarmadan sonra baş geçersiz, son geçerli"
+    );
     // Sarmadan hemen sonra biten (12 sn'den kısa kesintisiz): son uç da yok.
     let mut tap = BeatTap::new();
     tap.begin(Some("t".into()), true);
@@ -367,7 +409,10 @@ fn bars_and_hops_use_fixed_constants() {
     b.flags = HAS_TAIL;
     b.tail.bpm = 100.0;
     let m = a.merged(&b);
-    assert_eq!((m.flags, m.head.bpm, m.tail.bpm), (HAS_HEAD | HAS_TAIL, 120.0, 100.0));
+    assert_eq!(
+        (m.flags, m.head.bpm, m.tail.bpm),
+        (HAS_HEAD | HAS_TAIL, 120.0, 100.0)
+    );
 }
 
 // ── Ölçüm ───────────────────────────────────────────────────────────────
@@ -397,7 +442,11 @@ fn beat_cost() {
         std::hint::black_box(a);
         feed_only = feed_only.min(fed);
         total = total.min(fed + fin);
-        eprintln!("  koşu: feed {:.1} ms (içinde baş penceresi dahil), finish {:.1} ms", fed * 1e3, fin * 1e3);
+        eprintln!(
+            "  koşu: feed {:.1} ms (içinde baş penceresi dahil), finish {:.1} ms",
+            fed * 1e3,
+            fin * 1e3
+        );
     }
     let audio_s = minutes * 60.0;
     eprintln!(
@@ -417,8 +466,18 @@ fn debug_tempo() {
             let a = analyse(&song, true, true).unwrap();
             eprintln!(
                 "{} {bpm}: lead {} ms baş {:.2} bpm conf {:.2} faz {} ms | son {:.2} conf {:.2} faz {} ms",
-                if matches!(pattern, Pattern::Clicks) { "tık " } else { "davul" },
-                a.lead_ms, a.head.bpm, a.head.conf, a.head.beat_ms, a.tail.bpm, a.tail.conf, a.tail.beat_ms
+                if matches!(pattern, Pattern::Clicks) {
+                    "tık "
+                } else {
+                    "davul"
+                },
+                a.lead_ms,
+                a.head.bpm,
+                a.head.conf,
+                a.head.beat_ms,
+                a.tail.bpm,
+                a.tail.conf,
+                a.tail.beat_ms
             );
         }
     }

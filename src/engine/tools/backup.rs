@@ -73,7 +73,11 @@ pub fn build(
     let meta = &library.meta;
     let mut summary = Summary::default();
     let tracks_of = |key: &str| -> Option<Vec<Value>> {
-        contents.get(key).map(|rows| rows.iter().map(|e| track_json(e, info.get(&e.track))).collect())
+        contents.get(key).map(|rows| {
+            rows.iter()
+                .map(|e| track_json(e, info.get(&e.track)))
+                .collect()
+        })
     };
 
     let liked = tracks_of("liked");
@@ -165,7 +169,9 @@ pub fn export(db: &Db, path: &Path, now_ms: i64, offset_minutes: i64) -> Result<
     let mut contents: HashMap<String, Vec<Entry>> = HashMap::new();
     let mut uris: BTreeSet<String> = BTreeSet::new();
     for key in keys {
-        let Some(id) = CollectionId::from_key(&key) else { continue };
+        let Some(id) = CollectionId::from_key(&key) else {
+            continue;
+        };
         if let Some(rows) = db.collection_entries(&id)? {
             uris.extend(rows.iter().map(|e| e.track.clone()));
             contents.insert(key, rows);
@@ -193,14 +199,20 @@ pub fn write_json(path: &Path, value: &Value) -> Result<()> {
 
 /// Önerilen dosya adı: `openify-backup-2026-11-11.json`.
 pub fn suggested_name(now_ms: i64, offset_minutes: i64) -> String {
-    format!("openify-backup-{}.json", civil::date_stamp(now_ms, offset_minutes))
+    format!(
+        "openify-backup-{}.json",
+        civil::date_stamp(now_ms, offset_minutes)
+    )
 }
 
 /// Kaydet iletişim kutusu çıkmazsa ya da açılamazsa kullanılan yer:
 /// Belgeler\Openify yedekleri\<öneri>.
 pub fn fallback_path(now_ms: i64, offset_minutes: i64) -> PathBuf {
-    let base = dirs::document_dir().or_else(dirs::home_dir).unwrap_or_else(std::env::temp_dir);
-    base.join("Openify yedekleri").join(suggested_name(now_ms, offset_minutes))
+    let base = dirs::document_dir()
+        .or_else(dirs::home_dir)
+        .unwrap_or_else(std::env::temp_dir);
+    base.join("Openify yedekleri")
+        .join(suggested_name(now_ms, offset_minutes))
 }
 
 #[cfg(test)]
@@ -224,7 +236,12 @@ mod tests {
     }
 
     fn item(id: CollectionId, name: &str) -> LibraryItem {
-        LibraryItem { id, name: name.into(), subtitle: String::new(), image: String::new() }
+        LibraryItem {
+            id,
+            name: name.into(),
+            subtitle: String::new(),
+            image: String::new(),
+        }
     }
 
     fn library() -> Library {
@@ -232,10 +249,22 @@ mod tests {
         Library {
             liked_count: 2,
             albums: vec![item(CollectionId::Album("spotify:album:a".into()), "Albüm")],
-            playlists: vec![item(CollectionId::Playlist(pl(1)), "Bir"), item(CollectionId::Playlist(pl(2)), "İki")],
-            artists: vec![crate::engine::library::artist_item("spotify:artist:a", "Mavi Orman", "")],
+            playlists: vec![
+                item(CollectionId::Playlist(pl(1)), "Bir"),
+                item(CollectionId::Playlist(pl(2)), "İki"),
+            ],
+            artists: vec![crate::engine::library::artist_item(
+                "spotify:artist:a",
+                "Mavi Orman",
+                "",
+            )],
             meta: LibraryMeta {
-                folders: vec![Folder { key: folder.clone(), name: "Yol".into(), parent: None, at: 1 }],
+                folders: vec![Folder {
+                    key: folder.clone(),
+                    name: "Yol".into(),
+                    parent: None,
+                    at: 1,
+                }],
                 parents: [(pl(2), folder)].into(),
                 added: [(pl(1), 1_700_000_000_000)].into(),
                 creators: [(pl(1), "furka".to_string())].into(),
@@ -248,14 +277,31 @@ mod tests {
     fn json_has_every_part_of_the_library() {
         let lib = library();
         let contents: HashMap<String, Vec<Entry>> = [
-            ("liked".to_string(), vec![Entry::untimed(row(1).uri), Entry { track: row(2).uri, added_at: Some(5) }]),
-            (pl(1), vec![Entry::untimed(row(1).uri), Entry::untimed(row(3).uri)]),
+            (
+                "liked".to_string(),
+                vec![
+                    Entry::untimed(row(1).uri),
+                    Entry {
+                        track: row(2).uri,
+                        added_at: Some(5),
+                    },
+                ],
+            ),
+            (
+                pl(1),
+                vec![Entry::untimed(row(1).uri), Entry::untimed(row(3).uri)],
+            ),
         ]
         .into();
-        let info: HashMap<String, TrackRow> = [row(1), row(2)].into_iter().map(|r| (r.uri.clone(), r)).collect();
+        let info: HashMap<String, TrackRow> = [row(1), row(2)]
+            .into_iter()
+            .map(|r| (r.uri.clone(), r))
+            .collect();
         let (v, s) = build(1_794_400_496_000, 0, &lib, &contents, &info);
         assert_eq!(
-            (s.lists, s.tracks, s.albums, s.folders, s.artists, s.pinned, s.missing),
+            (
+                s.lists, s.tracks, s.albums, s.folders, s.artists, s.pinned, s.missing
+            ),
             (2, 4, 1, 1, 1, 2, 1)
         );
         assert_eq!(v["app"], "Openify");
@@ -266,7 +312,14 @@ mod tests {
         assert_eq!(v["liked"]["tracks"][0]["name"], "Şarkı 1");
         // Liste: sahip, eklenme, sabit; klasörde olmayan null.
         let p1 = &v["playlists"][0];
-        assert_eq!((p1["creator"].as_str(), p1["pinned"].as_bool(), p1["tracks_cached"].as_bool()), (Some("furka"), Some(true), Some(true)));
+        assert_eq!(
+            (
+                p1["creator"].as_str(),
+                p1["pinned"].as_bool(),
+                p1["tracks_cached"].as_bool()
+            ),
+            (Some("furka"), Some(true), Some(true))
+        );
         assert_eq!(p1["added_at"], 1_700_000_000_000i64);
         assert!(p1["folder"].is_null());
         // Önbellekte bilgisi olmayan şarkı yalnız adresiyle.
@@ -289,7 +342,12 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         db.save_library(&library()).unwrap();
         db.save_tracks(&[row(1), row(2)]).unwrap();
-        db.save_collection_entries(&CollectionId::Liked, Some(b"1"), &[Entry::untimed(row(2).uri)]).unwrap();
+        db.save_collection_entries(
+            &CollectionId::Liked,
+            Some(b"1"),
+            &[Entry::untimed(row(2).uri)],
+        )
+        .unwrap();
         db.save_collection_entries(
             &CollectionId::Playlist(pl(1)),
             Some(b"1"),
@@ -299,11 +357,17 @@ mod tests {
         // Üst klasör yok: oluşturulur.
         let path = dir.join("alt").join("yedek.json");
         let s = export(&db, &path, 1_794_400_496_000, 0).unwrap();
-        assert_eq!((s.lists, s.tracks, s.missing, s.path.clone()), (2, 3, 1, path.clone()));
+        assert_eq!(
+            (s.lists, s.tracks, s.missing, s.path.clone()),
+            (2, 3, 1, path.clone())
+        );
         let text = fs::read_to_string(&path).unwrap();
         let v: Value = serde_json::from_str(&text).unwrap();
         assert_eq!(v["playlists"][0]["tracks"][0]["name"], "Şarkı 1");
-        assert!(!path.with_extension("json.tmp").exists(), "geçici dosya kalmaz");
+        assert!(
+            !path.with_extension("json.tmp").exists(),
+            "geçici dosya kalmaz"
+        );
         // İkinci yazım dosyanın üstüne yazar.
         export(&db, &path, 1_794_400_496_000, 0).unwrap();
         let _ = fs::remove_dir_all(&dir);
@@ -319,33 +383,51 @@ mod tests {
 
     #[test]
     fn names_and_fallback_location() {
-        assert_eq!(suggested_name(1_794_400_496_000, 0), "openify-backup-2026-11-11.json");
+        assert_eq!(
+            suggested_name(1_794_400_496_000, 0),
+            "openify-backup-2026-11-11.json"
+        );
         let p = fallback_path(1_794_400_496_000, 0);
-        assert!(p.ends_with("Openify yedekleri/openify-backup-2026-11-11.json") || p.ends_with("Openify yedekleri\\openify-backup-2026-11-11.json"), "{p:?}");
+        assert!(
+            p.ends_with("Openify yedekleri/openify-backup-2026-11-11.json")
+                || p.ends_with("Openify yedekleri\\openify-backup-2026-11-11.json"),
+            "{p:?}"
+        );
     }
 
     /// Risk ölçümü: 100 liste x 200 şarkı (20 bin adres) yedeği. Çıta: < 2 sn.
     #[test]
     fn a_twenty_thousand_track_backup_is_quick() {
         let db = Db::open_in_memory().unwrap();
-        let mut lib = Library { liked_count: 0, ..Default::default() };
+        let mut lib = Library {
+            liked_count: 0,
+            ..Default::default()
+        };
         let rows: Vec<TrackRow> = (0..2000).map(row).collect();
         db.save_tracks(&rows).unwrap();
         for p in 0..100u32 {
-            lib.playlists.push(item(CollectionId::Playlist(pl(p)), &format!("Liste {p}")));
+            lib.playlists
+                .push(item(CollectionId::Playlist(pl(p)), &format!("Liste {p}")));
         }
         db.save_library(&lib).unwrap();
         for p in 0..100u32 {
-            let entries: Vec<Entry> = (0..200u32).map(|i| Entry::untimed(row((p * 7 + i) % 2000).uri)).collect();
-            db.save_collection_entries(&CollectionId::Playlist(pl(p)), Some(b"1"), &entries).unwrap();
+            let entries: Vec<Entry> = (0..200u32)
+                .map(|i| Entry::untimed(row((p * 7 + i) % 2000).uri))
+                .collect();
+            db.save_collection_entries(&CollectionId::Playlist(pl(p)), Some(b"1"), &entries)
+                .unwrap();
         }
-        let path = std::env::temp_dir().join(format!("openify-backup-perf-{}.json", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("openify-backup-perf-{}.json", std::process::id()));
         let t = std::time::Instant::now();
         let s = export(&db, &path, 1_794_400_496_000, 0).unwrap();
         let ms = t.elapsed().as_secs_f64() * 1000.;
         let bytes = std::fs::metadata(&path).unwrap().len();
         let _ = std::fs::remove_file(&path);
-        println!("ölçüm: 100 liste / 20000 adres yedek {ms:.1} ms, {:.1} MB", bytes as f64 / 1e6);
+        println!(
+            "ölçüm: 100 liste / 20000 adres yedek {ms:.1} ms, {:.1} MB",
+            bytes as f64 / 1e6
+        );
         assert_eq!((s.lists, s.tracks), (100, 20_000));
         assert!(ms < 2000., "{ms} ms");
     }

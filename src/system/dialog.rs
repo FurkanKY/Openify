@@ -10,10 +10,13 @@ use std::path::{Path, PathBuf};
 use windows::{
     Win32::{
         Foundation::ERROR_CANCELLED,
-        System::Com::{CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree, CoUninitialize},
+        System::Com::{
+            CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
+            CoTaskMemFree, CoUninitialize,
+        },
         UI::Shell::{
-            Common::COMDLG_FILTERSPEC, FOS_FORCEFILESYSTEM, FOS_OVERWRITEPROMPT, FOS_PATHMUSTEXIST, FileSaveDialog, IFileSaveDialog,
-            SIGDN_FILESYSPATH,
+            Common::COMDLG_FILTERSPEC, FOS_FORCEFILESYSTEM, FOS_OVERWRITEPROMPT, FOS_PATHMUSTEXIST,
+            FileSaveDialog, IFileSaveDialog, SIGDN_FILESYSPATH,
         },
     },
     core::{HSTRING, w},
@@ -22,13 +25,18 @@ use windows::{
 fn show(title: &str, file_name: &str) -> windows::core::Result<PathBuf> {
     // SAFETY: COM çağrıları bu iş parçacığında, iletişim kutusu bitene dek.
     unsafe {
-        let dialog: IFileSaveDialog = CoCreateInstance(&FileSaveDialog, None, CLSCTX_INPROC_SERVER)?;
+        let dialog: IFileSaveDialog =
+            CoCreateInstance(&FileSaveDialog, None, CLSCTX_INPROC_SERVER)?;
         dialog.SetTitle(&HSTRING::from(title))?;
         dialog.SetFileName(&HSTRING::from(file_name))?;
         dialog.SetDefaultExtension(w!("json"))?;
-        dialog.SetFileTypes(&[COMDLG_FILTERSPEC { pszName: w!("JSON"), pszSpec: w!("*.json") }])?;
+        dialog.SetFileTypes(&[COMDLG_FILTERSPEC {
+            pszName: w!("JSON"),
+            pszSpec: w!("*.json"),
+        }])?;
         let options = dialog.GetOptions()?;
-        dialog.SetOptions(options | FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM)?;
+        dialog
+            .SetOptions(options | FOS_OVERWRITEPROMPT | FOS_PATHMUSTEXIST | FOS_FORCEFILESYSTEM)?;
         dialog.Show(None)?;
         let item = dialog.GetResult()?;
         let name = item.GetDisplayName(SIGDN_FILESYSPATH)?;

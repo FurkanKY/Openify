@@ -33,7 +33,10 @@ pub(in crate::engine) enum TransportCmd {
     /// Görünür listedeki `i`. şarkıya atla.
     JumpTo(usize),
     /// Sıra zaten kuruldu: `uri` şarkısını `position_ms`'den çalmaya başla.
-    Start { uri: String, position_ms: u32 },
+    Start {
+        uri: String,
+        position_ms: u32,
+    },
     /// 0..1.
     SetVolume(f32),
 }

@@ -75,9 +75,17 @@ pub struct RadioInfo {
 
 /// Radyosu başlatılabilen adres: şarkı, sanatçı, albüm ya da liste.
 pub fn seed_ok(uri: &str) -> bool {
-    ["spotify:track:", "spotify:artist:", "spotify:album:", "spotify:playlist:"].iter().any(|p| {
-        uri.strip_prefix(p)
-            .is_some_and(|id| !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric()))
+    [
+        "spotify:track:",
+        "spotify:artist:",
+        "spotify:album:",
+        "spotify:playlist:",
+    ]
+    .iter()
+    .any(|p| {
+        uri.strip_prefix(p).is_some_and(|id| {
+            !id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric())
+        })
     })
 }
 
@@ -119,7 +127,11 @@ pub struct Station {
 
 fn text(v: Option<&Value>) -> String {
     let s = v.and_then(Value::as_str).unwrap_or_default();
-    s.chars().filter(|c| !c.is_control()).collect::<String>().trim().to_string()
+    s.chars()
+        .filter(|c| !c.is_control())
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 /// Sanatçılar: düz yazı, yazı dizisi ya da `{ "name" }` dizisi.
@@ -128,7 +140,13 @@ fn artists(v: Option<&Value>) -> String {
         Some(Value::String(_)) => text(v),
         Some(Value::Array(list)) => list
             .iter()
-            .map(|a| if a.is_object() { text(a.get("name")) } else { text(Some(a)) })
+            .map(|a| {
+                if a.is_object() {
+                    text(a.get("name"))
+                } else {
+                    text(Some(a))
+                }
+            })
             .filter(|n| !n.is_empty())
             .collect::<Vec<_>>()
             .join(", "),
@@ -139,27 +157,31 @@ fn artists(v: Option<&Value>) -> String {
 fn parse_track(v: &Value) -> Option<RadioTrack> {
     let uri = match v {
         Value::String(_) => text(Some(v)),
-        Value::Object(_) => {
-            ["uri", "trackUri", "track_uri"].iter().find_map(|k| Some(text(v.get(k))).filter(|t| !t.is_empty()))?
-        }
+        Value::Object(_) => ["uri", "trackUri", "track_uri"]
+            .iter()
+            .find_map(|k| Some(text(v.get(k))).filter(|t| !t.is_empty()))?,
         _ => return None,
     };
     track_id(&uri)?;
     // Yanıt künye de taşıyorsa (ad şart) kullanılır; yoksa motor toplu istekle alır.
-    let row = v.is_object().then(|| text(v.get("name"))).filter(|n| !n.is_empty()).map(|name| TrackRow {
-        uri: uri.clone(),
-        name,
-        artists: artists(v.get("artists").or_else(|| v.get("artistNames"))),
-        album: match v.get("album") {
-            Some(a) if a.is_object() => text(a.get("name")),
-            other => text(other),
-        },
-        duration_ms: ["duration_ms", "durationMs", "duration"]
-            .iter()
-            .find_map(|k| v.get(k).and_then(Value::as_u64))
-            .map_or(0, |d| d.min(u64::from(u32::MAX)) as u32),
-        image: String::new(),
-    });
+    let row = v
+        .is_object()
+        .then(|| text(v.get("name")))
+        .filter(|n| !n.is_empty())
+        .map(|name| TrackRow {
+            uri: uri.clone(),
+            name,
+            artists: artists(v.get("artists").or_else(|| v.get("artistNames"))),
+            album: match v.get("album") {
+                Some(a) if a.is_object() => text(a.get("name")),
+                other => text(other),
+            },
+            duration_ms: ["duration_ms", "durationMs", "duration"]
+                .iter()
+                .find_map(|k| v.get(k).and_then(Value::as_u64))
+                .map_or(0, |d| d.min(u64::from(u32::MAX)) as u32),
+            image: String::new(),
+        });
     Some(RadioTrack { uri, row })
 }
 
@@ -168,7 +190,9 @@ fn parse_track(v: &Value) -> Option<RadioTrack> {
 pub fn parse(value: &Value) -> Station {
     let mut tracks: Vec<RadioTrack> = Vec::new();
     for key in ["tracks", "mediaItems", "items"] {
-        let Some(list) = value.get(key).and_then(Value::as_array) else { continue };
+        let Some(list) = value.get(key).and_then(Value::as_array) else {
+            continue;
+        };
         for item in list {
             if let Some(t) = parse_track(item)
                 && !tracks.iter().any(|x| x.uri == t.uri)
@@ -178,7 +202,10 @@ pub fn parse(value: &Value) -> Station {
         }
     }
     tracks.truncate(BATCH_MAX);
-    let title: String = text(value.get("title").or_else(|| value.get("name"))).chars().take(TITLE_MAX).collect();
+    let title: String = text(value.get("title").or_else(|| value.get("name")))
+        .chars()
+        .take(TITLE_MAX)
+        .collect();
     Station { title, tracks }
 }
 
@@ -256,10 +283,16 @@ impl Feed {
     /// Şimdi devam istenmeli mi? `remaining`: bağlamda çalınmayı bekleyen
     /// şarkı, `ctx_len`: bağlamın uzunluğu.
     pub fn due(&self, now: Instant, remaining: usize, ctx_len: usize) -> bool {
-        if self.in_flight || remaining > REFILL_AT || ctx_len >= CTX_MAX || self.failures >= MAX_FAILURES {
+        if self.in_flight
+            || remaining > REFILL_AT
+            || ctx_len >= CTX_MAX
+            || self.failures >= MAX_FAILURES
+        {
             return false;
         }
-        self.last.is_none_or(|t| now.saturating_duration_since(t) >= MIN_INTERVAL * (1 << self.failures.min(4)))
+        self.last.is_none_or(|t| {
+            now.saturating_duration_since(t) >= MIN_INTERVAL * (1 << self.failures.min(4))
+        })
     }
 
     pub fn begin(&mut self, now: Instant) {
@@ -303,14 +336,17 @@ pub enum RadioFailure {
 impl From<&PathfinderError> for RadioFailure {
     fn from(e: &PathfinderError) -> Self {
         match e {
-            PathfinderError::RateLimited { .. } | PathfinderError::Blocked { .. } | PathfinderError::CircuitOpen => {
-                Self::RateLimited
-            }
+            PathfinderError::RateLimited { .. }
+            | PathfinderError::Blocked { .. }
+            | PathfinderError::CircuitOpen => Self::RateLimited,
             PathfinderError::Denied { .. } => Self::Denied,
-            PathfinderError::Http { status: 400 | 404 | 410 } | PathfinderError::InvalidResponse(_) => {
-                Self::Unavailable
+            PathfinderError::Http {
+                status: 400 | 404 | 410,
             }
-            PathfinderError::Token(_) | PathfinderError::Transport(_) | PathfinderError::Http { .. } => Self::Offline,
+            | PathfinderError::InvalidResponse(_) => Self::Unavailable,
+            PathfinderError::Token(_)
+            | PathfinderError::Transport(_)
+            | PathfinderError::Http { .. } => Self::Offline,
             _ => Self::Unavailable,
         }
     }
@@ -321,7 +357,9 @@ impl From<&PathfinderError> for RadioFailure {
 /// `OPENIFY_SETTINGS_PATH` varken) geçerli; dosya okunamazsa / çözülemezse yok.
 pub fn test_fixture() -> Option<Value> {
     let path = std::env::var_os("OPENIFY_TEST_RADIO_JSON")?;
-    if std::env::var_os("OPENIFY_TEST_DISPLAY").is_none() && std::env::var_os("OPENIFY_SETTINGS_PATH").is_none() {
+    if std::env::var_os("OPENIFY_TEST_DISPLAY").is_none()
+        && std::env::var_os("OPENIFY_SETTINGS_PATH").is_none()
+    {
         return None;
     }
     serde_json::from_slice(&std::fs::read(path).ok()?).ok()
@@ -340,7 +378,11 @@ pub async fn load_with(
     if !seed_ok(seed) {
         return Err(RadioFailure::Unavailable);
     }
-    let priority = if first { Priority::Interactive } else { Priority::Background };
+    let priority = if first {
+        Priority::Interactive
+    } else {
+        Priority::Background
+    };
     let url = station_url(seed, BATCH_MAX, prev);
     match pf.get_json(transport, "radio", &url, priority).await {
         Ok(value) => {
@@ -361,12 +403,28 @@ pub async fn load_with(
 
 /// Canlı oturumla (`pathfinder::radio` kapısından). Sınama kancası varsa
 /// ağa çıkmadan dosyadan.
-pub async fn load(session: &Session, seed: &str, prev: &[String], first: bool) -> Result<Station, RadioFailure> {
+pub async fn load(
+    session: &Session,
+    seed: &str,
+    prev: &[String],
+    first: bool,
+) -> Result<Station, RadioFailure> {
     if let Some(value) = test_fixture() {
         let station = parse(&value);
-        return if station.tracks.is_empty() { Err(RadioFailure::Empty) } else { Ok(station) };
+        return if station.tracks.is_empty() {
+            Err(RadioFailure::Empty)
+        } else {
+            Ok(station)
+        };
     }
-    load_with(pathfinder::radio(), &LiveTransport::new(session), seed, prev, first).await
+    load_with(
+        pathfinder::radio(),
+        &LiveTransport::new(session),
+        seed,
+        prev,
+        first,
+    )
+    .await
 }
 
 #[cfg(test)]
@@ -407,11 +465,20 @@ mod tests {
         // Künye varsa okunur: sanatçı dizisi, düz yazı, yazı dizisi, süre adları.
         let row = |i: usize| s.tracks[i].row.clone().unwrap();
         assert_eq!(
-            (row(0).name.as_str(), row(0).artists.as_str(), row(0).album.as_str(), row(0).duration_ms),
+            (
+                row(0).name.as_str(),
+                row(0).artists.as_str(),
+                row(0).album.as_str(),
+                row(0).duration_ms
+            ),
             ("Sessiz Harf", "Kuzey Isigi", "Aralik", 212_000)
         );
         assert_eq!(row(1).artists, "Dalga Boyu, Ece Tan");
-        assert_eq!((row(2).artists.as_str(), row(2).duration_ms), ("Mert Kaya", 243_000), "düz yazı sanatçı, durationMs");
+        assert_eq!(
+            (row(2).artists.as_str(), row(2).duration_ms),
+            ("Mert Kaya", 243_000),
+            "düz yazı sanatçı, durationMs"
+        );
         assert_eq!(row(4).artists, "Kuzey Isigi", "yazı dizisi");
         // Yalnız adres veren şarkı künyesiz (motor toplu istekle alır).
         assert!(s.tracks[6].row.is_none());
@@ -425,31 +492,61 @@ mod tests {
         });
         let s = parse(&v);
         let uris: Vec<&str> = s.tracks.iter().map(|t| t.uri.as_str()).collect();
-        assert_eq!(uris, ["spotify:track:aaa111", "spotify:track:bbb222", "spotify:track:ccc333"]);
-        assert!(s.tracks.iter().all(|t| t.row.is_none()), "adsız künye kurulmaz");
+        assert_eq!(
+            uris,
+            [
+                "spotify:track:aaa111",
+                "spotify:track:bbb222",
+                "spotify:track:ccc333"
+            ]
+        );
+        assert!(
+            s.tracks.iter().all(|t| t.row.is_none()),
+            "adsız künye kurulmaz"
+        );
         assert_eq!(s.title, "");
     }
 
     #[test]
     fn empty_and_unrelated_bodies_make_an_empty_station() {
-        for body in
-            ["{}", "[]", "null", "3", r#"{"tracks":[]}"#, r#"{"tracks":"x"}"#, r#"{"tracks":[{"uri":"spotify:episode:e"}]}"#]
-        {
-            assert!(parse(&serde_json::from_str(body).unwrap()).tracks.is_empty(), "{body}");
+        for body in [
+            "{}",
+            "[]",
+            "null",
+            "3",
+            r#"{"tracks":[]}"#,
+            r#"{"tracks":"x"}"#,
+            r#"{"tracks":[{"uri":"spotify:episode:e"}]}"#,
+        ] {
+            assert!(
+                parse(&serde_json::from_str(body).unwrap())
+                    .tracks
+                    .is_empty(),
+                "{body}"
+            );
         }
     }
 
     #[test]
     fn a_huge_response_is_capped_and_texts_are_clean() {
-        let list: Vec<Value> = (0..400).map(|i| serde_json::json!({ "uri": format!("spotify:track:t{i}") })).collect();
-        assert_eq!(parse(&serde_json::json!({ "tracks": list })).tracks.len(), BATCH_MAX);
+        let list: Vec<Value> = (0..400)
+            .map(|i| serde_json::json!({ "uri": format!("spotify:track:t{i}") }))
+            .collect();
+        assert_eq!(
+            parse(&serde_json::json!({ "tracks": list })).tracks.len(),
+            BATCH_MAX
+        );
         let long = "a".repeat(500);
         let s = parse(&serde_json::json!({
             "title": format!("  {long}\n"),
             "tracks": [{ "uri": "spotify:track:x1", "name": "Ad\u{0007}\u{0000}ı" }]
         }));
         assert_eq!(s.title.chars().count(), TITLE_MAX);
-        assert_eq!(s.tracks[0].row.as_ref().unwrap().name, "Adı", "denetim karakterleri atılır");
+        assert_eq!(
+            s.tracks[0].row.as_ref().unwrap().name,
+            "Adı",
+            "denetim karakterleri atılır"
+        );
     }
 
     // ── Adres ──────────────────────────────────────────────────────────
@@ -483,7 +580,10 @@ mod tests {
     #[test]
     fn station_url_is_the_single_constant_with_count_and_the_last_ids() {
         let base = "https://spclient.wg.spotify.com/radio-apollo/v3/stations";
-        assert_eq!(station_url("spotify:track:abc", 50, &[]), format!("{base}/spotify:track:abc?autoplay=true&count=50"));
+        assert_eq!(
+            station_url("spotify:track:abc", 50, &[]),
+            format!("{base}/spotify:track:abc?autoplay=true&count=50")
+        );
         // Sayı sınırlanır; geçersiz adresler (bölüm, yerel) prev'e girmez.
         let prev = vec![
             "spotify:track:p1".to_string(),
@@ -499,7 +599,12 @@ mod tests {
         // En çok PREV_MAX, en sondakiler.
         let many: Vec<String> = (0..200).map(|i| format!("spotify:track:t{i}")).collect();
         let url = station_url("spotify:track:abc", 30, &many);
-        let ids = url.split("prev_tracks=").nth(1).unwrap().split(',').collect::<Vec<_>>();
+        let ids = url
+            .split("prev_tracks=")
+            .nth(1)
+            .unwrap()
+            .split(',')
+            .collect::<Vec<_>>();
         assert_eq!(ids.len(), PREV_MAX);
         assert_eq!((ids[0], ids[PREV_MAX - 1]), ("t150", "t199"));
     }
@@ -519,9 +624,19 @@ mod tests {
 
     #[test]
     fn the_first_song_skips_blocked_hidden_and_explicit_unless_the_seed_is_a_track() {
-        let rows = vec![row("a", "Drake"), row("b", "Kaya"), row("c", "Tan"), row("d", "Aksu")];
+        let rows = vec![
+            row("a", "Drake"),
+            row("b", "Kaya"),
+            row("c", "Tan"),
+            row("d", "Aksu"),
+        ];
         let rules = Rules::new(false, true, ["drake"]);
-        let explicit = |u: &str| Some(Traits { explicit: u.ends_with(":c"), popularity: 0 });
+        let explicit = |u: &str| {
+            Some(Traits {
+                explicit: u.ends_with(":c"),
+                popularity: 0,
+            })
+        };
         let hidden = HiddenList::new(vec![crate::engine::hidden::HiddenSong {
             uri: "spotify:track:b".into(),
             context: None,
@@ -534,10 +649,22 @@ mod tests {
         // Şarkı tohumu: ilk şarkı (tohum) kurallara bakılmadan.
         assert_eq!(first_playable(&rows, &explicit, &rules, &hidden, true), 0);
         // Hiç kural yoksa ilk şarkı.
-        assert_eq!(first_playable(&rows, &|_| None, &Rules::default(), &HiddenList::default(), false), 0);
+        assert_eq!(
+            first_playable(
+                &rows,
+                &|_| None,
+                &Rules::default(),
+                &HiddenList::default(),
+                false
+            ),
+            0
+        );
         // Hepsi dışlanmışsa 0.
         let all = Rules::new(false, false, ["drake", "kaya", "tan", "aksu"]);
-        assert_eq!(first_playable(&rows, &|_| None, &all, &HiddenList::default(), false), 0);
+        assert_eq!(
+            first_playable(&rows, &|_| None, &all, &HiddenList::default(), false),
+            0
+        );
     }
 
     // ── Devam zamanlaması ──────────────────────────────────────────────
@@ -564,7 +691,10 @@ mod tests {
         let mut feed = Feed::default();
         assert!(feed.due(at(0), 3, 50), "hiç istek yapılmadıysa hemen");
         feed.begin(at(0));
-        assert!(feed.in_flight() && !feed.due(at(1000), 3, 50), "yoldayken ikincisi yok");
+        assert!(
+            feed.in_flight() && !feed.due(at(1000), 3, 50),
+            "yoldayken ikincisi yok"
+        );
         // Boş / hatalı dönüş: aralık ikiye katlanır (30 → 60 → 120), 3'te bırakılır.
         feed.end(0);
         assert_eq!(feed.failures(), 1);
@@ -593,7 +723,10 @@ mod tests {
         let mut feed = Feed::default();
         feed.want("spotify:track:a");
         feed.want("spotify:track:b");
-        assert!(!feed.take_wanted("spotify:track:a"), "daha yeni istek öncekini geçersiz kılar");
+        assert!(
+            !feed.take_wanted("spotify:track:a"),
+            "daha yeni istek öncekini geçersiz kılar"
+        );
         assert!(feed.take_wanted("spotify:track:b"));
         assert!(!feed.take_wanted("spotify:track:b"), "bir kez");
         // Nesil: yeni radyo başlayınca artar; eski radyonun yanıtı bununla ayıklanır.
@@ -620,7 +753,11 @@ mod tests {
     }
 
     fn reply(status: u16, body: &str) -> Result<Response, TransportError> {
-        Ok(Response { status, retry_after: None, body: Bytes::from(body.to_string()) })
+        Ok(Response {
+            status,
+            retry_after: None,
+            body: Bytes::from(body.to_string()),
+        })
     }
 
     impl Transport for FakeNet {
@@ -630,7 +767,11 @@ mod tests {
         fn get<'a>(&'a self, url: &'a str) -> BoxFuture<'a, Result<Response, TransportError>> {
             Box::pin(async move {
                 self.urls.lock().unwrap().push(url.to_string());
-                self.responses.lock().unwrap().pop_front().expect("beklenmeyen istek")
+                self.responses
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .expect("beklenmeyen istek")
             })
         }
         fn refresh_token<'a>(&'a self) -> BoxFuture<'a, Result<(), TransportError>> {
@@ -639,36 +780,80 @@ mod tests {
                 Ok(())
             })
         }
-        fn discover<'a>(&'a self, _: &'a str, _: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+        fn discover<'a>(
+            &'a self,
+            _: &'a str,
+            _: &'a str,
+        ) -> BoxFuture<'a, Result<String, DiscoverError>> {
             Box::pin(async { panic!("radyo hash aramaz") })
         }
     }
 
     fn fast() -> Pathfinder {
-        Pathfinder::new(Config { interval: Duration::ZERO, server_retries: 1, backoff_base: Duration::from_millis(1) })
+        Pathfinder::new(Config {
+            interval: Duration::ZERO,
+            server_retries: 1,
+            backoff_base: Duration::from_millis(1),
+        })
     }
 
     #[tokio::test]
     async fn loads_through_the_shared_client_with_one_request_per_call() {
         let net = FakeNet::default();
-        net.responses.lock().unwrap().extend([reply(200, FIXTURE), reply(200, FIXTURE)]);
-        let first = load_with(&fast(), &net, "spotify:track:0000000000000000seed01", &[], true).await.unwrap();
+        net.responses
+            .lock()
+            .unwrap()
+            .extend([reply(200, FIXTURE), reply(200, FIXTURE)]);
+        let first = load_with(
+            &fast(),
+            &net,
+            "spotify:track:0000000000000000seed01",
+            &[],
+            true,
+        )
+        .await
+        .unwrap();
         assert_eq!(first.tracks.len(), 11);
         let prev: Vec<String> = first.tracks.iter().map(|t| t.uri.clone()).collect();
-        load_with(&fast(), &net, "spotify:track:0000000000000000seed01", &prev, false).await.unwrap();
+        load_with(
+            &fast(),
+            &net,
+            "spotify:track:0000000000000000seed01",
+            &prev,
+            false,
+        )
+        .await
+        .unwrap();
         let urls = net.urls.lock().unwrap();
         assert_eq!(urls.len(), 2, "çağrı başına tek istek");
         assert!(!urls[0].contains("prev_tracks"));
-        assert!(urls[1].contains("prev_tracks=0000000000000000radio1,0000000000000000radio2"), "{}", urls[1]);
+        assert!(
+            urls[1].contains("prev_tracks=0000000000000000radio1,0000000000000000radio2"),
+            "{}",
+            urls[1]
+        );
     }
 
     #[tokio::test]
     async fn a_bad_seed_never_hits_the_network_and_an_empty_answer_is_a_code() {
         let net = FakeNet::default();
-        net.responses.lock().unwrap().push_back(reply(200, r#"{"tracks":[]}"#));
-        assert_eq!(load_with(&fast(), &net, "liked", &[], true).await.unwrap_err(), RadioFailure::Unavailable);
+        net.responses
+            .lock()
+            .unwrap()
+            .push_back(reply(200, r#"{"tracks":[]}"#));
+        assert_eq!(
+            load_with(&fast(), &net, "liked", &[], true)
+                .await
+                .unwrap_err(),
+            RadioFailure::Unavailable
+        );
         assert_eq!(net.urls.lock().unwrap().len(), 0);
-        assert_eq!(load_with(&fast(), &net, "spotify:album:abc", &[], true).await.unwrap_err(), RadioFailure::Empty);
+        assert_eq!(
+            load_with(&fast(), &net, "spotify:album:abc", &[], true)
+                .await
+                .unwrap_err(),
+            RadioFailure::Empty
+        );
     }
 
     #[tokio::test]
@@ -676,23 +861,44 @@ mod tests {
         let code = |responses: Vec<Result<Response, TransportError>>| async move {
             let net = FakeNet::default();
             net.responses.lock().unwrap().extend(responses);
-            load_with(&fast(), &net, "spotify:track:abc", &[], true).await.unwrap_err()
+            load_with(&fast(), &net, "spotify:track:abc", &[], true)
+                .await
+                .unwrap_err()
         };
-        assert_eq!(code(vec![reply(401, ""), reply(403, "")]).await, RadioFailure::Denied);
+        assert_eq!(
+            code(vec![reply(401, ""), reply(403, "")]).await,
+            RadioFailure::Denied
+        );
         assert_eq!(code(vec![reply(403, "")]).await, RadioFailure::Denied);
         assert_eq!(code(vec![reply(429, "")]).await, RadioFailure::RateLimited);
         assert_eq!(code(vec![reply(404, "")]).await, RadioFailure::Unavailable);
         assert_eq!(code(vec![reply(400, "")]).await, RadioFailure::Unavailable);
-        assert_eq!(code(vec![reply(200, "not json")]).await, RadioFailure::Unavailable);
-        assert_eq!(code(vec![reply(500, ""), reply(502, "")]).await, RadioFailure::Offline);
-        assert_eq!(code(vec![Err(TransportError::Network("down".into()))]).await, RadioFailure::Offline);
+        assert_eq!(
+            code(vec![reply(200, "not json")]).await,
+            RadioFailure::Unavailable
+        );
+        assert_eq!(
+            code(vec![reply(500, ""), reply(502, "")]).await,
+            RadioFailure::Offline
+        );
+        assert_eq!(
+            code(vec![Err(TransportError::Network("down".into()))]).await,
+            RadioFailure::Offline
+        );
     }
 
     #[tokio::test]
     async fn a_401_refreshes_the_token_once_then_succeeds() {
         let net = FakeNet::default();
-        net.responses.lock().unwrap().extend([reply(401, ""), reply(200, FIXTURE)]);
-        assert!(load_with(&fast(), &net, "spotify:track:abc", &[], true).await.is_ok());
+        net.responses
+            .lock()
+            .unwrap()
+            .extend([reply(401, ""), reply(200, FIXTURE)]);
+        assert!(
+            load_with(&fast(), &net, "spotify:track:abc", &[], true)
+                .await
+                .is_ok()
+        );
         assert_eq!(net.refreshes.load(Ordering::SeqCst), 1);
     }
 
@@ -700,22 +906,36 @@ mod tests {
     async fn a_429_stops_the_follow_ups_but_never_touches_another_gate() {
         // Radyonun kapısı kendi örneği: orada alınan 429 sonraki isteği (aynı kapıdan)
         // engeller, ama başka bir Pathfinder (arama / Keşfet) etkilenmez.
-        let radio_gate =
-            Pathfinder::new(Config { interval: Duration::ZERO, server_retries: 0, backoff_base: Duration::from_millis(1) });
+        let radio_gate = Pathfinder::new(Config {
+            interval: Duration::ZERO,
+            server_retries: 0,
+            backoff_base: Duration::from_millis(1),
+        });
         let other_gate = fast();
         let net = FakeNet::default();
-        net.responses.lock().unwrap().extend([reply(429, ""), reply(200, FIXTURE)]);
+        net.responses
+            .lock()
+            .unwrap()
+            .extend([reply(429, ""), reply(200, FIXTURE)]);
         assert_eq!(
-            load_with(&radio_gate, &net, "spotify:track:abc", &[], true).await.unwrap_err(),
+            load_with(&radio_gate, &net, "spotify:track:abc", &[], true)
+                .await
+                .unwrap_err(),
             RadioFailure::RateLimited
         );
         // Devamı (arka plan) artık kapıdan geçmez (Retry-After süresi): istek gitmez.
         assert_eq!(
-            load_with(&radio_gate, &net, "spotify:track:abc", &[], false).await.unwrap_err(),
+            load_with(&radio_gate, &net, "spotify:track:abc", &[], false)
+                .await
+                .unwrap_err(),
             RadioFailure::RateLimited
         );
         assert_eq!(net.urls.lock().unwrap().len(), 1);
-        assert!(load_with(&other_gate, &net, "spotify:track:abc", &[], true).await.is_ok());
+        assert!(
+            load_with(&other_gate, &net, "spotify:track:abc", &[], true)
+                .await
+                .is_ok()
+        );
     }
 
     // ── Canlı (sahibi onaylayınca elle) ────────────────────────────────
@@ -740,10 +960,14 @@ mod tests {
             .expect("Kayitli Spotify girisi yok");
         let credentials: Credentials = serde_json::from_str(&json).expect("kayitli giris bozuk");
         let session = Session::new(SessionConfig::default(), None);
-        session.connect(credentials, false).await.expect("Spotify'a baglanilamadi");
+        session
+            .connect(credentials, false)
+            .await
+            .expect("Spotify'a baglanilamadi");
 
         // Varsayılan: Rick Astley, "Never Gonna Give You Up".
-        let seed = std::env::var("OPENIFY_LIVE_SEED").unwrap_or_else(|_| "spotify:track:4cOdK2wGLETKBW3PvgPWqT".into());
+        let seed = std::env::var("OPENIFY_LIVE_SEED")
+            .unwrap_or_else(|_| "spotify:track:4cOdK2wGLETKBW3PvgPWqT".into());
         match load(&session, &seed, &[], true).await {
             Ok(station) => {
                 let with_row = station.tracks.iter().filter(|t| t.row.is_some()).count();
@@ -757,8 +981,16 @@ mod tests {
                 let prev: Vec<String> = station.tracks.iter().map(|t| t.uri.clone()).collect();
                 match load(&session, &seed, &prev, false).await {
                     Ok(more) => {
-                        let fresh = more.tracks.iter().filter(|t| !prev.contains(&t.uri)).count();
-                        println!("devam: {} sarki, oncekilerden farkli {}", more.tracks.len(), fresh);
+                        let fresh = more
+                            .tracks
+                            .iter()
+                            .filter(|t| !prev.contains(&t.uri))
+                            .count();
+                        println!(
+                            "devam: {} sarki, oncekilerden farkli {}",
+                            more.tracks.len(),
+                            fresh
+                        );
                     }
                     Err(e) => println!("devam alinamadi: {e:?}"),
                 }

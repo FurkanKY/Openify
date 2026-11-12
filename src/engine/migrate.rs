@@ -75,7 +75,11 @@ pub fn migrate(conn: &mut Connection, steps: &[Step]) -> Result<Report> {
     let latest = steps.last().map_or(0, |s| s.to);
     let from = user_version(conn)?;
     if from > latest {
-        return Err(MigrateError::TooNew { found: from, supported: latest }.into());
+        return Err(MigrateError::TooNew {
+            found: from,
+            supported: latest,
+        }
+        .into());
     }
     let mut applied = Vec::new();
     for step in steps.iter().filter(|s| s.to > from) {
@@ -88,15 +92,24 @@ pub fn migrate(conn: &mut Connection, steps: &[Step]) -> Result<Report> {
         if now >= step.to {
             continue;
         }
-        (step.up)(&tx, now).with_context(|| format!("göç \"{}\" (→ {}) başarısız", step.name, step.to))?;
+        (step.up)(&tx, now)
+            .with_context(|| format!("göç \"{}\" (→ {}) başarısız", step.name, step.to))?;
         tx.pragma_update(None, "user_version", step.to)?;
-        tx.commit().with_context(|| format!("göç \"{}\" kaydedilemedi", step.name))?;
+        tx.commit()
+            .with_context(|| format!("göç \"{}\" kaydedilemedi", step.name))?;
         applied.push(step.name);
     }
     if !applied.is_empty() {
-        log::info!("veritabanı göçü: sürüm {from} → {latest} ({})", applied.join(", "));
+        log::info!(
+            "veritabanı göçü: sürüm {from} → {latest} ({})",
+            applied.join(", ")
+        );
     }
-    Ok(Report { from, to: latest, applied })
+    Ok(Report {
+        from,
+        to: latest,
+        applied,
+    })
 }
 
 /// Tablo → sütun adları (sırasıyla), `sqlite_master`'dan: göç testlerinde
@@ -106,12 +119,24 @@ pub fn schema_columns(conn: &Connection) -> std::collections::BTreeMap<String, V
     let mut stmt = conn
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
         .unwrap();
-    let tables: Vec<String> = stmt.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+    let tables: Vec<String> = stmt
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
     tables
         .into_iter()
         .map(|t| {
-            let mut stmt = conn.prepare(&format!("SELECT name FROM pragma_table_info('{t}') ORDER BY cid")).unwrap();
-            let cols = stmt.query_map([], |r| r.get(0)).unwrap().map(Result::unwrap).collect();
+            let mut stmt = conn
+                .prepare(&format!(
+                    "SELECT name FROM pragma_table_info('{t}') ORDER BY cid"
+                ))
+                .unwrap();
+            let cols = stmt
+                .query_map([], |r| r.get(0))
+                .unwrap()
+                .map(Result::unwrap)
+                .collect();
             (t, cols)
         })
         .collect()
@@ -136,20 +161,40 @@ mod tests {
     }
 
     const STEPS: [Step; 3] = [
-        Step { to: 1, name: "a", up: create_a },
-        Step { to: 2, name: "b", up: add_b },
-        Step { to: 4, name: "z", up: add_column },
+        Step {
+            to: 1,
+            name: "a",
+            up: create_a,
+        },
+        Step {
+            to: 2,
+            name: "b",
+            up: add_b,
+        },
+        Step {
+            to: 4,
+            name: "z",
+            up: add_column,
+        },
     ];
 
     fn count(conn: &Connection, table: &str) -> i64 {
-        conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0)).unwrap()
+        conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+            .unwrap()
     }
 
     #[test]
     fn fresh_database_runs_every_step_in_order() {
         let mut conn = Connection::open_in_memory().unwrap();
         let report = migrate(&mut conn, &STEPS).unwrap();
-        assert_eq!(report, Report { from: 0, to: 4, applied: vec!["a", "b", "z"] });
+        assert_eq!(
+            report,
+            Report {
+                from: 0,
+                to: 4,
+                applied: vec!["a", "b", "z"]
+            }
+        );
         assert_eq!(user_version(&conn).unwrap(), 4);
         assert_eq!(count(&conn, "a"), 2);
     }
@@ -174,7 +219,14 @@ mod tests {
         let mut conn = Connection::open_in_memory().unwrap();
         migrate(&mut conn, &STEPS).unwrap();
         let again = migrate(&mut conn, &STEPS).unwrap();
-        assert_eq!(again, Report { from: 4, to: 4, applied: vec![] });
+        assert_eq!(
+            again,
+            Report {
+                from: 4,
+                to: 4,
+                applied: vec![]
+            }
+        );
         assert_eq!(count(&conn, "a"), 2);
     }
 
@@ -182,8 +234,16 @@ mod tests {
     fn a_failing_step_rolls_back_alone_and_keeps_earlier_steps() {
         let mut conn = Connection::open_in_memory().unwrap();
         let steps = [
-            Step { to: 1, name: "a", up: create_a },
-            Step { to: 2, name: "bozuk", up: fail_after_write },
+            Step {
+                to: 1,
+                name: "a",
+                up: create_a,
+            },
+            Step {
+                to: 2,
+                name: "bozuk",
+                up: fail_after_write,
+            },
         ];
         let err = migrate(&mut conn, &steps).unwrap_err();
         assert!(format!("{err:#}").contains("bozuk"), "{err:#}");
@@ -191,11 +251,26 @@ mod tests {
         assert_eq!(user_version(&conn).unwrap(), 1);
         assert_eq!(count(&conn, "a"), 1);
         let half: i64 = conn
-            .query_row("SELECT COUNT(*) FROM sqlite_master WHERE name = 'half'", [], |r| r.get(0))
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE name = 'half'",
+                [],
+                |r| r.get(0),
+            )
             .unwrap();
         assert_eq!(half, 0);
         // Düzeltilmiş adımla yeniden denenince kaldığı yerden sürer.
-        let fixed = [Step { to: 1, name: "a", up: create_a }, Step { to: 2, name: "b", up: add_b }];
+        let fixed = [
+            Step {
+                to: 1,
+                name: "a",
+                up: create_a,
+            },
+            Step {
+                to: 2,
+                name: "b",
+                up: add_b,
+            },
+        ];
         migrate(&mut conn, &fixed).unwrap();
         assert_eq!(user_version(&conn).unwrap(), 2);
     }
@@ -206,7 +281,13 @@ mod tests {
         migrate(&mut conn, &STEPS).unwrap();
         conn.pragma_update(None, "user_version", 9).unwrap();
         let err = migrate(&mut conn, &STEPS).unwrap_err();
-        assert_eq!(err.downcast_ref::<MigrateError>(), Some(&MigrateError::TooNew { found: 9, supported: 4 }));
+        assert_eq!(
+            err.downcast_ref::<MigrateError>(),
+            Some(&MigrateError::TooNew {
+                found: 9,
+                supported: 4
+            })
+        );
         assert_eq!(user_version(&conn).unwrap(), 9);
         assert_eq!(count(&conn, "a"), 2);
     }

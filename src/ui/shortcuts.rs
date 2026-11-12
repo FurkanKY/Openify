@@ -12,8 +12,8 @@
 //! Down / Home / End kaydırır.
 
 use gpui::{
-    AnyElement, Context, FocusHandle, MouseButton, ScrollHandle, Window, deferred, div, linear_color_stop,
-    linear_gradient, prelude::*, px, rgb,
+    AnyElement, Context, FocusHandle, MouseButton, ScrollHandle, Window, deferred, div,
+    linear_color_stop, linear_gradient, prelude::*, px, rgb,
 };
 
 use super::{
@@ -33,22 +33,52 @@ pub struct Chord {
 }
 
 const fn key(key: &'static str) -> Chord {
-    Chord { key, ctrl: false, shift: false, alt: false }
+    Chord {
+        key,
+        ctrl: false,
+        shift: false,
+        alt: false,
+    }
 }
 const fn ctrl(key: &'static str) -> Chord {
-    Chord { key, ctrl: true, shift: false, alt: false }
+    Chord {
+        key,
+        ctrl: true,
+        shift: false,
+        alt: false,
+    }
 }
 const fn shift(key: &'static str) -> Chord {
-    Chord { key, ctrl: false, shift: true, alt: false }
+    Chord {
+        key,
+        ctrl: false,
+        shift: true,
+        alt: false,
+    }
 }
 const fn alt(key: &'static str) -> Chord {
-    Chord { key, ctrl: false, shift: false, alt: true }
+    Chord {
+        key,
+        ctrl: false,
+        shift: false,
+        alt: true,
+    }
 }
 const fn ctrl_shift(key: &'static str) -> Chord {
-    Chord { key, ctrl: true, shift: true, alt: false }
+    Chord {
+        key,
+        ctrl: true,
+        shift: true,
+        alt: false,
+    }
 }
 const fn alt_shift(key: &'static str) -> Chord {
-    Chord { key, ctrl: false, shift: true, alt: true }
+    Chord {
+        key,
+        ctrl: false,
+        shift: true,
+        alt: true,
+    }
 }
 
 impl Chord {
@@ -144,36 +174,126 @@ struct Entry {
 }
 
 const fn entry(id: Shortcut, group: Group, how: How, chords: &'static [Chord]) -> Entry {
-    Entry { id, group, how, chords }
+    Entry {
+        id,
+        group,
+        how,
+        chords,
+    }
 }
 
 /// Tablo; yardım katmanındaki sıra da budur.
 const TABLE: &[Entry] = &[
-    entry(Shortcut::PlayPause, Group::Playback, How::Keys, &[key("space")]),
+    entry(
+        Shortcut::PlayPause,
+        Group::Playback,
+        How::Keys,
+        &[key("space")],
+    ),
     entry(Shortcut::Next, Group::Playback, How::Keys, &[ctrl("right")]),
-    entry(Shortcut::Previous, Group::Playback, How::Keys, &[ctrl("left")]),
-    entry(Shortcut::SeekForward, Group::Playback, How::Keys, &[shift("right")]),
-    entry(Shortcut::SeekBack, Group::Playback, How::Keys, &[shift("left")]),
-    entry(Shortcut::VolumeUp, Group::Playback, How::Keys, &[ctrl("up")]),
-    entry(Shortcut::VolumeDown, Group::Playback, How::Keys, &[ctrl("down")]),
-    entry(Shortcut::Mute, Group::Playback, How::Keys, &[ctrl_shift("down")]),
+    entry(
+        Shortcut::Previous,
+        Group::Playback,
+        How::Keys,
+        &[ctrl("left")],
+    ),
+    entry(
+        Shortcut::SeekForward,
+        Group::Playback,
+        How::Keys,
+        &[shift("right")],
+    ),
+    entry(
+        Shortcut::SeekBack,
+        Group::Playback,
+        How::Keys,
+        &[shift("left")],
+    ),
+    entry(
+        Shortcut::VolumeUp,
+        Group::Playback,
+        How::Keys,
+        &[ctrl("up")],
+    ),
+    entry(
+        Shortcut::VolumeDown,
+        Group::Playback,
+        How::Keys,
+        &[ctrl("down")],
+    ),
+    entry(
+        Shortcut::Mute,
+        Group::Playback,
+        How::Keys,
+        &[ctrl_shift("down")],
+    ),
     entry(Shortcut::Shuffle, Group::Playback, How::Keys, &[alt("s")]),
     entry(Shortcut::Repeat, Group::Playback, How::Keys, &[alt("r")]),
-    entry(Shortcut::QueuePanel, Group::Panels, How::Keys, &[alt_shift("q")]),
-    entry(Shortcut::LyricsPanel, Group::Panels, How::Keys, &[alt_shift("l")]),
-    entry(Shortcut::FullScreen, Group::Panels, How::Keys, &[key("f11")]),
-    entry(Shortcut::Help, Group::Panels, How::Char, &[key("?"), ctrl("/")]),
+    entry(
+        Shortcut::QueuePanel,
+        Group::Panels,
+        How::Keys,
+        &[alt_shift("q")],
+    ),
+    entry(
+        Shortcut::LyricsPanel,
+        Group::Panels,
+        How::Keys,
+        &[alt_shift("l")],
+    ),
+    entry(
+        Shortcut::FullScreen,
+        Group::Panels,
+        How::Keys,
+        &[key("f11")],
+    ),
+    entry(
+        Shortcut::Help,
+        Group::Panels,
+        How::Char,
+        &[key("?"), ctrl("/")],
+    ),
     entry(Shortcut::Search, Group::Navigate, How::Keys, &[ctrl("k")]),
-    entry(Shortcut::GlobalSearch, Group::Navigate, How::System, &[ctrl_shift("space")]),
-    entry(Shortcut::PasteLink, Group::Navigate, How::Keys, &[ctrl("v")]),
+    entry(
+        Shortcut::GlobalSearch,
+        Group::Navigate,
+        How::System,
+        &[ctrl_shift("space")],
+    ),
+    entry(
+        Shortcut::PasteLink,
+        Group::Navigate,
+        How::Keys,
+        &[ctrl("v")],
+    ),
     entry(Shortcut::Back, Group::Navigate, How::Keys, &[alt("left")]),
-    entry(Shortcut::Forward, Group::Navigate, How::Keys, &[alt("right")]),
+    entry(
+        Shortcut::Forward,
+        Group::Navigate,
+        How::Keys,
+        &[alt("right")],
+    ),
     entry(Shortcut::GoHome, Group::Navigate, How::Keys, &[alt("home")]),
     entry(Shortcut::TabHome, Group::Navigate, How::Keys, &[ctrl("1")]),
-    entry(Shortcut::TabExplore, Group::Navigate, How::Keys, &[ctrl("2")]),
-    entry(Shortcut::TabLibrary, Group::Navigate, How::Keys, &[ctrl("3")]),
+    entry(
+        Shortcut::TabExplore,
+        Group::Navigate,
+        How::Keys,
+        &[ctrl("2")],
+    ),
+    entry(
+        Shortcut::TabLibrary,
+        Group::Navigate,
+        How::Keys,
+        &[ctrl("3")],
+    ),
     entry(Shortcut::Settings, Group::Navigate, How::Keys, &[ctrl(",")]),
-    entry(Shortcut::Find, Group::Lists, How::Keys, &[ctrl("f"), key("f3")]),
+    entry(
+        Shortcut::Find,
+        Group::Lists,
+        How::Keys,
+        &[ctrl("f"), key("f3")],
+    ),
     entry(Shortcut::SelectAll, Group::Lists, How::Keys, &[ctrl("a")]),
     entry(Shortcut::Undo, Group::Lists, How::Keys, &[ctrl("z")]),
     entry(Shortcut::Delete, Group::Lists, How::Keys, &[key("delete")]),
@@ -188,7 +308,10 @@ impl Shortcut {
     }
 
     fn entry(self) -> &'static Entry {
-        TABLE.iter().find(|e| e.id == self).expect("her kısayol tabloda")
+        TABLE
+            .iter()
+            .find(|e| e.id == self)
+            .expect("her kısayol tabloda")
     }
 
     pub fn chords(self) -> &'static [Chord] {
@@ -210,7 +333,11 @@ impl Shortcut {
         TABLE
             .iter()
             .filter(|e| e.how == How::Keys)
-            .find(|e| e.chords.iter().any(|c| c.key == key && c.ctrl == ctrl && c.shift == shift && c.alt == alt))
+            .find(|e| {
+                e.chords
+                    .iter()
+                    .any(|c| c.key == key && c.ctrl == ctrl && c.shift == shift && c.alt == alt)
+            })
             .map(|e| e.id)
     }
 
@@ -350,7 +477,12 @@ impl Shell {
 
     /// Katman açıkken tuşlar: Esc / `?` kapatır, oklar kaydırır, gerisi yutulur
     /// (arkadaki sayfa tuşları işlemesin). İşlendiyse `true` (hep).
-    pub(super) fn help_key(&mut self, event: &gpui::KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn help_key(
+        &mut self,
+        event: &gpui::KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let ks = &event.keystroke;
         let handle = self.sui.help.scroll.clone();
         let page = f32::from(handle.bounds().size.height) * 0.8;
@@ -368,7 +500,9 @@ impl Shell {
             "pagedown" => scroll_by(page),
             "home" => scroll_by(-1.0e6),
             "end" => scroll_by(1.0e6),
-            _ if Shortcut::from_keystroke(ks) == Some(Shortcut::Help) => self.close_help(window, cx),
+            _ if Shortcut::from_keystroke(ks) == Some(Shortcut::Help) => {
+                self.close_help(window, cx)
+            }
             _ => {}
         }
         cx.notify();
@@ -382,7 +516,12 @@ impl Shell {
         let viewport = window.viewport_size();
         let (vw, vh) = (f32::from(viewport.width), f32::from(viewport.height));
         let wide = vw >= HELP_TWO_COLUMNS_FROM;
-        let width = if wide { HELP_WIDTH_WIDE } else { HELP_WIDTH_NARROW }.min(vw - 2. * S4);
+        let width = if wide {
+            HELP_WIDTH_WIDE
+        } else {
+            HELP_WIDTH_NARROW
+        }
+        .min(vw - 2. * S4);
         let max_h = (vh - 2. * S6).max(S8 * 3.);
 
         let block = |title: &'static str, rows: Vec<(Vec<String>, &'static str)>| -> AnyElement {
@@ -411,7 +550,13 @@ impl Shell {
         let panels = block(Group::Panels.title(), group_rows(Group::Panels));
         let navigate = block(Group::Navigate.title(), group_rows(Group::Navigate));
         let lists = block(Group::Lists.title(), group_rows(Group::Lists));
-        let around = block(t!(ShGroupContext), context_keys().into_iter().map(|(k, w)| (vec![k], w)).collect());
+        let around = block(
+            t!(ShGroupContext),
+            context_keys()
+                .into_iter()
+                .map(|(k, w)| (vec![k], w))
+                .collect(),
+        );
 
         let column = || div().flex_1().min_w_0().flex().flex_col();
         let body = (if wide {
@@ -421,7 +566,14 @@ impl Shell {
                 .child(column().child(playback).child(around))
                 .child(column().child(navigate).child(panels).child(lists))
         } else {
-            div().flex().flex_col().child(playback).child(panels).child(navigate).child(lists).child(around)
+            div()
+                .flex()
+                .flex_col()
+                .child(playback)
+                .child(panels)
+                .child(navigate)
+                .child(lists)
+                .child(around)
         })
         // Son satırın altında nefes payı: kaydırmanın sonunda harf yarım kalmaz.
         .pb(px(S4));
@@ -456,8 +608,10 @@ impl Shell {
         // yalnız o yönde içerik kaldıysa (güç, gizli içeriğe göre 32 px'e kadar
         // doğrusal). Tıklama ve tekerlek altındaki satıra geçer.
         let handle = &self.sui.help.scroll;
-        let (top_strength, bottom_strength) =
-            help_fade_strengths(f32::from(handle.offset().y), f32::from(handle.max_offset().height));
+        let (top_strength, bottom_strength) = help_fade_strengths(
+            f32::from(handle.offset().y),
+            f32::from(handle.max_offset().height),
+        );
         // Yerleşim henüz ölçülmediyse (katman yeni açıldı) bir sonraki karede
         // yeniden çiz: alt geçiş ilk karede eksik kalmasın.
         if f32::from(handle.bounds().size.height) <= 0. {
@@ -529,7 +683,10 @@ impl Shell {
 /// alt yok; içerik sığıyorsa ikisi de yok (lyrics paneliyle aynı kural).
 /// `offset`: kaydırma konumu (eksi ya da 0), `max`: en büyük kaydırma.
 fn help_fade_strengths(offset: f32, max: f32) -> (f32, f32) {
-    ((-offset / S6).clamp(0., 1.), ((max + offset) / S6).clamp(0., 1.))
+    (
+        (-offset / S6).clamp(0., 1.),
+        ((max + offset) / S6).clamp(0., 1.),
+    )
 }
 
 /// Kaydırma alanının üst ya da alt kenarındaki 32 px'lik geçiş: panel
@@ -544,7 +701,12 @@ fn help_veil(top: bool, strength: f32) -> Option<AnyElement> {
     let solid = linear_color_stop(with_alpha(BAR, strength), if top { 0. } else { 1. });
     let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
-    let veil = div().absolute().left_0().right_0().h(px(S6)).bg(linear_gradient(180., from, to));
+    let veil = div()
+        .absolute()
+        .left_0()
+        .right_0()
+        .h(px(S6))
+        .bg(linear_gradient(180., from, to));
     Some(if top { veil.top_0() } else { veil.bottom_0() }.into_any_element())
 }
 
@@ -554,9 +716,20 @@ fn help_row(chords: Vec<String>, what: &'static str) -> AnyElement {
     let mut keys = div().flex_none().flex().items_center().gap(px(S1));
     for (i, chord) in chords.iter().enumerate() {
         if i > 0 {
-            keys = keys.child(div().px(px(S1)).type_role(T_LABEL).text_color(label()).child("/"));
+            keys = keys.child(
+                div()
+                    .px(px(S1))
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child("/"),
+            );
         }
-        keys = keys.children(chord.split(' ').filter(|k| !k.is_empty()).map(|k| kbd(k.to_string())));
+        keys = keys.children(
+            chord
+                .split(' ')
+                .filter(|k| !k.is_empty())
+                .map(|k| kbd(k.to_string())),
+        );
     }
     div()
         .min_h(px(32.))
@@ -564,7 +737,14 @@ fn help_row(chords: Vec<String>, what: &'static str) -> AnyElement {
         .flex()
         .items_center()
         .gap(px(S4))
-        .child(div().flex_1().min_w_0().type_role(T_SECONDARY).text_color(muted()).child(what))
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .type_role(T_SECONDARY)
+                .text_color(muted())
+                .child(what),
+        )
         .child(keys)
         .into_any_element()
 }
@@ -611,21 +791,53 @@ mod tests {
     fn of_round_trips_every_key_chord_and_demands_exact_modifiers() {
         for s in Shortcut::all().filter(|s| s.how() == How::Keys) {
             for c in s.chords() {
-                assert_eq!(Shortcut::of(c.key, c.ctrl, c.shift, c.alt), Some(s), "{s:?} {c:?}");
+                assert_eq!(
+                    Shortcut::of(c.key, c.ctrl, c.shift, c.alt),
+                    Some(s),
+                    "{s:?} {c:?}"
+                );
                 // Ek bir değiştirici başka bir şeye dönüşmemeli (bu tuşta bağlı değilse).
                 let extra = Shortcut::of(c.key, c.ctrl, !c.shift, c.alt);
-                assert!(extra.is_none() || extra != Some(s), "{s:?}: Shift farkı aynı eylemi vermemeli");
+                assert!(
+                    extra.is_none() || extra != Some(s),
+                    "{s:?}: Shift farkı aynı eylemi vermemeli"
+                );
             }
         }
-        assert_eq!(Shortcut::of("k", true, false, false), Some(Shortcut::Search));
-        assert_eq!(Shortcut::of("k", true, true, false), None, "Ctrl+Shift+K bağlı değil");
+        assert_eq!(
+            Shortcut::of("k", true, false, false),
+            Some(Shortcut::Search)
+        );
+        assert_eq!(
+            Shortcut::of("k", true, true, false),
+            None,
+            "Ctrl+Shift+K bağlı değil"
+        );
         assert_eq!(Shortcut::of("k", false, false, false), None);
-        assert_eq!(Shortcut::of("space", false, false, false), Some(Shortcut::PlayPause));
-        assert_eq!(Shortcut::of("left", true, false, false), Some(Shortcut::Previous));
-        assert_eq!(Shortcut::of("left", false, true, false), Some(Shortcut::SeekBack));
-        assert_eq!(Shortcut::of("left", false, false, true), Some(Shortcut::Back));
-        assert_eq!(Shortcut::of("down", true, true, false), Some(Shortcut::Mute));
-        assert_eq!(Shortcut::of("f3", false, false, false), Some(Shortcut::Find));
+        assert_eq!(
+            Shortcut::of("space", false, false, false),
+            Some(Shortcut::PlayPause)
+        );
+        assert_eq!(
+            Shortcut::of("left", true, false, false),
+            Some(Shortcut::Previous)
+        );
+        assert_eq!(
+            Shortcut::of("left", false, true, false),
+            Some(Shortcut::SeekBack)
+        );
+        assert_eq!(
+            Shortcut::of("left", false, false, true),
+            Some(Shortcut::Back)
+        );
+        assert_eq!(
+            Shortcut::of("down", true, true, false),
+            Some(Shortcut::Mute)
+        );
+        assert_eq!(
+            Shortcut::of("f3", false, false, false),
+            Some(Shortcut::Find)
+        );
     }
 
     #[test]
@@ -645,8 +857,14 @@ mod tests {
         assert!(is_help_key("-", Some("?"), false, false));
         assert!(is_help_key("/", Some("/"), true, false), "Ctrl+/");
         assert!(is_help_key("/", None, true, false), "Ctrl+/ (karakter yok)");
-        assert!(!is_help_key("/", Some("/"), false, false), "çıplak / yardım değil");
-        assert!(!is_help_key("/", Some("?"), false, true), "Alt basılıyken yok");
+        assert!(
+            !is_help_key("/", Some("/"), false, false),
+            "çıplak / yardım değil"
+        );
+        assert!(
+            !is_help_key("/", Some("?"), false, true),
+            "Alt basılıyken yok"
+        );
         assert!(!is_help_key("k", Some("k"), false, false));
     }
 
@@ -684,7 +902,10 @@ mod tests {
                 continue;
             }
             let needle = format!("Shortcut::{s:?}");
-            assert!(handlers.contains(&needle), "{needle} hiçbir tuş işleyicisinde kullanılmıyor");
+            assert!(
+                handlers.contains(&needle),
+                "{needle} hiçbir tuş işleyicisinde kullanılmıyor"
+            );
         }
     }
 
@@ -704,6 +925,10 @@ mod tests {
             assert!(!s.label().is_empty(), "{s:?}");
             assert!(!s.group().title().is_empty());
         }
-        assert!(context_keys().iter().all(|(k, w)| !k.is_empty() && !w.is_empty()));
+        assert!(
+            context_keys()
+                .iter()
+                .all(|(k, w)| !k.is_empty() && !w.is_empty())
+        );
     }
 }

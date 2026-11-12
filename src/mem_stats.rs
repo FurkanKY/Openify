@@ -78,7 +78,11 @@ pub fn start() {
     if let Some(dir) = yol.parent() {
         let _ = std::fs::create_dir_all(dir);
     }
-    let Ok(mut dosya) = std::fs::OpenOptions::new().create(true).append(true).open(&yol) else {
+    let Ok(mut dosya) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&yol)
+    else {
         return;
     };
     if dosya.metadata().map(|m| m.len() == 0).unwrap_or(true) {

@@ -95,13 +95,19 @@ pub struct Entry {
 impl Entry {
     /// Eklenme anı bilinmeyen satır.
     pub fn untimed(track: impl Into<String>) -> Self {
-        Self { track: track.into(), added_at: None }
+        Self {
+            track: track.into(),
+            added_at: None,
+        }
     }
 }
 
 /// Spotify'ın öğe zaman damgasından (ms; verilmemişse 0 ya da eksi) satır.
 pub(super) fn entry_at(track: String, timestamp_ms: i64) -> Entry {
-    Entry { track, added_at: (timestamp_ms > 0).then_some(timestamp_ms) }
+    Entry {
+        track,
+        added_at: (timestamp_ms > 0).then_some(timestamp_ms),
+    }
 }
 
 /// Kenar çubuğundaki bir satırın türü: açılabilen liste (çalma listesi ya da
@@ -125,7 +131,11 @@ impl ItemKind {
 
     /// Bilinmeyen yazılış (daha yeni bir sürümden) liste sayılır.
     pub fn from_tag(tag: &str) -> Self {
-        if tag == "folder" { Self::Folder } else { Self::Playlist }
+        if tag == "folder" {
+            Self::Folder
+        } else {
+            Self::Playlist
+        }
     }
 }
 
@@ -189,7 +199,11 @@ const MOSAIC_SIDES: usize = 4;
 
 /// Mozaik adresinin dört kapağı; mozaik değilse `None`.
 pub fn mosaic_urls(image: &str) -> Option<Vec<&str>> {
-    let parts: Vec<&str> = image.strip_prefix(MOSAIC_PREFIX)?.split('|').filter(|u| !u.is_empty()).collect();
+    let parts: Vec<&str> = image
+        .strip_prefix(MOSAIC_PREFIX)?
+        .split('|')
+        .filter(|u| !u.is_empty())
+        .collect();
     (parts.len() == MOSAIC_SIDES).then_some(parts)
 }
 
@@ -198,7 +212,9 @@ pub fn mosaic_urls(image: &str) -> Option<Vec<&str>> {
 /// önbellekte yoksa dokunmaz (arayüz sakin bir yer tutucu çizer). Ağ yok.
 pub fn with_mosaics(db: &Db, library: &mut Library) {
     for item in library.playlists.iter_mut().filter(|i| i.image.is_empty()) {
-        let Ok(urls) = db.cover_samples(&item.id, MOSAIC_SIDES) else { continue };
+        let Ok(urls) = db.cover_samples(&item.id, MOSAIC_SIDES) else {
+            continue;
+        };
         item.image = match urls.len() {
             0 => continue,
             n if n >= MOSAIC_SIDES => format!("{MOSAIC_PREFIX}{}", urls.join("|")),
@@ -265,7 +281,9 @@ impl LibraryMeta {
 /// Klasör Spotify'da yeniden adlandırılınca anahtar değişir, bu değişmez:
 /// açık / kapalı durumu bununla saklanır.
 pub fn folder_id(key: &str) -> &str {
-    key.match_indices(':').nth(2).map_or(key, |(i, _)| &key[..i])
+    key.match_indices(':')
+        .nth(2)
+        .map_or(key, |(i, _)| &key[..i])
 }
 
 /// Düz kütüphaneden (albümler + listeler) ağaç düğümleri, kenar çubuğu
@@ -364,7 +382,8 @@ pub async fn refresh_library(
             liked.push(item);
         } else if item.uri.starts_with("spotify:album:") {
             if item.added_at > 0 {
-                meta.added.insert(item.uri.clone(), i64::from(item.added_at) * 1000);
+                meta.added
+                    .insert(item.uri.clone(), i64::from(item.added_at) * 1000);
             }
             album_uris.push(item.uri);
         }
@@ -426,13 +445,21 @@ pub async fn refresh_library(
     // sayısı çoğu zaman 0 geliyor; bunlar sürümü değişince ayrıca istenir.
     let username = session.username();
     let previous_items: HashMap<CollectionId, LibraryItem> = previous
-        .map(|l| l.playlists.iter().map(|p| (p.id.clone(), p.clone())).collect())
+        .map(|l| {
+            l.playlists
+                .iter()
+                .map(|p| (p.id.clone(), p.clone()))
+                .collect()
+        })
         .unwrap_or_default();
 
     let mut slots: Vec<Option<LibraryItem>> = Vec::new();
     let mut spotify_owned: Vec<(usize, CollectionId, Vec<u8>, String)> = Vec::new();
     let mut changed = Vec::new();
-    let Rootlist { entries: root_entries, folders } = rootlist(session).await?;
+    let Rootlist {
+        entries: root_entries,
+        folders,
+    } = rootlist(session).await?;
     for entry in root_entries {
         if let Some(parent) = &entry.parent {
             meta.parents.insert(entry.uri.clone(), parent.clone());
@@ -440,7 +467,11 @@ pub async fn refresh_library(
         if let Some(at) = entry.added_at {
             meta.added.insert(entry.uri.clone(), at);
         }
-        let creator = if entry.owner.is_empty() { username.as_str() } else { entry.owner.as_str() };
+        let creator = if entry.owner.is_empty() {
+            username.as_str()
+        } else {
+            entry.owner.as_str()
+        };
         meta.creators.insert(entry.uri.clone(), creator.to_string());
         let id = CollectionId::Playlist(entry.uri);
         let unchanged = db.revision(&id)?.as_deref() == Some(entry.revision.as_slice());
@@ -479,7 +510,10 @@ pub async fn refresh_library(
         .collect();
     let plan = &plan;
     let fetched = fetch_all(
-        spotify_owned.iter().map(|(_, id, _, _)| id.key().to_string()).collect(),
+        spotify_owned
+            .iter()
+            .map(|(_, id, _, _)| id.key().to_string())
+            .collect(),
         |uri| {
             let session = session.clone();
             async move {
@@ -508,7 +542,10 @@ pub async fn refresh_library(
     // Klasörlerin yeri alınamayan listeler düşünce kayar: `at` yeniden sayılır.
     meta.folders = folders
         .into_iter()
-        .map(|f| Folder { at: slots[..f.at.min(slots.len())].iter().flatten().count(), ..f })
+        .map(|f| Folder {
+            at: slots[..f.at.min(slots.len())].iter().flatten().count(),
+            ..f
+        })
         .collect();
     let playlists: Vec<LibraryItem> = slots.into_iter().flatten().collect();
     // Sabitlemeler yerel (`library_pins`): Spotify'dan gelen bir şey değil.
@@ -557,7 +594,11 @@ fn plan_followed(items: &[CollectionItem], known: &[LibraryItem]) -> (Vec<String
     sorted.sort_by(|a, b| b.added_at.cmp(&a.added_at));
     let order: Vec<String> = sorted.into_iter().map(|i| i.uri.clone()).collect();
     let have: std::collections::HashSet<&str> = known.iter().map(|k| k.id.key()).collect();
-    let missing = order.iter().filter(|u| !have.contains(u.as_str())).cloned().collect();
+    let missing = order
+        .iter()
+        .filter(|u| !have.contains(u.as_str()))
+        .cloned()
+        .collect();
     (order, missing)
 }
 
@@ -576,13 +617,19 @@ async fn followed_artists(session: &Session, known: &[LibraryItem]) -> Result<Ve
         match super::pages::fetch_artist_cards(session, chunk).await {
             Ok(cards) => {
                 for card in cards {
-                    resolved.insert(card.uri.clone(), artist_item(&card.uri, &card.name, &card.image));
+                    resolved.insert(
+                        card.uri.clone(),
+                        artist_item(&card.uri, &card.name, &card.image),
+                    );
                 }
             }
             Err(e) => log::warn!("{} sanatçının bilgisi alınamadı: {e:#}", chunk.len()),
         }
     }
-    Ok(order.into_iter().filter_map(|u| resolved.remove(&u)).collect())
+    Ok(order
+        .into_iter()
+        .filter_map(|u| resolved.remove(&u))
+        .collect())
 }
 
 /// Kütüphanedeki takip edilen sanatçı kartı (altyazı kanonik "Sanatçı").
@@ -598,7 +645,10 @@ pub fn artist_item(uri: &str, name: &str, image: &str) -> LibraryItem {
 /// Beğenilenler: şarkılar, en son eklenen başta. Spotify'ın `added_at`'i
 /// saniyedir; önbellekte (diğer kaynaklarla aynı) milisaniye tutulur.
 fn liked_entries(items: Vec<CollectionItem>) -> Vec<Entry> {
-    let mut items: Vec<CollectionItem> = items.into_iter().filter(|i| i.uri.starts_with("spotify:track:")).collect();
+    let mut items: Vec<CollectionItem> = items
+        .into_iter()
+        .filter(|i| i.uri.starts_with("spotify:track:"))
+        .collect();
     items.sort_by(|a, b| b.added_at.cmp(&a.added_at));
     items
         .into_iter()
@@ -613,7 +663,12 @@ fn playlist_entries(playlist: &Playlist) -> Result<Vec<Entry>> {
         .contents
         .items
         .iter()
-        .map(|item| Ok(entry_at(item.id.to_uri()?, item.attributes.timestamp.as_timestamp_ms())))
+        .map(|item| {
+            Ok(entry_at(
+                item.id.to_uri()?,
+                item.attributes.timestamp.as_timestamp_ms(),
+            ))
+        })
         .collect()
 }
 
@@ -688,7 +743,9 @@ pub async fn load_tracks(
         found.extend(fetched.into_iter().map(|r| (r.uri.clone(), r)));
     }
     // Yinelenen şarkılar da kendi sırasında kalır (bkz. `cached_tracks`).
-    Ok(Arc::new(uris.iter().filter_map(|u| found.get(u).cloned()).collect()))
+    Ok(Arc::new(
+        uris.iter().filter_map(|u| found.get(u).cloned()).collect(),
+    ))
 }
 
 /// Listelerde geçen ama bilgisi henüz indirilmemiş bütün şarkıları arka
@@ -763,7 +820,10 @@ async fn fetch_track_batch(session: &Session, uris: &[String]) -> Result<Vec<Tra
             let Ok(track) = Track::parse(&message, &uri) else {
                 continue;
             };
-            super::traits::note(&data.entity_uri, super::traits::from_spotify(track.is_explicit, track.popularity));
+            super::traits::note(
+                &data.entity_uri,
+                super::traits::from_spotify(track.is_explicit, track.popularity),
+            );
             rows.push(TrackRow {
                 uri: data.entity_uri.clone(),
                 name: track.name.clone(),
@@ -845,9 +905,15 @@ struct RootEntry {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) enum Tok {
     /// `spotify:start-group:<kimlik>:<ad>`: (tam işaret, kimlik, çözülmüş ad).
-    Start { key: String, id: String, name: String },
+    Start {
+        key: String,
+        id: String,
+        name: String,
+    },
     /// `spotify:end-group:<kimlik>`.
-    End { id: String },
+    End {
+        id: String,
+    },
     Playlist,
 }
 
@@ -857,9 +923,14 @@ pub(super) fn parse_marker(uri: &str) -> Option<Tok> {
     let rest = uri.strip_prefix("spotify:")?;
     if let Some(rest) = rest.strip_prefix("start-group:") {
         let (id, name) = rest.split_once(':').unwrap_or((rest, ""));
-        return Some(Tok::Start { key: uri.to_string(), id: id.to_string(), name: percent_decode(name) });
+        return Some(Tok::Start {
+            key: uri.to_string(),
+            id: id.to_string(),
+            name: percent_decode(name),
+        });
     }
-    rest.strip_prefix("end-group:").map(|id| Tok::End { id: id.to_string() })
+    rest.strip_prefix("end-group:")
+        .map(|id| Tok::End { id: id.to_string() })
 }
 
 /// `%XX` dizilerini ve `+`'ları çözer (Spotify klasör adını böyle yazıyor).
@@ -870,7 +941,10 @@ fn percent_decode(s: &str) -> String {
     let mut i = 0;
     while i < bytes.len() {
         match bytes[i] {
-            b'%' if bytes.get(i + 1..i + 3).is_some_and(|h| h.iter().all(u8::is_ascii_hexdigit)) => {
+            b'%' if bytes
+                .get(i + 1..i + 3)
+                .is_some_and(|h| h.iter().all(u8::is_ascii_hexdigit)) =>
+            {
                 let hex = std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or("00");
                 out.push(u8::from_str_radix(hex, 16).unwrap_or(b'%'));
                 i += 3;
@@ -986,7 +1060,12 @@ pub(crate) async fn raw_rootlist_uris(session: &Session) -> Result<Vec<String>> 
         .await
         .context("Kök liste alınamadı")?;
     let list = SelectedListContent::parse_from_bytes(&bytes)?;
-    Ok(list.contents.items.iter().map(|i| i.uri().to_string()).collect())
+    Ok(list
+        .contents
+        .items
+        .iter()
+        .map(|i| i.uri().to_string())
+        .collect())
 }
 
 /// Canlı denetim için (yalnız sınamalar): adresleri gerçek şarkılara çözer.
@@ -1010,7 +1089,11 @@ pub(crate) async fn raw_collection_uris(session: &Session) -> Result<Vec<String>
 /// (takip edilen sanatçılar), silinmişler hariç.
 #[cfg(test)]
 pub(crate) async fn raw_artist_uris(session: &Session) -> Result<Vec<String>> {
-    Ok(collection_items(session, "artist").await?.into_iter().map(|i| i.uri).collect())
+    Ok(collection_items(session, "artist")
+        .await?
+        .into_iter()
+        .map(|i| i.uri)
+        .collect())
 }
 
 /// Listenin kapağı: kendi resmi varsa o, yoksa Spotify'ın verdiği boyutlu
@@ -1149,11 +1232,21 @@ mod tests {
         };
         db.save_tracks(&[row(1), row(2)]).unwrap();
         let id = CollectionId::Playlist("spotify:playlist:1".into());
-        let entries: Vec<Entry> = [1, 2, 1, 1, 2].iter().map(|n| Entry::untimed(row(*n).uri)).collect();
-        db.save_collection_entries(&id, Some(b"r"), &entries).unwrap();
+        let entries: Vec<Entry> = [1, 2, 1, 1, 2]
+            .iter()
+            .map(|n| Entry::untimed(row(*n).uri))
+            .collect();
+        db.save_collection_entries(&id, Some(b"r"), &entries)
+            .unwrap();
         let (rows, complete) = cached_tracks(&db, &id).unwrap().unwrap();
-        assert!(complete, "iki farklı şarkının ikisi de bilindiği için eksiksiz");
-        assert_eq!(rows.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(), ["S1", "S2", "S1", "S1", "S2"]);
+        assert!(
+            complete,
+            "iki farklı şarkının ikisi de bilindiği için eksiksiz"
+        );
+        assert_eq!(
+            rows.iter().map(|r| r.name.as_str()).collect::<Vec<_>>(),
+            ["S1", "S2", "S1", "S1", "S2"]
+        );
         // Bilgisi eksik şarkı yine "eksiksiz değil".
         let mut more = entries.clone();
         more.push(Entry::untimed("spotify:track:3"));
@@ -1221,7 +1314,11 @@ mod tests {
     }
 
     fn collected(uri: &str, added_at: i32) -> CollectionItem {
-        CollectionItem { uri: uri.into(), added_at, is_removed: false }
+        CollectionItem {
+            uri: uri.into(),
+            added_at,
+            is_removed: false,
+        }
     }
 
     #[test]
@@ -1235,9 +1332,18 @@ mod tests {
         assert_eq!(
             entries,
             vec![
-                Entry { track: "spotify:track:new".into(), added_at: Some(300_000) },
-                Entry { track: "spotify:track:old".into(), added_at: Some(100_000) },
-                Entry { track: "spotify:track:nodate".into(), added_at: None },
+                Entry {
+                    track: "spotify:track:new".into(),
+                    added_at: Some(300_000)
+                },
+                Entry {
+                    track: "spotify:track:old".into(),
+                    added_at: Some(100_000)
+                },
+                Entry {
+                    track: "spotify:track:nodate".into(),
+                    added_at: None
+                },
             ]
         );
     }
@@ -1252,12 +1358,19 @@ mod tests {
                 collected("spotify:album:x", 999),
                 collected("spotify:artist:a", 50),
                 collected("spotify:artist:c", 200),
-                CollectionItem { uri: "spotify:artist:gone".into(), added_at: 400, is_removed: true },
+                CollectionItem {
+                    uri: "spotify:artist:gone".into(),
+                    added_at: 400,
+                    is_removed: true,
+                },
             ],
             &known,
         );
         // En son takip edilen önde; tekrar ve albüm yok; silinen yok.
-        assert_eq!(order, ["spotify:artist:b", "spotify:artist:c", "spotify:artist:a"]);
+        assert_eq!(
+            order,
+            ["spotify:artist:b", "spotify:artist:c", "spotify:artist:a"]
+        );
         // Yalnız önbellekte olmayanlar Spotify'dan sorulur (b bilinen).
         assert_eq!(missing, ["spotify:artist:c", "spotify:artist:a"]);
         // Takip yoksa hiçbir şey sorulmaz.
@@ -1269,10 +1382,16 @@ mod tests {
         let item = artist_item("spotify:artist:a", "Tarkan", "img");
         assert_eq!(item.id, CollectionId::Artist("spotify:artist:a".into()));
         assert_eq!(item.id.key(), "spotify:artist:a");
-        assert_eq!(CollectionId::from_key("spotify:artist:a"), Some(item.id.clone()));
+        assert_eq!(
+            CollectionId::from_key("spotify:artist:a"),
+            Some(item.id.clone())
+        );
         assert_eq!(item.subtitle, crate::i18n::canon::ARTIST);
         // Önbellekten dönen anahtar başka türe karışmaz.
-        assert_eq!(CollectionId::from_key("spotify:playlist:a"), Some(CollectionId::Playlist("spotify:playlist:a".into())));
+        assert_eq!(
+            CollectionId::from_key("spotify:playlist:a"),
+            Some(CollectionId::Playlist("spotify:playlist:a".into()))
+        );
         assert_eq!(CollectionId::from_key("spotify:show:a"), None);
     }
 
@@ -1280,7 +1399,10 @@ mod tests {
     fn missing_timestamps_stay_unknown() {
         assert_eq!(entry_at("spotify:track:a".into(), 0).added_at, None);
         assert_eq!(entry_at("spotify:track:a".into(), -5).added_at, None);
-        assert_eq!(entry_at("spotify:track:a".into(), 1_700_000_000_000).added_at, Some(1_700_000_000_000));
+        assert_eq!(
+            entry_at("spotify:track:a".into(), 1_700_000_000_000).added_at,
+            Some(1_700_000_000_000)
+        );
         assert_eq!(Entry::untimed("spotify:track:a").added_at, None);
     }
 
@@ -1293,7 +1415,10 @@ mod tests {
             image: "img".into(),
         };
         let node = LibraryNode::from_item(&item);
-        assert_eq!((node.kind, node.parent.as_deref()), (ItemKind::Playlist, None));
+        assert_eq!(
+            (node.kind, node.parent.as_deref()),
+            (ItemKind::Playlist, None)
+        );
         assert_eq!(node.to_item().as_ref(), Some(&item));
         let folder = LibraryNode {
             key: "spotify:start-group:f1:Klasör".into(),
@@ -1312,7 +1437,11 @@ mod tests {
     }
 
     fn start(id: &str, name: &str) -> Tok {
-        Tok::Start { key: format!("spotify:start-group:{id}:{name}"), id: id.into(), name: name.into() }
+        Tok::Start {
+            key: format!("spotify:start-group:{id}:{name}"),
+            id: id.into(),
+            name: name.into(),
+        }
     }
 
     fn end(id: &str) -> Tok {
@@ -1329,15 +1458,32 @@ mod tests {
                 name: "Yaz Listeleri".into()
             })
         );
-        assert!(matches!(parse_marker("spotify:start-group:a:Gece%20Odası%21"), Some(Tok::Start { name, .. }) if name == "Gece Odası!"));
-        assert!(matches!(parse_marker("spotify:start-group:a:%C3%87ay"), Some(Tok::Start { name, .. }) if name == "Çay"));
+        assert!(
+            matches!(parse_marker("spotify:start-group:a:Gece%20Odası%21"), Some(Tok::Start { name, .. }) if name == "Gece Odası!")
+        );
+        assert!(
+            matches!(parse_marker("spotify:start-group:a:%C3%87ay"), Some(Tok::Start { name, .. }) if name == "Çay")
+        );
         // Adı iki noktalı klasör: ad kalan her şey. Adsız klasör: boş ad.
-        assert!(matches!(parse_marker("spotify:start-group:a:Rock: 90lar"), Some(Tok::Start { name, .. }) if name == "Rock: 90lar"));
-        assert!(matches!(parse_marker("spotify:start-group:a"), Some(Tok::Start { name, .. }) if name.is_empty()));
+        assert!(
+            matches!(parse_marker("spotify:start-group:a:Rock: 90lar"), Some(Tok::Start { name, .. }) if name == "Rock: 90lar")
+        );
+        assert!(
+            matches!(parse_marker("spotify:start-group:a"), Some(Tok::Start { name, .. }) if name.is_empty())
+        );
         // Bozuk yüzde dizisi olduğu gibi kalır (çökmez).
-        assert!(matches!(parse_marker("spotify:start-group:a:100%"), Some(Tok::Start { name, .. }) if name == "100%"));
-        assert!(matches!(parse_marker("spotify:start-group:a:%zz"), Some(Tok::Start { name, .. }) if name == "%zz"));
-        assert_eq!(parse_marker("spotify:end-group:8c3a1f"), Some(Tok::End { id: "8c3a1f".into() }));
+        assert!(
+            matches!(parse_marker("spotify:start-group:a:100%"), Some(Tok::Start { name, .. }) if name == "100%")
+        );
+        assert!(
+            matches!(parse_marker("spotify:start-group:a:%zz"), Some(Tok::Start { name, .. }) if name == "%zz")
+        );
+        assert_eq!(
+            parse_marker("spotify:end-group:8c3a1f"),
+            Some(Tok::End {
+                id: "8c3a1f".into()
+            })
+        );
         assert_eq!(parse_marker("spotify:playlist:x"), None);
         assert_eq!(parse_marker("spotify:track:x"), None);
     }
@@ -1361,19 +1507,49 @@ mod tests {
         let (folders, parents) = fold_tree(&tokens);
         let f1 = "spotify:start-group:1:F1";
         let f2 = "spotify:start-group:2:F2";
-        assert_eq!(parents, [None, Some(f1.into()), Some(f2.into()), Some(f1.into()), None]);
-        let shape: Vec<(&str, Option<&str>, usize)> =
-            folders.iter().map(|f| (f.name.as_str(), f.parent.as_deref(), f.at)).collect();
-        assert_eq!(shape, [("F1", None, 1), ("F2", Some(f1), 2), ("F3", None, 5)]);
-        assert!(folders.windows(2).all(|w| w[0].at <= w[1].at), "`at` azalmaz");
+        assert_eq!(
+            parents,
+            [
+                None,
+                Some(f1.into()),
+                Some(f2.into()),
+                Some(f1.into()),
+                None
+            ]
+        );
+        let shape: Vec<(&str, Option<&str>, usize)> = folders
+            .iter()
+            .map(|f| (f.name.as_str(), f.parent.as_deref(), f.at))
+            .collect();
+        assert_eq!(
+            shape,
+            [("F1", None, 1), ("F2", Some(f1), 2), ("F3", None, 5)]
+        );
+        assert!(
+            folders.windows(2).all(|w| w[0].at <= w[1].at),
+            "`at` azalmaz"
+        );
     }
 
     #[test]
     fn broken_group_markers_do_not_lose_lists() {
         // Kapanmayan klasör sona kadar sürer; eşleşmeyen kapanış yok sayılır.
-        let (folders, parents) = fold_tree(&[Tok::Playlist, start("1", "A"), Tok::Playlist, end("zz"), Tok::Playlist]);
+        let (folders, parents) = fold_tree(&[
+            Tok::Playlist,
+            start("1", "A"),
+            Tok::Playlist,
+            end("zz"),
+            Tok::Playlist,
+        ]);
         assert_eq!(folders.len(), 1);
-        assert_eq!(parents, [None, Some("spotify:start-group:1:A".into()), Some("spotify:start-group:1:A".into())]);
+        assert_eq!(
+            parents,
+            [
+                None,
+                Some("spotify:start-group:1:A".into()),
+                Some("spotify:start-group:1:A".into())
+            ]
+        );
         // Dıştakini kapatan işaret içtekini de kapatır.
         let (_, parents) = fold_tree(&[start("1", "A"), start("2", "B"), end("1"), Tok::Playlist]);
         assert_eq!(parents, [None]);
@@ -1389,7 +1565,14 @@ mod tests {
             subtitle: "3 şarkı".into(),
             image: String::new(),
         };
-        let (folders, parents) = fold_tree(&[Tok::Playlist, start("1", "F"), Tok::Playlist, Tok::Playlist, end("1"), Tok::Playlist]);
+        let (folders, parents) = fold_tree(&[
+            Tok::Playlist,
+            start("1", "F"),
+            Tok::Playlist,
+            Tok::Playlist,
+            end("1"),
+            Tok::Playlist,
+        ]);
         let mut library = Library {
             albums: vec![LibraryItem {
                 id: CollectionId::Album("spotify:album:a".into()),
@@ -1402,13 +1585,22 @@ mod tests {
         };
         for (i, p) in parents.iter().enumerate() {
             if let Some(p) = p {
-                library.meta.parents.insert(format!("spotify:playlist:{}", i + 1), p.clone());
+                library
+                    .meta
+                    .parents
+                    .insert(format!("spotify:playlist:{}", i + 1), p.clone());
             }
         }
         library.meta.folders = folders;
         library.meta.added.insert("spotify:album:a".into(), 5_000);
-        library.meta.added.insert("spotify:playlist:3".into(), 9_000);
-        library.meta.creators.insert("spotify:playlist:3".into(), "ayse".into());
+        library
+            .meta
+            .added
+            .insert("spotify:playlist:3".into(), 9_000);
+        library
+            .meta
+            .creators
+            .insert("spotify:playlist:3".into(), "ayse".into());
         let nodes = library_nodes(&library);
         let seq: Vec<(&str, &str)> = nodes
             .iter()
@@ -1426,10 +1618,17 @@ mod tests {
             ]
         );
         assert_eq!(nodes[0].added_at, Some(5_000));
-        assert_eq!((nodes[4].added_at, nodes[4].creator.as_str()), (Some(9_000), "ayse"));
+        assert_eq!(
+            (nodes[4].added_at, nodes[4].creator.as_str()),
+            (Some(9_000), "ayse")
+        );
         assert_eq!(nodes[2].kind, ItemKind::Folder);
         // Klasörsüz kütüphane eskisi gibi düz yazılır.
         library.meta = LibraryMeta::default();
-        assert!(library_nodes(&library).iter().all(|n| n.kind == ItemKind::Playlist && n.parent.is_none()));
+        assert!(
+            library_nodes(&library)
+                .iter()
+                .all(|n| n.kind == ItemKind::Playlist && n.parent.is_none())
+        );
     }
 }

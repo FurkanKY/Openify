@@ -98,7 +98,9 @@ fn cluster_by_duration(tracks: &[TrackRow], members: &[usize]) -> Vec<Vec<usize>
             .iter()
             .position(|c| c.iter().any(|&j| tracks[j].uri == row.uri))
             .or_else(|| {
-                clusters.iter().position(|c| durations_compatible(tracks[c[0]].duration_ms, row.duration_ms))
+                clusters
+                    .iter()
+                    .position(|c| durations_compatible(tracks[c[0]].duration_ms, row.duration_ms))
             });
         match slot {
             Some(s) => clusters[s].push(i),
@@ -109,7 +111,9 @@ fn cluster_by_duration(tracks: &[TrackRow], members: &[usize]) -> Vec<Vec<usize>
 }
 
 fn make_group(tracks: &[TrackRow], members: &[usize]) -> DupGroup {
-    let same = members.iter().all(|&i| tracks[i].uri == tracks[members[0]].uri);
+    let same = members
+        .iter()
+        .all(|&i| tracks[i].uri == tracks[members[0]].uri);
     // Kalan: en kısa ad, eşitlikte en öndeki (üyeler zaten sıralı).
     let keep = members
         .iter()
@@ -117,10 +121,18 @@ fn make_group(tracks: &[TrackRow], members: &[usize]) -> DupGroup {
         .min_by_key(|&i| (tracks[i].name.chars().count(), i))
         .unwrap_or(members[0]);
     DupGroup {
-        kind: if same { DupKind::SameTrack } else { DupKind::Versions },
+        kind: if same {
+            DupKind::SameTrack
+        } else {
+            DupKind::Versions
+        },
         items: members
             .iter()
-            .map(|&i| DupItem { index: i, row: tracks[i].clone(), keep: i == keep })
+            .map(|&i| DupItem {
+                index: i,
+                row: tracks[i].clone(),
+                keep: i == keep,
+            })
             .collect(),
     }
 }
@@ -170,7 +182,12 @@ pub fn dedupe(rows: &[TrackRow], mode: DedupeMode) -> (Vec<TrackRow>, usize) {
             .map(|i| i.index)
             .collect(),
     };
-    let kept = rows.iter().enumerate().filter(|(i, _)| !drop.contains(i)).map(|(_, r)| r.clone()).collect();
+    let kept = rows
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| !drop.contains(i))
+        .map(|(_, r)| r.clone())
+        .collect();
     (kept, drop.len())
 }
 
@@ -196,7 +213,10 @@ mod tests {
 
     #[test]
     fn a_list_without_duplicates_has_no_groups() {
-        let rows = [row(1, "Sessiz Gece", "Mavi Orman", 200_000), row(2, "Ayna", "Deniz Aydın", 180_000)];
+        let rows = [
+            row(1, "Sessiz Gece", "Mavi Orman", 200_000),
+            row(2, "Ayna", "Deniz Aydın", 180_000),
+        ];
         assert!(find(&rows).is_empty());
         assert!(find(&[]).is_empty());
     }
@@ -204,21 +224,39 @@ mod tests {
     #[test]
     fn the_same_uri_twice_is_a_same_track_group_and_the_first_copy_stays() {
         let a = row(1, "Sessiz Gece", "Mavi Orman", 200_000);
-        let rows = [a.clone(), row(2, "Ayna", "Deniz Aydın", 180_000), a.clone(), a];
+        let rows = [
+            a.clone(),
+            row(2, "Ayna", "Deniz Aydın", 180_000),
+            a.clone(),
+            a,
+        ];
         let groups = find(&rows);
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].kind, DupKind::SameTrack);
-        let kept: Vec<_> = groups[0].items.iter().filter(|i| i.keep).map(|i| i.index).collect();
+        let kept: Vec<_> = groups[0]
+            .items
+            .iter()
+            .filter(|i| i.keep)
+            .map(|i| i.index)
+            .collect();
         assert_eq!(kept, [0]);
         assert_eq!(groups[0].removable(), 2);
-        let gone: Vec<usize> = removals(&groups, &HashSet::new()).iter().map(|(i, _)| *i).collect();
+        let gone: Vec<usize> = removals(&groups, &HashSet::new())
+            .iter()
+            .map(|(i, _)| *i)
+            .collect();
         assert_eq!(gone, [2, 3]);
     }
 
     #[test]
     fn versions_of_one_song_group_together_and_the_plainest_title_stays() {
         let rows = [
-            row(1, "Bring Me to Life - 2011 Remaster", "Evanescence", 235_000),
+            row(
+                1,
+                "Bring Me to Life - 2011 Remaster",
+                "Evanescence",
+                235_000,
+            ),
             row(2, "Sessiz Gece", "Mavi Orman", 200_000),
             row(3, "Bring Me to Life", "Evanescence", 236_000),
             row(4, "Bring Me to Life (Live)", "Evanescence", 250_000),
@@ -227,7 +265,10 @@ mod tests {
         assert_eq!(groups.len(), 1);
         let g = &groups[0];
         assert_eq!(g.kind, DupKind::Versions);
-        assert_eq!(g.items.iter().map(|i| i.index).collect::<Vec<_>>(), [0, 2, 3]);
+        assert_eq!(
+            g.items.iter().map(|i| i.index).collect::<Vec<_>>(),
+            [0, 2, 3]
+        );
         let kept: Vec<_> = g.items.iter().filter(|i| i.keep).map(|i| i.index).collect();
         assert_eq!(kept, [2], "en sade başlık kalır");
     }
@@ -245,13 +286,23 @@ mod tests {
     #[test]
     fn very_different_lengths_are_different_recordings() {
         // Aynı ad ve sanatçı ama biri iki katından uzun (ör. 10 dk'lık canlı kayıt).
-        let rows = [row(1, "Aurora", "Kuzey", 200_000), row(2, "Aurora", "Kuzey", 700_000)];
+        let rows = [
+            row(1, "Aurora", "Kuzey", 200_000),
+            row(2, "Aurora", "Kuzey", 700_000),
+        ];
         assert!(find(&rows).is_empty());
         // Aynı adresli kopyalar süre ne olursa olsun yine yinelenen.
-        let again = [rows[0].clone(), rows[1].clone(), same_uri(rows[1].clone(), 2)];
+        let again = [
+            rows[0].clone(),
+            rows[1].clone(),
+            same_uri(rows[1].clone(), 2),
+        ];
         let groups = find(&again);
         assert_eq!(groups.len(), 1);
-        assert_eq!(groups[0].items.iter().map(|i| i.index).collect::<Vec<_>>(), [1, 2]);
+        assert_eq!(
+            groups[0].items.iter().map(|i| i.index).collect::<Vec<_>>(),
+            [1, 2]
+        );
     }
 
     #[test]
@@ -263,13 +314,20 @@ mod tests {
         let groups = find(&rows);
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].kind, DupKind::SameTrack);
-        assert_eq!(groups[0].items.iter().map(|i| i.index).collect::<Vec<_>>(), [0, 2]);
+        assert_eq!(
+            groups[0].items.iter().map(|i| i.index).collect::<Vec<_>>(),
+            [0, 2]
+        );
     }
 
     #[test]
     fn mixed_group_with_exact_copies_and_a_version() {
         let a = row(1, "Ayna", "Deniz Aydın", 180_000);
-        let rows = [a.clone(), row(2, "Ayna - Remastered 2020", "Deniz Aydın", 181_000), a];
+        let rows = [
+            a.clone(),
+            row(2, "Ayna - Remastered 2020", "Deniz Aydın", 181_000),
+            a,
+        ];
         let groups = find(&rows);
         assert_eq!(groups.len(), 1);
         assert_eq!(groups[0].kind, DupKind::Versions);
@@ -307,7 +365,10 @@ mod tests {
         assert_eq!(dedupe(&rows, DedupeMode::Off), (rows.clone(), 0));
         let (same, n) = dedupe(&rows, DedupeMode::SameTrack);
         assert_eq!((same.len(), n), (3, 1));
-        assert_eq!(same.iter().map(|r| r.uri.clone()).collect::<Vec<_>>(), [a.uri.clone(), v.uri.clone(), b.uri.clone()]);
+        assert_eq!(
+            same.iter().map(|r| r.uri.clone()).collect::<Vec<_>>(),
+            [a.uri.clone(), v.uri.clone(), b.uri.clone()]
+        );
         let (versions, n) = dedupe(&rows, DedupeMode::Versions);
         assert_eq!(n, 2);
         assert_eq!(versions, [a, b]);
@@ -320,7 +381,12 @@ mod tests {
             .map(|i| {
                 // Her 5. satır bir öncekinin Remaster sürümü.
                 if i % 5 == 4 {
-                    row(i, &format!("Şarkı {} - 2011 Remaster", i - 1), "Sanatçı", 200_000)
+                    row(
+                        i,
+                        &format!("Şarkı {} - 2011 Remaster", i - 1),
+                        "Sanatçı",
+                        200_000,
+                    )
                 } else {
                     row(i, &format!("Şarkı {i}"), "Sanatçı", 200_000)
                 }
@@ -329,7 +395,10 @@ mod tests {
         let t = std::time::Instant::now();
         let groups = find(&rows);
         let ms = t.elapsed().as_secs_f64() * 1000.;
-        println!("ölçüm: 10000 satırda yinelenen bulma {ms:.1} ms ({} küme)", groups.len());
+        println!(
+            "ölçüm: 10000 satırda yinelenen bulma {ms:.1} ms ({} küme)",
+            groups.len()
+        );
         assert_eq!(groups.len(), 2000);
         assert!(ms < 500., "{ms} ms");
     }

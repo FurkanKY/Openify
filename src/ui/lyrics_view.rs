@@ -31,8 +31,8 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, Context, FontWeight, ScrollHandle, ScrollWheelEvent, Window, canvas, div, linear_color_stop, linear_gradient, prelude::*, px,
-    rgb,
+    AnyElement, Context, FontWeight, ScrollHandle, ScrollWheelEvent, Window, canvas, div,
+    linear_color_stop, linear_gradient, prelude::*, px, rgb,
 };
 
 use super::{
@@ -82,9 +82,12 @@ fn ui_language() -> &'static str {
 /// varken); yoksa `None` (sahte deneme sözü).
 pub(super) fn fixture_lyrics() -> Option<LyricsStatus> {
     static FIXTURE: OnceLock<Option<Option<Arc<Lyrics>>>> = OnceLock::new();
-    let test_run = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
+    let test_run = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+        || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
     let fixture = FIXTURE.get_or_init(|| {
-        let spec = std::env::var("OPENIFY_TEST_LYRICS_JSON").ok().filter(|_| test_run)?;
+        let spec = std::env::var("OPENIFY_TEST_LYRICS_JSON")
+            .ok()
+            .filter(|_| test_run)?;
         if spec == "!none" {
             return Some(None);
         }
@@ -124,7 +127,14 @@ impl Shell {
         let on = self.prefs.lyrics_translation;
         chip(id, t!(LyricsTranslation), on, look, self.accent().text)
             .when_some(stop, |el, h| el.track_focus(&h))
-            .tooltip(Tooltip::text(if on { t!(HideLyricsTranslation) } else { t!(ShowLyricsTranslation) }, None))
+            .tooltip(Tooltip::text(
+                if on {
+                    t!(HideLyricsTranslation)
+                } else {
+                    t!(ShowLyricsTranslation)
+                },
+                None,
+            ))
             .on_click(cx.listener(|this, ev: &gpui::ClickEvent, window, cx| {
                 this.leave_button(ev, window);
                 this.toggle_lyrics_translation(cx);
@@ -143,13 +153,19 @@ impl Shell {
     /// solda "Karaoke" (hap + açıkken sürgü), sağda (yalnız çeviri varken)
     /// "Çeviri". Çalan şarkı yokken şerit de yok. Tam ekranda iki düğme de
     /// denetimlerde (`fullscreen`).
-    pub(super) fn render_lyrics(&mut self, place: Place, window: &mut Window, cx: &mut Context<Self>) -> (AnyElement, bool) {
+    pub(super) fn render_lyrics(
+        &mut self,
+        place: Place,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (AnyElement, bool) {
         let (body, animating) = self.render_lyrics_body(place, cx);
         if place == Place::Full || self.state.track.is_none() {
             return (body, animating);
         }
         let translation = self.lyrics_translation_ix().is_some().then(|| {
-            let (stop, look) = self.stop_look("lyrics-translation", super::tab::PANEL, true, window, cx);
+            let (stop, look) =
+                self.stop_look("lyrics-translation", super::tab::PANEL, true, window, cx);
             self.translation_chip("lyrics-translation", stop, look, cx)
         });
         let karaoke = self.karaoke_group(Place::Panel, window, cx);
@@ -189,12 +205,18 @@ impl Shell {
                 .into_any_element()
         };
         if self.state.track.is_none() {
-            return (message("mic-vocal", t!(NothingPlaying), t!(LyricsIdleBody)), false);
+            return (
+                message("mic-vocal", t!(NothingPlaying), t!(LyricsIdleBody)),
+                false,
+            );
         }
         let lyrics = match &self.now.lyrics {
             LyricsStatus::Ready(l) => l.clone(),
             LyricsStatus::Missing => {
-                return (message("mic-vocal", t!(LyricsNoneTitle), t!(LyricsNoneBody)), false);
+                return (
+                    message("mic-vocal", t!(LyricsNoneTitle), t!(LyricsNoneBody)),
+                    false,
+                );
             }
             LyricsStatus::None | LyricsStatus::Loading => {
                 // Yeri ayrılı, sessiz bir satır: geldiğinde hiçbir şey zıplamaz.
@@ -218,7 +240,11 @@ impl Shell {
         let show_translation = translation.filter(|_| self.prefs.lyrics_translation);
         let now = Instant::now();
         let (clock, _) = self.lyric_clock(now);
-        let active = if synced { lyrics.line_at((clock + LYRIC_LEAD_MS).max(0) as u32) } else { None };
+        let active = if synced {
+            lyrics.line_at((clock + LYRIC_LEAD_MS).max(0) as u32)
+        } else {
+            None
+        };
 
         // Kayma: etkin satır değiştiyse hedefe yumuşakça.
         let mut animating = false;
@@ -240,7 +266,11 @@ impl Shell {
                 }
                 if let Some((from, to, start)) = scroll.anim {
                     let t = (start.elapsed().as_secs_f32() * 1000. / SCROLL_MS).min(1.);
-                    let y = if animations_enabled() { from + (to - from) * ease_out(t) } else { to };
+                    let y = if animations_enabled() {
+                        from + (to - from) * ease_out(t)
+                    } else {
+                        to
+                    };
                     let x = scroll.handle.offset().x;
                     scroll.handle.set_offset(gpui::point(x, px(y)));
                     if t >= 1. {
@@ -254,7 +284,15 @@ impl Shell {
 
         let (role, weight, gap) = if full {
             // Geniş pencerede (bkz. `fullscreen::LARGE_FROM`) bir basamak büyük.
-            (if self.now.full.large { T_DISPLAY } else { T_HEADLINE }, FontWeight::EXTRA_BOLD, S4)
+            (
+                if self.now.full.large {
+                    T_DISPLAY
+                } else {
+                    T_HEADLINE
+                },
+                FontWeight::EXTRA_BOLD,
+                S4,
+            )
         } else {
             (T_TITLE, FontWeight::BOLD, S3)
         };
@@ -299,11 +337,22 @@ impl Shell {
         for (i, l) in lyrics.lines.iter().enumerate() {
             let is_active = active == Some(i);
             let alpha = fades.as_ref().map_or(1., |f| f.alpha(i));
-            let color = if is_active || !synced { text() } else { muted() };
+            let color = if is_active || !synced {
+                text()
+            } else {
+                muted()
+            };
             let start = l.start_ms;
-            let content: String = if l.text.is_empty() { "• • •".into() } else { l.text.clone() };
+            let content: String = if l.text.is_empty() {
+                "• • •".into()
+            } else {
+                l.text.clone()
+            };
             // Soluk çeviri satırı (boş çeviri: hiçbir şey; ara satırı "• • •" da çevrilmez).
-            let translated = show_translation.and_then(|ix| l.alts.get(ix)).filter(|a| !a.is_empty() && !l.text.is_empty()).cloned();
+            let translated = show_translation
+                .and_then(|ix| l.alts.get(ix))
+                .filter(|a| !a.is_empty() && !l.text.is_empty())
+                .cloned();
             // Panelde yazı panelin kenar boşluğundan (16 px) başlar, sekme
             // haplarıyla aynı kenardan; okunan satırın çizgisi yazının 8 px
             // solunda, kenar boşluğunun içinde (7 Kasım). Tam ekranda kenar
@@ -365,9 +414,17 @@ impl Shell {
 
         // İz: etkin satır değişimi boyandığı an (bkz. `now_playing::trace`).
         let probe = (trace::enabled() && synced).then(|| self.clock_probe(now));
-        let seek_at = if probe.is_some() { self.now.seek_at.take() } else { None };
+        let seek_at = if probe.is_some() {
+            self.now.seek_at.take()
+        } else {
+            None
+        };
         let view = if full { "full" } else { "panel" };
-        let starts: Vec<u32> = if probe.is_some() { lyrics.lines.iter().map(|l| l.start_ms).collect() } else { Vec::new() };
+        let starts: Vec<u32> = if probe.is_some() {
+            lyrics.lines.iter().map(|l| l.start_ms).collect()
+        } else {
+            Vec::new()
+        };
         let tracer = probe.map(|probe| {
             canvas(
                 |_, _, _| {},
@@ -400,7 +457,10 @@ impl Shell {
         } else {
             let offset = f32::from(handle.offset().y);
             let max = f32::from(handle.max_offset().height);
-            (edge_veil(true, -offset / PANEL_FADE), edge_veil(false, (max + offset) / PANEL_FADE))
+            (
+                edge_veil(true, -offset / PANEL_FADE),
+                edge_veil(false, (max + offset) / PANEL_FADE),
+            )
         };
 
         let view = div()
@@ -426,8 +486,22 @@ pub(super) fn edge_veil(top: bool, strength: f32) -> Option<AnyElement> {
     let solid = linear_color_stop(with_alpha(BAR, strength), if top { 0. } else { 1. });
     let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
-    let veil = div().absolute().left_0().right_0().h(px(PANEL_FADE)).bg(linear_gradient(180., from, to));
-    Some(if top { veil.top_0() } else { veil.bottom_0().rounded_bl(px(PANEL_INNER_RADIUS)).rounded_br(px(PANEL_INNER_RADIUS)) }.into_any_element())
+    let veil = div()
+        .absolute()
+        .left_0()
+        .right_0()
+        .h(px(PANEL_FADE))
+        .bg(linear_gradient(180., from, to));
+    Some(
+        if top {
+            veil.top_0()
+        } else {
+            veil.bottom_0()
+                .rounded_bl(px(PANEL_INNER_RADIUS))
+                .rounded_br(px(PANEL_INNER_RADIUS))
+        }
+        .into_any_element(),
+    )
 }
 
 /// Tam ekranda satır saydamlıkları: son yerleşimdeki satır konumlarından
@@ -448,14 +522,19 @@ impl EdgeFade {
         while let Some(b) = handle.bounds_for_item(first + rows.len()) {
             rows.push((f32::from(b.top()) + offset, f32::from(b.bottom()) + offset));
         }
-        Self { rows, view: (f32::from(view.top()), f32::from(view.bottom())) }
+        Self {
+            rows,
+            view: (f32::from(view.top()), f32::from(view.bottom())),
+        }
     }
 
     /// `line`: satırın sırası (sondaki kaynak yazısı için satır sayısı).
     /// Ölçülmemiş satır (ilk kare) tam görünür.
     fn alpha(&self, line: usize) -> f32 {
         match self.rows.get(line) {
-            Some(&(top, bottom)) if self.view.1 > self.view.0 => edge_alpha(top, bottom, self.view, FULL_FADE),
+            Some(&(top, bottom)) if self.view.1 > self.view.0 => {
+                edge_alpha(top, bottom, self.view, FULL_FADE)
+            }
             _ => 1.,
         }
     }
@@ -483,7 +562,9 @@ fn focus_offset(scroll: &LyricScroll, line: usize) -> Option<f32> {
         return None;
     }
     let max = f32::from(scroll.handle.max_offset().height);
-    let target = f32::from(view.top()) + height * FOCUS_AT - f32::from(item.size.height) / 2. - f32::from(item.top());
+    let target = f32::from(view.top()) + height * FOCUS_AT
+        - f32::from(item.size.height) / 2.
+        - f32::from(item.top());
     Some(target.clamp(-max, 0.))
 }
 
@@ -511,7 +592,10 @@ mod tests {
         assert!((edge_alpha(100. + half, 140. + half, VIEW, FULL_FADE) - 0.5).abs() < 1e-6);
         assert!((edge_alpha(640. - half, 700. - half, VIEW, FULL_FADE) - 0.5).abs() < 1e-6);
         // Bölgenin sonunda tam görünür.
-        assert_eq!(edge_alpha(100. + FULL_FADE, 140. + FULL_FADE, VIEW, FULL_FADE), 1.);
+        assert_eq!(
+            edge_alpha(100. + FULL_FADE, 140. + FULL_FADE, VIEW, FULL_FADE),
+            1.
+        );
     }
 
     #[test]

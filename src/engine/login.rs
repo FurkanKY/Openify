@@ -87,7 +87,9 @@ impl LinkState {
     /// anahtarı (`ui::components::explain_error` bu önekleri tanır).
     pub fn library_error(&self) -> Option<&'static str> {
         match self {
-            Self::NeedsLogin | Self::LoginFailed(_) | Self::LoggingIn => Some("auth:login-required"),
+            Self::NeedsLogin | Self::LoginFailed(_) | Self::LoggingIn => {
+                Some("auth:login-required")
+            }
             Self::NeedsPremium => Some("premium:free-account"),
             Self::Connecting | Self::Connected | Self::Offline => None,
         }
@@ -117,27 +119,54 @@ mod tests {
     fn only_needs_login_and_failed_can_open_the_browser() {
         assert!(LinkState::NeedsLogin.can_start_login());
         assert!(LinkState::LoginFailed(ANY).can_start_login());
-        for s in [LinkState::Connecting, LinkState::Connected, LinkState::Offline, LinkState::LoggingIn, LinkState::NeedsPremium] {
+        for s in [
+            LinkState::Connecting,
+            LinkState::Connected,
+            LinkState::Offline,
+            LinkState::LoggingIn,
+            LinkState::NeedsPremium,
+        ] {
             assert!(!s.can_start_login(), "{s:?}");
         }
     }
 
     #[test]
     fn no_background_reconnect_when_the_user_must_act() {
-        for s in [LinkState::NeedsLogin, LinkState::LoggingIn, LinkState::LoginFailed(ANY), LinkState::NeedsPremium] {
+        for s in [
+            LinkState::NeedsLogin,
+            LinkState::LoggingIn,
+            LinkState::LoginFailed(ANY),
+            LinkState::NeedsPremium,
+        ] {
             assert!(!s.may_reconnect(), "{s:?}");
         }
-        for s in [LinkState::Connecting, LinkState::Connected, LinkState::Offline] {
+        for s in [
+            LinkState::Connecting,
+            LinkState::Connected,
+            LinkState::Offline,
+        ] {
             assert!(s.may_reconnect(), "{s:?}");
         }
     }
 
     #[test]
     fn playback_is_blocked_with_a_code_except_when_waiting_for_the_network() {
-        assert_eq!(LinkState::NeedsPremium.playback_block(), Some(PlayBlock::NeedsPremium));
-        assert_eq!(LinkState::NeedsLogin.playback_block(), Some(PlayBlock::NeedsLogin));
-        assert_eq!(LinkState::LoggingIn.playback_block(), Some(PlayBlock::LoggingIn));
-        assert_eq!(LinkState::LoginFailed(ANY).playback_block(), Some(PlayBlock::LoginFailed));
+        assert_eq!(
+            LinkState::NeedsPremium.playback_block(),
+            Some(PlayBlock::NeedsPremium)
+        );
+        assert_eq!(
+            LinkState::NeedsLogin.playback_block(),
+            Some(PlayBlock::NeedsLogin)
+        );
+        assert_eq!(
+            LinkState::LoggingIn.playback_block(),
+            Some(PlayBlock::LoggingIn)
+        );
+        assert_eq!(
+            LinkState::LoginFailed(ANY).playback_block(),
+            Some(PlayBlock::LoginFailed)
+        );
         assert_eq!(LinkState::Connected.playback_block(), None);
         assert_eq!(LinkState::Connecting.playback_block(), None);
         assert_eq!(LinkState::Offline.playback_block(), None);
@@ -145,11 +174,26 @@ mod tests {
 
     #[test]
     fn login_errors_map_to_states() {
-        assert_eq!(after_login_error(&LoginError::Cancelled), LinkState::NeedsLogin);
-        assert_eq!(after_login_error(&LoginError::NeedsPremium), LinkState::NeedsPremium);
-        assert_eq!(after_login_error(&LoginError::TimedOut), LinkState::LoginFailed(LoginFailReason::TimedOut));
-        assert_eq!(after_login_error(&LoginError::PortBusy), LinkState::LoginFailed(LoginFailReason::PortBusy));
-        assert_eq!(after_login_error(&LoginError::Network), LinkState::LoginFailed(LoginFailReason::Network));
+        assert_eq!(
+            after_login_error(&LoginError::Cancelled),
+            LinkState::NeedsLogin
+        );
+        assert_eq!(
+            after_login_error(&LoginError::NeedsPremium),
+            LinkState::NeedsPremium
+        );
+        assert_eq!(
+            after_login_error(&LoginError::TimedOut),
+            LinkState::LoginFailed(LoginFailReason::TimedOut)
+        );
+        assert_eq!(
+            after_login_error(&LoginError::PortBusy),
+            LinkState::LoginFailed(LoginFailReason::PortBusy)
+        );
+        assert_eq!(
+            after_login_error(&LoginError::Network),
+            LinkState::LoginFailed(LoginFailReason::Network)
+        );
         // Teknik ayrıntı arayüze sızmaz.
         let s = after_login_error(&LoginError::Failed("Failed to exchange code (401)".into()));
         assert_eq!(s, LinkState::LoginFailed(LoginFailReason::Other));
@@ -157,8 +201,18 @@ mod tests {
 
     #[test]
     fn library_error_keys_are_recognised_by_the_ui() {
-        assert!(LinkState::NeedsLogin.library_error().unwrap().starts_with("auth:"));
-        assert!(LinkState::NeedsPremium.library_error().unwrap().starts_with("premium:"));
+        assert!(
+            LinkState::NeedsLogin
+                .library_error()
+                .unwrap()
+                .starts_with("auth:")
+        );
+        assert!(
+            LinkState::NeedsPremium
+                .library_error()
+                .unwrap()
+                .starts_with("premium:")
+        );
         assert_eq!(LinkState::Offline.library_error(), None);
     }
 }

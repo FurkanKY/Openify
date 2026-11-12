@@ -91,13 +91,16 @@ pub struct KaraokeCtl {
 
 impl KaraokeCtl {
     pub fn new() -> Self {
-        Self { depth: AtomicU32::new(0.0f32.to_bits()) }
+        Self {
+            depth: AtomicU32::new(0.0f32.to_bits()),
+        }
     }
 
     /// Ayarı yayınlar (motor iş parçacığı). `amount` 0..1 sınırlanır; sonlu
     /// olmayan 0 olur.
     pub fn set(&self, enabled: bool, amount: f32) {
-        self.depth.store(depth_of(enabled, amount).to_bits(), Relaxed);
+        self.depth
+            .store(depth_of(enabled, amount).to_bits(), Relaxed);
     }
 
     #[inline]
@@ -108,7 +111,11 @@ impl KaraokeCtl {
 
 /// Etkin bastırma derinliği: kapalıysa 0, değilse 0..1.
 fn depth_of(enabled: bool, amount: f32) -> f32 {
-    if enabled && amount.is_finite() { amount.clamp(0.0, 1.0) } else { 0.0 }
+    if enabled && amount.is_finite() {
+        amount.clamp(0.0, 1.0)
+    } else {
+        0.0
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +144,13 @@ fn biquad(kind: Kind, f0: f64) -> Coef {
         Kind::All => (1.0 - alpha, -2.0 * c, 1.0 + alpha),
     };
     let (a1, a2) = (-2.0 * c, 1.0 - alpha);
-    [(b0 / a0) as f32, (b1 / a0) as f32, (b2 / a0) as f32, (a1 / a0) as f32, (a2 / a0) as f32]
+    [
+        (b0 / a0) as f32,
+        (b1 / a0) as f32,
+        (b2 / a0) as f32,
+        (a1 / a0) as f32,
+        (a2 / a0) as f32,
+    ]
 }
 
 /// Bir biquad'ın durumu (doğrudan biçim II devrik).
@@ -272,7 +285,11 @@ impl Karaoke {
             }
             self.e_mid = self.e_mid * LEAK + em;
             self.e_side = self.e_side * LEAK + es;
-            self.exact_run = if em >= SILENCE && es <= em * EXACT_MONO { self.exact_run.saturating_add(1) } else { 0 };
+            self.exact_run = if em >= SILENCE && es <= em * EXACT_MONO {
+                self.exact_run.saturating_add(1)
+            } else {
+                0
+            };
             if self.exact_run >= EXACT_RUN {
                 // Sayısal mono: eski (stereo) geçmişi at, karar hemen mono.
                 (self.e_mid, self.e_side, self.mono) = (em, es, true);
@@ -286,7 +303,11 @@ impl Karaoke {
             }
         }
 
-        let engage_target = if self.depth > 0.0 && !self.mono { 1.0f32 } else { 0.0 };
+        let engage_target = if self.depth > 0.0 && !self.mono {
+            1.0f32
+        } else {
+            0.0
+        };
         if self.fresh {
             self.fresh = false;
             if engage_target < self.engage {

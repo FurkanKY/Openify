@@ -196,7 +196,11 @@ pub fn mix(a: u32, b: u32, t: f32) -> u32 {
 pub fn luminance(color: u32) -> f32 {
     let lin = |shift: u32| {
         let c = ((color >> shift) & 0xFF) as f32 / 255.0;
-        if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+        if c <= 0.04045 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
     };
     0.2126 * lin(16) + 0.7152 * lin(8) + 0.0722 * lin(0)
 }
@@ -381,7 +385,11 @@ pub fn cover_fade() -> std::time::Duration {
 
 fn scaled(d: std::time::Duration) -> std::time::Duration {
     // Kapalıysa 1 ms: geçiş anında biter, süreye bölen hesaplar sıfıra bölmez.
-    if animations_enabled() { d.mul_f32(slow_motion()) } else { std::time::Duration::from_millis(1) }
+    if animations_enabled() {
+        d.mul_f32(slow_motion())
+    } else {
+        std::time::Duration::from_millis(1)
+    }
 }
 
 /// Geliştirme kancası `OPENIFY_TEST_SLOW_MOTION=<kat>`: bütün geçişler bu
@@ -415,9 +423,10 @@ pub fn set_reduce_motion(pref: &str) {
 /// ayarı (açılışta bir kez okunur), değilse kullanıcının seçimi.
 pub fn animations_enabled() -> bool {
     static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
-    animation_choice(MOTION_PREF.load(std::sync::atomic::Ordering::Relaxed), || {
-        *ENABLED.get_or_init(read_animation_setting)
-    })
+    animation_choice(
+        MOTION_PREF.load(std::sync::atomic::Ordering::Relaxed),
+        || *ENABLED.get_or_init(read_animation_setting),
+    )
 }
 
 /// Tercih ve sistem ayarından animasyon kararı (saf; test edilir).
@@ -479,17 +488,35 @@ pub struct TypeRole {
 }
 
 /// Etiket: sütun başlığı, bölüm adı, süre, kısayol.
-pub const T_LABEL: TypeRole = TypeRole { size: 12., line: 16. };
+pub const T_LABEL: TypeRole = TypeRole {
+    size: 12.,
+    line: 16.,
+};
 /// İkincil: sanatçı, meta satırı, açıklama.
-pub const T_SECONDARY: TypeRole = TypeRole { size: 13., line: 18. };
+pub const T_SECONDARY: TypeRole = TypeRole {
+    size: 13.,
+    line: 18.,
+};
 /// Ana metin: şarkı adı, liste adı, menü öğesi.
-pub const T_BODY: TypeRole = TypeRole { size: 14., line: 20. };
+pub const T_BODY: TypeRole = TypeRole {
+    size: 14.,
+    line: 20.,
+};
 /// Palet girişi, kart başlığı.
-pub const T_TITLE: TypeRole = TypeRole { size: 18., line: 24. };
+pub const T_TITLE: TypeRole = TypeRole {
+    size: 18.,
+    line: 24.,
+};
 /// Dar pencerede sayfa başlığı, bölüm başlığı (Figtree, kalın).
-pub const T_HEADLINE: TypeRole = TypeRole { size: 28., line: 34. };
+pub const T_HEADLINE: TypeRole = TypeRole {
+    size: 28.,
+    line: 34.,
+};
 /// Sayfa başlığı (Figtree, kalın).
-pub const T_DISPLAY: TypeRole = TypeRole { size: 40., line: 44. };
+pub const T_DISPLAY: TypeRole = TypeRole {
+    size: 40.,
+    line: 44.,
+};
 
 /// Yazı rolleri ve küçük yazı ayarları için kısayollar.
 pub trait Type: Styled {
@@ -500,8 +527,9 @@ pub trait Type: Styled {
 
     /// Eşit genişlikte rakamlar: süre ve sayılar değişirken titremesin.
     fn tabular(mut self) -> Self {
-        self.text_style().get_or_insert_with(Default::default).font_features =
-            Some(FontFeatures(std::sync::Arc::new(vec![("tnum".into(), 1)])));
+        self.text_style()
+            .get_or_insert_with(Default::default)
+            .font_features = Some(FontFeatures(std::sync::Arc::new(vec![("tnum".into(), 1)])));
         self
     }
 }
@@ -523,11 +551,21 @@ pub fn font() -> &'static str {
 
 pub fn load_fonts(cx: &App) {
     let fonts: Vec<Cow<'static, [u8]>> = vec![
-        Cow::Borrowed(include_bytes!("../../assets/fonts/PlusJakartaSans-Regular.ttf")),
-        Cow::Borrowed(include_bytes!("../../assets/fonts/PlusJakartaSans-Medium.ttf")),
-        Cow::Borrowed(include_bytes!("../../assets/fonts/PlusJakartaSans-SemiBold.ttf")),
-        Cow::Borrowed(include_bytes!("../../assets/fonts/PlusJakartaSans-Bold.ttf")),
-        Cow::Borrowed(include_bytes!("../../assets/fonts/PlusJakartaSans-ExtraBold.ttf")),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/PlusJakartaSans-Regular.ttf"
+        )),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/PlusJakartaSans-Medium.ttf"
+        )),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/PlusJakartaSans-SemiBold.ttf"
+        )),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/PlusJakartaSans-Bold.ttf"
+        )),
+        Cow::Borrowed(include_bytes!(
+            "../../assets/fonts/PlusJakartaSans-ExtraBold.ttf"
+        )),
         Cow::Borrowed(include_bytes!("../../assets/fonts/Figtree-Regular.ttf")),
         Cow::Borrowed(include_bytes!("../../assets/fonts/Figtree-Medium.ttf")),
         Cow::Borrowed(include_bytes!("../../assets/fonts/Figtree-SemiBold.ttf")),
@@ -550,23 +588,72 @@ macro_rules! icons {
 }
 
 icons!(
-    "play", "pause", "skip-back", "skip-forward", "volume-2", "volume-1", "volume-x", "search",
-    "music", "heart", "heart-fill", "x", "minus", "square", "copy", "disc-3", "list-music",
-    "wifi-off", "circle-alert", "info", "refresh-cw",
+    "play",
+    "pause",
+    "skip-back",
+    "skip-forward",
+    "volume-2",
+    "volume-1",
+    "volume-x",
+    "search",
+    "music",
+    "heart",
+    "heart-fill",
+    "x",
+    "minus",
+    "square",
+    "copy",
+    "disc-3",
+    "list-music",
+    "wifi-off",
+    "circle-alert",
+    "info",
+    "refresh-cw",
     // Çalma kontrolleri için dolu simgeler (Lucide'de yok, aynı ölçüde çizildi).
-    "play-fill", "pause-fill", "skip-back-fill", "skip-forward-fill",
+    "play-fill",
+    "pause-fill",
+    "skip-back-fill",
+    "skip-forward-fill",
     // Şimdi çalıyor (Adım 11 / 14): karıştırma, tekrar, sıra, sözler, tam ekran.
-    "shuffle", "repeat", "repeat-1", "mic-vocal", "maximize-2", "minimize-2", "grip-vertical",
+    "shuffle",
+    "repeat",
+    "repeat-1",
+    "mic-vocal",
+    "maximize-2",
+    "minimize-2",
+    "grip-vertical",
     // Gezinme ve kütüphane yönetimi (Adım 12 / 13): geri / ileri, ana sayfa,
     // sanatçı, sağ tık menüsü, eşitleme.
-    "arrow-left", "arrow-right", "chevron-right", "house", "user", "list-plus", "list-end",
-    "list-start", "link", "pencil", "trash-2", "ellipsis", "check", "cloud-upload", "plus",
+    "arrow-left",
+    "arrow-right",
+    "chevron-right",
+    "house",
+    "user",
+    "list-plus",
+    "list-end",
+    "list-start",
+    "link",
+    "pencil",
+    "trash-2",
+    "ellipsis",
+    "check",
+    "cloud-upload",
+    "plus",
     // Gezinme sekmeleri, Kütüphane görünümü (Adım 12, 7 Kasım).
-    "compass", "library", "layout-grid", "list", "arrow-up-down",
+    "compass",
+    "library",
+    "layout-grid",
+    "list",
+    "arrow-up-down",
     // Ayarlar sayfası ve profil menüsü (Adım 15).
-    "settings", "chevron-down", "log-out", "folder-open",
+    "settings",
+    "chevron-down",
+    "log-out",
+    "folder-open",
     // Sanatçı takibi ve paylaşma: takip et / takip ediliyor, Spotify'da aç.
-    "user-plus", "user-check", "external-link",
+    "user-plus",
+    "user-check",
+    "external-link",
     // Karıştırma kuralları: "Bu sanatçıyı hiç çalma".
     "user-x",
     // Karşılama ekranı: uygulama işareti (karosuz).
@@ -574,13 +661,18 @@ icons!(
     // Arkadaş etkinliği (başlık çubuğu düğmesi).
     "users",
     // Kütüphane düzeni: klasör, sabitleme.
-    "folder", "pin", "pin-off",
+    "folder",
+    "pin",
+    "pin-off",
     // Kütüphane araçları: araç çubuğu düğmesi ve palet komutu.
     "wrench",
     // Radyo, gizleme, gizli oturum: menü girdileri, başlık çubuğu simgesi.
-    "radio", "eye", "eye-off",
+    "radio",
+    "eye",
+    "eye-off",
     // Bir anlam, bir simge: "Hiçbir yerde çalma" (ban), Connect şeridi (cast).
-    "ban", "cast",
+    "ban",
+    "cast",
 );
 
 /// gpui'nin `svg().path(...)` için okuduğu gömülü dosyalar.
@@ -707,7 +799,13 @@ mod tests {
                 }
             }
         }
-        assert!(worst.0 >= 4.5, "{:.2}:1 ışıma {:06X}, y = {}", worst.0, worst.1, worst.2);
+        assert!(
+            worst.0 >= 4.5,
+            "{:.2}:1 ışıma {:06X}, y = {}",
+            worst.0,
+            worst.1,
+            worst.2
+        );
     }
 
     #[test]
@@ -735,5 +833,4 @@ mod tests {
         let c = with_alpha(0xFF0000, 0.5);
         assert!((c.r - 1.0).abs() < 1e-6 && (c.a - 128.0 / 255.0).abs() < 1e-3);
     }
-
 }

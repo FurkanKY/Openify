@@ -31,7 +31,11 @@ pub struct Key {
 
 impl Key {
     pub fn new(group: u8, num: i64, text: impl Into<String>) -> Self {
-        Self { group, num, text: text.into() }
+        Self {
+            group,
+            num,
+            text: text.into(),
+        }
     }
 
     /// En sona giden anahtar (içi boş klasör).
@@ -85,13 +89,22 @@ const MAX_DEPTH: usize = 32;
 
 /// Ekranda görünecek düğümler, sırasıyla.
 pub fn layout(nodes: &[Node], opts: &Options) -> Vec<Placed> {
-    let folder_ids: HashSet<&str> = nodes.iter().filter(|n| n.folder).map(|n| n.id.as_str()).collect();
+    let folder_ids: HashSet<&str> = nodes
+        .iter()
+        .filter(|n| n.folder)
+        .map(|n| n.id.as_str())
+        .collect();
     fn parent_of<'a>(n: &'a Node, folders: &HashSet<&str>) -> Option<&'a str> {
-        n.parent.as_deref().filter(|p| folders.contains(p) && *p != n.id)
+        n.parent
+            .as_deref()
+            .filter(|p| folders.contains(p) && *p != n.id)
     }
     let mut children: HashMap<Option<&str>, Vec<usize>> = HashMap::new();
     for (i, n) in nodes.iter().enumerate() {
-        children.entry(parent_of(n, &folder_ids)).or_default().push(i);
+        children
+            .entry(parent_of(n, &folder_ids))
+            .or_default()
+            .push(i);
     }
 
     let mut keys: Vec<Key> = nodes.iter().map(|n| n.key.clone()).collect();
@@ -117,10 +130,18 @@ pub fn layout(nodes: &[Node], opts: &Options) -> Vec<Placed> {
     let mut out = Vec::new();
     let lift = opts.lift_pins && root.is_none();
     if lift {
-        let mut pinned: Vec<usize> =
-            nodes.iter().enumerate().filter(|(_, n)| !n.folder && n.pin.is_some()).map(|(i, _)| i).collect();
+        let mut pinned: Vec<usize> = nodes
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| !n.folder && n.pin.is_some())
+            .map(|(i, _)| i)
+            .collect();
         pinned.sort_by_key(|&i| (nodes[i].pin, nodes[i].seq));
-        out.extend(pinned.into_iter().map(|ix| Placed { ix, depth: 0, lifted: true }));
+        out.extend(pinned.into_iter().map(|ix| Placed {
+            ix,
+            depth: 0,
+            lifted: true,
+        }));
     }
     walk(nodes, &children, root, 0, opts.is_open, lift, &mut out);
     out
@@ -144,7 +165,11 @@ fn walk(
         if skip_pinned_here && depth == 0 && !n.folder && n.pin.is_some() {
             continue;
         }
-        out.push(Placed { ix: i, depth, lifted: false });
+        out.push(Placed {
+            ix: i,
+            depth,
+            lifted: false,
+        });
         if n.folder && is_open.is_some_and(|f| f(&n.id)) {
             walk(nodes, children, Some(&n.id), depth + 1, is_open, false, out);
         }
@@ -163,8 +188,16 @@ fn best_below(
         return None;
     }
     let mut best: Option<Key> = None;
-    for &i in children.get(&Some(folder)).map(Vec::as_slice).unwrap_or_default() {
-        let k = if nodes[i].folder { best_below(nodes, children, keys, &nodes[i].id, depth + 1) } else { Some(keys[i].clone()) };
+    for &i in children
+        .get(&Some(folder))
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+    {
+        let k = if nodes[i].folder {
+            best_below(nodes, children, keys, &nodes[i].id, depth + 1)
+        } else {
+            Some(keys[i].clone())
+        };
         if let Some(k) = k {
             if best.as_ref().is_none_or(|b| k < *b) {
                 best = Some(k);
@@ -177,31 +210,56 @@ fn best_below(
 /// Her klasörün altındaki öğe sayısı (iç içe klasörler dahil, klasörün
 /// kendisi sayılmaz).
 pub fn item_counts(nodes: &[Node]) -> HashMap<String, usize> {
-    let folder_ids: HashSet<&str> = nodes.iter().filter(|n| n.folder).map(|n| n.id.as_str()).collect();
+    let folder_ids: HashSet<&str> = nodes
+        .iter()
+        .filter(|n| n.folder)
+        .map(|n| n.id.as_str())
+        .collect();
     let mut direct: HashMap<&str, usize> = HashMap::new();
     let mut subfolders: HashMap<&str, Vec<&str>> = HashMap::new();
     for n in nodes {
-        let Some(p) = n.parent.as_deref().filter(|p| folder_ids.contains(p) && *p != n.id) else { continue };
+        let Some(p) = n
+            .parent
+            .as_deref()
+            .filter(|p| folder_ids.contains(p) && *p != n.id)
+        else {
+            continue;
+        };
         if n.folder {
             subfolders.entry(p).or_default().push(&n.id);
         } else {
             *direct.entry(p).or_default() += 1;
         }
     }
-    fn total(f: &str, direct: &HashMap<&str, usize>, sub: &HashMap<&str, Vec<&str>>, depth: usize) -> usize {
+    fn total(
+        f: &str,
+        direct: &HashMap<&str, usize>,
+        sub: &HashMap<&str, Vec<&str>>,
+        depth: usize,
+    ) -> usize {
         if depth > MAX_DEPTH {
             return 0;
         }
         direct.get(f).copied().unwrap_or(0)
-            + sub.get(f).map(|v| v.iter().map(|s| total(s, direct, sub, depth + 1)).sum()).unwrap_or(0)
+            + sub
+                .get(f)
+                .map(|v| v.iter().map(|s| total(s, direct, sub, depth + 1)).sum())
+                .unwrap_or(0)
     }
-    folder_ids.iter().map(|f| (f.to_string(), total(f, &direct, &subfolders, 0))).collect()
+    folder_ids
+        .iter()
+        .map(|f| (f.to_string(), total(f, &direct, &subfolders, 0)))
+        .collect()
 }
 
 /// Klasörün (üstündeki klasörlerle birlikte) kök yolu: kökten başlayıp
 /// klasörün kendisinde biter. Bilinmeyen klasör için boş.
 pub fn path_to<'a>(nodes: &'a [Node], folder: &str) -> Vec<&'a Node> {
-    let by_id: HashMap<&str, &Node> = nodes.iter().filter(|n| n.folder).map(|n| (n.id.as_str(), n)).collect();
+    let by_id: HashMap<&str, &Node> = nodes
+        .iter()
+        .filter(|n| n.folder)
+        .map(|n| (n.id.as_str(), n))
+        .collect();
     let mut path = Vec::new();
     let mut cur = by_id.get(folder).copied();
     while let Some(n) = cur {
@@ -209,7 +267,11 @@ pub fn path_to<'a>(nodes: &'a [Node], folder: &str) -> Vec<&'a Node> {
             break;
         }
         path.push(n);
-        cur = n.parent.as_deref().and_then(|p| by_id.get(p).copied()).filter(|p| p.id != n.id);
+        cur = n
+            .parent
+            .as_deref()
+            .and_then(|p| by_id.get(p).copied())
+            .filter(|p| p.id != n.id);
     }
     path.reverse();
     path
@@ -219,14 +281,35 @@ pub fn path_to<'a>(nodes: &'a [Node], folder: &str) -> Vec<&'a Node> {
 mod tests {
     use super::*;
 
-    fn node(id: &str, parent: Option<&str>, folder: bool, num: i64, pin: Option<usize>, seq: usize) -> Node {
-        Node { id: id.into(), parent: parent.map(String::from), folder, key: Key::new(0, num, ""), pin, seq }
+    fn node(
+        id: &str,
+        parent: Option<&str>,
+        folder: bool,
+        num: i64,
+        pin: Option<usize>,
+        seq: usize,
+    ) -> Node {
+        Node {
+            id: id.into(),
+            parent: parent.map(String::from),
+            folder,
+            key: Key::new(0, num, ""),
+            pin,
+            seq,
+        }
     }
 
     fn ids(nodes: &[Node], placed: &[Placed]) -> Vec<String> {
         placed
             .iter()
-            .map(|p| format!("{}{}{}", "-".repeat(p.depth), if p.lifted { "^" } else { "" }, nodes[p.ix].id))
+            .map(|p| {
+                format!(
+                    "{}{}{}",
+                    "-".repeat(p.depth),
+                    if p.lifted { "^" } else { "" },
+                    nodes[p.ix].id
+                )
+            })
             .collect()
     }
 
@@ -244,7 +327,12 @@ mod tests {
     }
 
     fn opts<'a>(is_open: Option<&'a dyn Fn(&str) -> bool>) -> Options<'a> {
-        Options { root: None, is_open, lift_pins: true, folders_by_children: true }
+        Options {
+            root: None,
+            is_open,
+            lift_pins: true,
+            folders_by_children: true,
+        }
     }
 
     #[test]
@@ -261,7 +349,10 @@ mod tests {
         let open = |f: &str| f == "F" || f == "G";
         let placed = layout(&nodes, &opts(Some(&open)));
         // F içinde: G(c=1), d(2), b(4); G içinde: c.
-        assert_eq!(ids(&nodes, &placed), ["F", "-G", "--c", "-d", "-b", "e", "a"]);
+        assert_eq!(
+            ids(&nodes, &placed),
+            ["F", "-G", "--c", "-d", "-b", "e", "a"]
+        );
         let only_f = |f: &str| f == "F";
         let placed = layout(&nodes, &opts(Some(&only_f)));
         assert_eq!(ids(&nodes, &placed), ["F", "-G", "-d", "-b", "e", "a"]);
@@ -270,12 +361,36 @@ mod tests {
     #[test]
     fn entering_a_folder_shows_its_direct_children_only() {
         let nodes = sample();
-        let placed = layout(&nodes, &Options { root: Some("F"), is_open: None, lift_pins: true, folders_by_children: true });
+        let placed = layout(
+            &nodes,
+            &Options {
+                root: Some("F"),
+                is_open: None,
+                lift_pins: true,
+                folders_by_children: true,
+            },
+        );
         assert_eq!(ids(&nodes, &placed), ["G", "d", "b"]);
-        let placed = layout(&nodes, &Options { root: Some("G"), is_open: None, lift_pins: true, folders_by_children: true });
+        let placed = layout(
+            &nodes,
+            &Options {
+                root: Some("G"),
+                is_open: None,
+                lift_pins: true,
+                folders_by_children: true,
+            },
+        );
         assert_eq!(ids(&nodes, &placed), ["c"]);
         // Bilinmeyen klasör: kök gösterilir (bayat durum).
-        let placed = layout(&nodes, &Options { root: Some("yok"), is_open: None, lift_pins: true, folders_by_children: true });
+        let placed = layout(
+            &nodes,
+            &Options {
+                root: Some("yok"),
+                is_open: None,
+                lift_pins: true,
+                folders_by_children: true,
+            },
+        );
         assert_eq!(ids(&nodes, &placed), ["F", "e", "a"]);
     }
 
@@ -288,10 +403,21 @@ mod tests {
         let placed = layout(&nodes, &opts(Some(&open)));
         // Üstte sabitler (sabitlenme sırasıyla), sonra ağaç; a ağaçta yinelenmez,
         // c yerinde de durur.
-        assert_eq!(ids(&nodes, &placed), ["^c", "^a", "F", "-G", "--c", "-d", "-b", "e"]);
+        assert_eq!(
+            ids(&nodes, &placed),
+            ["^c", "^a", "F", "-G", "--c", "-d", "-b", "e"]
+        );
         // Klasöre girilince blok yok; sabitli öğe kardeşlerinin önünde.
         nodes[5].pin = Some(2); // d, F içinde
-        let placed = layout(&nodes, &Options { root: Some("F"), is_open: None, lift_pins: true, folders_by_children: true });
+        let placed = layout(
+            &nodes,
+            &Options {
+                root: Some("F"),
+                is_open: None,
+                lift_pins: true,
+                folders_by_children: true,
+            },
+        );
         assert_eq!(ids(&nodes, &placed), ["d", "G", "b"]);
     }
 
@@ -300,16 +426,31 @@ mod tests {
         let mut nodes = sample();
         nodes.push(node("H", None, true, 0, None, 7));
         let placed = layout(&nodes, &opts(None));
-        assert_eq!(ids(&nodes, &placed), ["F", "e", "a", "H"], "boş klasör sona");
+        assert_eq!(
+            ids(&nodes, &placed),
+            ["F", "e", "a", "H"],
+            "boş klasör sona"
+        );
         // Kendi anahtarı: F'nin num'u 0, H'nin 0, e'nin 3: klasörler önde, seq sırası.
-        let placed = layout(&nodes, &Options { root: None, is_open: None, lift_pins: true, folders_by_children: false });
+        let placed = layout(
+            &nodes,
+            &Options {
+                root: None,
+                is_open: None,
+                lift_pins: true,
+                folders_by_children: false,
+            },
+        );
         assert_eq!(ids(&nodes, &placed), ["F", "H", "e", "a"]);
     }
 
     #[test]
     fn orphans_and_cycles_do_not_hang_or_lose_items() {
         // Üst klasörü olmayan liste kökte görünür.
-        let nodes = vec![node("x", Some("kayıp"), false, 1, None, 0), node("y", None, false, 2, None, 1)];
+        let nodes = vec![
+            node("x", Some("kayıp"), false, 1, None, 0),
+            node("y", None, false, 2, None, 1),
+        ];
         assert_eq!(ids(&nodes, &layout(&nodes, &opts(None))), ["x", "y"]);
         // Döngü: A içinde B, B içinde A. Köke bağlı olmadıkları için görünmezler
         // ama sonsuz döngü olmaz; öğeleri kök gibi davranan bir listede kalır.

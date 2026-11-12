@@ -46,8 +46,9 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, ClickEvent, Context, FocusHandle, FontWeight, KeyDownEvent, MouseButton, MouseDownEvent, Pixels,
-    Point, ScrollHandle, SharedString, Window, canvas, div, point, prelude::*, px, rgb,
+    AnyElement, ClickEvent, Context, FocusHandle, FontWeight, KeyDownEvent, MouseButton,
+    MouseDownEvent, Pixels, Point, ScrollHandle, SharedString, Window, canvas, div, point,
+    prelude::*, px, rgb,
 };
 
 use super::{
@@ -222,7 +223,10 @@ pub(super) fn is_live(timestamp_ms: i64, now_ms: i64) -> bool {
 }
 
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 // ── Gövdenin hâli (saf) ─────────────────────────────────────────────────
@@ -252,7 +256,10 @@ pub(super) fn body_of(known: Option<usize>, failure: Option<FriendsFailure>) -> 
 
 /// Başlık yazısı: kimliği olmayan satır adı yerine boş bırakmaz.
 fn initial_of(name: &str) -> String {
-    name.chars().find(|c| c.is_alphanumeric()).map(|c| c.to_uppercase().collect()).unwrap_or_default()
+    name.chars()
+        .find(|c| c.is_alphanumeric())
+        .map(|c| c.to_uppercase().collect())
+        .unwrap_or_default()
 }
 
 // ── Gruplar ve yükseklik (saf) ──────────────────────────────────────────
@@ -340,12 +347,19 @@ fn item_height(item: Item, first: bool, list: &[Friend]) -> f32 {
 
 /// Sıradaki öğelerin toplam yüksekliği.
 pub(super) fn items_height(items: &[Item], list: &[Friend]) -> f32 {
-    items.iter().enumerate().map(|(i, &item)| item_height(item, i == 0, list)).sum()
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, &item)| item_height(item, i == 0, list))
+        .sum()
 }
 
 /// `ix`. arkadaşın bloğunun gövdenin üstünden uzaklığı (menü konumu için).
 fn entry_top(items: &[Item], list: &[Friend], ix: usize) -> f32 {
-    let at = items.iter().position(|&i| i == Item::Entry(ix)).unwrap_or(0);
+    let at = items
+        .iter()
+        .position(|&i| i == Item::Entry(ix))
+        .unwrap_or(0);
     BODY_TOP + items_height(&items[..at], list)
 }
 
@@ -381,7 +395,10 @@ pub(super) fn avatar_hue_step(name: &str) -> u32 {
 /// düşük.
 pub(super) fn avatar_colors(name: &str) -> (u32, u32) {
     let hue = avatar_hue_step(name) as f32 * (360. / HUE_STEPS as f32);
-    (mix(PLACEHOLDER, hsl_color(hue, 0.55, 0.52), 0.30), hsl_color(hue, 0.55, 0.82))
+    (
+        mix(PLACEHOLDER, hsl_color(hue, 0.55, 0.52), 0.30),
+        hsl_color(hue, 0.55, 0.82),
+    )
 }
 
 // ── Zaman yazısı (mutlak) ───────────────────────────────────────────────
@@ -394,7 +411,11 @@ fn clock_label(at_ms: i64, offset_minutes: i64) -> String {
 
 /// "Nov 12, 2026, 14:32" / "12 Kas 2026 14:32": zamanın üzerine gelince.
 fn absolute_label_in(at_ms: i64, offset_minutes: i64) -> String {
-    tf!(FriendsTimeAt, date_label(at_ms, offset_minutes), clock_label(at_ms, offset_minutes))
+    tf!(
+        FriendsTimeAt,
+        date_label(at_ms, offset_minutes),
+        clock_label(at_ms, offset_minutes)
+    )
 }
 
 // ── Durum ───────────────────────────────────────────────────────────────
@@ -413,7 +434,14 @@ pub(super) struct FriendsUi {
 
 impl FriendsUi {
     pub(super) fn new() -> Self {
-        Self { list: None, failure: None, schedule: Schedule::default(), timer: None, scroll: ScrollHandle::new(), fixture: false }
+        Self {
+            list: None,
+            failure: None,
+            schedule: Schedule::default(),
+            timer: None,
+            scroll: ScrollHandle::new(),
+            fixture: false,
+        }
     }
 
     fn friend(&self, ix: usize) -> Option<Friend> {
@@ -429,7 +457,8 @@ impl FriendsUi {
 
 /// Sınama koşusu mu? (Kanca gerçek ayar dosyasını etkileyemesin.)
 fn test_run() -> bool {
-    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
+    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+        || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
 }
 
 /// Kancanın doldurduğu durum.
@@ -466,7 +495,12 @@ pub(super) fn load_fixture(spec: &str, now_ms: i64) -> Option<Fixture> {
 impl Shell {
     /// Açılışta: sınama kancası varsa listeyi doldur ve ayarı bellekte aç.
     pub(super) fn init_friends_fixture(&mut self) {
-        let Some(spec) = std::env::var("OPENIFY_TEST_FRIENDS_JSON").ok().filter(|_| test_run()) else { return };
+        let Some(spec) = std::env::var("OPENIFY_TEST_FRIENDS_JSON")
+            .ok()
+            .filter(|_| test_run())
+        else {
+            return;
+        };
         let Some(fixture) = load_fixture(&spec, now_ms()) else {
             log::warn!("OPENIFY_TEST_FRIENDS_JSON okunamadı: {spec}");
             return;
@@ -501,18 +535,24 @@ impl Shell {
         let wake = match self.schedule_step(now) {
             Step::Idle => {
                 if self.friends.timer.take().is_some() {
-                    log::debug!("arkadaş etkinliği: yenileme durdu (panel ya da pencere görünmüyor)");
+                    log::debug!(
+                        "arkadaş etkinliği: yenileme durdu (panel ya da pencere görünmüyor)"
+                    );
                 }
                 return;
             }
             Step::Fetch => {
                 log::debug!("arkadaş etkinliği: istek gönderildi");
                 self.friends.schedule.started(now);
-                self.engine.send(Command::Library(LibraryCommand::OpenFriends));
+                self.engine
+                    .send(Command::Library(LibraryCommand::OpenFriends));
                 IN_FLIGHT_TIMEOUT
             }
             Step::Wait(d) => {
-                log::debug!("arkadaş etkinliği: {} sn sonra yeniden bakılacak", d.as_secs());
+                log::debug!(
+                    "arkadaş etkinliği: {} sn sonra yeniden bakılacak",
+                    d.as_secs()
+                );
                 d
             }
         };
@@ -607,7 +647,8 @@ impl Shell {
     pub(super) fn play_friend(&mut self, friend: &Friend) {
         match engine::play_plan(friend) {
             PlayPlan::Context { uri, track, hint } => {
-                self.engine.send(Command::PlayContextAt { uri, track, hint });
+                self.engine
+                    .send(Command::PlayContextAt { uri, track, hint });
             }
             PlayPlan::Track(uri) => {
                 if let Ok(uri) = librespot::core::SpotifyUri::from_uri(&uri) {
@@ -643,8 +684,15 @@ impl Shell {
     }
 
     /// Satırın sağ tık menüsü: çal, albüme git, sanatçıya git, profili Spotify'da aç.
-    pub(super) fn open_friend_menu(&mut self, ix: usize, at: Point<Pixels>, cx: &mut Context<Self>) {
-        let Some(f) = self.friends.friend(ix) else { return };
+    pub(super) fn open_friend_menu(
+        &mut self,
+        ix: usize,
+        at: Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
+        let Some(f) = self.friends.friend(ix) else {
+            return;
+        };
         let item = |icon: &'static str, label: String, act: Act| Entry::Item {
             icon,
             label,
@@ -653,34 +701,63 @@ impl Shell {
             act: Some(act),
             sub: Vec::new(),
         };
-        let mut entries = vec![item("play", t!(Play).into(), Act::PlayFriend(Box::new(f.clone())))];
+        let mut entries = vec![item(
+            "play",
+            t!(Play).into(),
+            Act::PlayFriend(Box::new(f.clone())),
+        )];
         if !f.album_uri.is_empty() {
-            entries.push(item("disc-3", t!(MenuGoAlbum).into(), Act::GoAlbumUri(f.album_uri.clone())));
+            entries.push(item(
+                "disc-3",
+                t!(MenuGoAlbum).into(),
+                Act::GoAlbumUri(f.album_uri.clone()),
+            ));
         }
         if !f.artist_uri.is_empty() {
-            entries.push(item("user", t!(MenuGoArtist).into(), Act::GoArtistUri(f.artist_uri.clone())));
+            entries.push(item(
+                "user",
+                t!(MenuGoArtist).into(),
+                Act::GoArtistUri(f.artist_uri.clone()),
+            ));
         }
         if crate::link::app_target(&f.user_uri).is_some() {
             entries.push(Entry::Separator);
-            entries.push(item("external-link", t!(FriendsMenuProfile).into(), Act::OpenInSpotify(f.user_uri.clone())));
+            entries.push(item(
+                "external-link",
+                t!(FriendsMenuProfile).into(),
+                Act::OpenInSpotify(f.user_uri.clone()),
+            ));
         }
         self.show_menu(at, entries, cx);
     }
 
     /// Klavye (panel odaktayken, satır odaklıysa): ↑ / ↓ komşu satıra, Shift+F10
     /// menü. İşlendiyse `true`. Enter / Boşluk'u gpui satırın tıklamasına çevirir.
-    pub(super) fn friends_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn friends_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if self.manage.modal() {
             return false;
         }
-        let Some((key, _)) = self.nav.extra_focused(window) else { return false };
-        let Some(ix) = key.strip_prefix("fr-row-").and_then(|n| n.parse::<usize>().ok()) else { return false };
+        let Some((key, _)) = self.nav.extra_focused(window) else {
+            return false;
+        };
+        let Some(ix) = key
+            .strip_prefix("fr-row-")
+            .and_then(|n| n.parse::<usize>().ok())
+        else {
+            return false;
+        };
         let ks = &event.keystroke;
         log::debug!("arkadaş satırı {ix}: tuş {:?}", ks.key);
         match (Shortcut::from_keystroke(ks), ks.key.as_str()) {
             (Some(Shortcut::RowMenu), _) => {
                 let viewport = window.viewport_size();
-                let (top, _) = self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
+                let (top, _) =
+                    self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
                 let (width, right) = self.now.dock.panel_box;
                 let offset = f32::from(self.friends.scroll.offset().y);
                 let list = self.friends.list.clone().unwrap_or_default();
@@ -690,10 +767,16 @@ impl Shell {
                 self.open_friend_menu(ix, point(px(x.max(S2)), px(y)), cx);
                 true
             }
-            (None, "up" | "down") if !ks.modifiers.shift && !ks.modifiers.control && !ks.modifiers.alt => {
+            (None, "up" | "down")
+                if !ks.modifiers.shift && !ks.modifiers.control && !ks.modifiers.alt =>
+            {
                 self.keyboard_focus = true;
                 self.nav.reveal.set(true);
-                if ks.key == "up" { window.focus_prev() } else { window.focus_next() }
+                if ks.key == "up" {
+                    window.focus_prev()
+                } else {
+                    window.focus_next()
+                }
                 cx.notify();
                 true
             }
@@ -704,7 +787,11 @@ impl Shell {
     // ── Görünüm ─────────────────────────────────────────────────────────
 
     /// Başlık çubuğundaki düğme (ayar açıkken).
-    pub(super) fn render_friends_button(&self, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(super) fn render_friends_button(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         if !self.prefs.friend_activity {
             return None;
         }
@@ -750,7 +837,10 @@ impl Shell {
             .child(
                 icon_button("friends-close", "x", look, accent)
                     .when_some(stop, |el, h| el.track_focus(&h))
-                    .tooltip(Tooltip::text(t!(Close), (!self.now.docked()).then_some("Esc")))
+                    .tooltip(Tooltip::text(
+                        t!(Close),
+                        (!self.now.docked()).then_some("Esc"),
+                    ))
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.leave_friends(cx);
                         window.focus(&this.focus);
@@ -771,7 +861,11 @@ impl Shell {
     }
 
     /// Panelin gövdesi: gruplu arkadaş blokları ya da ortada sakin bir durum.
-    pub(super) fn render_friends_body(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_friends_body(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let body = self.friends.body();
         if body != Body::Rows {
             return friends_state(body);
@@ -817,13 +911,22 @@ impl Shell {
     /// Bir arkadaşın bloğu: A) profil resmi, ad, zaman; B) şarkı kapağı, şarkı,
     /// sanatçı, bağlam. Blok ve kapak çalar; ad menüyü açar; sanatçı ve bağlam
     /// kendi sayfalarına gider.
-    fn friend_entry(&self, ix: usize, f: &Friend, now_ms: i64, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn friend_entry(
+        &self,
+        ix: usize,
+        f: &Friend,
+        now_ms: i64,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
-        let (stop, look) = self.stop_look(format!("fr-row-{ix}"), super::tab::PANEL, true, window, cx);
+        let (stop, look) =
+            self.stop_look(format!("fr-row-{ix}"), super::tab::PANEL, true, window, cx);
         let focused = look == Look::Focus;
         let live = is_live(f.timestamp_ms, now_ms);
         let age = (f.timestamp_ms > 0).then(|| age_label(age_of(now_ms - f.timestamp_ms)));
-        let at = (f.timestamp_ms > 0).then(|| absolute_label_in(f.timestamp_ms, local_offset_minutes()));
+        let at =
+            (f.timestamp_ms > 0).then(|| absolute_label_in(f.timestamp_ms, local_offset_minutes()));
 
         // A satırı: profil resmi, ad (menü), zaman.
         let time = div()
@@ -835,7 +938,9 @@ impl Shell {
             .type_role(T_LABEL)
             .tabular()
             .text_color(if live { muted() } else { label() })
-            .when(live, |el| el.child(div().size(px(S1 + S0)).rounded_full().bg(rgb(accent))))
+            .when(live, |el| {
+                el.child(div().size(px(S1 + S0)).rounded_full().bg(rgb(accent)))
+            })
             .children(age)
             .when_some(at, |el, at| el.tooltip(Tooltip::text(at, None)));
         let name = div()
@@ -853,8 +958,18 @@ impl Shell {
                     cx.stop_propagation();
                 }),
             )
-            .child(line_with_tip(("fr-name", ix), f.name.clone()).flex().min_w_0());
-        let line_a = div().flex().items_center().gap(px(S2)).child(self.avatar(f)).child(name).child(time);
+            .child(
+                line_with_tip(("fr-name", ix), f.name.clone())
+                    .flex()
+                    .min_w_0(),
+            );
+        let line_a = div()
+            .flex()
+            .items_center()
+            .gap(px(S2))
+            .child(self.avatar(f))
+            .child(name)
+            .child(time);
 
         // B satırı: kapak (üzerine gelince çal), şarkı, sanatçı, bağlam.
         let group: SharedString = format!("fr-cover-{ix}").into();
@@ -865,7 +980,14 @@ impl Shell {
             .size(px(COVER))
             .rounded(px(R_SM))
             .group(group.clone())
-            .child(cover_image(&self.images, &f.track_image, &f.album_uri, COVER, R_SM, "music"))
+            .child(cover_image(
+                &self.images,
+                &f.track_image,
+                &f.album_uri,
+                COVER,
+                R_SM,
+                "music",
+            ))
             .child(
                 div()
                     .absolute()
@@ -889,10 +1011,11 @@ impl Shell {
                     ),
             )
             .tooltip(Tooltip::text(t!(FriendsPlayTip), None));
-        let title = div()
-            .type_role(T_BODY)
-            .text_color(text())
-            .child(line_with_tip(("fr-song", ix), f.track.clone()).flex().min_w_0());
+        let title = div().type_role(T_BODY).text_color(text()).child(
+            line_with_tip(("fr-song", ix), f.track.clone())
+                .flex()
+                .min_w_0(),
+        );
         let artist = (!f.artist.is_empty()).then(|| {
             let names = [f.artist.as_str()];
             let on_click: SpanHandler = if f.artist_uri.is_empty() {
@@ -903,22 +1026,35 @@ impl Shell {
                     let _ = this.update(cx, |shell, cx| shell.go_friend_artist(uri.clone(), cx));
                 })
             };
-            div()
-                .type_role(T_SECONDARY)
-                .text_color(muted())
-                .child(link_line(("fr-artist", ix), &names, on_click, None).flex().min_w_0())
+            div().type_role(T_SECONDARY).text_color(muted()).child(
+                link_line(("fr-artist", ix), &names, on_click, None)
+                    .flex()
+                    .min_w_0(),
+            )
         });
         let context = context_name(f).map(|name| {
-            let kind = f.context_uri.as_deref().map_or(ContextKind::Other, context_kind);
+            let kind = f
+                .context_uri
+                .as_deref()
+                .map_or(ContextKind::Other, context_kind);
             let line: AnyElement = match (&f.context_uri, kind) {
                 (Some(uri), kind) if kind != ContextKind::Other => {
-                    let (uri, title, this) = (uri.clone(), name.to_string(), cx.entity().downgrade());
+                    let (uri, title, this) =
+                        (uri.clone(), name.to_string(), cx.entity().downgrade());
                     let on_click: SpanHandler = Rc::new(move |_, _, cx| {
-                        let _ = this.update(cx, |shell, cx| shell.go_friend_context(uri.clone(), title.clone(), cx));
+                        let _ = this.update(cx, |shell, cx| {
+                            shell.go_friend_context(uri.clone(), title.clone(), cx)
+                        });
                     });
-                    link_line(("fr-context", ix), &[name], on_click, None).flex().min_w_0().into_any_element()
+                    link_line(("fr-context", ix), &[name], on_click, None)
+                        .flex()
+                        .min_w_0()
+                        .into_any_element()
                 }
-                _ => line_with_tip(("fr-context", ix), name.to_string()).flex().min_w_0().into_any_element(),
+                _ => line_with_tip(("fr-context", ix), name.to_string())
+                    .flex()
+                    .min_w_0()
+                    .into_any_element(),
             };
             div()
                 .flex()
@@ -938,7 +1074,13 @@ impl Shell {
             .child(title)
             .children(artist)
             .children(context);
-        let line_b = div().pl(px(AVATAR + S2)).flex().items_center().gap(px(S3)).child(cover).child(texts);
+        let line_b = div()
+            .pl(px(AVATAR + S2))
+            .flex()
+            .items_center()
+            .gap(px(S3))
+            .child(cover)
+            .child(texts);
 
         let friend = f.clone();
         div()
@@ -952,10 +1094,19 @@ impl Shell {
             .flex_col()
             .gap(px(LINE_GAP))
             .border_2()
-            .border_color(if focused { rgb(accent).into() } else { gpui::transparent_black() })
+            .border_color(if focused {
+                rgb(accent).into()
+            } else {
+                gpui::transparent_black()
+            })
             .when(focused, |el| el.bg(veil(VEIL_SELECTED)))
             .cursor_pointer()
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+            .child(super::tween::hover_fill(
+                veil(VEIL_HOVER),
+                veil(VEIL_PRESSED),
+                0.,
+                R_MD,
+            ))
             .when_some(stop.as_ref(), |el, h| el.child(self.friends_probe(h)))
             .when_some(stop, |el, h| el.track_focus(&h))
             .on_click(cx.listener(move |this, _, _, cx| {
@@ -978,7 +1129,14 @@ impl Shell {
     /// sakin bir daire içinde baş harf.
     fn avatar(&self, f: &Friend) -> AnyElement {
         if self.images.get(&f.image).is_some() {
-            return cover_image(&self.images, &f.image, &f.user_uri, AVATAR, AVATAR / 2., "user");
+            return cover_image(
+                &self.images,
+                &f.image,
+                &f.user_uri,
+                AVATAR,
+                AVATAR / 2.,
+                "user",
+            );
         }
         let (fill, ink) = avatar_colors(&f.name);
         div()
@@ -1095,7 +1253,11 @@ mod tests {
     fn nothing_is_asked_unless_wanted() {
         let t0 = Instant::now();
         let s = Schedule::default();
-        assert_eq!(s.step(false, t0), Step::Idle, "kapalı / görünmez: hiçbir şey sorulmaz");
+        assert_eq!(
+            s.step(false, t0),
+            Step::Idle,
+            "kapalı / görünmez: hiçbir şey sorulmaz"
+        );
         assert_eq!(s.step(true, t0), Step::Fetch, "ilk görünüşte hemen sorulur");
     }
 
@@ -1105,7 +1267,10 @@ mod tests {
         let mut s = Schedule::default();
         s.started(t0);
         // Cevap beklenirken ikinci istek yok; bekleme kayıp eşiğine kadar.
-        assert_eq!(s.step(true, at(t0, 5)), Step::Wait(IN_FLIGHT_TIMEOUT - 5 * S));
+        assert_eq!(
+            s.step(true, at(t0, 5)),
+            Step::Wait(IN_FLIGHT_TIMEOUT - 5 * S)
+        );
         s.succeeded(at(t0, 2));
         assert_eq!(s.step(true, at(t0, 2)), Step::Wait(REFRESH));
         assert_eq!(s.step(true, at(t0, 61)), Step::Wait(S));
@@ -1134,7 +1299,11 @@ mod tests {
         let mut s = Schedule::default();
         s.started(t0);
         assert!(matches!(s.step(true, at(t0, 89)), Step::Wait(_)));
-        assert_eq!(s.step(true, at(t0, 90)), Step::Fetch, "cevap gelmedi: yeniden sorulabilir");
+        assert_eq!(
+            s.step(true, at(t0, 90)),
+            Step::Fetch,
+            "cevap gelmedi: yeniden sorulabilir"
+        );
         // Görünmezken de kayıp istek yeni bir şey başlatmaz.
         assert_eq!(s.step(false, at(t0, 200)), Step::Idle);
     }
@@ -1153,19 +1322,38 @@ mod tests {
                 }
             })
             .collect();
-        assert_eq!(delays, [120, 240, 480, 600, 600, 600], "katlanır, 10 dk'da durur");
+        assert_eq!(
+            delays,
+            [120, 240, 480, 600, 600, 600],
+            "katlanır, 10 dk'da durur"
+        );
         s.started(t0);
         s.succeeded(t0);
-        assert_eq!(s.step(true, t0), Step::Wait(REFRESH), "başarı aralığı sıfırlar");
+        assert_eq!(
+            s.step(true, t0),
+            Step::Wait(REFRESH),
+            "başarı aralığı sıfırlar"
+        );
         s.started(t0);
         s.failed(t0, FriendsFailure::Offline);
-        assert_eq!(s.step(true, t0), Step::Wait(2 * REFRESH), "hata sayacı da sıfırlandı");
+        assert_eq!(
+            s.step(true, t0),
+            Step::Wait(2 * REFRESH),
+            "hata sayacı da sıfırlandı"
+        );
     }
 
     #[test]
     fn rate_limits_and_denials_wait_longer() {
-        assert_eq!(retry_delay(1, FriendsFailure::RateLimited), RATE_LIMIT_MIN, "429: en az 5 dk");
-        assert_eq!(retry_delay(3, FriendsFailure::RateLimited), Duration::from_secs(480));
+        assert_eq!(
+            retry_delay(1, FriendsFailure::RateLimited),
+            RATE_LIMIT_MIN,
+            "429: en az 5 dk"
+        );
+        assert_eq!(
+            retry_delay(3, FriendsFailure::RateLimited),
+            Duration::from_secs(480)
+        );
         assert_eq!(retry_delay(1, FriendsFailure::Denied), BACKOFF_MAX);
         assert_eq!(retry_delay(1, FriendsFailure::Unavailable), BACKOFF_MAX);
         assert_eq!(retry_delay(1, FriendsFailure::Offline), 2 * REFRESH);
@@ -1225,7 +1413,10 @@ mod tests {
         assert!(is_live(now - LIVE_WINDOW_MS, now));
         assert!(!is_live(now - LIVE_WINDOW_MS - 1, now));
         assert!(!is_live(0, now), "zamanı bilinmeyen canlı sayılmaz");
-        assert!(!is_live(now + 5_000, now), "gelecekteki damga canlı sayılmaz");
+        assert!(
+            !is_live(now + 5_000, now),
+            "gelecekteki damga canlı sayılmaz"
+        );
     }
 
     // ── Gövde hâlleri ──────────────────────────────────────────────────
@@ -1237,8 +1428,14 @@ mod tests {
         assert_eq!(body_of(Some(3), None), Body::Rows);
         // Eski liste varsa hata sırasında o gösterilir; yoksa tek satır hata.
         assert_eq!(body_of(Some(3), Some(FriendsFailure::Offline)), Body::Rows);
-        assert_eq!(body_of(None, Some(FriendsFailure::Denied)), Body::Failed(FriendsFailure::Denied));
-        assert_eq!(body_of(Some(0), Some(FriendsFailure::RateLimited)), Body::Failed(FriendsFailure::RateLimited));
+        assert_eq!(
+            body_of(None, Some(FriendsFailure::Denied)),
+            Body::Failed(FriendsFailure::Denied)
+        );
+        assert_eq!(
+            body_of(Some(0), Some(FriendsFailure::RateLimited)),
+            Body::Failed(FriendsFailure::RateLimited)
+        );
     }
 
     #[test]
@@ -1252,9 +1449,18 @@ mod tests {
 
     #[test]
     fn fixture_specs() {
-        assert_eq!(load_fixture("!error", 0), Some(Fixture::Failed(FriendsFailure::Offline)));
-        assert_eq!(load_fixture("!busy", 0), Some(Fixture::Failed(FriendsFailure::RateLimited)));
-        assert_eq!(load_fixture("!denied", 0), Some(Fixture::Failed(FriendsFailure::Denied)));
+        assert_eq!(
+            load_fixture("!error", 0),
+            Some(Fixture::Failed(FriendsFailure::Offline))
+        );
+        assert_eq!(
+            load_fixture("!busy", 0),
+            Some(Fixture::Failed(FriendsFailure::RateLimited))
+        );
+        assert_eq!(
+            load_fixture("!denied", 0),
+            Some(Fixture::Failed(FriendsFailure::Denied))
+        );
         assert_eq!(load_fixture("!loading", 0), Some(Fixture::Loading));
         assert_eq!(load_fixture("yok-boyle-bir-dosya.json", 0), None);
     }
@@ -1269,27 +1475,44 @@ mod tests {
             {"ageSeconds":30,"user":{"uri":"spotify:user:b","name":"B"},"track":{"uri":"spotify:track:y","name":"M"}}]}"#;
         std::fs::write(&path, body).unwrap();
         let now = 1_762_900_000_000;
-        let Some(Fixture::Feed(list)) = load_fixture(path.to_str().unwrap(), now) else { panic!("liste bekleniyordu") };
+        let Some(Fixture::Feed(list)) = load_fixture(path.to_str().unwrap(), now) else {
+            panic!("liste bekleniyordu")
+        };
         std::fs::remove_dir_all(&dir).ok();
         assert_eq!(list.len(), 2);
         // En yeni önde: B 30 sn, A 600 sn önce.
-        assert_eq!((list[0].name.as_str(), list[0].timestamp_ms), ("B", now - 30_000));
-        assert_eq!((list[1].name.as_str(), list[1].timestamp_ms), ("A", now - 600_000));
+        assert_eq!(
+            (list[0].name.as_str(), list[0].timestamp_ms),
+            ("B", now - 30_000)
+        );
+        assert_eq!(
+            (list[1].name.as_str(), list[1].timestamp_ms),
+            ("A", now - 600_000)
+        );
     }
 
     /// Ekran sınaması fikstürü gerçek bir kullanım gibi çözülür ve hem şu an
     /// dinleyenleri hem eski kayıtları içerir (görsel durumların hepsi görünür).
     #[test]
     fn demo_fixture_covers_the_visual_states() {
-        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/engine/fixtures/friend_activity_demo.json");
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/engine/fixtures/friend_activity_demo.json"
+        );
         let now = 1_762_900_000_000;
-        let Some(Fixture::Feed(list)) = load_fixture(path, now) else { panic!("liste bekleniyordu") };
+        let Some(Fixture::Feed(list)) = load_fixture(path, now) else {
+            panic!("liste bekleniyordu")
+        };
         assert_eq!(list.len(), 9);
         let live = list.iter().filter(|f| is_live(f.timestamp_ms, now)).count();
         assert_eq!(live, 2, "iki arkadaş şu an dinliyor");
         let ages: Vec<Age> = list.iter().map(|f| age_of(now - f.timestamp_ms)).collect();
-        assert!(ages.contains(&Age::Now) && ages.iter().any(|a| matches!(a, Age::Minutes(_)))
-            && ages.iter().any(|a| matches!(a, Age::Hours(_))) && ages.iter().any(|a| matches!(a, Age::Days(_))));
+        assert!(
+            ages.contains(&Age::Now)
+                && ages.iter().any(|a| matches!(a, Age::Minutes(_)))
+                && ages.iter().any(|a| matches!(a, Age::Hours(_)))
+                && ages.iter().any(|a| matches!(a, Age::Days(_)))
+        );
     }
 
     // ── Kaplı liste (v2): gruplar, yükseklik, baş harf tonu, yerleşim ─────
@@ -1338,41 +1561,82 @@ mod tests {
             ]
         );
         // Sınır: tam 3 dk hâlâ canlı, 1 ms sonrası eski; zamanı bilinmeyen eski.
-        let edge = [friend("A", 180, None), Friend { timestamp_ms: NOW - 180_001, ..friend("B", 0, None) }, Friend { timestamp_ms: 0, ..friend("C", 0, None) }];
+        let edge = [
+            friend("A", 180, None),
+            Friend {
+                timestamp_ms: NOW - 180_001,
+                ..friend("B", 0, None)
+            },
+            Friend {
+                timestamp_ms: 0,
+                ..friend("C", 0, None)
+            },
+        ];
         assert_eq!(
             plan_items(&edge, NOW),
-            [Item::Head(Group::Live), Item::Entry(0), Item::Head(Group::Earlier), Item::Entry(1), Item::Entry(2)]
+            [
+                Item::Head(Group::Live),
+                Item::Entry(0),
+                Item::Head(Group::Earlier),
+                Item::Entry(1),
+                Item::Entry(2)
+            ]
         );
     }
 
     #[test]
     fn an_empty_group_is_omitted() {
         let only_live = [friend("A", 10, None), friend("B", 60, None)];
-        assert_eq!(plan_items(&only_live, NOW), [Item::Head(Group::Live), Item::Entry(0), Item::Entry(1)]);
+        assert_eq!(
+            plan_items(&only_live, NOW),
+            [Item::Head(Group::Live), Item::Entry(0), Item::Entry(1)]
+        );
         let only_earlier = [friend("A", 600, None), friend("B", 7_200, None)];
-        assert_eq!(plan_items(&only_earlier, NOW), [Item::Head(Group::Earlier), Item::Entry(0), Item::Entry(1)]);
+        assert_eq!(
+            plan_items(&only_earlier, NOW),
+            [Item::Head(Group::Earlier), Item::Entry(0), Item::Entry(1)]
+        );
         assert!(plan_items(&[], NOW).is_empty());
     }
 
     #[test]
     fn heights_follow_the_items_and_the_panel_hugs_its_content() {
         // Bağlam satırı varsa yazılar (54) kapaktan (48) yüksek: blok 6 px uzar.
-        assert_eq!(entry_height(false), 2. * ENTRY_PAD + AVATAR + LINE_GAP + COVER);
-        assert_eq!(entry_height(true) - entry_height(false), TEXT_LINES_FULL - COVER);
+        assert_eq!(
+            entry_height(false),
+            2. * ENTRY_PAD + AVATAR + LINE_GAP + COVER
+        );
+        assert_eq!(
+            entry_height(true) - entry_height(false),
+            TEXT_LINES_FULL - COVER
+        );
         let list = [friend("A", 10, Some("p")), friend("B", 600, None)];
         let items = plan_items(&list, NOW);
         // İlk başlıkta üst boşluk yok, ikincisinde var.
-        assert_eq!(items_height(&items, &list), 2. * HEAD_HEIGHT + HEAD_GAP + entry_height(true) + entry_height(false));
+        assert_eq!(
+            items_height(&items, &list),
+            2. * HEAD_HEIGHT + HEAD_GAP + entry_height(true) + entry_height(false)
+        );
         assert_eq!(entry_top(&items, &list, 0), BODY_TOP + HEAD_HEIGHT);
-        assert_eq!(entry_top(&items, &list, 1), BODY_TOP + HEAD_HEIGHT + entry_height(true) + HEAD_GAP + HEAD_HEIGHT);
+        assert_eq!(
+            entry_top(&items, &list, 1),
+            BODY_TOP + HEAD_HEIGHT + entry_height(true) + HEAD_GAP + HEAD_HEIGHT
+        );
         // Panel içerik kadar: sığıyorsa o, sığmıyorsa alanın tamamı (kayar).
         let h = items_height(&items, &list);
         let want = BORDER + ROW_HEIGHT + BODY_TOP + h + BODY_BOTTOM;
         assert_eq!(panel_height(Body::Rows, h, 2000.), want);
         assert_eq!(panel_height(Body::Rows, h, 300.), 300.);
         // Durum ekranları sabit, kısa bir kart.
-        for body in [Body::Empty, Body::Loading, Body::Failed(FriendsFailure::Offline)] {
-            assert_eq!(panel_height(body, 0., 2000.), BORDER + ROW_HEIGHT + STATE_BODY);
+        for body in [
+            Body::Empty,
+            Body::Loading,
+            Body::Failed(FriendsFailure::Offline),
+        ] {
+            assert_eq!(
+                panel_height(body, 0., 2000.),
+                BORDER + ROW_HEIGHT + STATE_BODY
+            );
         }
     }
 
@@ -1382,20 +1646,52 @@ mod tests {
         assert_eq!(avatar_colors("Maya"), avatar_colors("Maya"));
         assert_eq!(avatar_hue_step("Maya"), avatar_hue_step("  maya "));
         // Bilinen değerler: hash sürümler arası değişmemeli (renk titremesin).
-        let steps: Vec<u32> = ["Maya", "Leo", "Ivy Okafor", "Noah", "Sofia", "Arlo", "June", ""].iter().map(|n| avatar_hue_step(n)).collect();
+        let steps: Vec<u32> = [
+            "Maya",
+            "Leo",
+            "Ivy Okafor",
+            "Noah",
+            "Sofia",
+            "Arlo",
+            "June",
+            "",
+        ]
+        .iter()
+        .map(|n| avatar_hue_step(n))
+        .collect();
         assert_eq!(steps, [5, 15, 15, 19, 21, 7, 5, 13]);
         // Ton 24 adımdan biri; birkaç ad farklı tonlara dağılır.
         assert!(steps.iter().all(|s| *s < HUE_STEPS));
         assert!(steps.iter().collect::<std::collections::HashSet<_>>().len() >= 5);
         // Sakin: zemin yüzey tonuna yakın (her kanal yüzeyden en çok 55 uzak),
         // harf zeminden belirgin açık (okunur).
-        for name in ["Maya", "Leo", "Ivy Okafor", "Noah", "Sofia", "Arlo", "June", "Zeynep", "Can"] {
+        for name in [
+            "Maya",
+            "Leo",
+            "Ivy Okafor",
+            "Noah",
+            "Sofia",
+            "Arlo",
+            "June",
+            "Zeynep",
+            "Can",
+        ] {
             let (fill, ink) = avatar_colors(name);
             for shift in [16, 8, 0] {
-                let (a, b) = (((fill >> shift) & 0xFF) as i32, ((PLACEHOLDER >> shift) & 0xFF) as i32);
-                assert!((a - b).abs() <= 55, "{name}: kanal {shift} yüzeyden uzak ({a} / {b})");
+                let (a, b) = (
+                    ((fill >> shift) & 0xFF) as i32,
+                    ((PLACEHOLDER >> shift) & 0xFF) as i32,
+                );
+                assert!(
+                    (a - b).abs() <= 55,
+                    "{name}: kanal {shift} yüzeyden uzak ({a} / {b})"
+                );
             }
-            assert!(contrast(ink, fill) >= 4.5, "{name}: baş harf okunmuyor ({:.2})", contrast(ink, fill));
+            assert!(
+                contrast(ink, fill) >= 4.5,
+                "{name}: baş harf okunmuyor ({:.2})",
+                contrast(ink, fill)
+            );
         }
     }
 
@@ -1404,12 +1700,21 @@ mod tests {
         assert_eq!(context_kind("spotify:playlist:x"), ContextKind::Playlist);
         assert_eq!(context_kind("spotify:album:x"), ContextKind::Album);
         assert_eq!(context_kind("spotify:artist:x"), ContextKind::Artist);
-        assert_eq!(context_kind("spotify:user:x:collection"), ContextKind::Other);
+        assert_eq!(
+            context_kind("spotify:user:x:collection"),
+            ContextKind::Other
+        );
         assert_eq!(context_icon(ContextKind::Playlist), "list-music");
         assert_eq!(context_icon(ContextKind::Other), "music");
         // Adı olmayan bağlam gösterilmez.
         assert_eq!(context_name(&friend("A", 1, Some("Liste"))), Some("Liste"));
-        assert_eq!(context_name(&Friend { context_name: Some(String::new()), ..friend("A", 1, None) }), None);
+        assert_eq!(
+            context_name(&Friend {
+                context_name: Some(String::new()),
+                ..friend("A", 1, None)
+            }),
+            None
+        );
     }
 
     #[test]
@@ -1420,8 +1725,12 @@ mod tests {
         assert_eq!(clock_label(at, 0), "23:32");
         assert_eq!(clock_label(at, 180), "02:32");
         assert_eq!(clock_label(at, -300), "18:32");
-        with_lang(Lang::En, || assert_eq!(absolute_label_in(at, 180), "Nov 12, 2025, 02:32"));
-        with_lang(Lang::Tr, || assert_eq!(absolute_label_in(at, 180), "12 Kas 2025 02:32"));
+        with_lang(Lang::En, || {
+            assert_eq!(absolute_label_in(at, 180), "Nov 12, 2025, 02:32")
+        });
+        with_lang(Lang::Tr, || {
+            assert_eq!(absolute_label_in(at, 180), "12 Kas 2025 02:32")
+        });
     }
 
     /// Yerleşim kararı (900 / 1180 / 1920): içerik alanı en dar pencere eninin
@@ -1429,7 +1738,9 @@ mod tests {
     /// çalıyor paneli kendi eşiğinde (1720) kalır.
     #[test]
     fn friends_dock_decision_at_common_window_widths() {
-        use super::super::now_panel::{DockKind, FRIENDS_DOCK_MIN_WIDTH, FRIENDS_PANEL_WIDTH, dock_layout_at, dock_layout_for};
+        use super::super::now_panel::{
+            DockKind, FRIENDS_DOCK_MIN_WIDTH, FRIENDS_PANEL_WIDTH, dock_layout_at, dock_layout_for,
+        };
         let friends = |w: f32| dock_layout_for(DockKind::FRIENDS, w, true, 1.);
         // 900×700: yerleşemez (içerik 524 px kalırdı), yüzer; içerik daralmaz.
         let l = friends(900.);
@@ -1464,6 +1775,8 @@ mod tests {
         assert!(!dock_layout_at(1180., true, 1.).docked);
         assert!(!dock_layout_at(1600., true, 1.).docked);
         // …1920'de yerleşir ve hapı daraltır.
-        assert!(dock_layout_at(1920., true, 1.).docked && dock_layout_at(1920., true, 1.).beside_pill);
+        assert!(
+            dock_layout_at(1920., true, 1.).docked && dock_layout_at(1920., true, 1.).beside_pill
+        );
     }
 }

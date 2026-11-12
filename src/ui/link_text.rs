@@ -51,7 +51,10 @@ pub fn join_names<'a>(names: impl IntoIterator<Item = &'a str>) -> (String, Vec<
 
 /// "A, B" yazısını adlara böler (`TrackRow::artists` biçimi).
 pub fn split_names(text: &str) -> Vec<&str> {
-    text.split(", ").map(str::trim).filter(|n| !n.is_empty()).collect()
+    text.split(", ")
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+        .collect()
 }
 
 /// Tıklanabilen adlı tek satır; kısaltıldıysa üzerine gelince tamamı ipucunda.
@@ -68,9 +71,18 @@ pub fn link_line(
     let full = text.clone();
     InteractiveElement::id(div(), id)
         .min_w_0()
-        .child(LinkLine { text, spans, on_click, on_hover, truncated })
+        .child(LinkLine {
+            text,
+            spans,
+            on_click,
+            on_hover,
+            truncated,
+        })
         .tooltip(move |_, cx| {
-            let tip = FullText { text: full.clone(), show: flag.get() };
+            let tip = FullText {
+                text: full.clone(),
+                show: flag.get(),
+            };
             cx.new(|_| tip).into()
         })
 }
@@ -134,18 +146,19 @@ impl Element for LinkLine {
         style.size.height = line_height.into();
         style.min_size.width = px(0.).into();
         style.flex_shrink = 1.;
-        let layout_id = window.request_measured_layout(style, move |known, available, window, _| {
-            let natural = window
-                .text_system()
-                .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
-                .width;
-            let width = known.width.unwrap_or(match available.width {
-                AvailableSpace::Definite(space) => natural.min(space),
-                AvailableSpace::MinContent => px(0.),
-                AvailableSpace::MaxContent => natural,
+        let layout_id =
+            window.request_measured_layout(style, move |known, available, window, _| {
+                let natural = window
+                    .text_system()
+                    .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
+                    .width;
+                let width = known.width.unwrap_or(match available.width {
+                    AvailableSpace::Definite(space) => natural.min(space),
+                    AvailableSpace::MinContent => px(0.),
+                    AvailableSpace::MaxContent => natural,
+                });
+                size(width, line_height)
             });
-            size(width, line_height)
-        });
         (layout_id, ())
     }
 
@@ -164,7 +177,10 @@ impl Element for LinkLine {
         let mut runs = vec![style.to_run(self.text.len())];
         // Sığan yazı kısaltılmaz: `truncate_line` kesirli ölçekte (%125) kutu tam
         // yazı enindeyken sığanı da kısaltabiliyordu (bkz. `text.rs`).
-        let full_width = window.text_system().shape_line(self.text.clone(), font_size, &runs, None).width;
+        let full_width = window
+            .text_system()
+            .shape_line(self.text.clone(), font_size, &runs, None)
+            .width;
         let shown = if full_width <= bounds.size.width + px(1.) {
             self.text.clone()
         } else {
@@ -175,8 +191,14 @@ impl Element for LinkLine {
         let truncated = shown != self.text;
         self.truncated.set(truncated);
         // Kısaltıldıysa yazının ilk `visible` baytı görünüyor ("…" hariç).
-        let visible = if truncated { shown.len().saturating_sub(ELLIPSIS.len()) } else { shown.len() };
-        let shaped = window.text_system().shape_line(shown, font_size, &runs, None);
+        let visible = if truncated {
+            shown.len().saturating_sub(ELLIPSIS.len())
+        } else {
+            shown.len()
+        };
+        let shaped = window
+            .text_system()
+            .shape_line(shown, font_size, &runs, None);
         let mut spans = Vec::new();
         for (i, range) in self.spans.iter().enumerate() {
             if range.start >= visible {
@@ -188,10 +210,17 @@ impl Element for LinkLine {
             if x1 <= x0 {
                 continue;
             }
-            let hit = Bounds::new(point(bounds.origin.x + x0, bounds.origin.y), size(x1 - x0, bounds.size.height));
+            let hit = Bounds::new(
+                point(bounds.origin.x + x0, bounds.origin.y),
+                size(x1 - x0, bounds.size.height),
+            );
             spans.push((i, x0, x1, window.insert_hitbox(hit, HitboxBehavior::Normal)));
         }
-        Prepainted { shaped, line_height, spans }
+        Prepainted {
+            shaped,
+            line_height,
+            spans,
+        }
     }
 
     fn paint(
@@ -205,8 +234,14 @@ impl Element for LinkLine {
         cx: &mut App,
     ) {
         let color = window.text_style().color;
-        let _ = state.shaped.paint(bounds.origin, state.line_height, window, cx);
-        let hovered = state.spans.iter().find(|(_, _, _, h)| h.is_hovered(window)).map(|(i, ..)| *i);
+        let _ = state
+            .shaped
+            .paint(bounds.origin, state.line_height, window, cx);
+        let hovered = state
+            .spans
+            .iter()
+            .find(|(_, _, _, h)| h.is_hovered(window))
+            .map(|(i, ..)| *i);
         for (i, x0, x1, hitbox) in &state.spans {
             window.set_cursor_style(CursorStyle::PointingHand, hitbox);
             if hovered == Some(*i) {
@@ -218,8 +253,13 @@ impl Element for LinkLine {
                 ));
             }
         }
-        let hitboxes: Rc<Vec<(usize, Hitbox)>> =
-            Rc::new(state.spans.iter().map(|(i, _, _, h)| (*i, h.clone())).collect());
+        let hitboxes: Rc<Vec<(usize, Hitbox)>> = Rc::new(
+            state
+                .spans
+                .iter()
+                .map(|(i, _, _, h)| (*i, h.clone()))
+                .collect(),
+        );
 
         // Tıklama: satırın kendi tıklamasından önce (üstteki öğe önce alır).
         let on_click = self.on_click.clone();
@@ -240,7 +280,10 @@ impl Element for LinkLine {
             if phase != DispatchPhase::Bubble {
                 return;
             }
-            let now = hitboxes.iter().find(|(_, h)| h.is_hovered(window)).map(|(i, _)| *i);
+            let now = hitboxes
+                .iter()
+                .find(|(_, h)| h.is_hovered(window))
+                .map(|(i, _)| *i);
             if now != painted.get() {
                 painted.set(now);
                 window.refresh();

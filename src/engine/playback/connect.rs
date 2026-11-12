@@ -22,7 +22,9 @@ use std::sync::Arc;
 
 use librespot::connect::{ClusterView, SpircEvent};
 
-use super::{Cx, Driver, Effect, Local, LocalSnapshot, Playback, RemoteDrive, SpircDrive, TransportCmd};
+use super::{
+    Cx, Driver, Effect, Local, LocalSnapshot, Playback, RemoteDrive, SpircDrive, TransportCmd,
+};
 use crate::engine::{ConnectDriver, ConnectPort, ConnectStatus, Event, QueueState, RemoteNow};
 
 /// Spotify Connect tarafının `Playback`teki durumu.
@@ -42,17 +44,29 @@ pub(in crate::engine) struct Link {
 
 impl Default for Link {
     fn default() -> Self {
-        Self { port: None, self_id: String::new(), name: String::new(), cluster: None, shown: ConnectStatus::default() }
+        Self {
+            port: None,
+            self_id: String::new(),
+            name: String::new(),
+            cluster: None,
+            shown: ConnectStatus::default(),
+        }
     }
 }
 
 /// Kümede başka bir aygıt çalıyorsa (kimliği, adı).
 fn other_playing(link: &Link) -> Option<(String, String)> {
     let c = link.cluster.as_ref()?;
-    if c.active_device_id.is_empty() || c.active_device_id == link.self_id || !c.playing || c.paused {
+    if c.active_device_id.is_empty() || c.active_device_id == link.self_id || !c.playing || c.paused
+    {
         return None;
     }
-    let name = c.devices.iter().find(|d| d.id == c.active_device_id)?.name.clone();
+    let name = c
+        .devices
+        .iter()
+        .find(|d| d.id == c.active_device_id)?
+        .name
+        .clone();
     (!name.is_empty()).then(|| (c.active_device_id.clone(), name))
 }
 
@@ -63,9 +77,18 @@ impl Playback {
         let (driver, remote) = match &self.driver {
             Driver::Local(_) => (ConnectDriver::Local, None),
             Driver::Spirc(_) => (ConnectDriver::Spirc, None),
-            Driver::Remote(r) => (ConnectDriver::Remote, Some(RemoteNow { device_name: r.device_name.clone() })),
+            Driver::Remote(r) => (
+                ConnectDriver::Remote,
+                Some(RemoteNow {
+                    device_name: r.device_name.clone(),
+                }),
+            ),
         };
-        ConnectStatus { driver, device_name: self.link.name.clone(), remote }
+        ConnectStatus {
+            driver,
+            device_name: self.link.name.clone(),
+            remote,
+        }
     }
 
     /// Durum değiştiyse arayüze bildir.
@@ -78,7 +101,13 @@ impl Playback {
     }
 
     /// Spirc başladı: `name` Spotify'da görünen adımız, `self_id` Connect kimliğimiz.
-    pub fn connect_up(&mut self, cx: &mut Cx<'_>, port: Arc<dyn ConnectPort>, self_id: String, name: String) {
+    pub fn connect_up(
+        &mut self,
+        cx: &mut Cx<'_>,
+        port: Arc<dyn ConnectPort>,
+        self_id: String,
+        name: String,
+    ) {
         self.link.port = Some(port);
         self.link.self_id = self_id;
         self.link.name = name;
@@ -106,7 +135,10 @@ impl Playback {
             return;
         }
         let Some(deck) = &self.deck else { return };
-        let snapshot = LocalSnapshot { track: self.track_info.clone(), position_ms: self.position_now() };
+        let snapshot = LocalSnapshot {
+            track: self.track_info.clone(),
+            position_ms: self.position_now(),
+        };
         // Yerel çalma artık sürmüyor: önyükleme, yükleme izleme, kurtarma
         // durumu bırakılır; kaldığı yer kaydı donar (bkz. `Engine::persist_at`).
         self.restored = None;
@@ -124,9 +156,18 @@ impl Playback {
         // çalmasın; derin şarkı sonu payı da iner.
         deck.out.set_tail(false);
         deck.foreign_flush();
-        self.driver = Driver::Spirc(SpircDrive { snapshot, silenced: false, load_expected: true });
+        self.driver = Driver::Spirc(SpircDrive {
+            snapshot,
+            silenced: false,
+            load_expected: true,
+        });
         // Sıra telefonun: ileri / geri düğmeleri açık, bizim sıramız gösterilmez.
-        cx.emit(Event::QueueChanged(QueueState { context: None, index: 0, has_next: true, has_previous: true }));
+        cx.emit(Event::QueueChanged(QueueState {
+            context: None,
+            index: 0,
+            has_next: true,
+            has_previous: true,
+        }));
         self.publish_connect(cx);
     }
 
@@ -136,7 +177,9 @@ impl Playback {
         if !matches!(self.driver, Driver::Spirc(_)) {
             return;
         }
-        let Driver::Spirc(drive) = std::mem::replace(&mut self.driver, Driver::Local(Local)) else { return };
+        let Driver::Spirc(drive) = std::mem::replace(&mut self.driver, Driver::Local(Local)) else {
+            return;
+        };
         if let Some(deck) = &self.deck {
             // Telefonun sesinin kuyruktaki kalanı atılır (Spirc `stop`u izler).
             deck.foreign_flush();
@@ -158,11 +201,16 @@ impl Playback {
                 self.restored = Some(snapshot.position_ms);
                 self.track_info = Some(info.clone());
                 if let Some(url) = info.cover_url.clone() {
-                    cx.fx.push(Effect::FetchCover { uri: info.uri.clone(), url });
+                    cx.fx.push(Effect::FetchCover {
+                        uri: info.uri.clone(),
+                        url,
+                    });
                 }
                 cx.emit(Event::TrackChanged(info));
                 cx.queue_changed();
-                cx.emit(Event::Paused { position_ms: snapshot.position_ms });
+                cx.emit(Event::Paused {
+                    position_ms: snapshot.position_ms,
+                });
             }
             None => {
                 self.track_info = None;
@@ -209,10 +257,16 @@ impl Playback {
         let idle = self.local_idle();
         let next = match (&self.driver, other) {
             (Driver::Local(_), Some((device_id, device_name))) if idle => {
-                Some(Driver::Remote(RemoteDrive { device_id, device_name }))
+                Some(Driver::Remote(RemoteDrive {
+                    device_id,
+                    device_name,
+                }))
             }
             (Driver::Remote(_), Some((device_id, device_name))) => {
-                Some(Driver::Remote(RemoteDrive { device_id, device_name }))
+                Some(Driver::Remote(RemoteDrive {
+                    device_id,
+                    device_name,
+                }))
             }
             (Driver::Remote(_), None) => Some(Driver::Local(Local)),
             _ => None,
@@ -252,7 +306,9 @@ impl Playback {
 
     /// Çıkışı sustur (duraklatma: telefonun ya da bizim). Bir kez.
     pub(super) fn spirc_silence(&mut self) {
-        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else { return };
+        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else {
+            return;
+        };
         if !drive.silenced {
             drive.silenced = true;
             deck.silence();
@@ -261,7 +317,9 @@ impl Playback {
 
     /// Çalma sürdü: susturma kalkar.
     pub(super) fn spirc_resumed(&mut self) {
-        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else { return };
+        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else {
+            return;
+        };
         if std::mem::take(&mut drive.silenced) {
             deck.unsilence();
         }
@@ -270,7 +328,9 @@ impl Playback {
     /// Telefondan (ya da etkinleşmeden) yükleme: kendiliğinden geçiş ya da
     /// bizim komutumuz değilse kuyruktaki eski ses atılır.
     pub(super) fn spirc_loading(&mut self) {
-        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else { return };
+        let (Some(deck), Driver::Spirc(drive)) = (&self.deck, &mut self.driver) else {
+            return;
+        };
         if !std::mem::take(&mut drive.load_expected) {
             deck.foreign_flush();
         }
@@ -345,7 +405,10 @@ impl Playback {
     /// çalma başlatan komutlar yerel çalmayı başlatır (`Remote`tan çıkılır);
     /// duraklat / sar zaten boştaki yerel çalara gider.
     pub(super) fn remote_transport(&mut self, cx: &mut Cx<'_>, cmd: TransportCmd) {
-        if !matches!(cmd, TransportCmd::Pause | TransportCmd::Seek(_) | TransportCmd::SetVolume(_)) {
+        if !matches!(
+            cmd,
+            TransportCmd::Pause | TransportCmd::Seek(_) | TransportCmd::SetVolume(_)
+        ) {
             self.leave_remote(cx);
         }
         self.local_transport(cx, cmd);

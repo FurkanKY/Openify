@@ -13,7 +13,8 @@ use super::{
     testkit::{self, Call, Spy},
 };
 use crate::engine::{
-    ConnectDriver, ConnectPort, ConnectStatus, Event, OutputCtl, PlaybackEvent, TrackInfo, queue::Queue,
+    ConnectDriver, ConnectPort, ConnectStatus, Event, OutputCtl, PlaybackEvent, TrackInfo,
+    queue::Queue,
 };
 
 fn uri(i: usize) -> String {
@@ -40,7 +41,11 @@ struct FakeConnect {
 
 impl FakeConnect {
     fn new(out: Arc<OutputCtl>) -> Arc<Self> {
-        Arc::new(Self { calls: Mutex::default(), out, silent_at_pause: Mutex::default() })
+        Arc::new(Self {
+            calls: Mutex::default(),
+            out,
+            silent_at_pause: Mutex::default(),
+        })
     }
 
     fn log(&self, call: impl Into<String>) {
@@ -110,13 +115,26 @@ impl Bench {
         let mut pb = Playback::new(Gate::new(tx, ptx), 0);
         pb.deck = Some(deck);
         let mut queue = Queue::new();
-        queue.restart(None, (0..3).map(uri).collect(), None, 0, 1, true).unwrap();
+        queue
+            .restart(None, (0..3).map(uri).collect(), None, 0, 1, true)
+            .unwrap();
         let port = FakeConnect::new(out.clone());
-        let mut b = Self { pb, queue, meta: HashMap::new(), spy, out, port, events, view };
+        let mut b = Self {
+            pb,
+            queue,
+            meta: HashMap::new(),
+            spy,
+            out,
+            port,
+            events,
+            view,
+        };
         let first = b.queue.current_uri().unwrap().to_owned();
         b.run(|pb, cx| pb.begin(cx, first, 0));
         b.signal(PlayerSignal::TrackChanged(info(0)));
-        b.signal(PlayerSignal::Playing { position_ms: 42_000 });
+        b.signal(PlayerSignal::Playing {
+            position_ms: 42_000,
+        });
         b.spy.take();
         b
     }
@@ -133,7 +151,12 @@ impl Bench {
         let mut fx = Vec::new();
         let result = f(
             &mut self.pb,
-            &mut Cx { queue: &mut self.queue, meta: &self.meta, link: LinkFacts::default(), fx: &mut fx },
+            &mut Cx {
+                queue: &mut self.queue,
+                meta: &self.meta,
+                link: LinkFacts::default(),
+                fx: &mut fx,
+            },
         );
         (result, fx)
     }
@@ -152,7 +175,11 @@ impl Bench {
 
     /// Çalara giden komutlar (işaretler hariç: onlar çıkış kapısının).
     fn player_commands(&self) -> Vec<Call> {
-        self.spy.take().into_iter().filter(|c| !matches!(c, Call::Mark(_))).collect()
+        self.spy
+            .take()
+            .into_iter()
+            .filter(|c| !matches!(c, Call::Mark(_)))
+            .collect()
     }
 
     fn driver(&self) -> ConnectDriver {
@@ -194,7 +221,12 @@ fn emitted(fx: &[Effect]) -> Vec<&Event> {
 }
 
 fn host(active: bool, playing: bool, paused: bool) -> SpircEvent {
-    SpircEvent::State(HostView { active, playing, paused, ..HostView::default() })
+    SpircEvent::State(HostView {
+        active,
+        playing,
+        paused,
+        ..HostView::default()
+    })
 }
 
 /// Küme: `active` aygıt `playing` çalıyor; aygıtlar "me" (bu) ve "phone" ("Pixel 8").
@@ -202,8 +234,18 @@ fn cluster(active: &str, playing: bool) -> SpircEvent {
     SpircEvent::Cluster(ClusterView {
         active_device_id: active.into(),
         devices: vec![
-            DeviceView { id: "me".into(), name: "Openify (test)".into(), device_type: 1, volume: 1 },
-            DeviceView { id: "phone".into(), name: "Pixel 8".into(), device_type: 3, volume: 1 },
+            DeviceView {
+                id: "me".into(),
+                name: "Openify (test)".into(),
+                device_type: 1,
+                volume: 1,
+            },
+            DeviceView {
+                id: "phone".into(),
+                name: "Pixel 8".into(),
+                device_type: 3,
+                volume: 1,
+            },
         ],
         playing,
         paused: !playing,
@@ -221,17 +263,28 @@ fn without_spirc_everything_stays_local_and_nothing_is_published() {
     // Yerel çalmanın her adımı: ne bir sürücü geçişi ne bir Connect olayı.
     let mut all = Vec::new();
     all.extend(b.signal(PlayerSignal::PreloadDue));
-    all.extend(b.signal(PlayerSignal::Paused { position_ms: 50_000 }));
+    all.extend(b.signal(PlayerSignal::Paused {
+        position_ms: 50_000,
+    }));
     all.extend(b.transport(TransportCmd::Play));
     all.extend(b.signal(PlayerSignal::EndOfTrack));
     all.extend(b.transport(TransportCmd::Next));
     all.extend(b.transport(TransportCmd::Pause));
-    assert!(statuses(&all).is_empty(), "Connect kapalıyken arayüze Connect durumu gitmez");
+    assert!(
+        statuses(&all).is_empty(),
+        "Connect kapalıyken arayüze Connect durumu gitmez"
+    );
     assert_eq!(b.driver(), ConnectDriver::Local);
     // Çalar komutları bugünkü gibi gidiyor (preload, load, pause…).
     let calls = b.player_commands();
-    assert!(calls.iter().any(|c| matches!(c, Call::Preload(_))), "{calls:?}");
-    assert!(calls.iter().any(|c| matches!(c, Call::Load { .. })), "{calls:?}");
+    assert!(
+        calls.iter().any(|c| matches!(c, Call::Preload(_))),
+        "{calls:?}"
+    );
+    assert!(
+        calls.iter().any(|c| matches!(c, Call::Load { .. })),
+        "{calls:?}"
+    );
     assert!(calls.iter().any(|c| matches!(c, Call::Pause)), "{calls:?}");
 }
 
@@ -243,7 +296,10 @@ fn spirc_events_without_a_link_are_harmless() {
     let fx = b.spirc(cluster("phone", true));
     // Küme kimliksiz (self_id boş) olsa da: başka aygıt çalıyor ve yerel boşta
     // → Remote; Spirc yokken bu olay zaten gelmez, ama gelse de çökmez.
-    assert!(matches!(b.driver(), ConnectDriver::Remote | ConnectDriver::Local), "{fx:?}");
+    assert!(
+        matches!(b.driver(), ConnectDriver::Remote | ConnectDriver::Local),
+        "{fx:?}"
+    );
 }
 
 // ── Telefon aktarır (Local → Spirc) ─────────────────────────────────────
@@ -257,15 +313,23 @@ fn phone_transfer_attaches_spirc_flushes_old_audio_and_sends_no_player_command()
     // Yerelde çalan sesin kuyruktaki kalanı atılır: işaret var, çalar komutu yok.
     assert!(b.out.flush_requested() > flushed_before, "kuyruk atılmadı");
     let calls = b.spy.take();
-    assert!(matches!(calls.as_slice(), [Call::Mark(_)]), "yalnız işaret: {calls:?}");
+    assert!(
+        matches!(calls.as_slice(), [Call::Mark(_)]),
+        "yalnız işaret: {calls:?}"
+    );
     // Arayüz: ileri / geri açık; Connect durumu Spirc.
     assert!(
-        emitted(&fx).iter().any(|e| matches!(e, Event::QueueChanged(q) if q.has_next && q.has_previous)),
+        emitted(&fx)
+            .iter()
+            .any(|e| matches!(e, Event::QueueChanged(q) if q.has_next && q.has_previous)),
         "{fx:?}"
     );
     let shown = statuses(&fx);
     assert_eq!(shown.len(), 1);
-    assert_eq!((shown[0].driver, shown[0].device_name.as_str()), (ConnectDriver::Spirc, "Openify (test)"));
+    assert_eq!(
+        (shown[0].driver, shown[0].device_name.as_str()),
+        (ConnectDriver::Spirc, "Openify (test)")
+    );
     // Tekrarı etkisiz (bant içi işaret + durum bildirimi ikisi de gelir).
     let again = b.attach();
     assert!(again.is_empty() && b.spy.take().is_empty());
@@ -314,10 +378,20 @@ fn spirc_arm_never_commands_the_player() {
     assert!(b.player_commands().is_empty(), "çalara komut gitmedi");
     assert_eq!(
         b.port.take(),
-        ["play", "pause", "seek(5000)", "next", "prev", "volume(32767)"],
+        [
+            "play",
+            "pause",
+            "seek(5000)",
+            "next",
+            "prev",
+            "volume(32767)"
+        ],
         "komutlar Spirc'e gitti"
     );
-    assert!(b.pb.load_started.is_none() && !b.pb.preload_armed, "yükleme izleme / önyükleme yerelin işi");
+    assert!(
+        b.pb.load_started.is_none() && !b.pb.preload_armed,
+        "yükleme izleme / önyükleme yerelin işi"
+    );
 }
 
 #[test]
@@ -325,10 +399,22 @@ fn spirc_arm_surfaces_the_phones_track_and_position_to_the_ui() {
     let mut b = Bench::with_spirc();
     b.attach();
     let fx = b.signal(PlayerSignal::TrackChanged(info(9)));
-    assert!(emitted(&fx).iter().any(|e| matches!(e, Event::TrackChanged(t) if t.uri == uri(9))), "{fx:?}");
+    assert!(
+        emitted(&fx)
+            .iter()
+            .any(|e| matches!(e, Event::TrackChanged(t) if t.uri == uri(9))),
+        "{fx:?}"
+    );
     let fx = b.signal(PlayerSignal::Playing { position_ms: 1_000 });
-    assert!(emitted(&fx).iter().any(|e| matches!(e, Event::Playing { .. })));
-    assert_eq!(b.pb.track_info.as_ref().map(|t| t.uri.clone()), Some(uri(9)));
+    assert!(
+        emitted(&fx)
+            .iter()
+            .any(|e| matches!(e, Event::Playing { .. }))
+    );
+    assert_eq!(
+        b.pb.track_info.as_ref().map(|t| t.uri.clone()),
+        Some(uri(9))
+    );
 }
 
 // ── Duraklatma anında susar ─────────────────────────────────────────────
@@ -346,7 +432,9 @@ fn phone_pause_silences_the_output_without_waiting_for_the_queue() {
     // Çalar `Paused`ı sonra bildirince ikinci kez susturulmaz (işaret sayısı artmaz).
     let marks = b.out.flush_requested();
     let before = b.spy.take().len();
-    b.signal(PlayerSignal::Paused { position_ms: 10_000 });
+    b.signal(PlayerSignal::Paused {
+        position_ms: 10_000,
+    });
     assert_eq!(b.spy.take().len(), 0, "ikinci işaret yok ({before} önceki)");
     assert_eq!(b.out.flush_requested(), marks);
     assert!(b.out.is_ducked());
@@ -357,10 +445,14 @@ fn phone_pause_is_silenced_by_the_player_event_alone_too() {
     let mut b = Bench::with_spirc();
     b.attach();
     b.signal(PlayerSignal::Playing { position_ms: 0 });
-    b.signal(PlayerSignal::Paused { position_ms: 10_000 });
+    b.signal(PlayerSignal::Paused {
+        position_ms: 10_000,
+    });
     assert!(b.out.is_ducked());
     // Telefon yeniden çalınca (çalar `Playing`): susturma kalkar.
-    b.signal(PlayerSignal::Playing { position_ms: 10_000 });
+    b.signal(PlayerSignal::Playing {
+        position_ms: 10_000,
+    });
     assert!(!b.out.is_ducked(), "çalma sürünce ses geri gelir");
 }
 
@@ -369,7 +461,11 @@ fn own_pause_silences_before_spirc_is_asked_to_pause() {
     let mut b = Bench::with_spirc();
     b.attach();
     b.transport(TransportCmd::Pause);
-    assert_eq!(*b.port.silent_at_pause.lock().unwrap(), Some(true), "önce sustur, sonra Spirc'e ilet");
+    assert_eq!(
+        *b.port.silent_at_pause.lock().unwrap(),
+        Some(true),
+        "önce sustur, sonra Spirc'e ilet"
+    );
     assert!(b.player_commands().is_empty());
     // Çal: önce susturma kalkar.
     b.transport(TransportCmd::Play);
@@ -389,10 +485,17 @@ fn phone_skip_flushes_but_an_automatic_advance_does_not() {
     // Şarkı kendiliğinden bitti, Spirc sıradakini yükledi: yıkama yok (boşluksuz).
     b.signal(PlayerSignal::EndOfTrack);
     b.signal(PlayerSignal::Loading);
-    assert_eq!(b.out.flush_requested(), base, "kendiliğinden geçişte kuyruk atılmaz");
+    assert_eq!(
+        b.out.flush_requested(),
+        base,
+        "kendiliğinden geçişte kuyruk atılmaz"
+    );
     // Telefonda "sonraki": yükleme şarkı bitmeden geldi → eski ses atılır.
     b.signal(PlayerSignal::Loading);
-    assert!(b.out.flush_requested() > base, "telefon atladı: eski ses atılmalı");
+    assert!(
+        b.out.flush_requested() > base,
+        "telefon atladı: eski ses atılmalı"
+    );
     assert!(b.player_commands().is_empty());
 }
 
@@ -406,9 +509,16 @@ fn own_next_and_seek_flush_first_and_the_resulting_load_is_not_flushed_twice() {
     let after_cmd = b.out.flush_requested();
     assert!(after_cmd > before, "kendi Sonraki'miz kuyruğu önce atar");
     b.signal(PlayerSignal::Loading);
-    assert_eq!(b.out.flush_requested(), after_cmd, "komutun yüklemesi yeniden atmaz");
+    assert_eq!(
+        b.out.flush_requested(),
+        after_cmd,
+        "komutun yüklemesi yeniden atmaz"
+    );
     b.transport(TransportCmd::Seek(1_000));
-    assert!(b.out.flush_requested() > after_cmd, "kendi sarmamız kuyruğu atar");
+    assert!(
+        b.out.flush_requested() > after_cmd,
+        "kendi sarmamız kuyruğu atar"
+    );
 }
 
 // ── Telefon geri alır (Spirc → Local) ───────────────────────────────────
@@ -423,19 +533,40 @@ fn phone_taking_back_returns_the_ui_to_the_paused_local_track() {
     let flushed = b.out.flush_requested();
     let fx = b.signal(PlayerSignal::RemoteDetached);
     assert_eq!(b.driver(), ConnectDriver::Local);
-    assert!(b.out.flush_requested() > flushed, "telefonun sesinin kuyruktaki kalanı atılır");
-    assert!(b.player_commands().is_empty(), "çalara komut yok (telefon zaten `stop` verir)");
+    assert!(
+        b.out.flush_requested() > flushed,
+        "telefonun sesinin kuyruktaki kalanı atılır"
+    );
+    assert!(
+        b.player_commands().is_empty(),
+        "çalara komut yok (telefon zaten `stop` verir)"
+    );
     // Arayüz: aktarmadan önce gösterilen yerel şarkı, kaldığı konumda duraklatılmış.
     let ev = emitted(&fx);
-    assert!(ev.iter().any(|e| matches!(e, Event::TrackChanged(t) if t.uri == uri(0))), "{fx:?}");
-    assert!(ev.iter().any(|e| matches!(e, Event::Paused { position_ms } if (42_000..=43_000).contains(position_ms))));
+    assert!(
+        ev.iter()
+            .any(|e| matches!(e, Event::TrackChanged(t) if t.uri == uri(0))),
+        "{fx:?}"
+    );
+    assert!(ev.iter().any(
+        |e| matches!(e, Event::Paused { position_ms } if (42_000..=43_000).contains(position_ms))
+    ));
     assert!(fx.iter().any(|e| matches!(e, Effect::QueueChanged)));
-    assert!(b.pb.restored.is_some(), "Çal yerel şarkıyı kaldığı yerden yükler");
-    assert_eq!(statuses(&fx).last().map(|s| s.driver), Some(ConnectDriver::Local));
+    assert!(
+        b.pb.restored.is_some(),
+        "Çal yerel şarkıyı kaldığı yerden yükler"
+    );
+    assert_eq!(
+        statuses(&fx).last().map(|s| s.driver),
+        Some(ConnectDriver::Local)
+    );
     // Çal: yerel sürücü yükler (kullanıcı yüklemesi: kuyruk atılır).
     b.transport(TransportCmd::Play);
     let calls = b.player_commands();
-    assert!(matches!(calls.as_slice(), [Call::Load { uri: u, play: true, position_ms }] if *u == uri(0) && *position_ms >= 42_000), "{calls:?}");
+    assert!(
+        matches!(calls.as_slice(), [Call::Load { uri: u, play: true, position_ms }] if *u == uri(0) && *position_ms >= 42_000),
+        "{calls:?}"
+    );
 }
 
 #[test]
@@ -459,13 +590,21 @@ fn phone_takes_back_while_nothing_was_local_clears_the_player() {
     let port = FakeConnect::new(out);
     let mut fx = Vec::new();
     {
-        let mut cx = Cx { queue: &mut queue, meta: &meta, link: LinkFacts::default(), fx: &mut fx };
+        let mut cx = Cx {
+            queue: &mut queue,
+            meta: &meta,
+            link: LinkFacts::default(),
+            fx: &mut fx,
+        };
         pb.connect_up(&mut cx, port, "me".into(), "Openify".into());
         pb.on_signal(&mut cx, PlayerSignal::RemoteAttached);
         cx.fx.clear();
         pb.on_signal(&mut cx, PlayerSignal::RemoteDetached);
     }
-    assert!(emitted(&fx).iter().any(|e| matches!(e, Event::Ended)), "{fx:?}");
+    assert!(
+        emitted(&fx).iter().any(|e| matches!(e, Event::Ended)),
+        "{fx:?}"
+    );
     assert!(pb.restored.is_none());
 }
 
@@ -477,12 +616,27 @@ fn local_start_leaves_spirc_and_plays_locally() {
     b.attach();
     b.spy.take();
     b.port.take();
-    let fx = b.transport(TransportCmd::Start { uri: uri(2), position_ms: 0 });
+    let fx = b.transport(TransportCmd::Start {
+        uri: uri(2),
+        position_ms: 0,
+    });
     assert_eq!(b.driver(), ConnectDriver::Local);
-    assert_eq!(b.port.take(), ["host_drives(true)", "leave"], "Spirc'e: ana uygulama sürüyor, etkinlikten çık");
+    assert_eq!(
+        b.port.take(),
+        ["host_drives(true)", "leave"],
+        "Spirc'e: ana uygulama sürüyor, etkinlikten çık"
+    );
     let calls = b.player_commands();
-    assert!(matches!(calls.as_slice(), [Call::Load { uri: u, play: true, position_ms: 0 }] if *u == uri(2)), "{calls:?}");
-    assert!(statuses(&fx).iter().any(|s| s.driver == ConnectDriver::Local), "{fx:?}");
+    assert!(
+        matches!(calls.as_slice(), [Call::Load { uri: u, play: true, position_ms: 0 }] if *u == uri(2)),
+        "{calls:?}"
+    );
+    assert!(
+        statuses(&fx)
+            .iter()
+            .any(|s| s.driver == ConnectDriver::Local),
+        "{fx:?}"
+    );
     assert!(!b.out.is_ducked());
 }
 
@@ -503,7 +657,13 @@ fn enqueue_goes_to_the_phones_queue_only_while_spirc_drives() {
     assert!(b.port.take().is_empty());
     b.attach();
     assert!(b.pb.spirc_enqueue(&[uri(5), uri(6)]));
-    assert_eq!(b.port.take(), [format!("enqueue({})", uri(5)), format!("enqueue({})", uri(6))]);
+    assert_eq!(
+        b.port.take(),
+        [
+            format!("enqueue({})", uri(5)),
+            format!("enqueue({})", uri(6))
+        ]
+    );
 }
 
 // ── Başka aygıtta çalıyor ─────────────────────────────────────────
@@ -517,20 +677,30 @@ fn another_device_playing_turns_an_idle_local_into_remote() {
     let shown = statuses(&fx);
     assert_eq!(shown.len(), 1, "{fx:?}");
     assert_eq!(shown[0].driver, ConnectDriver::Remote);
-    assert_eq!(shown[0].remote.as_ref().map(|r| r.device_name.as_str()), Some("Pixel 8"));
+    assert_eq!(
+        shown[0].remote.as_ref().map(|r| r.device_name.as_str()),
+        Some("Pixel 8")
+    );
     // Aynı küme yeniden gelince yeni bildirim yok.
     assert!(statuses(&b.spirc(cluster("phone", true))).is_empty());
     // Telefon durdurunca: yerel.
     let fx = b.spirc(cluster("phone", false));
     assert_eq!(b.driver(), ConnectDriver::Local);
-    assert_eq!(statuses(&fx).last().map(|s| s.driver), Some(ConnectDriver::Local));
+    assert_eq!(
+        statuses(&fx).last().map(|s| s.driver),
+        Some(ConnectDriver::Local)
+    );
 }
 
 #[test]
 fn local_playback_is_never_turned_into_remote_by_a_cluster_update() {
     let mut b = Bench::with_spirc();
     b.spirc(cluster("phone", true));
-    assert_eq!(b.driver(), ConnectDriver::Local, "burada çalarken 'başka aygıtta çalıyor' denmez");
+    assert_eq!(
+        b.driver(),
+        ConnectDriver::Local,
+        "burada çalarken 'başka aygıtta çalıyor' denmez"
+    );
     // Yerel sustu: artık orada çalıyor.
     b.signal(PlayerSignal::Paused { position_ms: 1_000 });
     assert_eq!(b.driver(), ConnectDriver::Remote);
@@ -552,7 +722,10 @@ fn local_play_starting_leaves_remote() {
     assert_eq!(b.driver(), ConnectDriver::Remote);
     let fx = b.signal(PlayerSignal::Loading);
     assert_eq!(b.driver(), ConnectDriver::Local);
-    assert_eq!(statuses(&fx).last().map(|s| s.driver), Some(ConnectDriver::Local));
+    assert_eq!(
+        statuses(&fx).last().map(|s| s.driver),
+        Some(ConnectDriver::Local)
+    );
 }
 
 #[test]
@@ -597,7 +770,10 @@ fn transferring_here_from_remote_ends_with_the_phone_attaching() {
     // Spotify aktardı: bant içi işaret → Spirc.
     let fx = b.attach();
     assert_eq!(b.driver(), ConnectDriver::Spirc);
-    assert_eq!(statuses(&fx).last().map(|s| (s.driver, s.remote.clone())), Some((ConnectDriver::Spirc, None)));
+    assert_eq!(
+        statuses(&fx).last().map(|s| (s.driver, s.remote.clone())),
+        Some((ConnectDriver::Spirc, None))
+    );
 }
 
 // ── Oturum yenilenince / Spirc bitince ──────────────────────────────────
@@ -610,11 +786,19 @@ fn connect_down_returns_to_local_and_clears_the_name() {
     assert_eq!(b.driver(), ConnectDriver::Local);
     assert!(b.pb.link.port.is_none());
     let last = statuses(&fx).pop().expect("durum bildirildi");
-    assert_eq!((last.driver, last.device_name.as_str()), (ConnectDriver::Local, ""));
+    assert_eq!(
+        (last.driver, last.device_name.as_str()),
+        (ConnectDriver::Local, "")
+    );
     // Yeni oturumun Spirc'i yeniden bağlanır (aynı kalıcı kimlik).
     let port: Arc<dyn ConnectPort> = b.port.clone();
-    let fx = b.run(|pb, cx| pb.connect_up(cx, port, "me".into(), "Openify (test)".into())).1;
-    assert_eq!(statuses(&fx).pop().map(|s| s.device_name), Some("Openify (test)".to_string()));
+    let fx = b
+        .run(|pb, cx| pb.connect_up(cx, port, "me".into(), "Openify (test)".into()))
+        .1;
+    assert_eq!(
+        statuses(&fx).pop().map(|s| s.device_name),
+        Some("Openify (test)".to_string())
+    );
 }
 
 #[test]

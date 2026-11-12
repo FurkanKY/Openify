@@ -91,7 +91,11 @@ pub enum PlayLog {
     /// Yeni çalma (eşik geçildi).
     Count(PlayRecord),
     /// Sayılmış çalmanın dinlenen süresine `add_ms` ekle (`uri` + `played_at` satırı).
-    Extend { uri: String, played_at: i64, add_ms: u64 },
+    Extend {
+        uri: String,
+        played_at: i64,
+        add_ms: u64,
+    },
 }
 
 struct Current {
@@ -119,13 +123,21 @@ impl PlayCounter {
     /// Yeni şarkı başladı (henüz çalmıyor olabilir): öncekini kapatır.
     pub fn track_changed(&mut self, meta: TrackMeta, mono_ms: u64, wall_ms: i64) -> Vec<PlayLog> {
         let out = self.stopped(mono_ms, wall_ms);
-        self.cur = Some(Current { meta, listened: 0, since: None, counted: None, flushed: 0 });
+        self.cur = Some(Current {
+            meta,
+            listened: 0,
+            since: None,
+            counted: None,
+            flushed: 0,
+        });
         out
     }
 
     /// Çalmaya başladı / sürdü (sarma, tamponlamadan çıkış dahil).
     pub fn playing(&mut self, mono_ms: u64, wall_ms: i64) -> Vec<PlayLog> {
-        let Some(cur) = self.cur.as_mut() else { return Vec::new() };
+        let Some(cur) = self.cur.as_mut() else {
+            return Vec::new();
+        };
         accumulate(cur, mono_ms);
         cur.since = Some(mono_ms);
         check(cur, wall_ms)
@@ -133,7 +145,9 @@ impl PlayCounter {
 
     /// Durdu, yükleniyor, bitti: dinlenen süre toplanır, kalan yazılır.
     pub fn stopped(&mut self, mono_ms: u64, wall_ms: i64) -> Vec<PlayLog> {
-        let Some(cur) = self.cur.as_mut() else { return Vec::new() };
+        let Some(cur) = self.cur.as_mut() else {
+            return Vec::new();
+        };
         accumulate(cur, mono_ms);
         cur.since = None;
         let mut out = check(cur, wall_ms);
@@ -143,7 +157,9 @@ impl PlayCounter {
 
     /// Zaman geçti (eşik zamanlayıcısı): eşik geçildiyse `Count`.
     pub fn tick(&mut self, mono_ms: u64, wall_ms: i64) -> Vec<PlayLog> {
-        let Some(cur) = self.cur.as_mut() else { return Vec::new() };
+        let Some(cur) = self.cur.as_mut() else {
+            return Vec::new();
+        };
         if cur.since.is_some() {
             accumulate(cur, mono_ms);
             cur.since = Some(mono_ms);
@@ -197,7 +213,11 @@ fn flush(cur: &mut Current) -> Option<PlayLog> {
     }
     let add = cur.listened - cur.flushed;
     cur.flushed = cur.listened;
-    Some(PlayLog::Extend { uri: cur.meta.uri.clone(), played_at: at, add_ms: add })
+    Some(PlayLog::Extend {
+        uri: cur.meta.uri.clone(),
+        played_at: at,
+        add_ms: add,
+    })
 }
 
 // ── Tablo ───────────────────────────────────────────────────────────────
@@ -319,14 +339,25 @@ pub struct StatsReport {
     pub hours: [u64; 24],
 }
 
-fn rank_key(plays: u32, listened: u64, name: &str) -> (std::cmp::Reverse<u32>, std::cmp::Reverse<u64>, String) {
-    (std::cmp::Reverse(plays), std::cmp::Reverse(listened), fold(name))
+fn rank_key(
+    plays: u32,
+    listened: u64,
+    name: &str,
+) -> (std::cmp::Reverse<u32>, std::cmp::Reverse<u64>, String) {
+    (
+        std::cmp::Reverse(plays),
+        std::cmp::Reverse(listened),
+        fold(name),
+    )
 }
 
 /// `records` (zaten aralıkta) üzerinden raporu çıkarır. Sanatçı: şarkının ana
 /// (ilk) sanatçısı. Sıra: çalma sayısı, eşitlikte dinlenen süre, sonra ad.
 pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64) -> StatsReport {
-    let mut report = StatsReport { range, ..Default::default() };
+    let mut report = StatsReport {
+        range,
+        ..Default::default()
+    };
     let mut tracks: HashMap<&str, TopTrack> = HashMap::new();
     let mut artists: HashMap<String, TopArtist> = HashMap::new();
     let mut albums: HashMap<(String, String), TopAlbum> = HashMap::new();
@@ -348,7 +379,11 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
         t.artists.clone_from(&r.artists);
         let artist = primary_artist(&r.artists);
         if !artist.is_empty() {
-            let a = artists.entry(fold(artist)).or_insert_with(|| TopArtist { name: artist.to_string(), plays: 0, listened_ms: 0 });
+            let a = artists.entry(fold(artist)).or_insert_with(|| TopArtist {
+                name: artist.to_string(),
+                plays: 0,
+                listened_ms: 0,
+            });
             a.plays += 1;
             a.listened_ms += r.listened_ms;
         }
@@ -365,13 +400,19 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
         }
     }
     report.tracks = tracks.into_values().collect();
-    report.tracks.sort_by_key(|t| rank_key(t.plays, t.listened_ms, &t.name));
+    report
+        .tracks
+        .sort_by_key(|t| rank_key(t.plays, t.listened_ms, &t.name));
     report.tracks.truncate(TOP_N);
     report.artists = artists.into_values().collect();
-    report.artists.sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.name));
+    report
+        .artists
+        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.name));
     report.artists.truncate(TOP_N);
     report.albums = albums.into_values().collect();
-    report.albums.sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.album));
+    report
+        .albums
+        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.album));
     report.albums.truncate(TOP_N);
     report
 }
@@ -399,7 +440,9 @@ mod tests {
     }
 
     fn counts(logs: &[PlayLog]) -> usize {
-        logs.iter().filter(|l| matches!(l, PlayLog::Count(_))).count()
+        logs.iter()
+            .filter(|l| matches!(l, PlayLog::Count(_)))
+            .count()
     }
 
     #[test]
@@ -419,15 +462,35 @@ mod tests {
         assert!(c.track_changed(meta(1, 200_000), 0, wall).is_empty());
         assert!(c.playing(0, wall).is_empty());
         assert_eq!(c.deadline_ms(10 * S), Some(20 * S));
-        assert!(c.tick(29 * S, wall + 29_000).is_empty(), "29 sn: henüz sayılmaz");
+        assert!(
+            c.tick(29 * S, wall + 29_000).is_empty(),
+            "29 sn: henüz sayılmaz"
+        );
         let logs = c.tick(31 * S, wall + 31_000);
         assert_eq!(counts(&logs), 1);
-        let PlayLog::Count(rec) = &logs[0] else { panic!() };
-        assert_eq!((rec.listened_ms, rec.played_at), (31_000, wall + 30_000), "an eşik geçildiği an");
-        assert_eq!(c.deadline_ms(32 * S), None, "sayıldıktan sonra zamanlayıcı yok");
+        let PlayLog::Count(rec) = &logs[0] else {
+            panic!()
+        };
+        assert_eq!(
+            (rec.listened_ms, rec.played_at),
+            (31_000, wall + 30_000),
+            "an eşik geçildiği an"
+        );
+        assert_eq!(
+            c.deadline_ms(32 * S),
+            None,
+            "sayıldıktan sonra zamanlayıcı yok"
+        );
         // 100. saniyede duraklat: kalan 69 sn eklenir (31 → 100).
         let logs = c.stopped(100 * S, wall + 100_000);
-        assert_eq!(logs, [PlayLog::Extend { uri: meta(1, 0).uri, played_at: wall + 30_000, add_ms: 69_000 }]);
+        assert_eq!(
+            logs,
+            [PlayLog::Extend {
+                uri: meta(1, 0).uri,
+                played_at: wall + 30_000,
+                add_ms: 69_000
+            }]
+        );
         // Bir daha durdurmak ek yazmaz.
         assert!(c.stopped(120 * S, wall + 120_000).is_empty());
     }
@@ -479,10 +542,21 @@ mod tests {
         c.tick(31 * S, 31_000);
         // Şarkı 45. saniyede değişti: önceki kapanır (14 sn ek), yenisi sıfırdan.
         let logs = c.track_changed(meta(1, 200_000), 45 * S, 45_000);
-        assert_eq!(logs, [PlayLog::Extend { uri: meta(1, 0).uri, played_at: 30_000, add_ms: 14_000 }]);
+        assert_eq!(
+            logs,
+            [PlayLog::Extend {
+                uri: meta(1, 0).uri,
+                played_at: 30_000,
+                add_ms: 14_000
+            }]
+        );
         c.playing(45 * S, 45_000);
         let logs = c.tick(76 * S, 76_000);
-        assert_eq!(counts(&logs), 1, "aynı şarkının yeniden başlaması ayrı çalma");
+        assert_eq!(
+            counts(&logs),
+            1,
+            "aynı şarkının yeniden başlaması ayrı çalma"
+        );
     }
 
     #[test]
@@ -493,7 +567,9 @@ mod tests {
         // Zamanlayıcı kaçtı; ilk olay 90 sn sonra (duraklat) geldi: bir Count + bir Extend.
         let logs = c.stopped(90 * S, 90_000);
         assert_eq!(counts(&logs), 1);
-        let PlayLog::Count(rec) = &logs[0] else { panic!() };
+        let PlayLog::Count(rec) = &logs[0] else {
+            panic!()
+        };
         assert_eq!((rec.listened_ms, rec.played_at), (90_000, 30_000));
         assert_eq!(logs.len(), 1, "Count zaten 90 sn'yi yazdı, ek yok");
     }
@@ -501,7 +577,9 @@ mod tests {
     #[test]
     fn events_without_a_track_are_ignored() {
         let mut c = PlayCounter::new();
-        assert!(c.playing(0, 0).is_empty() && c.tick(1, 1).is_empty() && c.stopped(2, 2).is_empty());
+        assert!(
+            c.playing(0, 0).is_empty() && c.tick(1, 1).is_empty() && c.stopped(2, 2).is_empty()
+        );
         assert_eq!(c.deadline_ms(3), None);
     }
 
@@ -541,7 +619,10 @@ mod tests {
         db.extend_play(&a.uri, 77, 1).unwrap();
         let all = db.plays_since(0).unwrap();
         assert_eq!(all.len(), 2);
-        assert_eq!((all[0].uri.as_str(), all[0].listened_ms), (a.uri.as_str(), 40_000));
+        assert_eq!(
+            (all[0].uri.as_str(), all[0].listened_ms),
+            (a.uri.as_str(), 40_000)
+        );
         assert_eq!(db.plays_since(2_000).unwrap().len(), 1, "aralık başlangıcı");
         assert_eq!(db.plays_since(5_000).unwrap().len(), 1, "başlangıç dahil");
     }
@@ -563,7 +644,13 @@ mod tests {
         assert_eq!(r.tracks[0].uri, records[0].uri);
         assert_eq!((r.tracks[0].plays, r.tracks[0].listened_ms), (2, 350_000));
         // Sanatçılar: Mavi Orman 3 çalma; "Kuzey" ve "kuzey" aynı sanatçı (2).
-        assert_eq!(r.artists.iter().map(|a| (a.name.as_str(), a.plays)).collect::<Vec<_>>(), [("Mavi Orman", 3), ("Kuzey", 2)]);
+        assert_eq!(
+            r.artists
+                .iter()
+                .map(|a| (a.name.as_str(), a.plays))
+                .collect::<Vec<_>>(),
+            [("Mavi Orman", 3), ("Kuzey", 2)]
+        );
         assert_eq!(r.albums[0].album, "Uzun Yol");
         assert_eq!((r.albums[0].plays, r.albums[1].plays), (3, 2));
         assert_eq!(r.hours[12], 450_000, "saat 12 (UTC 09 + 3)");
@@ -577,9 +664,14 @@ mod tests {
         let none = aggregate(StatsRange::Weeks4, &[], 0);
         assert_eq!((none.plays, none.listened_ms), (0, 0));
         assert!(none.tracks.is_empty() && none.artists.is_empty() && none.albums.is_empty());
-        let many: Vec<PlayRecord> = (0..40).map(|n| rec(n, &format!("S{n}"), &format!("A{n}"), 1000, n as i64)).collect();
+        let many: Vec<PlayRecord> = (0..40)
+            .map(|n| rec(n, &format!("S{n}"), &format!("A{n}"), 1000, n as i64))
+            .collect();
         let r = aggregate(StatsRange::All, &many, 0);
-        assert_eq!((r.tracks.len(), r.artists.len(), r.albums.len()), (TOP_N, TOP_N, TOP_N));
+        assert_eq!(
+            (r.tracks.len(), r.artists.len(), r.albums.len()),
+            (TOP_N, TOP_N, TOP_N)
+        );
     }
 
     #[test]
@@ -590,8 +682,10 @@ mod tests {
         assert_eq!(now - StatsRange::Months6.since_ms(now), 182 * 86_400_000);
         // Veritabanından aralık: eski çalma 4 haftalıkta yok, tümünde var.
         let db = Db::open_in_memory().unwrap();
-        db.record_play(&rec(1, "A", "X", 1000, now - 40 * 86_400_000)).unwrap();
-        db.record_play(&rec(2, "B", "Y", 1000, now - 86_400_000)).unwrap();
+        db.record_play(&rec(1, "A", "X", 1000, now - 40 * 86_400_000))
+            .unwrap();
+        db.record_play(&rec(2, "B", "Y", 1000, now - 86_400_000))
+            .unwrap();
         assert_eq!(report(&db, StatsRange::Weeks4, now, 0).unwrap().plays, 1);
         assert_eq!(report(&db, StatsRange::Months6, now, 0).unwrap().plays, 2);
         assert_eq!(report(&db, StatsRange::All, now, 0).unwrap().plays, 2);
@@ -601,7 +695,15 @@ mod tests {
     #[test]
     fn aggregating_a_hundred_thousand_plays_is_fast() {
         let records: Vec<PlayRecord> = (0..100_000u32)
-            .map(|i| rec(i % 3000, &format!("Sanatçı {}", i % 400), &format!("Albüm {}", i % 900), 100_000, i64::from(i) * 60_000))
+            .map(|i| {
+                rec(
+                    i % 3000,
+                    &format!("Sanatçı {}", i % 400),
+                    &format!("Albüm {}", i % 900),
+                    100_000,
+                    i64::from(i) * 60_000,
+                )
+            })
             .collect();
         // Üç denemenin en iyisi: makine başka derlemelerle doluyken tek ölçüm sapar.
         let mut ms = f64::MAX;

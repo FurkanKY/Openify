@@ -6,14 +6,12 @@
 //! Explorer yeniden başlayınca bu ileti yeniden gelir: düğmeler yeniden
 //! eklenir. Tıklama `WM_COMMAND` ile gelir (`hook.rs`).
 
-use windows::{
-    Win32::{
-        Foundation::HWND,
-        System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
-        UI::Shell::{
-            ITaskbarList3, THB_FLAGS, THB_ICON, THB_TOOLTIP, THBF_DISABLED, THBF_ENABLED,
-            THUMBBUTTON, TaskbarList,
-        },
+use windows::Win32::{
+    Foundation::HWND,
+    System::Com::{CLSCTX_INPROC_SERVER, CoCreateInstance},
+    UI::Shell::{
+        ITaskbarList3, THB_FLAGS, THB_ICON, THB_TOOLTIP, THBF_DISABLED, THBF_ENABLED, THUMBBUTTON,
+        TaskbarList,
     },
 };
 
@@ -23,7 +21,7 @@ use super::{
     icons::{self, Icon},
     tray::copy_wide,
 };
-use crate::{t};
+use crate::t;
 
 struct Icons {
     previous: Icon,
@@ -54,10 +52,15 @@ pub struct Taskbar {
 
 impl Taskbar {
     pub fn new(light: bool) -> windows::core::Result<Self> {
-        let list: ITaskbarList3 = unsafe { CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)? };
+        let list: ITaskbarList3 =
+            unsafe { CoCreateInstance(&TaskbarList, None, CLSCTX_INPROC_SERVER)? };
         unsafe { list.HrInit()? };
         let icons = Icons::render(light).ok_or_else(|| windows::core::Error::from_win32())?;
-        Ok(Taskbar { list, icons, added: false })
+        Ok(Taskbar {
+            list,
+            icons,
+            added: false,
+        })
     }
 
     fn buttons(&self, now: &NowPlaying) -> [THUMBBUTTON; 3] {
@@ -74,7 +77,12 @@ impl Taskbar {
             b
         };
         [
-            button(THUMB_PREVIOUS, &self.icons.previous, t!(PrevTrack), now.can_previous),
+            button(
+                THUMB_PREVIOUS,
+                &self.icons.previous,
+                t!(PrevTrack),
+                now.can_previous,
+            ),
             if playing {
                 button(THUMB_PLAY, &self.icons.pause, t!(Pause), true)
             } else {
@@ -97,7 +105,10 @@ impl Taskbar {
                     .is_ok();
             }
         }
-        log::info!("sistem: görev çubuğu düğmeleri {}", if self.added { "eklendi" } else { "yok" });
+        log::info!(
+            "sistem: görev çubuğu düğmeleri {}",
+            if self.added { "eklendi" } else { "yok" }
+        );
     }
 
     pub fn set_state(&mut self, hwnd: HWND, now: &NowPlaying) {

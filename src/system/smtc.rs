@@ -28,7 +28,10 @@ pub struct Smtc {
 
 impl Smtc {
     pub fn new(hwnd: HWND) -> Result<Self> {
-        let interop = windows::core::factory::<SystemMediaTransportControls, ISystemMediaTransportControlsInterop>()?;
+        let interop = windows::core::factory::<
+            SystemMediaTransportControls,
+            ISystemMediaTransportControlsInterop,
+        >()?;
         let controls: SystemMediaTransportControls = unsafe { interop.GetForWindow(hwnd)? };
         controls.SetIsEnabled(true)?;
         controls.SetIsPlayEnabled(false)?;
@@ -77,7 +80,12 @@ impl Smtc {
         log::info!(
             "sistem: medya kontrolü bilgisi \"{}\" ({}) {:.2} ms",
             now.title,
-            now.cover.as_ref().map_or("kapaksız".to_string(), |c| format!("kapak {} bayt", c.bytes.len())),
+            now.cover
+                .as_ref()
+                .map_or("kapaksız".to_string(), |c| format!(
+                    "kapak {} bayt",
+                    c.bytes.len()
+                )),
             t.elapsed().as_secs_f64() * 1000.
         );
     }
@@ -129,7 +137,9 @@ impl Smtc {
     /// saniye değil; Windows aradaki konumu kendisi ilerletir).
     pub fn set_timeline(&mut self, now: &NowPlaying) {
         let r = (|| -> Result<()> {
-            let span = |ms: u32| TimeSpan { Duration: ms as i64 * 10_000 };
+            let span = |ms: u32| TimeSpan {
+                Duration: ms as i64 * 10_000,
+            };
             let timeline = SystemMediaTransportControlsTimelineProperties::new()?;
             timeline.SetStartTime(span(0))?;
             timeline.SetEndTime(span(now.duration_ms))?;

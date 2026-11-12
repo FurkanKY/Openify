@@ -68,8 +68,20 @@ fn variables(query: &str, limit: usize) -> Value {
 
 /// Arama: hash'i istemci yönetir (kayıtlı hash, eskiyse web player'dan yenisi,
 /// kapı); yanıt çözülür.
-pub async fn run(session: &Session, db: Option<&Db>, query: &str, limit: usize) -> Result<SearchResults, PathfinderError> {
-    let value = pathfinder::query(session, db, &SEARCH_DESKTOP, variables(query, limit), Priority::Interactive).await?;
+pub async fn run(
+    session: &Session,
+    db: Option<&Db>,
+    query: &str,
+    limit: usize,
+) -> Result<SearchResults, PathfinderError> {
+    let value = pathfinder::query(
+        session,
+        db,
+        &SEARCH_DESKTOP,
+        variables(query, limit),
+        Priority::Interactive,
+    )
+    .await?;
     Ok(parse_results(&value))
 }
 
@@ -80,9 +92,16 @@ pub fn test_results() -> Option<SearchResults> {
     let path = std::env::var_os("OPENIFY_TEST_SEARCH_JSON")?;
     let mut results = from_json(&std::fs::read_to_string(path).ok()?)?;
     // Kayıttaki resim adresleri uydurma: ağa hiç çıkılmasın, yer tutucular görünsün.
-    for hit in [&mut results.artists, &mut results.albums, &mut results.playlists, &mut results.podcasts, &mut results.episodes, &mut results.profiles]
-        .into_iter()
-        .flatten()
+    for hit in [
+        &mut results.artists,
+        &mut results.albums,
+        &mut results.playlists,
+        &mut results.podcasts,
+        &mut results.episodes,
+        &mut results.profiles,
+    ]
+    .into_iter()
+    .flatten()
     {
         hit.image.clear();
     }
@@ -101,9 +120,8 @@ pub fn from_json(text: &str) -> Option<SearchResults> {
 fn parse_results(value: &Value) -> SearchResults {
     let root = &value["data"]["searchV2"];
 
-    let items = |key: &str| -> Vec<Value> {
-        root[key]["items"].as_array().cloned().unwrap_or_default()
-    };
+    let items =
+        |key: &str| -> Vec<Value> { root[key]["items"].as_array().cloned().unwrap_or_default() };
 
     let tracks = items("tracksV2")
         .iter()
@@ -137,7 +155,10 @@ fn parse_results(value: &Value) -> SearchResults {
         .iter()
         .filter_map(|i| {
             let d = &i["data"];
-            let year = d["date"]["year"].as_u64().map(|y| format!(" · {y}")).unwrap_or_default();
+            let year = d["date"]["year"]
+                .as_u64()
+                .map(|y| format!(" · {y}"))
+                .unwrap_or_default();
             Some(SearchHit {
                 uri: d["uri"].as_str()?.to_string(),
                 name: str_of(&d["name"]),
@@ -155,7 +176,11 @@ fn parse_results(value: &Value) -> SearchResults {
             Some(SearchHit {
                 uri: d["uri"].as_str()?.to_string(),
                 name: str_of(&d["name"]),
-                subtitle: if owner.is_empty() { crate::i18n::canon::PLAYLIST.into() } else { owner },
+                subtitle: if owner.is_empty() {
+                    crate::i18n::canon::PLAYLIST.into()
+                } else {
+                    owner
+                },
                 image: card_image(&d["images"]["items"][0]["sources"]),
             })
         })
@@ -165,7 +190,9 @@ fn parse_results(value: &Value) -> SearchResults {
         .iter()
         .filter_map(|i| {
             let d = node(i);
-            let uri = d["uri"].as_str().filter(|u| u.starts_with("spotify:show:"))?;
+            let uri = d["uri"]
+                .as_str()
+                .filter(|u| u.starts_with("spotify:show:"))?;
             Some(SearchHit {
                 uri: uri.to_string(),
                 name: str_of(&d["name"]),
@@ -179,7 +206,9 @@ fn parse_results(value: &Value) -> SearchResults {
         .iter()
         .filter_map(|i| {
             let d = node(i);
-            let uri = d["uri"].as_str().filter(|u| u.starts_with("spotify:episode:"))?;
+            let uri = d["uri"]
+                .as_str()
+                .filter(|u| u.starts_with("spotify:episode:"))?;
             let show = node(&d["podcastV2"]);
             let year = d["releaseDate"]["isoString"]
                 .as_str()
@@ -205,7 +234,9 @@ fn parse_results(value: &Value) -> SearchResults {
         .iter()
         .filter_map(|i| {
             let d = node(i);
-            let uri = d["uri"].as_str().filter(|u| u.starts_with("spotify:user:"))?;
+            let uri = d["uri"]
+                .as_str()
+                .filter(|u| u.starts_with("spotify:user:"))?;
             // Görünen ad yoksa kullanıcı adı, o da yoksa adresteki kimlik.
             let name = [&d["displayName"], &d["name"], &d["username"], &d["id"]]
                 .into_iter()
@@ -217,7 +248,12 @@ fn parse_results(value: &Value) -> SearchResults {
                 .map(|k| avatar_sources(&d[k]))
                 .find(|u| !u.is_empty())
                 .unwrap_or_default();
-            Some(SearchHit { uri: uri.to_string(), name, subtitle: String::new(), image })
+            Some(SearchHit {
+                uri: uri.to_string(),
+                name,
+                subtitle: String::new(),
+                image,
+            })
         })
         .collect();
 
@@ -337,7 +373,8 @@ mod tests {
     }
 
     fn fixture() -> SearchResults {
-        let value: Value = serde_json::from_str(include_str!("fixtures/search_desktop.json")).unwrap();
+        let value: Value =
+            serde_json::from_str(include_str!("fixtures/search_desktop.json")).unwrap();
         parse_results(&value)
     }
 
@@ -349,9 +386,16 @@ mod tests {
         assert_eq!(r.tracks[1].artists, "Mavi Orman, Kuzey");
         assert_eq!(r.artists.len(), 2);
         assert_eq!(r.albums[0].subtitle, "Mavi Orman · 2021");
-        assert_eq!(r.albums[1].subtitle, "Kuzey", "yılsız albüm yalnız sanatçıyı yazar");
+        assert_eq!(
+            r.albums[1].subtitle, "Kuzey",
+            "yılsız albüm yalnız sanatçıyı yazar"
+        );
         assert_eq!(r.playlists[0].subtitle, "Openify Test");
-        assert_eq!(r.playlists[1].subtitle, crate::i18n::canon::PLAYLIST, "sahibi yoksa kanonik 'Liste'");
+        assert_eq!(
+            r.playlists[1].subtitle,
+            crate::i18n::canon::PLAYLIST,
+            "sahibi yoksa kanonik 'Liste'"
+        );
     }
 
     #[test]
@@ -362,7 +406,11 @@ mod tests {
         assert_eq!(r.podcasts[0].uri, "spotify:show:00000000000000000000s1");
         assert_eq!(r.podcasts[0].name, "Yavaş Sabah");
         assert_eq!(r.podcasts[0].subtitle, "Sakin Yayınlar");
-        assert!(r.podcasts[0].image.ends_with("f68ds1"), "kart için ~300 px resim: {}", r.podcasts[0].image);
+        assert!(
+            r.podcasts[0].image.ends_with("f68ds1"),
+            "kart için ~300 px resim: {}",
+            r.podcasts[0].image
+        );
         // Kapağı ve yayıncısı olmayan podcast boş alanlarla yine listelenir.
         assert_eq!(r.podcasts[1].subtitle, "");
         assert_eq!(r.podcasts[1].image, "");
@@ -403,6 +451,11 @@ mod tests {
         assert_eq!(node(&wrapped)["uri"], "spotify:show:a");
         assert_eq!(node(&plain)["uri"], "spotify:show:b");
         assert_eq!(node(&bare)["uri"], "spotify:show:c");
-        assert_eq!(avatar_sources(&json!({ "items": [ { "sources": [ { "url": "u", "width": 300 } ] } ] })), "u");
+        assert_eq!(
+            avatar_sources(
+                &json!({ "items": [ { "sources": [ { "url": "u", "width": 300 } ] } ] })
+            ),
+            "u"
+        );
     }
 }

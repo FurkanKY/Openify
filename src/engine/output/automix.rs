@@ -71,8 +71,13 @@ pub struct Plan {
 /// Zarftan sönme / giriş uzunluğu (sn): sınırdan (0. saniye) başlayıp ses
 /// düzeyi gövdenin (zarfın tepesi) `RAMP_DB` altına inmeyen ilk saniyeye dek.
 pub fn ramp_len(env: &[i8; ENV_SECS]) -> u8 {
-    let Some(body) = env.iter().copied().filter(|v| *v != ENV_UNKNOWN).max() else { return 0 };
-    let k = env.iter().position(|v| *v != ENV_UNKNOWN && *v as i32 >= body as i32 - RAMP_DB).unwrap_or(0);
+    let Some(body) = env.iter().copied().filter(|v| *v != ENV_UNKNOWN).max() else {
+        return 0;
+    };
+    let k = env
+        .iter()
+        .position(|v| *v != ENV_UNKNOWN && *v as i32 >= body as i32 - RAMP_DB)
+        .unwrap_or(0);
     k.min(PLAN_MAX_S as usize) as u8
 }
 
@@ -134,7 +139,9 @@ pub fn tempo_compatible(a: f32, b: f32) -> bool {
         return false;
     }
     let ratio = b as f64 / a as f64;
-    [1.0, 2.0, 0.5].iter().any(|m| (ratio / m - 1.0).abs() <= TEMPO_TOL)
+    [1.0, 2.0, 0.5]
+        .iter()
+        .any(|m| (ratio / m - 1.0).abs() <= TEMPO_TOL)
 }
 
 fn secs_to_frames(s: f64) -> f64 {
@@ -165,15 +172,26 @@ pub fn decide(out: &EdgeView, inc: Option<&EdgeView>, ring_extra: u32) -> Plan {
             .map(|n| (n, base + n as f64 * period))
             .filter(|(_, ov)| *ov >= lo && *ov <= hi)
             .map(|(n, ov)| {
-                let cost = (ov - want).abs() / period + if n % BEATS_PER_BAR == 0 { 0.0 } else { OFF_BAR_COST };
+                let cost = (ov - want).abs() / period
+                    + if n % BEATS_PER_BAR == 0 {
+                        0.0
+                    } else {
+                        OFF_BAR_COST
+                    };
                 (cost, ov)
             })
             .min_by(|a, b| a.0.total_cmp(&b.0));
         if let Some((_, ov)) = best {
-            return Plan { overlap: ov.round() as u32, aligned: true };
+            return Plan {
+                overlap: ov.round() as u32,
+                aligned: true,
+            };
         }
     }
-    Plan { overlap: want.round() as u32, aligned: false }
+    Plan {
+        overlap: want.round() as u32,
+        aligned: false,
+    }
 }
 
 // ── Sessizlik atlama ────────────────────────────────────────────────────
@@ -296,7 +314,12 @@ mod tests {
     use super::*;
 
     fn view(bpm: f32, conf: f32, beat_ms: u32, ramp_s: u8) -> EdgeView {
-        EdgeView { bpm, conf, beat_ms, ramp_s }
+        EdgeView {
+            bpm,
+            conf,
+            beat_ms,
+            ramp_s,
+        }
     }
 
     #[test]
@@ -336,7 +359,13 @@ mod tests {
     fn hard_edges_get_the_two_second_floor_and_slow_edges_follow_the_ramp() {
         let hard = view(0.0, 0.0, 0, 0);
         let plan = decide(&hard, None, 0);
-        assert_eq!(plan, Plan { overlap: 2 * RATE, aligned: false });
+        assert_eq!(
+            plan,
+            Plan {
+                overlap: 2 * RATE,
+                aligned: false
+            }
+        );
         let fade = view(0.0, 0.0, 0, 7);
         assert_eq!(decide(&fade, Some(&hard), 0).overlap, 7 * RATE);
         // Gelenin yavaş girişi de uzatır; üst sınır 12 sn.
@@ -366,9 +395,15 @@ mod tests {
         let period = 22_050.0;
         let base = 0.4 * RATE as f64;
         let n = ((plan.overlap as f64 - base) / period).round();
-        assert!((plan.overlap as f64 - (base + n * period)).abs() < 1.5, "{plan:?}");
+        assert!(
+            (plan.overlap as f64 - (base + n * period)).abs() < 1.5,
+            "{plan:?}"
+        );
         // İstenen 6 sn'ye en yakın, ölçü (n % 4 == 0) tercihli.
-        assert!((plan.overlap as f64 / RATE as f64 - 6.0).abs() < 1.2, "{plan:?}");
+        assert!(
+            (plan.overlap as f64 / RATE as f64 - 6.0).abs() < 1.2,
+            "{plan:?}"
+        );
         assert_eq!(n as usize % 4, 0, "ölçü tercihi");
     }
 
@@ -377,7 +412,13 @@ mod tests {
         let out = view(120.0, 0.8, 300, 5);
         let shaky = view(120.0, 0.1, 100, 0);
         let plan = decide(&out, Some(&shaky), 0);
-        assert_eq!(plan, Plan { overlap: 5 * RATE, aligned: false });
+        assert_eq!(
+            plan,
+            Plan {
+                overlap: 5 * RATE,
+                aligned: false
+            }
+        );
         let far = view(150.0, 0.9, 100, 0);
         assert!(!decide(&out, Some(&far), 0).aligned);
         let unsure_out = view(120.0, 0.1, 300, 5);
@@ -394,7 +435,10 @@ mod tests {
                     let inc = view(bpm, 0.9, 500 - beat.min(500), 0);
                     let plan = decide(&out, Some(&inc), 700);
                     let s = plan.overlap as f64 / RATE as f64;
-                    assert!((2.0 - 1e-6..=12.0 + 1e-6).contains(&s), "bpm {bpm} beat {beat}: {s}");
+                    assert!(
+                        (2.0 - 1e-6..=12.0 + 1e-6).contains(&s),
+                        "bpm {bpm} beat {beat}: {s}"
+                    );
                 }
             }
         }
@@ -414,7 +458,11 @@ mod tests {
         pkt.extend(vec![(0.0, 0.0); 4_410]);
         pkt.extend(vec![(0.5, 0.5); 100]);
         let out = t.apply(&stereo(&pkt)).into_owned();
-        assert_eq!(out.len(), 2 * pkt.len(), "kısa boşluk (< 1,5 sn) aynı uzunlukta");
+        assert_eq!(
+            out.len(),
+            2 * pkt.len(),
+            "kısa boşluk (< 1,5 sn) aynı uzunlukta"
+        );
         // Şarkı sonu: müzik + 3 sn sessizlik: yalnız TRIM_KEEP kalır.
         let mut t = TailTrim::default();
         let mut pkt = vec![(0.5, 0.5); 100];
@@ -427,7 +475,11 @@ mod tests {
         let input = stereo(&[(0.5, 0.5); 10]);
         let out = t.apply(&input);
         assert_eq!(out.len() / 2, (GAP_MAX - TRIM_KEEP) as usize + 10);
-        assert!(out[..(GAP_MAX - TRIM_KEEP) as usize * 2].iter().all(|x| *x == 0.0));
+        assert!(
+            out[..(GAP_MAX - TRIM_KEEP) as usize * 2]
+                .iter()
+                .all(|x| *x == 0.0)
+        );
     }
 
     #[test]
@@ -442,7 +494,10 @@ mod tests {
         // Süren kısa aralık paketler arasında sayılır.
         let quiet = vec![0.0f64; 2 * 600];
         assert!(matches!(t.apply(&quiet), Cow::Borrowed(_)));
-        assert!(matches!(t.apply(&quiet), Cow::Owned(_)), "ikinci paketle 1 200 kare > 1 024");
+        assert!(
+            matches!(t.apply(&quiet), Cow::Owned(_)),
+            "ikinci paketle 1 200 kare > 1 024"
+        );
     }
 
     #[test]

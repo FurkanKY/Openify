@@ -78,7 +78,9 @@ impl Playback {
 
     /// Görünür listedeki `i`. şarkıya atla.
     pub fn jump_to(&mut self, cx: &mut Cx<'_>, i: usize) {
-        let Some(uri) = cx.queue.jump_to(i) else { return };
+        let Some(uri) = cx.queue.jump_to(i) else {
+            return;
+        };
         self.restored = None;
         if self.load_uri(&uri, 0, true) {
             cx.queue_changed();
@@ -91,7 +93,9 @@ impl Playback {
     /// zaten önyüklendiyse boş.
     pub fn preload_next(&mut self, queue: &Queue) {
         let Some(deck) = &self.deck else { return };
-        let Some(uri) = queue.peek_next_auto() else { return };
+        let Some(uri) = queue.peek_next_auto() else {
+            return;
+        };
         if self.preloaded.as_deref() == Some(uri.as_str()) {
             return;
         }

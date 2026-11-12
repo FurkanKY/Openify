@@ -79,7 +79,11 @@ pub struct History {
 
 impl History {
     pub fn new(start: Route) -> Self {
-        Self { back: Vec::new(), current: start, forward: Vec::new() }
+        Self {
+            back: Vec::new(),
+            current: start,
+            forward: Vec::new(),
+        }
     }
 
     pub fn current(&self) -> &Route {
@@ -101,7 +105,10 @@ impl History {
             return false;
         }
         let from = std::mem::replace(&mut self.current, route);
-        self.back.push(Entry { route: from, scroll });
+        self.back.push(Entry {
+            route: from,
+            scroll,
+        });
         if self.back.len() > MAX_BACK {
             self.back.remove(0);
         }
@@ -113,14 +120,20 @@ impl History {
     pub fn back(&mut self, scroll: f32) -> Option<Entry> {
         let to = self.back.pop()?;
         let from = std::mem::replace(&mut self.current, to.route.clone());
-        self.forward.push(Entry { route: from, scroll });
+        self.forward.push(Entry {
+            route: from,
+            scroll,
+        });
         Some(to)
     }
 
     pub fn forward(&mut self, scroll: f32) -> Option<Entry> {
         let to = self.forward.pop()?;
         let from = std::mem::replace(&mut self.current, to.route.clone());
-        self.back.push(Entry { route: from, scroll });
+        self.back.push(Entry {
+            route: from,
+            scroll,
+        });
         Some(to)
     }
 
@@ -161,14 +174,26 @@ mod tests {
         assert!(h.push(artist(2), 120.));
         assert!(!h.push(artist(2), 0.), "aynı yere ikinci kez gidilmez");
         let to = h.back(40.).unwrap();
-        assert_eq!(to, Entry { route: artist(1), scroll: 120. });
+        assert_eq!(
+            to,
+            Entry {
+                route: artist(1),
+                scroll: 120.
+            }
+        );
         let to = h.back(0.).unwrap();
         assert_eq!(to.scroll, 300.);
         assert!(!h.can_back());
         let to = h.forward(10.).unwrap();
         assert_eq!(to.route, artist(1));
         let to = h.forward(0.).unwrap();
-        assert_eq!(to, Entry { route: artist(2), scroll: 40. });
+        assert_eq!(
+            to,
+            Entry {
+                route: artist(2),
+                scroll: 40.
+            }
+        );
         // Yeni yere gitmek ileriyi siler.
         h.back(0.);
         h.push(Route::Home, 0.);

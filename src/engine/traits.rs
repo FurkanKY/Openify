@@ -28,7 +28,9 @@ fn pending() -> &'static Mutex<HashMap<String, Traits>> {
 
 /// Spotify'dan yeni gelen bir şarkının özelliği (veritabanına yazılmayı bekler).
 pub fn note(uri: &str, traits: Traits) {
-    let Ok(mut map) = pending().lock() else { return };
+    let Ok(mut map) = pending().lock() else {
+        return;
+    };
     if map.len() >= PENDING_MAX {
         map.clear();
     }
@@ -37,16 +39,23 @@ pub fn note(uri: &str, traits: Traits) {
 
 /// `uris` için bekleyenleri alır (bekleyenlerden düşer).
 pub fn take<'a>(uris: impl IntoIterator<Item = &'a str>) -> Vec<(String, Traits)> {
-    let Ok(mut map) = pending().lock() else { return Vec::new() };
+    let Ok(mut map) = pending().lock() else {
+        return Vec::new();
+    };
     if map.is_empty() {
         return Vec::new();
     }
-    uris.into_iter().filter_map(|u| map.remove_entry(u)).collect()
+    uris.into_iter()
+        .filter_map(|u| map.remove_entry(u))
+        .collect()
 }
 
 /// Spotify'ın ham değerlerinden: popülerlik 0–100'e sıkıştırılır.
 pub fn from_spotify(explicit: bool, popularity: i32) -> Traits {
-    Traits { explicit, popularity: popularity.clamp(0, 100) as u8 }
+    Traits {
+        explicit,
+        popularity: popularity.clamp(0, 100) as u8,
+    }
 }
 
 #[cfg(test)]
@@ -59,7 +68,16 @@ mod tests {
         note("test:traits:a", from_spotify(true, 55));
         note("test:traits:b", from_spotify(false, 300));
         let got = take(["test:traits:a", "test:traits:zzz"]);
-        assert_eq!(got, vec![("test:traits:a".to_string(), Traits { explicit: true, popularity: 55 })]);
+        assert_eq!(
+            got,
+            vec![(
+                "test:traits:a".to_string(),
+                Traits {
+                    explicit: true,
+                    popularity: 55
+                }
+            )]
+        );
         assert!(take(["test:traits:a"]).is_empty(), "ikinci kez verilmez");
         let b = take(["test:traits:b"]);
         assert_eq!(b[0].1.popularity, 100, "popülerlik 100'e sıkışır");
@@ -68,11 +86,23 @@ mod tests {
     #[test]
     fn popularity_is_clamped() {
         assert_eq!(from_spotify(false, -5).popularity, 0);
-        assert_eq!(from_spotify(true, 42), Traits { explicit: true, popularity: 42 });
+        assert_eq!(
+            from_spotify(true, 42),
+            Traits {
+                explicit: true,
+                popularity: 42
+            }
+        );
     }
 
     #[test]
     fn the_unknown_default_is_clean_and_unpopular() {
-        assert_eq!(Traits::default(), Traits { explicit: false, popularity: 0 });
+        assert_eq!(
+            Traits::default(),
+            Traits {
+                explicit: false,
+                popularity: 0
+            }
+        );
     }
 }

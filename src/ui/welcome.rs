@@ -148,7 +148,14 @@ pub(super) struct WelcomeUi {
 
 impl WelcomeUi {
     pub(super) fn new() -> Self {
-        Self { since: Instant::now(), timer: None, trying: None, shown: Cell::new(false), settled_at: Cell::new(None), page_seen: RefCell::new(("", Instant::now())) }
+        Self {
+            since: Instant::now(),
+            timer: None,
+            trying: None,
+            shown: Cell::new(false),
+            settled_at: Cell::new(None),
+            page_seen: RefCell::new(("", Instant::now())),
+        }
     }
 
     /// Yükleme yeniden başlıyor: saati sıfırla, sınırlarda sayfayı yenile.
@@ -177,7 +184,13 @@ impl WelcomeUi {
 /// `failure`: kütüphane hatası; `failed_all`: sayfanın bütün istekleri başarısız
 /// (sayfanın kendi hata görünümü var, "uzun sürüyor" denmez); `slow`: yükleme
 /// `SLOW_AFTER`'ı aştı.
-fn decide(connection: &Connection, trying: Option<&GateKind>, failure: Option<&str>, failed_all: bool, slow: bool) -> Option<Gate> {
+fn decide(
+    connection: &Connection,
+    trying: Option<&GateKind>,
+    failure: Option<&str>,
+    failed_all: bool,
+    slow: bool,
+) -> Option<Gate> {
     let kind = match connection {
         Connection::NeedsLogin => GateKind::SignIn,
         Connection::LoggingIn => GateKind::SigningIn,
@@ -187,7 +200,10 @@ fn decide(connection: &Connection, trying: Option<&GateKind>, failure: Option<&s
         Connection::Failed(_) => GateKind::Offline,
         Connection::Connecting | Connection::Connected(_) | Connection::NoAudio => {
             if let Some(kind) = trying {
-                return Some(Gate { kind: kind.clone(), busy: true });
+                return Some(Gate {
+                    kind: kind.clone(),
+                    busy: true,
+                });
             }
             if let Some(error) = failure {
                 GateKind::Failed(error.to_string())
@@ -209,9 +225,14 @@ fn fade_in(id: impl Into<ElementId>, content: Div) -> AnyElement {
         return content.into_any_element();
     }
     content
-        .with_animation(id, Animation::new(motion()).with_easing(gpui::ease_out_quint()), |el, d| {
-            el.opacity(FADE_FLOOR + (1. - FADE_FLOOR) * d).mt(px(S2 * (1. - d)))
-        })
+        .with_animation(
+            id,
+            Animation::new(motion()).with_easing(gpui::ease_out_quint()),
+            |el, d| {
+                el.opacity(FADE_FLOOR + (1. - FADE_FLOOR) * d)
+                    .mt(px(S2 * (1. - d)))
+            },
+        )
         .into_any_element()
 }
 
@@ -230,16 +251,29 @@ impl Shell {
     /// Veri gelebilecek bir durumda mıyız (bağlanıyor / bağlı, yavaş değil)?
     /// Hayırsa bekleyen bölüm iskeleti hiç çizilmez: beklenen veri gelmeyecek.
     pub(super) fn load_may_arrive(&self) -> bool {
-        matches!(self.state.connection, Connection::Connecting | Connection::Connected(_) | Connection::NoAudio)
-            && !self.load_is_slow()
+        matches!(
+            self.state.connection,
+            Connection::Connecting | Connection::Connected(_) | Connection::NoAudio
+        ) && !self.load_is_slow()
     }
 
     /// Bağlantı durumundan (veri yokken) sayfanın göstereceği durum; yoksa
     /// (gerçekten yükleniyor) `None`. `failure`: kütüphane hatası;
     /// `failed_all`: sayfanın bütün istekleri başarısız (kendi hata görünümü var).
     pub(super) fn gate_for(&self, failure: Option<&str>, failed_all: bool) -> Option<Gate> {
-        let trying = self.welcome.trying.as_ref().filter(|(_, at)| at.elapsed() < TRY_HOLD).map(|(kind, _)| kind);
-        decide(&self.state.connection, trying, failure, failed_all, self.load_is_slow())
+        let trying = self
+            .welcome
+            .trying
+            .as_ref()
+            .filter(|(_, at)| at.elapsed() < TRY_HOLD)
+            .map(|(kind, _)| kind);
+        decide(
+            &self.state.connection,
+            trying,
+            failure,
+            failed_all,
+            self.load_is_slow(),
+        )
     }
 
     /// Kütüphane (Ana sayfa, Kütüphane sekmesi) için: kütüphane yoksa nedeni.
@@ -267,7 +301,8 @@ impl Shell {
     /// Kütüphane sekmesinde raf, kütüphane gelene (ya da durum çıkana) dek
     /// çizilmez: durumun altında gri iskelet kartlar durmasın.
     pub(super) fn hide_shelf(&self) -> bool {
-        !matches!(self.library.library, Loadable::Loaded(_)) && (self.library_gate().is_some() || !self.skeleton_due())
+        !matches!(self.library.library, Loadable::Loaded(_))
+            && (self.library_gate().is_some() || !self.skeleton_due())
     }
 
     // ── Olaylar ─────────────────────────────────────────────────────────
@@ -344,7 +379,13 @@ impl Shell {
 
     /// Sayfa içeriği (Ana sayfa, Keşfet) yerine: kütüphane ya da sayfa verisi
     /// henüz yokken. Durum varsa o, yoksa (yükleniyor) boş sayfa, sonra iskelet.
-    pub(super) fn pending_page(&self, gate: Option<Gate>, skeleton: impl FnOnce() -> Div, window: &Window, cx: &mut Context<Self>) -> Div {
+    pub(super) fn pending_page(
+        &self,
+        gate: Option<Gate>,
+        skeleton: impl FnOnce() -> Div,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Div {
         if let Some(gate) = gate {
             return self.gate_page(&gate, window, cx);
         }
@@ -385,7 +426,10 @@ impl Shell {
             self.welcome.settled_at.set(None);
             return content;
         }
-        div().child(fade_in(ElementId::Name(format!("settle-{key}").into()), content))
+        div().child(fade_in(
+            ElementId::Name(format!("settle-{key}").into()),
+            content,
+        ))
     }
 
     pub(super) fn mark_shown(&self) {
@@ -397,11 +441,21 @@ impl Shell {
     /// hapın üstünde kalan alanda ortalı (`page_error` ile aynı kural).
     pub(super) fn gate_page(&self, gate: &Gate, window: &Window, cx: &mut Context<Self>) -> Div {
         let height = f32::from(window.viewport_size().height) - super::TITLEBAR_HEIGHT;
-        div().h(px(height)).flex().items_center().justify_center().child(self.gate_card(gate, true, window, cx))
+        div()
+            .h(px(height))
+            .flex()
+            .items_center()
+            .justify_center()
+            .child(self.gate_card(gate, true, window, cx))
     }
 
     /// Kütüphane sekmesinde (kaymayan alan) durum.
-    pub(super) fn gate_fill(&self, gate: &Gate, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn gate_fill(
+        &self,
+        gate: &Gate,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         div()
             .size_full()
             .pt(px(S2))
@@ -414,12 +468,23 @@ impl Shell {
     }
 
     /// Asıl düğmenin Tab durağı (hep aynı tutamaç: durum değişince odak kalır).
-    fn gate_stop(&self, probe: bool, window: &Window, cx: &mut Context<Self>) -> (Option<gpui::FocusHandle>, Look, bool) {
+    fn gate_stop(
+        &self,
+        probe: bool,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> (Option<gpui::FocusHandle>, Look, bool) {
         let (stop, look) = self.stop_look("gate-primary", super::tab::PAGE, true, window, cx);
         (stop, look, probe)
     }
 
-    fn gate_card(&self, gate: &Gate, probe: bool, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn gate_card(
+        &self,
+        gate: &Gate,
+        probe: bool,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         self.mark_shown();
         let accent = self.accent().text;
         let busy = gate.busy;
@@ -438,7 +503,13 @@ impl Shell {
         let retry_look = if busy { Look::Disabled } else { look };
 
         // (işaret, başlık, açıklama, eylemler, not)
-        let (mark, title, body, actions, note): (AnyElement, &str, String, Vec<AnyElement>, Option<&'static str>) = match &kind {
+        let (mark, title, body, actions, note): (
+            AnyElement,
+            &str,
+            String,
+            Vec<AnyElement>,
+            Option<&'static str>,
+        ) = match &kind {
             GateKind::SignIn => (
                 super::theme::icon("openify-mark", S8, text()).into_any_element(),
                 t!(WelcomeTitle),
@@ -471,30 +542,57 @@ impl Shell {
             ),
             GateKind::Premium => {
                 // İkincil düğmeler de kendi Tab duraklarıyla (odak halkası yalnız odaktakinde).
-                let (check_stop, check_look) = self.stop_look("gate-check", super::tab::PAGE, true, window, cx);
-                let (out_stop, out_look) = self.stop_look("gate-sign-out", super::tab::PAGE, true, window, cx);
+                let (check_stop, check_look) =
+                    self.stop_look("gate-check", super::tab::PAGE, true, window, cx);
+                let (out_stop, out_look) =
+                    self.stop_look("gate-sign-out", super::tab::PAGE, true, window, cx);
                 let check_look = if busy { Look::Disabled } else { check_look };
-                let check = secondary_button("gate-check", "refresh-cw", again(t!(GateCheckAgain)), check_look, accent)
-                    .when(!busy, |el| {
-                        el.on_click(cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Premium, cx)))
-                    });
-                let out = ghost_button("gate-sign-out", "log-out", t!(SignOut), false, out_look, accent)
-                    .on_click(cx.listener(|this, _, _, cx| this.ask_sign_out(cx)));
-                let stop_of = |button: Stateful<Div>, h: &Option<gpui::FocusHandle>| -> AnyElement {
-                    match h {
-                        Some(h) if probe => button.child(self.focus_probe(h)).track_focus(h).into_any_element(),
-                        Some(h) => button.track_focus(h).into_any_element(),
-                        None => button.into_any_element(),
-                    }
-                };
+                let check = secondary_button(
+                    "gate-check",
+                    "refresh-cw",
+                    again(t!(GateCheckAgain)),
+                    check_look,
+                    accent,
+                )
+                .when(!busy, |el| {
+                    el.on_click(
+                        cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Premium, cx)),
+                    )
+                });
+                let out = ghost_button(
+                    "gate-sign-out",
+                    "log-out",
+                    t!(SignOut),
+                    false,
+                    out_look,
+                    accent,
+                )
+                .on_click(cx.listener(|this, _, _, cx| this.ask_sign_out(cx)));
+                let stop_of =
+                    |button: Stateful<Div>, h: &Option<gpui::FocusHandle>| -> AnyElement {
+                        match h {
+                            Some(h) if probe => button
+                                .child(self.focus_probe(h))
+                                .track_focus(h)
+                                .into_any_element(),
+                            Some(h) => button.track_focus(h).into_any_element(),
+                            None => button.into_any_element(),
+                        }
+                    };
                 (
                     state_mark("circle-alert"),
                     t!(PillNeedsPremiumTitle),
                     t!(GatePremiumBody).into(),
                     vec![
                         track(
-                            primary_button("gate-primary", "arrow-right", t!(GateGetPremium), look, accent)
-                                .on_click(cx.listener(|this, _, _, cx| this.open_premium_page(cx))),
+                            primary_button(
+                                "gate-primary",
+                                "arrow-right",
+                                t!(GateGetPremium),
+                                look,
+                                accent,
+                            )
+                            .on_click(cx.listener(|this, _, _, cx| this.open_premium_page(cx))),
                         ),
                         stop_of(check, &check_stop),
                         stop_of(out, &out_stop),
@@ -507,8 +605,18 @@ impl Shell {
                 t!(GateOfflineTitle),
                 t!(GateOfflineBody).into(),
                 vec![track(
-                    primary_button("gate-primary", "refresh-cw", again(t!(GateTryNow)), retry_look, accent)
-                        .when(!busy, |el| el.on_click(cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Offline, cx)))),
+                    primary_button(
+                        "gate-primary",
+                        "refresh-cw",
+                        again(t!(GateTryNow)),
+                        retry_look,
+                        accent,
+                    )
+                    .when(!busy, |el| {
+                        el.on_click(
+                            cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Offline, cx)),
+                        )
+                    }),
                 )],
                 None,
             ),
@@ -517,8 +625,16 @@ impl Shell {
                 t!(PillEngineStoppedTitle),
                 t!(GateStoppedBody).into(),
                 vec![track(
-                    primary_button("gate-primary", "refresh-cw", again(t!(BtnRestart)), retry_look, accent)
-                        .when(!busy, |el| el.on_click(cx.listener(|this, _, _, cx| this.gate_restart(cx)))),
+                    primary_button(
+                        "gate-primary",
+                        "refresh-cw",
+                        again(t!(BtnRestart)),
+                        retry_look,
+                        accent,
+                    )
+                    .when(!busy, |el| {
+                        el.on_click(cx.listener(|this, _, _, cx| this.gate_restart(cx)))
+                    }),
                 )],
                 None,
             ),
@@ -527,8 +643,18 @@ impl Shell {
                 t!(GateSlowTitle),
                 t!(GateSlowBody).into(),
                 vec![track(
-                    primary_button("gate-primary", "refresh-cw", again(t!(GateTryNow)), retry_look, accent)
-                        .when(!busy, |el| el.on_click(cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Slow, cx)))),
+                    primary_button(
+                        "gate-primary",
+                        "refresh-cw",
+                        again(t!(GateTryNow)),
+                        retry_look,
+                        accent,
+                    )
+                    .when(!busy, |el| {
+                        el.on_click(
+                            cx.listener(|this, _, _, cx| this.gate_retry(GateKind::Slow, cx)),
+                        )
+                    }),
                 )],
                 None,
             ),
@@ -540,8 +666,17 @@ impl Shell {
                     title,
                     message.into(),
                     vec![track(
-                        primary_button("gate-primary", "refresh-cw", again(t!(Retry)), retry_look, accent).when(!busy, |el| {
-                            el.on_click(cx.listener(move |this, _, _, cx| this.gate_retry(GateKind::Failed(error.clone()), cx)))
+                        primary_button(
+                            "gate-primary",
+                            "refresh-cw",
+                            again(t!(Retry)),
+                            retry_look,
+                            accent,
+                        )
+                        .when(!busy, |el| {
+                            el.on_click(cx.listener(move |this, _, _, cx| {
+                                this.gate_retry(GateKind::Failed(error.clone()), cx)
+                            }))
                         }),
                     )],
                     None,
@@ -557,7 +692,13 @@ impl Shell {
 mod tests {
     use super::*;
 
-    fn kind(conn: Connection, trying: Option<&GateKind>, failure: Option<&str>, failed_all: bool, slow: bool) -> Option<GateKind> {
+    fn kind(
+        conn: Connection,
+        trying: Option<&GateKind>,
+        failure: Option<&str>,
+        failed_all: bool,
+        slow: bool,
+    ) -> Option<GateKind> {
         decide(&conn, trying, failure, failed_all, slow).map(|g| g.kind)
     }
 
@@ -572,14 +713,24 @@ mod tests {
         );
         assert_eq!(any(Connection::NeedsPremium), Some(GateKind::Premium));
         assert_eq!(any(Connection::EngineStopped), Some(GateKind::Stopped));
-        assert_eq!(any(Connection::Failed("network: x".into())), Some(GateKind::Offline));
+        assert_eq!(
+            any(Connection::Failed("network: x".into())),
+            Some(GateKind::Offline)
+        );
     }
 
     #[test]
     fn loading_shows_no_state_until_it_is_slow() {
-        for conn in [Connection::Connecting, Connection::Connected("a".into()), Connection::NoAudio] {
+        for conn in [
+            Connection::Connecting,
+            Connection::Connected("a".into()),
+            Connection::NoAudio,
+        ] {
             assert_eq!(kind(conn.clone(), None, None, false, false), None);
-            assert_eq!(kind(conn.clone(), None, None, false, true), Some(GateKind::Slow));
+            assert_eq!(
+                kind(conn.clone(), None, None, false, true),
+                Some(GateKind::Slow)
+            );
             // Sayfanın kendi hata görünümü varsa "uzun sürüyor" denmez.
             assert_eq!(kind(conn, None, None, true, true), None);
         }
@@ -587,19 +738,48 @@ mod tests {
 
     #[test]
     fn a_library_failure_while_connected_is_explained() {
-        let k = kind(Connection::Connected("a".into()), None, Some("boom"), false, false);
+        let k = kind(
+            Connection::Connected("a".into()),
+            None,
+            Some("boom"),
+            false,
+            false,
+        );
         assert_eq!(k, Some(GateKind::Failed("boom".into())));
         // Çevrimdışıyken hata metni değil çevrimdışı durumu.
-        assert_eq!(kind(Connection::Failed("e".into()), None, Some("network: x"), false, false), Some(GateKind::Offline));
+        assert_eq!(
+            kind(
+                Connection::Failed("e".into()),
+                None,
+                Some("network: x"),
+                false,
+                false
+            ),
+            Some(GateKind::Offline)
+        );
     }
 
     #[test]
     fn pressing_try_now_keeps_the_state_busy_while_connecting() {
-        let d = decide(&Connection::Connecting, Some(&GateKind::Offline), None, false, false).unwrap();
+        let d = decide(
+            &Connection::Connecting,
+            Some(&GateKind::Offline),
+            None,
+            false,
+            false,
+        )
+        .unwrap();
         assert_eq!(d.kind, GateKind::Offline);
         assert!(d.busy);
         // Sonuç gelince (çevrimdışı yine) normal düğme.
-        let d = decide(&Connection::Failed("e".into()), Some(&GateKind::Offline), None, false, false).unwrap();
+        let d = decide(
+            &Connection::Failed("e".into()),
+            Some(&GateKind::Offline),
+            None,
+            false,
+            false,
+        )
+        .unwrap();
         assert!(!d.busy);
     }
 
@@ -636,7 +816,10 @@ mod tests {
     fn timings_are_calm() {
         // İskelet gecikmesi hissedilmez ama bağlantı sonucunu bekler; "uzun
         // sürüyor" bir iki saniyede değil, gerçekten uzun sürünce.
-        assert!(SKELETON_DELAY >= Duration::from_millis(200) && SKELETON_DELAY <= Duration::from_millis(600));
+        assert!(
+            SKELETON_DELAY >= Duration::from_millis(200)
+                && SKELETON_DELAY <= Duration::from_millis(600)
+        );
         assert!(SLOW_AFTER >= Duration::from_secs(10));
         assert!(TRY_HOLD < SLOW_AFTER);
         assert!(SETTLE_WINDOW > motion());

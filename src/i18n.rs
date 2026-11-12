@@ -22,9 +22,9 @@
 //! tablodaki yazılar `concat!` ile derleme zamanında birleşir).
 
 use std::fmt::{Display, Write as _};
+use std::sync::atomic::AtomicU8;
 #[cfg(not(test))]
 use std::sync::atomic::Ordering;
-use std::sync::atomic::AtomicU8;
 
 /// Anahtar tablosunu ve `K` sıralamasını kuran makro. Her girdi İKİ dili birden
 /// ister: biri eksikse derleme durur.
@@ -171,7 +171,11 @@ pub fn system_lang() -> Lang {
 
 /// LANGID'in birincil dil kısmı (alt 10 bit) Türkçe (0x1F) ise `Tr`.
 pub fn lang_from_langid(id: u16) -> Lang {
-    if id & 0x3ff == 0x1f { Lang::Tr } else { Lang::En }
+    if id & 0x3ff == 0x1f {
+        Lang::Tr
+    } else {
+        Lang::En
+    }
 }
 
 /// Düz yazı.
@@ -201,7 +205,13 @@ pub fn tp(k: K, n: u64, extra: &[&dyn Display]) -> String {
 
 fn pick_plural(s: &'static str, n: u64) -> &'static str {
     match s.split_once('|') {
-        Some((one, many)) => if n == 1 { one } else { many },
+        Some((one, many)) => {
+            if n == 1 {
+                one
+            } else {
+                many
+            }
+        }
         None => s,
     }
 }
@@ -261,7 +271,11 @@ fn group(n: u64, sep: char) -> String {
 
 /// Hazır biçimlenmiş sayıdaki ondalık noktayı dile uydurur ("1.2 MB" → Türkçede "1,2 MB").
 pub fn localize_decimal(s: &str) -> String {
-    if lang() == Lang::Tr { s.replace('.', ",") } else { s.to_string() }
+    if lang() == Lang::Tr {
+        s.replace('.', ",")
+    } else {
+        s.to_string()
+    }
 }
 
 /// Küçük harfe çevirme; Türkçede İ → i, I → ı (Rust'ın varsayılanı "i̇" üretir).

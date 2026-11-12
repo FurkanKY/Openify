@@ -16,15 +16,15 @@
 use std::{cell::Cell, rc::Rc};
 
 use gpui::{
-    AnyElement, Bounds, ClickEvent, Context, ElementId, FontWeight, KeyDownEvent, MouseButton, Pixels, SharedString, Window,
-    canvas, deferred, div, prelude::*, px, rgb,
+    AnyElement, Bounds, ClickEvent, Context, ElementId, FontWeight, KeyDownEvent, MouseButton,
+    Pixels, SharedString, Window, canvas, deferred, div, prelude::*, px, rgb,
 };
 
 use super::{
     Shell, TITLEBAR_HEIGHT,
     components::{
-        Look, MENU_ITEM_HEIGHT, MenuItem, Tooltip, menu_item, menu_panel,
-        menu_separator, primary_button_sized, secondary_button, segment, segmented_track, select_field, switch,
+        Look, MENU_ITEM_HEIGHT, MenuItem, Tooltip, menu_item, menu_panel, menu_separator,
+        primary_button_sized, secondary_button, segment, segmented_track, select_field, switch,
     },
     history::Route,
     player::Connection,
@@ -130,7 +130,11 @@ impl SettingsUi {
 
     /// Klavyeyi ve tekerleği kendine alan bir katman açık mı?
     pub fn modal(&self) -> bool {
-        self.profile_open || self.device_open || self.confirm.is_some() || self.help.open || self.credits.open
+        self.profile_open
+            || self.device_open
+            || self.confirm.is_some()
+            || self.help.open
+            || self.credits.open
     }
 
     /// Menüleri kapat (onay kutusu kalır).
@@ -146,7 +150,9 @@ impl SettingsUi {
 /// Spotify'ın kendi ürettiği kullanıcı kimliği mi (uzun, harf-rakam karışık)?
 /// Bunlar bir ad değil; baş harfi anlamsız.
 fn looks_generated(name: &str) -> bool {
-    name.len() >= 20 && name.chars().all(|c| c.is_ascii_alphanumeric()) && name.chars().any(|c| c.is_ascii_digit())
+    name.len() >= 20
+        && name.chars().all(|c| c.is_ascii_alphanumeric())
+        && name.chars().any(|c| c.is_ascii_digit())
 }
 
 /// Profil düğmesindeki baş harf; ad yoksa ya da bir kimlik gibiyse `None` (simge).
@@ -202,28 +208,60 @@ fn device_label(selected: &Option<String>, known: Option<&Vec<String>>) -> Strin
 
 /// Kullanılan açık kaynak bileşenler: ad, lisans, ne için. Yazı tipleri ve
 /// simgelerin lisans metni uygulamaya gömülü (OFL / ISC bunu ister).
-pub fn notices() -> [(&'static str, &'static str, &'static str, Option<&'static str>); 14] {
+pub fn notices() -> [(
+    &'static str,
+    &'static str,
+    &'static str,
+    Option<&'static str>,
+); 14] {
     [
-    ("librespot", "MIT", t!(LicLibrespot), None),
-    ("gpui (Zed)", "Apache-2.0", t!(LicUi), None),
-    ("Velopack", "MIT", t!(LicInstaller), None),
-    ("cpal ve rodio", "Apache-2.0, MIT", t!(LicAudioOut), None),
-    ("SQLite (rusqlite)", t!(LicSqliteTerms), t!(Cache), None),
-    ("Tokio, reqwest", "MIT, Apache-2.0", t!(LicNetwork), None),
-    ("serde, protobuf", "MIT, Apache-2.0", t!(LicDataFormats), None),
-    ("resvg, image", "Apache-2.0, MIT", t!(LicImages), None),
-    ("nucleo-matcher", "MPL-2.0", t!(LicMatcher), None),
-    ("keyring, windows-rs", "MIT, Apache-2.0", t!(LicWindows), None),
-    ("Figtree", "SIL OFL 1.1", t!(LicTitleFont), Some(include_str!("../../assets/licenses/Figtree-OFL.txt"))),
-    (
-        "Plus Jakarta Sans",
-        "SIL OFL 1.1",
-        t!(LicFallbackFont),
-        Some(include_str!("../../assets/licenses/PlusJakartaSans-OFL.txt")),
-    ),
-    ("Lucide", "ISC", t!(LicIcons), Some(include_str!("../../assets/licenses/Lucide-ISC.txt"))),
-    ("OPRA", "CC BY-SA 4.0", t!(LicOpra), Some(include_str!("../../assets/licenses/OPRA-NOTICE.txt"))),
-]
+        ("librespot", "MIT", t!(LicLibrespot), None),
+        ("gpui (Zed)", "Apache-2.0", t!(LicUi), None),
+        ("Velopack", "MIT", t!(LicInstaller), None),
+        ("cpal ve rodio", "Apache-2.0, MIT", t!(LicAudioOut), None),
+        ("SQLite (rusqlite)", t!(LicSqliteTerms), t!(Cache), None),
+        ("Tokio, reqwest", "MIT, Apache-2.0", t!(LicNetwork), None),
+        (
+            "serde, protobuf",
+            "MIT, Apache-2.0",
+            t!(LicDataFormats),
+            None,
+        ),
+        ("resvg, image", "Apache-2.0, MIT", t!(LicImages), None),
+        ("nucleo-matcher", "MPL-2.0", t!(LicMatcher), None),
+        (
+            "keyring, windows-rs",
+            "MIT, Apache-2.0",
+            t!(LicWindows),
+            None,
+        ),
+        (
+            "Figtree",
+            "SIL OFL 1.1",
+            t!(LicTitleFont),
+            Some(include_str!("../../assets/licenses/Figtree-OFL.txt")),
+        ),
+        (
+            "Plus Jakarta Sans",
+            "SIL OFL 1.1",
+            t!(LicFallbackFont),
+            Some(include_str!(
+                "../../assets/licenses/PlusJakartaSans-OFL.txt"
+            )),
+        ),
+        (
+            "Lucide",
+            "ISC",
+            t!(LicIcons),
+            Some(include_str!("../../assets/licenses/Lucide-ISC.txt")),
+        ),
+        (
+            "OPRA",
+            "CC BY-SA 4.0",
+            t!(LicOpra),
+            Some(include_str!("../../assets/licenses/OPRA-NOTICE.txt")),
+        ),
+    ]
 }
 
 // ── Eylemler ────────────────────────────────────────────────────────────
@@ -247,7 +285,12 @@ impl Shell {
     pub(super) fn enter_settings(&mut self, cx: &mut Context<Self>) {
         self.sui.autostart_on = self.sui.autostart.is_enabled();
         self.sui.cache_note = None;
-        let devices = cx.background_spawn(async { (engine::output_device_names(), engine::default_output_device_name()) });
+        let devices = cx.background_spawn(async {
+            (
+                engine::output_device_names(),
+                engine::default_output_device_name(),
+            )
+        });
         cx.spawn(async move |this, cx| {
             let (names, default) = devices.await;
             let _ = this.update(cx, |shell, cx| {
@@ -303,10 +346,13 @@ impl Shell {
     pub(super) fn apply_prefs(&mut self, startup: bool) {
         engine::apply_audio(self.prefs.kbps(), self.prefs.normalise);
         engine::apply_normalisation_level(self.prefs.normalise_pregain_db());
-        self.engine.send(engine::Command::SetQueueRules(self.prefs.queue_rules()));
+        self.engine
+            .send(engine::Command::SetQueueRules(self.prefs.queue_rules()));
         engine::set_output_device(self.prefs.output_device.clone());
-        self.engine.send(engine::Command::SetCrossfade(self.prefs.crossfade_ms));
-        self.engine.send(engine::Command::SetAutoMix(self.prefs.automix));
+        self.engine
+            .send(engine::Command::SetCrossfade(self.prefs.crossfade_ms));
+        self.engine
+            .send(engine::Command::SetAutoMix(self.prefs.automix));
         self.eq_send();
         self.karaoke_send();
         self.connect_send();
@@ -329,26 +375,38 @@ impl Shell {
         let sent = &mut self.sui.connect_sent;
         if on && sent.1 != name {
             sent.1 = name.clone();
-            self.engine.send(engine::Command::Connect(engine::ConnectCommand::SetName(name)));
+            self.engine
+                .send(engine::Command::Connect(engine::ConnectCommand::SetName(
+                    name,
+                )));
         }
         let sent = &mut self.sui.connect_sent;
         if on != sent.0 {
             sent.0 = on;
-            self.engine.send(engine::Command::Connect(engine::ConnectCommand::SetEnabled(on)));
+            self.engine.send(engine::Command::Connect(
+                engine::ConnectCommand::SetEnabled(on),
+            ));
         }
     }
 
     /// Cihaz adı penceresini aç (Spotify'ın cihaz listesinde görünen ad).
     fn ask_device_name(&mut self, cx: &mut Context<Self>) {
         use super::manage::{Prompt, PromptKind};
-        self.manage.prompt = Some(Prompt { kind: PromptKind::DeviceName, text: self.prefs.device_name.clone() });
+        self.manage.prompt = Some(Prompt {
+            kind: PromptKind::DeviceName,
+            text: self.prefs.device_name.clone(),
+        });
         self.refocus_anchor = true;
         cx.notify();
     }
 
     /// Cihaz adı penceresi onaylandı (`manage::confirm_prompt`).
     pub(super) fn set_device_name(&mut self, name: String, cx: &mut Context<Self>) {
-        let name: String = name.trim().chars().take(crate::settings::DEVICE_NAME_MAX).collect();
+        let name: String = name
+            .trim()
+            .chars()
+            .take(crate::settings::DEVICE_NAME_MAX)
+            .collect();
         if name.is_empty() {
             return;
         }
@@ -357,11 +415,21 @@ impl Shell {
 
     /// Bir sanatçıyı kara listeye al / listeden çıkar (sağ tık menüleri ve
     /// Ayarlar'daki liste): hemen uygulanır, kaydedilir, bir bildirimle söylenir.
-    pub(super) fn set_artist_blocked(&mut self, name: String, uri: String, on: bool, cx: &mut Context<Self>) {
+    pub(super) fn set_artist_blocked(
+        &mut self,
+        name: String,
+        uri: String,
+        on: bool,
+        cx: &mut Context<Self>,
+    ) {
         let mut changed = false;
         self.set_pref(cx, |p| changed = p.set_blocked(&name, &uri, on));
         if changed {
-            let text = if on { tf!(ToastArtistBlocked, name) } else { tf!(ToastArtistAllowed, name) };
+            let text = if on {
+                tf!(ToastArtistBlocked, name)
+            } else {
+                tf!(ToastArtistAllowed, name)
+            };
             self.show_toast(text, false, false, cx);
         }
     }
@@ -371,7 +439,12 @@ impl Shell {
     /// "yeniden izin ver". `named`: tek sanatçılı satır adı da söyler (menü
     /// zaten tek sanatçıyı göstermiyorsa); uzun adlar menüye sığmaz, bu yüzden
     /// satır tek sanatçıyı gösteriyorsa genel yazı kullanılır. Boş adlar atlanır.
-    pub(super) fn never_play_entries(&self, names: &[&str], uri: &str, named: bool) -> Vec<super::manage::Entry> {
+    pub(super) fn never_play_entries(
+        &self,
+        names: &[&str],
+        uri: &str,
+        named: bool,
+    ) -> Vec<super::manage::Entry> {
         use super::manage::{Act, Entry};
         let act = |name: &str, named: bool| {
             let blocked = self.prefs.is_blocked(name);
@@ -381,14 +454,33 @@ impl Shell {
                 (true, false) => t!(MenuAllowArtist).to_string(),
                 (false, false) => t!(MenuNeverPlayArtist).to_string(),
             };
-            (blocked, label, Act::BlockArtist { name: name.to_string(), uri: uri.to_string(), on: !blocked })
+            (
+                blocked,
+                label,
+                Act::BlockArtist {
+                    name: name.to_string(),
+                    uri: uri.to_string(),
+                    on: !blocked,
+                },
+            )
         };
-        let names: Vec<&str> = names.iter().copied().filter(|n| !n.trim().is_empty()).collect();
+        let names: Vec<&str> = names
+            .iter()
+            .copied()
+            .filter(|n| !n.trim().is_empty())
+            .collect();
         match names.len() {
             0 => Vec::new(),
             1 => {
                 let (_, label, act) = act(names[0], named);
-                vec![Entry::Item { icon: "user-x", label, shortcut: None, danger: false, act: Some(act), sub: Vec::new() }]
+                vec![Entry::Item {
+                    icon: "user-x",
+                    label,
+                    shortcut: None,
+                    danger: false,
+                    act: Some(act),
+                    sub: Vec::new(),
+                }]
             }
             _ => vec![Entry::Item {
                 icon: "user-x",
@@ -447,7 +539,8 @@ impl Shell {
         }
         if let Err(e) = crate::auth::clear() {
             log::warn!("Çıkış yapılamadı: {e:#}");
-            self.state.notify(engine::NoticeKind::Problem, t!(SignOutFailed));
+            self.state
+                .notify(engine::NoticeKind::Problem, t!(SignOutFailed));
             cx.notify();
             return;
         }
@@ -461,8 +554,11 @@ impl Shell {
         if !engine::clearing_allowed() {
             return;
         }
-        let Some(dir) = engine::settings_cache_dir() else { return };
-        let freed = cx.background_spawn(async move { engine::clear_subdirs(&dir, &engine::CLEARABLE) });
+        let Some(dir) = engine::settings_cache_dir() else {
+            return;
+        };
+        let freed =
+            cx.background_spawn(async move { engine::clear_subdirs(&dir, &engine::CLEARABLE) });
         cx.spawn(async move |this, cx| {
             let freed = freed.await;
             let _ = this.update(cx, |shell, cx| {
@@ -497,14 +593,20 @@ impl Shell {
         self.sui.device_open = !self.sui.device_open;
         // Seçili aygıttan başla.
         self.sui.device_cursor = self.sui.devices.as_ref().map_or(0, |d| {
-            self.prefs.output_device.as_ref().and_then(|s| d.iter().position(|n| n == s)).map_or(0, |i| i + 1)
+            self.prefs
+                .output_device
+                .as_ref()
+                .and_then(|s| d.iter().position(|n| n == s))
+                .map_or(0, |i| i + 1)
         });
         cx.notify();
     }
 
     fn pick_device(&mut self, index: usize, cx: &mut Context<Self>) {
         // 0: sistem varsayılanı, sonrakiler listedeki aygıtlar.
-        let name = index.checked_sub(1).and_then(|i| self.sui.devices.as_ref()?.get(i).cloned());
+        let name = index
+            .checked_sub(1)
+            .and_then(|i| self.sui.devices.as_ref()?.get(i).cloned());
         self.sui.device_open = false;
         self.set_pref(cx, |p| p.output_device = name);
     }
@@ -541,8 +643,20 @@ impl Shell {
             const ITEMS: usize = 4;
             match key {
                 "escape" => self.sui.profile_open = false,
-                "up" => self.sui.profile_cursor = Some(self.sui.profile_cursor.map_or(ITEMS - 1, |c| c.saturating_sub(1))),
-                "down" => self.sui.profile_cursor = Some(self.sui.profile_cursor.map_or(0, |c| (c + 1).min(ITEMS - 1))),
+                "up" => {
+                    self.sui.profile_cursor = Some(
+                        self.sui
+                            .profile_cursor
+                            .map_or(ITEMS - 1, |c| c.saturating_sub(1)),
+                    )
+                }
+                "down" => {
+                    self.sui.profile_cursor = Some(
+                        self.sui
+                            .profile_cursor
+                            .map_or(0, |c| (c + 1).min(ITEMS - 1)),
+                    )
+                }
                 "enter" => match self.sui.profile_cursor {
                     Some(0) => self.open_settings(cx),
                     Some(1) => self.toggle_private_from_menu(cx),
@@ -591,7 +705,11 @@ impl Shell {
 
     /// Başlık çubuğunun en solundaki profil hapı: baş harf (ya da kişi
     /// simgesi) + ad + aşağı ok. Dar pencerede yalnız avatar + ok.
-    pub(super) fn render_profile_button(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_profile_button(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let (stop, look) = self.stop_look("profile-button", super::tab::PROFILE, true, window, cx);
         let open = self.sui.profile_open;
         let rest = if open { VEIL_SELECTED } else { VEIL_HOVER };
@@ -635,7 +753,11 @@ impl Shell {
             .bg(veil(rest))
             .cursor_pointer()
             .border_2()
-            .border_color(if look == Look::Focus { rgb(self.accent().text).into() } else { gpui::transparent_black() })
+            .border_color(if look == Look::Focus {
+                rgb(self.accent().text).into()
+            } else {
+                gpui::transparent_black()
+            })
             .when_some(stop, |el, h| el.track_focus(&h))
             // Menü açıkken ipucu yok: menünün üstünde kalırdı.
             .when(!open, |el| el.tooltip(Tooltip::text(t!(ProfileTip), None)))
@@ -643,7 +765,12 @@ impl Shell {
                 this.leave_button(ev, window);
                 this.toggle_profile(cx)
             }))
-            .child(super::tween::hover_fill(veil(VEIL_SELECTED), veil(VEIL_PRESSED), rest, 16.))
+            .child(super::tween::hover_fill(
+                veil(VEIL_SELECTED),
+                veil(VEIL_PRESSED),
+                rest,
+                16.,
+            ))
             .child(avatar)
             .when_some(name_w, |el, w| {
                 el.child(
@@ -662,7 +789,11 @@ impl Shell {
                             if name.chars().count() as f32 * 8. <= w {
                                 el.child(name.clone())
                             } else {
-                                el.w(px(w)).child(line_with_tip("profile-pill-name", name.clone()).flex().min_w_0())
+                                el.w(px(w)).child(
+                                    line_with_tip("profile-pill-name", name.clone())
+                                        .flex()
+                                        .min_w_0(),
+                                )
                             }
                         }),
                 )
@@ -684,7 +815,11 @@ impl Shell {
     fn profile_name_width(&self, window: &Window) -> Option<f32> {
         let w = f32::from(window.viewport_size().width);
         let half = (w - self.search_width()) / 2.;
-        let tabs = if w >= super::explore::TABS_LABELS_FROM { TABS_WIDTH_LABELS } else { TABS_WIDTH_ICONS };
+        let tabs = if w >= super::explore::TABS_LABELS_FROM {
+            TABS_WIDTH_LABELS
+        } else {
+            TABS_WIDTH_ICONS
+        };
         let fixed = S5 + PROFILE_CHROME + super::pages::NAV_WIDTH + tabs + S4 + S2;
         let room = (half - fixed).min(PROFILE_NAME_MAX);
         (room >= PROFILE_NAME_MIN).then_some(room)
@@ -692,7 +827,11 @@ impl Shell {
 
     // ── Katmanlar: profil menüsü, aygıt listesi, onay ─────────────────────
 
-    pub(super) fn render_settings_overlays(&self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    pub(super) fn render_settings_overlays(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
         let mut out = Vec::new();
         if self.sui.profile_open {
             out.push(self.render_profile_menu(window, cx));
@@ -835,7 +974,11 @@ impl Shell {
             );
 
         let item = |i: usize, entry: MenuItem, act: fn(&mut Shell, &mut Context<Shell>)| {
-            let look = if self.sui.profile_cursor == Some(i) { Look::Hover } else { Look::Live };
+            let look = if self.sui.profile_cursor == Some(i) {
+                Look::Hover
+            } else {
+                Look::Live
+            };
             menu_item(i, entry.look(look), accent)
                 .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
                     if *hovered && this.sui.profile_cursor != Some(i) {
@@ -851,21 +994,43 @@ impl Shell {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(header)
             .child(menu_separator())
-            .child(item(0, MenuItem::new(t!(Settings)).icon("settings").shortcut("Ctrl ,"), |s, cx| s.open_settings(cx)))
+            .child(item(
+                0,
+                MenuItem::new(t!(Settings))
+                    .icon("settings")
+                    .shortcut("Ctrl ,"),
+                |s, cx| s.open_settings(cx),
+            ))
             // Gizli oturum: açıkken simge "gizli göz" ve "Açık" yazar (bkz. `listening`).
             .child(item(
                 1,
                 {
-                    let entry = MenuItem::new(t!(MenuPrivateSession)).icon(if self.private_session() { "eye-off" } else { "eye" });
-                    if self.private_session() { entry.shortcut(t!(On)) } else { entry }
+                    let entry =
+                        MenuItem::new(t!(MenuPrivateSession)).icon(if self.private_session() {
+                            "eye-off"
+                        } else {
+                            "eye"
+                        });
+                    if self.private_session() {
+                        entry.shortcut(t!(On))
+                    } else {
+                        entry
+                    }
                 },
                 |s, cx| s.toggle_private_from_menu(cx),
             ))
-            .child(item(2, MenuItem::new(t!(About)).icon("info"), |s, cx| s.open_about(cx)))
+            .child(item(2, MenuItem::new(t!(About)).icon("info"), |s, cx| {
+                s.open_about(cx)
+            }))
             .child(menu_separator())
-            .child(item(3, MenuItem::new(t!(SignOut)).icon("log-out").danger(), |s, cx| s.ask_sign_out(cx)));
+            .child(item(
+                3,
+                MenuItem::new(t!(SignOut)).icon("log-out").danger(),
+                |s, cx| s.ask_sign_out(cx),
+            ));
         deferred(
-            self.dismiss_layer(cx).child(div().absolute().left(px(x)).top(px(y)).child(panel)),
+            self.dismiss_layer(cx)
+                .child(div().absolute().left(px(x)).top(px(y)).child(panel)),
         )
         .with_priority(2)
         .into_any_element()
@@ -884,14 +1049,28 @@ impl Shell {
         let height = shown as f32 * MENU_ITEM_HEIGHT + 2. * S1 + 2.;
         let width = anchor.map_or(320., |b| f32::from(b.size.width).max(320.));
         let (left, top, field_h) = anchor.map_or((win_w - width - S5, TITLEBAR_HEIGHT, 0.), |b| {
-            (f32::from(b.origin.x), f32::from(b.origin.y), f32::from(b.size.height))
+            (
+                f32::from(b.origin.x),
+                f32::from(b.origin.y),
+                f32::from(b.size.height),
+            )
         });
-        let x = (left + anchor.map_or(width, |b| f32::from(b.size.width)) - width).clamp(S2, win_w - width - S2);
+        let x = (left + anchor.map_or(width, |b| f32::from(b.size.width)) - width)
+            .clamp(S2, win_w - width - S2);
         // Altına sığmazsa üstüne açılır.
         let below = top + field_h + S1;
-        let y = if below + height > win_h - S2 { (top - height - S1).max(S2) } else { below };
+        let y = if below + height > win_h - S2 {
+            (top - height - S1).max(S2)
+        } else {
+            below
+        };
 
-        let selected = self.prefs.output_device.as_ref().and_then(|s| devices.iter().position(|n| n == s)).map_or(0, |i| i + 1);
+        let selected = self
+            .prefs
+            .output_device
+            .as_ref()
+            .and_then(|s| devices.iter().position(|n| n == s))
+            .map_or(0, |i| i + 1);
         let mut list = div()
             .id("device-list")
             .flex()
@@ -899,7 +1078,11 @@ impl Shell {
             .max_h(px(DEVICE_ROWS as f32 * MENU_ITEM_HEIGHT))
             .overflow_y_scroll();
         for i in 0..rows {
-            let label_text: SharedString = if i == 0 { t!(SystemDefault).into() } else { devices[i - 1].clone().into() };
+            let label_text: SharedString = if i == 0 {
+                t!(SystemDefault).into()
+            } else {
+                devices[i - 1].clone().into()
+            };
             let mut entry = MenuItem::new(label_text);
             if i == selected {
                 entry = entry.icon("check");
@@ -924,9 +1107,12 @@ impl Shell {
             .occlude()
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(list);
-        deferred(self.dismiss_layer(cx).child(div().absolute().left(px(x)).top(px(y)).child(panel)))
-            .with_priority(2)
-            .into_any_element()
+        deferred(
+            self.dismiss_layer(cx)
+                .child(div().absolute().left(px(x)).top(px(y)).child(panel)),
+        )
+        .with_priority(2)
+        .into_any_element()
     }
 
     fn render_confirm(&self, confirm: Confirm, cx: &mut Context<Self>) -> AnyElement {
@@ -934,8 +1120,7 @@ impl Shell {
         let (title, body, ok_label, ok_icon, danger) = match confirm {
             Confirm::SignOut => (
                 t!(ConfirmSignOutTitle),
-                t!(ConfirmSignOutBody)
-                    .to_string(),
+                t!(ConfirmSignOutBody).to_string(),
                 t!(SignOut),
                 "log-out",
                 true,
@@ -944,7 +1129,9 @@ impl Shell {
                 t!(ConfirmClearTitle),
                 tf!(
                     ConfirmClearBody,
-                    self.sui.cache_bytes.map_or(String::new(), |b| format!(" ({})", format_size(b)))
+                    self.sui
+                        .cache_bytes
+                        .map_or(String::new(), |b| format!(" ({})", format_size(b)))
                 ),
                 t!(Clear),
                 "trash-2",
@@ -981,15 +1168,23 @@ impl Shell {
                     .items_center()
                     .justify_end()
                     .gap(px(S2))
-                    .child(secondary_button("confirm-cancel", "x", t!(Cancel), Look::Live, accent).on_click(
-                        cx.listener(|this, _, _, cx| {
-                            this.sui.confirm = None;
-                            cx.notify();
-                        }),
-                    ))
                     .child(
-                        primary_button_sized("confirm-ok", ok_icon, ok_label, Look::Live, ok_color, true)
-                            .on_click(cx.listener(move |this, _, _, cx| this.run_confirm(confirm, cx))),
+                        secondary_button("confirm-cancel", "x", t!(Cancel), Look::Live, accent)
+                            .on_click(cx.listener(|this, _, _, cx| {
+                                this.sui.confirm = None;
+                                cx.notify();
+                            })),
+                    )
+                    .child(
+                        primary_button_sized(
+                            "confirm-ok",
+                            ok_icon,
+                            ok_label,
+                            Look::Live,
+                            ok_color,
+                            true,
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| this.run_confirm(confirm, cx))),
                     ),
             );
         deferred(
@@ -1036,13 +1231,19 @@ fn crossfade_key(ms: u32) -> &'static str {
     if ms == 0 {
         return CROSSFADE_KEYS[0];
     }
-    let nearest = (1..CROSSFADE_KEYS.len()).min_by_key(|i| CROSSFADE_CHOICES_MS[*i].abs_diff(ms)).unwrap_or(2);
+    let nearest = (1..CROSSFADE_KEYS.len())
+        .min_by_key(|i| CROSSFADE_CHOICES_MS[*i].abs_diff(ms))
+        .unwrap_or(2);
     CROSSFADE_KEYS[nearest]
 }
 
 /// Denetimde seçili görünen anahtar: AutoMix açıksa o, değilse süreye en yakın.
 fn crossfade_choice(p: &Settings) -> &'static str {
-    if p.automix { AUTOMIX_KEY } else { crossfade_key(p.crossfade_ms) }
+    if p.automix {
+        AUTOMIX_KEY
+    } else {
+        crossfade_key(p.crossfade_ms)
+    }
 }
 
 /// Bir seçeneği ayara işler: AutoMix, sabit süreyi (`crossfade_ms`) bozmadan açılır;
@@ -1063,7 +1264,11 @@ fn crossfade_ms(key: &str) -> u32 {
 
 /// Satırın sol yarısı: ad ve tek cümle açıklama. Açıklama tek satırdır, sığmazsa
 /// "…" ile kısalır, tamamı ipucunda (yanında denetim olan satırlar).
-pub(super) fn row_text(title: &str, desc: impl Into<SharedString>, note: Option<(SharedString, bool)>) -> gpui::Div {
+pub(super) fn row_text(
+    title: &str,
+    desc: impl Into<SharedString>,
+    note: Option<(SharedString, bool)>,
+) -> gpui::Div {
     row_text_inner(title, desc.into(), note, false)
 }
 
@@ -1072,16 +1277,29 @@ pub(super) fn row_text_wrap(title: &str, desc: impl Into<SharedString>) -> gpui:
     row_text_inner(title, desc.into(), None, true)
 }
 
-fn row_text_inner(title: &str, desc: SharedString, note: Option<(SharedString, bool)>, wrap: bool) -> gpui::Div {
+fn row_text_inner(
+    title: &str,
+    desc: SharedString,
+    note: Option<(SharedString, bool)>,
+    wrap: bool,
+) -> gpui::Div {
     let desc_el = if wrap {
-        div().min_w_0().type_role(T_SECONDARY).text_color(muted()).child(desc)
+        div()
+            .min_w_0()
+            .type_role(T_SECONDARY)
+            .text_color(muted())
+            .child(desc)
     } else {
         div()
             .flex()
             .min_w_0()
             .type_role(T_SECONDARY)
             .text_color(muted())
-            .child(line_with_tip(ElementId::Name(format!("row-desc-{title}").into()), desc).flex().min_w_0())
+            .child(
+                line_with_tip(ElementId::Name(format!("row-desc-{title}").into()), desc)
+                    .flex()
+                    .min_w_0(),
+            )
     };
     div()
         .flex_grow()
@@ -1091,10 +1309,20 @@ fn row_text_inner(title: &str, desc: SharedString, note: Option<(SharedString, b
         .flex()
         .flex_col()
         .gap(px(S0))
-        .child(div().type_role(T_BODY).font_weight(FontWeight::MEDIUM).text_color(text()).child(title.to_string()))
+        .child(
+            div()
+                .type_role(T_BODY)
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(text())
+                .child(title.to_string()),
+        )
         .child(desc_el)
         .children(note.map(|(note, problem)| {
-            div().pt(px(S1)).type_role(T_SECONDARY).text_color(if problem { rgb(DANGER_TEXT) } else { label() }).child(note)
+            div()
+                .pt(px(S1))
+                .type_role(T_SECONDARY)
+                .text_color(if problem { rgb(DANGER_TEXT) } else { label() })
+                .child(note)
         }))
 }
 
@@ -1155,11 +1383,23 @@ impl Shell {
         for (key, label_text) in options {
             let key: &'static str = key;
             // Anahtar `seg:grup:seçenek`: ← / → grubun içinde gezer.
-            let (stop, look) = self.stop_look(format!("seg:{id}:{key}"), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("seg:{id}:{key}"),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             track = track.child(
-                segment(ElementId::Name(format!("{id}-{key}").into()), *label_text, current == key, look, accent)
-                    .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                    .on_click(cx.listener(move |this, _, _, cx| this.set_pref(cx, |p| pick(p, key)))),
+                segment(
+                    ElementId::Name(format!("{id}-{key}").into()),
+                    *label_text,
+                    current == key,
+                    look,
+                    accent,
+                )
+                .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| this.set_pref(cx, |p| pick(p, key)))),
             );
         }
         track.into_any_element()
@@ -1186,7 +1426,11 @@ impl Shell {
         let p = &self.prefs;
         let quality = self.choice_control(
             "quality",
-            &[("normal", "Normal"), ("high", t!(QualityHigh)), ("very_high", t!(QualityVeryHigh))],
+            &[
+                ("normal", "Normal"),
+                ("high", t!(QualityHigh)),
+                ("very_high", t!(QualityVeryHigh)),
+            ],
             &p.quality,
             |p, k| p.quality = k.into(),
             window,
@@ -1196,8 +1440,17 @@ impl Shell {
         // açar ve düzeyi seçer (`Settings::normalise_pregain_db`).
         let normalise = self.choice_control(
             "normalise",
-            &[("off", t!(Off)), ("quiet", t!(NormaliseQuiet)), ("normal", t!(NormaliseNormal)), ("loud", t!(NormaliseLoud))],
-            if p.normalise { p.normalise_level.as_str() } else { "off" },
+            &[
+                ("off", t!(Off)),
+                ("quiet", t!(NormaliseQuiet)),
+                ("normal", t!(NormaliseNormal)),
+                ("loud", t!(NormaliseLoud)),
+            ],
+            if p.normalise {
+                p.normalise_level.as_str()
+            } else {
+                "off"
+            },
             |p, k| {
                 p.normalise = k != "off";
                 if k != "off" {
@@ -1224,7 +1477,8 @@ impl Shell {
             cx,
         );
         let bounds = self.sui.device_bounds.clone();
-        let (device_stop, device_look) = self.stop_look("device-field", super::tab::PAGE, true, window, cx);
+        let (device_stop, device_look) =
+            self.stop_look("device-field", super::tab::PAGE, true, window, cx);
         let field = div()
             .relative()
             .w(px(280.))
@@ -1236,13 +1490,21 @@ impl Shell {
                     device_look,
                     accent,
                 )
-                .when_some(device_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .when_some(device_stop, |el, h| {
+                    el.child(self.focus_probe(&h)).track_focus(&h)
+                })
                 .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
                     this.leave_button(ev, window);
                     this.toggle_devices(cx)
                 })),
             )
-            .child(canvas(move |b, _, _| bounds.set(Some(b)), |_, _, _, _| {}).absolute().top_0().left_0().size_full())
+            .child(
+                canvas(move |b, _, _| bounds.set(Some(b)), |_, _, _, _| {})
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full(),
+            )
             .into_any_element();
         self.settings_section(
             t!(SectionSound),
@@ -1280,10 +1542,20 @@ impl Shell {
     fn connect_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
         let p = &self.prefs;
-        let on = self.switch_control("connect", p.connect_enabled, |p, v| p.connect_enabled = v, window, cx);
+        let on = self.switch_control(
+            "connect",
+            p.connect_enabled,
+            |p, v| p.connect_enabled = v,
+            window,
+            cx,
+        );
         let mut rows = vec![setting_row(
             true,
-            row_text(t!(RowConnect), t!(RowConnectDesc), Some((t!(ConnectExperimental).into(), false))),
+            row_text(
+                t!(RowConnect),
+                t!(RowConnectDesc),
+                Some((t!(ConnectExperimental).into(), false)),
+            ),
             on,
         )];
         if p.connect_enabled {
@@ -1301,7 +1573,11 @@ impl Shell {
                     this.ask_device_name(cx);
                 }))
                 .into_any_element();
-            rows.push(setting_row(false, row_text(t!(RowConnectName), t!(RowConnectNameDesc), None), name));
+            rows.push(setting_row(
+                false,
+                row_text(t!(RowConnectName), t!(RowConnectNameDesc), None),
+                name,
+            ));
         }
         self.settings_section(t!(SectionConnect), rows)
     }
@@ -1310,13 +1586,37 @@ impl Shell {
     fn shuffle_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
         let p = &self.prefs;
-        let dedupe = self.switch_control("dedupe", p.dedupe_versions, |p, v| p.dedupe_versions = v, window, cx);
-        let explicit = self.switch_control("skip-explicit", p.skip_explicit, |p, v| p.skip_explicit = v, window, cx);
+        let dedupe = self.switch_control(
+            "dedupe",
+            p.dedupe_versions,
+            |p, v| p.dedupe_versions = v,
+            window,
+            cx,
+        );
+        let explicit = self.switch_control(
+            "skip-explicit",
+            p.skip_explicit,
+            |p, v| p.skip_explicit = v,
+            window,
+            cx,
+        );
         let mut rows = vec![
-            setting_row(true, row_text(t!(RowDedupe), t!(RowDedupeDesc), None), dedupe),
-            setting_row(false, row_text(t!(RowSkipExplicit), t!(RowSkipExplicitDesc), None), explicit),
+            setting_row(
+                true,
+                row_text(t!(RowDedupe), t!(RowDedupeDesc), None),
+                dedupe,
+            ),
+            setting_row(
+                false,
+                row_text(t!(RowSkipExplicit), t!(RowSkipExplicitDesc), None),
+                explicit,
+            ),
             // Başlık satırı: denetimi yok, liste altında.
-            setting_row(false, row_text_wrap(t!(RowNeverPlay), t!(RowNeverPlayDesc)), div().into_any_element()),
+            setting_row(
+                false,
+                row_text_wrap(t!(RowNeverPlay), t!(RowNeverPlayDesc)),
+                div().into_any_element(),
+            ),
         ];
         if p.blocked_artists.is_empty() {
             rows.push(
@@ -1329,7 +1629,13 @@ impl Shell {
             );
         }
         for (i, artist) in p.blocked_artists.iter().enumerate() {
-            let (stop, look) = self.stop_look(format!("allow-artist-{i}"), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("allow-artist-{i}"),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             let name = artist.name.clone();
             let uri = artist.uri.clone();
             let allow = secondary_button(
@@ -1351,13 +1657,25 @@ impl Shell {
                 .flex()
                 .type_role(T_BODY)
                 .text_color(text())
-                .child(line_with_tip(ElementId::Name(format!("blocked-artist-{i}").into()), artist.name.clone()).flex().min_w_0());
+                .child(
+                    line_with_tip(
+                        ElementId::Name(format!("blocked-artist-{i}").into()),
+                        artist.name.clone(),
+                    )
+                    .flex()
+                    .min_w_0(),
+                );
             rows.push(setting_row(false, left, allow));
         }
         // Yerel olarak gizlenen şarkılar (bkz. `listening`).
         rows.extend(self.hidden_settings_rows(window, cx));
         rows.push(
-            div().pt(px(S4)).type_role(T_SECONDARY).text_color(label()).child(t!(ShuffleSpreadNote)).into_any_element(),
+            div()
+                .pt(px(S4))
+                .type_role(T_SECONDARY)
+                .text_color(label())
+                .child(t!(ShuffleSpreadNote))
+                .into_any_element(),
         );
         self.settings_section(t!(SectionShuffle), rows)
     }
@@ -1368,7 +1686,11 @@ impl Shell {
         // (`apply_prefs` → `i18n::apply_preference`, ardından kök yenilenir).
         let language = self.choice_control(
             "language",
-            &[("system", t!(LangSystem)), ("en", t!(LangEnglish)), ("tr", t!(LangTurkish))],
+            &[
+                ("system", t!(LangSystem)),
+                ("en", t!(LangEnglish)),
+                ("tr", t!(LangTurkish)),
+            ],
             &p.language,
             |p, k| p.language = k.into(),
             window,
@@ -1382,8 +1704,15 @@ impl Shell {
             window,
             cx,
         );
-        let panel = self.switch_control("now-panel", p.now_panel, |p, v| p.now_panel = v, window, cx);
-        let friends = self.switch_control("friend-activity", p.friend_activity, |p, v| p.friend_activity = v, window, cx);
+        let panel =
+            self.switch_control("now-panel", p.now_panel, |p, v| p.now_panel = v, window, cx);
+        let friends = self.switch_control(
+            "friend-activity",
+            p.friend_activity,
+            |p, v| p.friend_activity = v,
+            window,
+            cx,
+        );
         let close = self.choice_control(
             "close",
             &[("tray", t!(CloseToTray)), ("quit", t!(CloseQuit))],
@@ -1392,9 +1721,19 @@ impl Shell {
             window,
             cx,
         );
-        let hotkey = self.switch_control("hotkey", p.global_hotkey, |p, v| p.global_hotkey = v, window, cx);
+        let hotkey = self.switch_control(
+            "hotkey",
+            p.global_hotkey,
+            |p, v| p.global_hotkey = v,
+            window,
+            cx,
+        );
         let private_row = self.private_setting_row(window, cx);
-        let hotkey_note = self.sui.hotkey_note.clone().map(|n| (SharedString::from(n), true));
+        let hotkey_note = self
+            .sui
+            .hotkey_note
+            .clone()
+            .map(|n| (SharedString::from(n), true));
         self.settings_section(
             t!(SectionBehavior),
             vec![
@@ -1419,18 +1758,10 @@ impl Shell {
                     friends,
                 ),
                 private_row,
+                setting_row(false, row_text(t!(RowClose), t!(RowCloseDesc), None), close),
                 setting_row(
                     false,
-                    row_text(t!(RowClose), t!(RowCloseDesc), None),
-                    close,
-                ),
-                setting_row(
-                    false,
-                    row_text(
-                        t!(RowHotkey),
-                        t!(RowHotkeyDesc),
-                        hotkey_note,
-                    ),
+                    row_text(t!(RowHotkey), t!(RowHotkeyDesc), hotkey_note),
                     hotkey,
                 ),
             ],
@@ -1439,26 +1770,26 @@ impl Shell {
 
     fn startup_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
-        let (auto_stop, auto_look) = self.stop_look("autostart", super::tab::PAGE, true, window, cx);
+        let (auto_stop, auto_look) =
+            self.stop_look("autostart", super::tab::PAGE, true, window, cx);
         let auto = switch("autostart", self.sui.autostart_on, auto_look, accent)
-            .when_some(auto_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+            .when_some(auto_stop, |el, h| {
+                el.child(self.focus_probe(&h)).track_focus(&h)
+            })
             .on_click(cx.listener(|this, _, _, cx| this.toggle_autostart(cx)))
             .into_any_element();
         let auto_note = self
             .sui
             .autostart_failed
             .then(|| (SharedString::from(t!(AutostartFailed)), true));
-        let resume = self.switch_control("resume", self.prefs.resume, |p, v| p.resume = v, window, cx);
+        let resume =
+            self.switch_control("resume", self.prefs.resume, |p, v| p.resume = v, window, cx);
         self.settings_section(
             t!(SectionStartup),
             vec![
                 setting_row(
                     true,
-                    row_text(
-                        t!(RowAutostart),
-                        t!(RowAutostartDesc),
-                        auto_note,
-                    ),
+                    row_text(t!(RowAutostart), t!(RowAutostartDesc), auto_note),
                     auto,
                 ),
                 setting_row(
@@ -1479,10 +1810,15 @@ impl Shell {
             (None, None) => t!(CacheSizing).into(),
         };
         let dir = engine::settings_cache_dir();
-        let dir_text = dir.as_ref().map_or_else(|| t!(NotFound).to_string(), |d| d.display().to_string());
-        let (clear_stop, clear_look) = self.stop_look("clear-cache", super::tab::PAGE, allowed, window, cx);
+        let dir_text = dir
+            .as_ref()
+            .map_or_else(|| t!(NotFound).to_string(), |d| d.display().to_string());
+        let (clear_stop, clear_look) =
+            self.stop_look("clear-cache", super::tab::PAGE, allowed, window, cx);
         let clear = secondary_button("clear-cache", "trash-2", t!(ClearCache), clear_look, accent)
-            .when_some(clear_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+            .when_some(clear_stop, |el, h| {
+                el.child(self.focus_probe(&h)).track_focus(&h)
+            })
             .when(allowed, |el| {
                 el.on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
                     this.leave_button(ev, window);
@@ -1490,22 +1826,31 @@ impl Shell {
                 }))
             })
             .into_any_element();
-        let (open_stop, open_look) = self.stop_look("open-cache", super::tab::PAGE, dir.is_some(), window, cx);
-        let open = secondary_button("open-cache", "folder-open", t!(OpenFolder), open_look, accent)
-            .when_some(open_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-            .when(dir.is_some() && std::env::var_os("OPENIFY_TEST_DISPLAY").is_none(), |el| {
+        let (open_stop, open_look) =
+            self.stop_look("open-cache", super::tab::PAGE, dir.is_some(), window, cx);
+        let open = secondary_button(
+            "open-cache",
+            "folder-open",
+            t!(OpenFolder),
+            open_look,
+            accent,
+        )
+        .when_some(open_stop, |el, h| {
+            el.child(self.focus_probe(&h)).track_focus(&h)
+        })
+        .when(
+            dir.is_some() && std::env::var_os("OPENIFY_TEST_DISPLAY").is_none(),
+            |el| {
                 el.on_click(cx.listener(|_, _, _, _| {
                     if let Some(dir) = engine::settings_cache_dir() {
                         let _ = std::process::Command::new("explorer").arg(dir).spawn();
                     }
                 }))
-            })
-            .into_any_element();
+            },
+        )
+        .into_any_element();
         let (account, account_detail): (SharedString, SharedString) = match self.account_name() {
-            Some(u) => (
-                t!(SpotifyAccount).into(),
-                tf!(ConnectedAs, u).into(),
-            ),
+            Some(u) => (t!(SpotifyAccount).into(), tf!(ConnectedAs, u).into()),
             None => (t!(SpotifyAccount).into(), t!(ShownHereWhenConnected).into()),
         };
         let (out_stop, out_look) = self.stop_look("sign-out", super::tab::PAGE, true, window, cx);
@@ -1518,7 +1863,9 @@ impl Shell {
             _ => ("log-out", t!(SignOut)),
         };
         let sign_out = secondary_button("sign-out", sign_icon, sign_label, out_look, accent)
-            .when_some(out_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+            .when_some(out_stop, |el, h| {
+                el.child(self.focus_probe(&h)).track_focus(&h)
+            })
             .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
                 this.leave_button(ev, window);
                 match this.state.connection {
@@ -1531,34 +1878,34 @@ impl Shell {
             .into_any_element();
         // Adım 17: kayıt klasörünü aç (günlük + çökme raporları).
         let log_dir = crate::crash::log_dir();
-        let (log_stop, log_look) = self.stop_look("open-logs", super::tab::PAGE, log_dir.is_some(), window, cx);
-        let open_logs = secondary_button("open-logs", "folder-open", t!(BtnOpenLogFolder), log_look, accent)
-            .when_some(log_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-            .when(log_dir.is_some() && std::env::var_os("OPENIFY_TEST_DISPLAY").is_none(), |el| {
+        let (log_stop, log_look) =
+            self.stop_look("open-logs", super::tab::PAGE, log_dir.is_some(), window, cx);
+        let open_logs = secondary_button(
+            "open-logs",
+            "folder-open",
+            t!(BtnOpenLogFolder),
+            log_look,
+            accent,
+        )
+        .when_some(log_stop, |el, h| {
+            el.child(self.focus_probe(&h)).track_focus(&h)
+        })
+        .when(
+            log_dir.is_some() && std::env::var_os("OPENIFY_TEST_DISPLAY").is_none(),
+            |el| {
                 el.on_click(cx.listener(|_, _, _, _| {
                     if let Some(dir) = crate::crash::log_dir() {
                         let _ = std::process::Command::new("explorer").arg(dir).spawn();
                     }
                 }))
-            })
-            .into_any_element();
+            },
+        )
+        .into_any_element();
         self.settings_section(
             t!(SectionStorage),
             vec![
-                setting_row(
-                    true,
-                    row_text(
-                        t!(Cache),
-                        tf!(CacheDesc, size),
-                        None,
-                    ),
-                    clear,
-                ),
-                setting_row(
-                    false,
-                    row_text(t!(CacheLocation), dir_text, None),
-                    open,
-                ),
+                setting_row(true, row_text(t!(Cache), tf!(CacheDesc, size), None), clear),
+                setting_row(false, row_text(t!(CacheLocation), dir_text, None), open),
                 setting_row(
                     false,
                     row_text(t!(SettingsLogTitle), t!(SettingsLogDetail), None),
@@ -1572,17 +1919,31 @@ impl Shell {
     fn about_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
         let status = update::status();
-        let can_check = !matches!(status, update::Status::NotInstalled | update::Status::Off | update::Status::Checking);
-        let (check_stop, check_look) = self.stop_look("check-update", super::tab::PAGE, can_check, window, cx);
-        let check = secondary_button("check-update", "refresh-cw", t!(CheckNow), check_look, accent)
-        .when_some(check_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+        let can_check = !matches!(
+            status,
+            update::Status::NotInstalled | update::Status::Off | update::Status::Checking
+        );
+        let (check_stop, check_look) =
+            self.stop_look("check-update", super::tab::PAGE, can_check, window, cx);
+        let check = secondary_button(
+            "check-update",
+            "refresh-cw",
+            t!(CheckNow),
+            check_look,
+            accent,
+        )
+        .when_some(check_stop, |el, h| {
+            el.child(self.focus_probe(&h)).track_focus(&h)
+        })
         .when(can_check, |el| {
             el.on_click(cx.listener(|_, _, _, cx| {
                 update::check_now(|_| {});
                 // Sonuç birkaç saniye sonra: bitene dek sayfa saniyede bir yenilenir.
                 cx.spawn(async move |this, cx| {
                     for _ in 0..30 {
-                        cx.background_executor().timer(std::time::Duration::from_secs(1)).await;
+                        cx.background_executor()
+                            .timer(std::time::Duration::from_secs(1))
+                            .await;
                         let done = update::status() != update::Status::Checking;
                         let _ = this.update(cx, |_, cx| cx.notify());
                         if done {
@@ -1595,15 +1956,22 @@ impl Shell {
             }))
         })
         .into_any_element();
-        let (lic_stop, lic_look) = self.stop_look("licenses-toggle", super::tab::PAGE, true, window, cx);
+        let (lic_stop, lic_look) =
+            self.stop_look("licenses-toggle", super::tab::PAGE, true, window, cx);
         let licenses_button = secondary_button(
             "licenses-toggle",
             "info",
-            if self.sui.licenses_open { t!(Hide) } else { t!(Show) },
+            if self.sui.licenses_open {
+                t!(Hide)
+            } else {
+                t!(Show)
+            },
             lic_look,
             accent,
         )
-        .when_some(lic_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+        .when_some(lic_stop, |el, h| {
+            el.child(self.focus_probe(&h)).track_focus(&h)
+        })
         .on_click(cx.listener(|this, _, _, cx| {
             this.sui.licenses_open = !this.sui.licenses_open;
             this.sui.license_text = None;
@@ -1614,7 +1982,11 @@ impl Shell {
         let mut rows = vec![
             setting_row(
                 true,
-                row_text(&format!("{} {}", crate::brand::APP_NAME, update::version()), update_text(&status), None),
+                row_text(
+                    &format!("{} {}", crate::brand::APP_NAME, update::version()),
+                    update_text(&status),
+                    None,
+                ),
                 check,
             ),
             setting_row(
@@ -1656,16 +2028,47 @@ impl Shell {
                 .type_role(T_SECONDARY)
                 .when(has_text, |el| {
                     el.cursor_pointer()
-                        .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+                        .child(super::tween::hover_fill(
+                            veil(VEIL_HOVER),
+                            veil(VEIL_PRESSED),
+                            0.,
+                            R_MD,
+                        ))
                         .on_click(cx.listener(move |this, _, _, cx| {
-                            this.sui.license_text = if this.sui.license_text == Some(i) { None } else { Some(i) };
+                            this.sui.license_text = if this.sui.license_text == Some(i) {
+                                None
+                            } else {
+                                Some(i)
+                            };
                             cx.notify();
                         }))
                 })
-                .child(div().w(px(176.)).flex_none().text_color(text()).child(*name))
-                .child(div().w(px(160.)).flex_none().text_color(muted()).child(*license))
+                .child(
+                    div()
+                        .w(px(176.))
+                        .flex_none()
+                        .text_color(text())
+                        .child(*name),
+                )
+                .child(
+                    div()
+                        .w(px(160.))
+                        .flex_none()
+                        .text_color(muted())
+                        .child(*license),
+                )
                 .child(div().flex_1().min_w_0().text_color(label()).child(*role))
-                .when(has_text, |el| el.child(icon(if open { "chevron-down" } else { "chevron-right" }, 14., label())));
+                .when(has_text, |el| {
+                    el.child(icon(
+                        if open {
+                            "chevron-down"
+                        } else {
+                            "chevron-right"
+                        },
+                        14.,
+                        label(),
+                    ))
+                });
             list = list.child(row);
             if open && let Some(full) = full {
                 list = list.child(
@@ -1709,12 +2112,20 @@ mod tests {
     #[test]
     fn initial_comes_from_a_real_name_only() {
         assert_eq!(profile_initial("furkan"), Some('F'));
-        assert_eq!(profile_initial("  ışık "), Some('I'), "Türkçe harf büyütülür");
+        assert_eq!(
+            profile_initial("  ışık "),
+            Some('I'),
+            "Türkçe harf büyütülür"
+        );
         assert_eq!(profile_initial(""), None);
         // Spotify'ın ürettiği kimlikler ad değil.
         assert_eq!(profile_initial("31abc4defghij5klmnopqrstuv"), None);
         assert_eq!(profile_initial("abcdefghijklmnopqrstuvwxy12"), None);
-        assert_eq!(profile_initial("123456"), None, "rakamla başlayan harf değil");
+        assert_eq!(
+            profile_initial("123456"),
+            None,
+            "rakamla başlayan harf değil"
+        );
     }
 
     #[test]
@@ -1730,7 +2141,16 @@ mod tests {
     #[test]
     fn every_update_status_has_a_plain_sentence() {
         use update::Status::*;
-        for s in [NotInstalled, Off, Waiting, Checking, UpToDate, Ready("0.2.0".into()), Failed, RolledBack("0.2.0".into())] {
+        for s in [
+            NotInstalled,
+            Off,
+            Waiting,
+            Checking,
+            UpToDate,
+            Ready("0.2.0".into()),
+            Failed,
+            RolledBack("0.2.0".into()),
+        ] {
             let t = update_text(&s);
             assert!(!t.is_empty() && !t.contains("Status"), "{t}");
         }
@@ -1742,8 +2162,14 @@ mod tests {
     fn device_label_marks_missing_devices() {
         let known = vec!["Hoparlör".to_string(), "Kulaklık".to_string()];
         assert_eq!(device_label(&None, Some(&known)), "Sistem varsayılanı");
-        assert_eq!(device_label(&Some("Kulaklık".into()), Some(&known)), "Kulaklık");
-        assert_eq!(device_label(&Some("Eski".into()), Some(&known)), "Eski (bağlı değil)");
+        assert_eq!(
+            device_label(&Some("Kulaklık".into()), Some(&known)),
+            "Kulaklık"
+        );
+        assert_eq!(
+            device_label(&Some("Eski".into()), Some(&known)),
+            "Eski (bağlı değil)"
+        );
         // Liste henüz gelmediyse adı olduğu gibi göster.
         assert_eq!(device_label(&Some("Eski".into()), None), "Eski");
     }
@@ -1769,12 +2195,18 @@ mod tests {
         assert_eq!(crossfade_key(12_000), "12");
         assert_eq!(crossfade_key(1), "2", "kapalı yalnız tam 0");
         // AutoMix: açıkken seçili görünen o; bir süre seçmek onu kapatır, açmak süreyi bozmaz.
-        let mut p = Settings { crossfade_ms: 8_000, ..Settings::default() };
+        let mut p = Settings {
+            crossfade_ms: 8_000,
+            ..Settings::default()
+        };
         assert_eq!(crossfade_choice(&p), "8");
         pick_crossfade(&mut p, AUTOMIX_KEY);
         assert_eq!((crossfade_choice(&p), p.crossfade_ms), (AUTOMIX_KEY, 8_000));
         pick_crossfade(&mut p, "5");
-        assert_eq!((crossfade_choice(&p), p.automix, p.crossfade_ms), ("5", false, 5_000));
+        assert_eq!(
+            (crossfade_choice(&p), p.automix, p.crossfade_ms),
+            ("5", false, 5_000)
+        );
         pick_crossfade(&mut p, "0");
         assert_eq!((crossfade_choice(&p), p.crossfade_ms), ("0", 0));
     }
@@ -1785,7 +2217,10 @@ mod tests {
         for (name, license, role, full) in notices() {
             assert!(!name.is_empty() && !license.is_empty() && !role.is_empty());
             if license.contains("OFL") || license.contains("ISC") {
-                assert!(full.is_some_and(|t| t.len() > 200), "{name}: lisans metni gömülü olmalı");
+                assert!(
+                    full.is_some_and(|t| t.len() > 200),
+                    "{name}: lisans metni gömülü olmalı"
+                );
             }
         }
     }

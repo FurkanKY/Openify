@@ -20,48 +20,48 @@
 
 mod added_date;
 mod components;
+mod credits;
 mod design_rules;
 mod equalizer;
 mod explore;
 mod frames;
-mod credits;
 mod friends;
+mod fullscreen;
 mod fuzzy;
 mod gallery;
-mod images;
-mod integration;
 mod history;
 mod home;
+mod images;
+mod integration;
 mod karaoke;
 mod library;
 mod library_layout;
 mod library_tree;
-mod listening;
 mod link_text;
-mod manage;
-mod pages;
+mod listening;
 mod lyrics_view;
-mod now_playing;
+mod manage;
 mod now_panel;
-mod fullscreen;
+mod now_playing;
+mod pages;
 mod palette;
-mod queue_panel;
-mod recent_page;
-mod search_page;
 mod pill;
 mod pill_glass;
 mod player;
 #[cfg(windows)]
 mod popups;
+mod queue_panel;
+mod recent_page;
+mod search_page;
 mod settings;
-mod shortcuts;
 mod shelf;
+mod shortcuts;
 mod smooth_scroll;
 mod text;
+mod theme;
 mod tools;
 mod tools_view;
 mod tween;
-mod theme;
 mod views;
 mod welcome;
 #[cfg(windows)]
@@ -74,14 +74,15 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, AnyView, Application, Bounds, Context, DispatchPhase, FocusHandle,
-    KeyDownEvent, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
-    SharedString, StyleRefinement, Subscription, Task, TitlebarOptions, UniformListScrollHandle,
-    Window, WindowBounds, WindowControlArea, WindowOptions, canvas, div, img, linear_color_stop,
+    AnyElement, AnyView, Application, Bounds, Context, DispatchPhase, FocusHandle, KeyDownEvent,
+    MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, SharedString,
+    StyleRefinement, Subscription, Task, TitlebarOptions, UniformListScrollHandle, Window,
+    WindowBounds, WindowControlArea, WindowOptions, canvas, div, img, linear_color_stop,
     linear_gradient, prelude::*, px, rgb, size,
 };
 use librespot::core::SpotifyUri;
 
+use crate::t;
 use crate::{
     engine::{self, CollectionId, Command, EngineHandle, palette::Accent},
     link,
@@ -98,7 +99,6 @@ use shortcuts::Shortcut;
 use smooth_scroll::SmoothScroll;
 use text::line;
 use theme::*;
-use crate::t;
 
 const SEEK_STEP_MS: u32 = 5_000;
 const VOLUME_STEP: f32 = 0.05;
@@ -333,7 +333,14 @@ impl Shell {
             "aşama {} ms: erken olaylar {} (liste {})",
             crate::since_start(),
             early.len(),
-            if early.iter().any(|e| matches!(e, engine::Event::CollectionLoaded { .. })) { "hazır" } else { "yok" }
+            if early
+                .iter()
+                .any(|e| matches!(e, engine::Event::CollectionLoaded { .. }))
+            {
+                "hazır"
+            } else {
+                "yok"
+            }
         );
 
         // Pencere kapanırken ses düzeyini ve son çalınanları kaydet. Tepsi
@@ -341,21 +348,28 @@ impl Shell {
         // `integration`).
         let this = cx.weak_entity();
         window.on_window_should_close(cx, move |_, cx| {
-            this.upgrade().is_none_or(|shell| shell.update(cx, |shell, cx| shell.on_close_requested(cx)))
+            this.upgrade()
+                .is_none_or(|shell| shell.update(cx, |shell, cx| shell.on_close_requested(cx)))
         });
 
         // Motordan gelen olayları sırayla işle.
         let events = engine.events.clone();
         let events_task = cx.spawn(async move |this, cx| {
             while let Ok(event) = events.recv().await {
-                if this.update(cx, |shell, cx| shell.on_engine_event(event, cx)).is_err() {
+                if this
+                    .update(cx, |shell, cx| shell.on_engine_event(event, cx))
+                    .is_err()
+                {
                     break;
                 }
             }
             // Olay kanalı kapandı: motor iş parçacığı ölmüş (tutamak kanalı
             // açık tutar, normalde `EngineStopped` zaten gelir). Zombi kalma.
             let _ = this.update(cx, |shell, cx| {
-                shell.on_engine_event(engine::Event::EngineStopped("event channel closed".into()), cx)
+                shell.on_engine_event(
+                    engine::Event::EngineStopped("event channel closed".into()),
+                    cx,
+                )
             });
         });
 
@@ -363,7 +377,10 @@ impl Shell {
         let playback = engine.playback.clone();
         cx.spawn(async move |this, cx| {
             while let Ok(event) = playback.recv().await {
-                if this.update(cx, |shell, cx| shell.on_playback_event(event, cx)).is_err() {
+                if this
+                    .update(cx, |shell, cx| shell.on_playback_event(event, cx))
+                    .is_err()
+                {
                     break;
                 }
             }
@@ -376,9 +393,14 @@ impl Shell {
         // Geliştirme denemesi: OPENIFY_TEST_PLAY_AFTER=saniye verilirse açık
         // listenin ilk şarkısı o kadar sonra çalınır. Açılıştaki eşitleme
         // sırasında çalmanın bozulmadığını sınamak için.
-        if let Some(secs) = std::env::var("OPENIFY_TEST_PLAY_AFTER").ok().and_then(|v| v.parse::<u64>().ok()) {
+        if let Some(secs) = std::env::var("OPENIFY_TEST_PLAY_AFTER")
+            .ok()
+            .and_then(|v| v.parse::<u64>().ok())
+        {
             cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(Duration::from_secs(secs)).await;
+                cx.background_executor()
+                    .timer(Duration::from_secs(secs))
+                    .await;
                 let _ = this.update(cx, |shell, cx| shell.test_play(cx));
             })
             .detach();
@@ -456,7 +478,12 @@ impl Shell {
         // `OPENIFY_TEST_FAKE_ROW=n`: ilki yerine n. şarkı (farklı kapaklarla
         // hapın ışığını sınamak için).
         if std::env::var_os("OPENIFY_TEST_FAKE_PLAY").is_some() {
-            if let Some(t) = shell.library.tracks(&CollectionId::Liked).and_then(|t| t.get(fake_row())).cloned() {
+            if let Some(t) = shell
+                .library
+                .tracks(&CollectionId::Liked)
+                .and_then(|t| t.get(fake_row()))
+                .cloned()
+            {
                 let now = Instant::now();
                 shell.state.apply(
                     engine::Event::TrackChanged(engine::TrackInfo {
@@ -477,7 +504,9 @@ impl Shell {
                     }),
                     now,
                 );
-                shell.state.apply(engine::Event::Playing { position_ms: 0 }, now);
+                shell
+                    .state
+                    .apply(engine::Event::Playing { position_ms: 0 }, now);
                 shell.update_ticker(cx);
                 shell.sync_system(true);
             }
@@ -635,7 +664,11 @@ impl Shell {
                     .and_then(|id| self.library.tracks(id))
                     .and_then(|t| t.get(queue.index));
                 if let Some(t) = next
-                    && self.state.track.as_ref().is_none_or(|current| current.uri != t.uri)
+                    && self
+                        .state
+                        .track
+                        .as_ref()
+                        .is_none_or(|current| current.uri != t.uri)
                 {
                     self.state.pending = Some(player::PendingTrack {
                         name: t.name.clone(),
@@ -650,11 +683,13 @@ impl Shell {
         // eski takvimle bir saniyeye kadar geç kalabiliyordu).
         let reschedule = matches!(
             event,
-            engine::Event::TrackChanged(_) | engine::Event::Playing { .. } | engine::Event::Position { .. }
+            engine::Event::TrackChanged(_)
+                | engine::Event::Playing { .. }
+                | engine::Event::Position { .. }
         );
         // Windows medya kontrolünün konumu da bunlarda (ve durunca) yenilenir.
-        let timeline = reschedule
-            || matches!(event, engine::Event::Paused { .. } | engine::Event::Ended);
+        let timeline =
+            reschedule || matches!(event, engine::Event::Paused { .. } | engine::Event::Ended);
         self.state.apply(event, Instant::now());
         // Yerini yenisine bırakan kapakların çözülmüş pikselleri gpui'nin
         // önbelleğinden atılır (yoksa her şarkıda bir kapak birikiyordu).
@@ -785,7 +820,10 @@ impl Shell {
             f32::INFINITY
         };
         // Hesap bir tık erken kalırsa değişim kaçmasın: bir milisaniye pay.
-        let ms = to_second.min(to_pixel).clamp(BAR_WAIT_MIN_MS, BAR_WAIT_MAX_MS) + 1.;
+        let ms = to_second
+            .min(to_pixel)
+            .clamp(BAR_WAIT_MIN_MS, BAR_WAIT_MAX_MS)
+            + 1.;
         Duration::from_secs_f32(ms / 1000.)
     }
 
@@ -931,10 +969,8 @@ impl Shell {
                 }
             }
             _ => {
-                self.state.notify(
-                    engine::NoticeKind::Info,
-                    t!(NoticeNotTrackLink),
-                );
+                self.state
+                    .notify(engine::NoticeKind::Info, t!(NoticeNotTrackLink));
                 self.arm_notice_expiry(cx);
             }
         }
@@ -992,7 +1028,13 @@ impl Shell {
             cx.stop_propagation();
             return;
         }
-        if self.nav_key(keystroke.key.as_str(), keystroke.modifiers.shift, ctrl, window, cx) {
+        if self.nav_key(
+            keystroke.key.as_str(),
+            keystroke.modifiers.shift,
+            ctrl,
+            window,
+            cx,
+        ) {
             cx.stop_propagation();
             return;
         }
@@ -1042,7 +1084,11 @@ impl Shell {
                     cx.notify();
                     return true;
                 }
-                if shift { window.focus_prev() } else { window.focus_next() }
+                if shift {
+                    window.focus_prev()
+                } else {
+                    window.focus_next()
+                }
                 // Rafa gelince imleç açık olan listede başlar.
                 if self.nav.focused(window) == Some(NavTarget::Shelf) {
                     self.shelf_cursor = self.selected_shelf_index();
@@ -1058,7 +1104,12 @@ impl Shell {
             }
             // Seçenek düğmesinde ← / → gruptaki komşuya geçer; başka düğmede
             // ok tuşu bir şey yapmaz.
-            "left" | "right" if !ctrl && !shift && focused == Some(NavTarget::Other) && self.karaoke_slider_focused(window) => {
+            "left" | "right"
+                if !ctrl
+                    && !shift
+                    && focused == Some(NavTarget::Other)
+                    && self.karaoke_slider_focused(window) =>
+            {
                 self.karaoke_step(key == "right", cx);
                 true
             }
@@ -1071,7 +1122,9 @@ impl Shell {
                 self.seek_by(if key == "left" { -step } else { step }, cx);
                 true
             }
-            "left" | "right" | "up" | "down" if !ctrl && !shift && focused == Some(NavTarget::Volume) => {
+            "left" | "right" | "up" | "down"
+                if !ctrl && !shift && focused == Some(NavTarget::Volume) =>
+            {
                 let up = key == "right" || key == "up";
                 let base = self.volume_before_mute.unwrap_or(self.state.volume);
                 self.set_volume(base + if up { VOLUME_STEP } else { -VOLUME_STEP }, cx);
@@ -1173,13 +1226,26 @@ impl Shell {
     /// Seçenek düğmeleri arasında ok tuşuyla gezinme (anahtar
     /// `seg:grup:seçenek`): odak yalnız aynı grubun içinde kalır.
     fn segment_step(&mut self, forward: bool, window: &mut Window, cx: &mut Context<Self>) {
-        let Some((key, old)) = self.nav.extra_focused(window) else { return };
-        let Some(group) = key.strip_prefix("seg:").and_then(|k| k.rsplit_once(':')).map(|(g, _)| format!("seg:{g}:"))
+        let Some((key, old)) = self.nav.extra_focused(window) else {
+            return;
+        };
+        let Some(group) = key
+            .strip_prefix("seg:")
+            .and_then(|k| k.rsplit_once(':'))
+            .map(|(g, _)| format!("seg:{g}:"))
         else {
             return;
         };
-        if forward { window.focus_next() } else { window.focus_prev() }
-        if !self.nav.extra_focused(window).is_some_and(|(k, _)| k.starts_with(&group)) {
+        if forward {
+            window.focus_next()
+        } else {
+            window.focus_prev()
+        }
+        if !self
+            .nav
+            .extra_focused(window)
+            .is_some_and(|(k, _)| k.starts_with(&group))
+        {
             window.focus(&old);
         }
         cx.notify();
@@ -1207,8 +1273,14 @@ impl Shell {
             }
             Drag::Eq(slot) => self.eq_drag_to(slot, ev.position, cx),
             Drag::Karaoke(place) => self.karaoke_drag_to(place, ev.position, cx),
-            Drag::Scroll { bar, start_y, start_offset } => {
-                let Some(m) = self.scroll_metrics(bar) else { return };
+            Drag::Scroll {
+                bar,
+                start_y,
+                start_offset,
+            } => {
+                let Some(m) = self.scroll_metrics(bar) else {
+                    return;
+                };
                 let (h, _) = m.thumb();
                 let track = (m.viewport - h).max(1.);
                 let moved = f32::from(ev.position.y) - start_y;
@@ -1238,12 +1310,18 @@ impl Shell {
         };
         let offset = -f32::from(self.scroll_parts(bar).0.0.borrow().base_handle.offset().y);
         let max = (content - viewport).max(0.);
-        Some(ScrollMetrics { viewport, content, offset: offset.clamp(0., max) })
+        Some(ScrollMetrics {
+            viewport,
+            content,
+            offset: offset.clamp(0., max),
+        })
     }
 
     /// Kaydırma çubuğuyla kaydır: süren tekerlek hareketi bırakılır.
     fn set_scroll(&self, bar: ScrollBar, offset: f32) {
-        let Some(m) = self.scroll_metrics(bar) else { return };
+        let Some(m) = self.scroll_metrics(bar) else {
+            return;
+        };
         let y = -offset.clamp(0., m.max());
         let (handle, glide) = self.scroll_parts(bar);
         glide.cancel();
@@ -1282,7 +1360,9 @@ impl Shell {
             .h(px(h))
             .rounded_full()
             .bg(veil(if dragging { LINE_HOVER } else { LINE_INPUT }))
-            .when(!dragging, |el| el.group_hover(group, |s| s.bg(veil(LINE_HOVER))))
+            .when(!dragging, |el| {
+                el.group_hover(group, |s| s.bg(veil(LINE_HOVER)))
+            })
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
@@ -1310,9 +1390,19 @@ impl Shell {
                     MouseButton::Left,
                     cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
                         // Tutamacın üstüne / altına tıklamak bir sayfa kaydırır.
-                        let Some(m) = this.scroll_metrics(bar) else { return };
+                        let Some(m) = this.scroll_metrics(bar) else {
+                            return;
+                        };
                         let (h, top) = m.thumb();
-                        let origin = this.scroll_parts(bar).0.0.borrow().base_handle.bounds().origin.y;
+                        let origin = this
+                            .scroll_parts(bar)
+                            .0
+                            .0
+                            .borrow()
+                            .base_handle
+                            .bounds()
+                            .origin
+                            .y;
                         let y = f32::from(ev.position.y - origin);
                         let page = m.viewport * 0.9;
                         if y < top {
@@ -1329,7 +1419,9 @@ impl Shell {
     }
 
     fn on_drag_end(&mut self, _: &MouseUpEvent, _: &mut Window, cx: &mut Context<Self>) {
-        let Some(drag) = self.dragging.take() else { return };
+        let Some(drag) = self.dragging.take() else {
+            return;
+        };
         if let Drag::Progress(f) = drag {
             let target = (self.state.duration_ms() as f32 * f) as u32;
             self.seek_to(target, cx);
@@ -1371,19 +1463,28 @@ impl Shell {
                 .text_color(muted())
                 // Odak halkası: düğmenin içinde, hep duran 2 px'lik kenar.
                 .border_2()
-                .border_color(if look == Look::Focus { rgb(accent).into() } else { gpui::transparent_black() })
-                .when(close, |el| el.hover(|s| s.bg(rgb(CLOSE_HOVER)).text_color(text())))
-                .when(!close, |el| el.hover(|s| s.bg(veil(VEIL_HOVER)).text_color(text())))
+                .border_color(if look == Look::Focus {
+                    rgb(accent).into()
+                } else {
+                    gpui::transparent_black()
+                })
+                .when(close, |el| {
+                    el.hover(|s| s.bg(rgb(CLOSE_HOVER)).text_color(text()))
+                })
+                .when(!close, |el| {
+                    el.hover(|s| s.bg(veil(VEIL_HOVER)).text_color(text()))
+                })
                 .when_some(handle, |el, handle| {
-                    el.track_focus(&handle).on_click(cx.listener(move |this, _, window, cx| match area {
-                        WindowControlArea::Min => window.minimize_window(),
-                        WindowControlArea::Max => window.zoom_window(),
-                        _ => {
-                            if this.on_close_requested(cx) {
-                                window.remove_window();
+                    el.track_focus(&handle)
+                        .on_click(cx.listener(move |this, _, window, cx| match area {
+                            WindowControlArea::Min => window.minimize_window(),
+                            WindowControlArea::Max => window.zoom_window(),
+                            _ => {
+                                if this.on_close_requested(cx) {
+                                    window.remove_window();
+                                }
                             }
-                        }
-                    }))
+                        }))
                 })
                 .child(icon(icon_name, 14., muted()))
         };
@@ -1394,7 +1495,10 @@ impl Shell {
         // akarken başlık çubuğunun geri kalanı her karede yeniden kuruluyor,
         // arama önceki kareden tekrar oynatılıyor.
         let search = AnyView::from(self.views.search.clone()).cached(
-            StyleRefinement::default().w(px(self.search_width())).h(px(SEARCH_HEIGHT)).flex_shrink_0(),
+            StyleRefinement::default()
+                .w(px(self.search_width()))
+                .h(px(SEARCH_HEIGHT))
+                .flex_shrink_0(),
         );
 
         div()
@@ -1415,9 +1519,14 @@ impl Shell {
                     // En solda profil hapı (bkz. `settings`), sürükleme alanının dışında.
                     .child(self.render_profile_button(window, cx))
                     // Kendi önbellekli görünümünde (bkz. `views::NavView`).
-                    .child(AnyView::from(self.views.nav.clone()).cached(
-                        StyleRefinement::default().w(px(pages::NAV_WIDTH)).h_full().flex_shrink_0(),
-                    ))
+                    .child(
+                        AnyView::from(self.views.nav.clone()).cached(
+                            StyleRefinement::default()
+                                .w(px(pages::NAV_WIDTH))
+                                .h_full()
+                                .flex_shrink_0(),
+                        ),
+                    )
                     .child(
                         div()
                             .id("titlebar-drag")
@@ -1452,7 +1561,14 @@ impl Shell {
                     .children(self.render_friends_button(window, cx))
                     // Bekleyen ya da yazılamayan değişiklik varsa eşitleme.
                     .children(self.render_sync_badge(cx))
-                    .child(control("win-min", WindowControlArea::Min, "minus", false, tab::MINIMIZE, cx))
+                    .child(control(
+                        "win-min",
+                        WindowControlArea::Min,
+                        "minus",
+                        false,
+                        tab::MINIMIZE,
+                        cx,
+                    ))
                     .child(control(
                         "win-max",
                         WindowControlArea::Max,
@@ -1461,7 +1577,14 @@ impl Shell {
                         tab::MAXIMIZE,
                         cx,
                     ))
-                    .child(control("win-close", WindowControlArea::Close, "x", true, tab::CLOSE, cx)),
+                    .child(control(
+                        "win-close",
+                        WindowControlArea::Close,
+                        "x",
+                        true,
+                        tab::CLOSE,
+                        cx,
+                    )),
             )
             .into_any_element()
     }
@@ -1486,12 +1609,16 @@ impl Shell {
             .border_1()
             .border_color(veil(LINE_INPUT))
             .cursor_pointer()
-            .hover(|s| s.bg(shade(SHADE_INPUT_HOVER)).border_color(veil(LINE_HOVER)))
+            .hover(|s| {
+                s.bg(shade(SHADE_INPUT_HOVER))
+                    .border_color(veil(LINE_HOVER))
+            })
             .active(|s| s.bg(shade(SCRIM)))
             .track_focus(&self.nav.search)
-            .when(self.look(&self.nav.search, window, true) == Look::Focus, |el| {
-                el.border_color(rgb(self.accent().text))
-            })
+            .when(
+                self.look(&self.nav.search, window, true) == Look::Focus,
+                |el| el.border_color(rgb(self.accent().text)),
+            )
             .on_click(cx.listener(|this, _, _, cx| this.open_palette(cx)))
             .child(icon("search", 14., muted()))
             .child(
@@ -1517,7 +1644,11 @@ impl Shell {
         // çalan şarkının kapak rengi.
         let top = match self.category_glow_color() {
             Some(color) => color,
-            None => mix(BG, glow_top(self.accent().glow), 1. - GLOW_SCROLLED_DIM * collapse),
+            None => mix(
+                BG,
+                glow_top(self.accent().glow),
+                1. - GLOW_SCROLLED_DIM * collapse,
+            ),
         };
         div()
             .absolute()
@@ -1558,7 +1689,9 @@ impl Shell {
     /// Bilgi bildirimi süresi dolunca hapı yeniden çiz (başka bir sebeple
     /// çizilmeyebilir: duraklatılmışken).
     fn arm_notice_expiry(&mut self, cx: &mut Context<Self>) {
-        let Some(n) = self.state.notice.as_ref() else { return };
+        let Some(n) = self.state.notice.as_ref() else {
+            return;
+        };
         if n.kind != engine::NoticeKind::Info {
             return;
         }
@@ -1604,7 +1737,11 @@ impl Render for Shell {
                 crate::since_start(),
                 if self.library.selected.as_ref().is_some_and(|id| {
                     matches!(self.library.collections.get(id), Some(Loadable::Loaded(_)))
-                }) { "hazır" } else { "yok" }
+                }) {
+                    "hazır"
+                } else {
+                    "yok"
+                }
             );
         }
         // Kök her karede çizilir (bir parça görünüm uyarılınca kök de kirli
@@ -1628,7 +1765,9 @@ impl Render for Shell {
             let scrolled = self.list_offset() > 0.;
             self.library.header_collapse = library::initial_collapse(short || scrolled);
             self.library.list_glide.cancel();
-            self.trace_scroll("short", || format!("short={short} h={:.1}", f32::from(viewport.height)));
+            self.trace_scroll("short", || {
+                format!("short={short} h={:.1}", f32::from(viewport.height))
+            });
         }
         self.scale_factor = window.scale_factor();
         // Raf ile liste arasındaki değişmez her karede, raf ve liste
@@ -1636,9 +1775,17 @@ impl Render for Shell {
         self.heal_list_collapse();
         self.advance_list_glide(window);
         if library::scroll_trace::enabled() {
-            let (collapse, offset) = (self.library.header_collapse.min(shelf::COLLAPSE_MAX), self.list_offset());
+            let (collapse, offset) = (
+                self.library.header_collapse.min(shelf::COLLAPSE_MAX),
+                self.list_offset(),
+            );
             let extent = self.list_extent();
-            library::scroll_trace::state(collapse, offset, || format!("root extent={extent:?} glide={}", self.library.list_glide.is_active()));
+            library::scroll_trace::state(collapse, offset, || {
+                format!(
+                    "root extent={extent:?} glide={}",
+                    self.library.list_glide.is_active()
+                )
+            });
         }
 
         // Başlık çubuğu önbelleğe alınamaz: pencere düğmeleri ve sürükleme
@@ -1646,7 +1793,8 @@ impl Render for Shell {
         // önbellekli bir görünümde olsalar çalışmazlardı.
         let titlebar = self.render_titlebar(window, cx);
         // Her yerden açılan palet kendi penceresinde (bkz. `popups`).
-        let palette = (self.palette.open && !self.palette.detached).then(|| self.render_palette(cx));
+        let palette =
+            (self.palette.open && !self.palette.detached).then(|| self.render_palette(cx));
         // Raf, liste ve hap kendi görünümlerinde çizilir (bkz. `views`);
         // burada yalnız yerlerini tutan kutular var. Kutunun boyu içerikten
         // gelmez, burada verilir: rafın boyu kapanma oranından.
@@ -1667,17 +1815,32 @@ impl Render for Shell {
         // Ekolayzer bütün pencereyi kaplayan saydam bir katman: listeden
         // sonra gelir (aynı karede ölçülen yeri okusun), hapın ve paletin
         // altında kalır (hapın altına giren satırın ekolayzeri hapla örtülür).
-        let equalizer = AnyView::from(self.views.equalizer.clone())
-            .cached(StyleRefinement::default().absolute().top_0().left_0().size_full());
+        let equalizer = AnyView::from(self.views.equalizer.clone()).cached(
+            StyleRefinement::default()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+        );
         // Ölçüm kancası (yalnız geliştirme): OPENIFY_PROF_HIDE="shelf,list,
         // pill,titlebar,glow,equalizer" bölgeleri çizmez; kare süresinin
         // nereden geldiğini bulmak için. (Eski adlar "sidebar" ve "bar" da
         // geçerli: ölçüm betikleri onları kullanıyor.)
         let hide = frames::hidden;
-        let titlebar = if hide("titlebar") { div().h(px(TITLEBAR_HEIGHT)).into_any_element() } else { titlebar };
-        let list = if hide("list") { div().flex_1().into_any_element() } else { list.into_any_element() };
+        let titlebar = if hide("titlebar") {
+            div().h(px(TITLEBAR_HEIGHT)).into_any_element()
+        } else {
+            titlebar
+        };
+        let list = if hide("list") {
+            div().flex_1().into_any_element()
+        } else {
+            list.into_any_element()
+        };
         let shelf = if hide("shelf") || hide("sidebar") {
-            div().h(px(shelf::shelf_height(self.collapse_progress()))).into_any_element()
+            div()
+                .h(px(shelf::shelf_height(self.collapse_progress())))
+                .into_any_element()
         } else {
             shelf.into_any_element()
         };
@@ -1699,7 +1862,11 @@ impl Render for Shell {
                 ))
         });
         let equalizer = (!hide("equalizer")).then_some(equalizer);
-        let glow = if hide("glow") { div().into_any_element() } else { self.render_glow() };
+        let glow = if hide("glow") {
+            div().into_any_element()
+        } else {
+            self.render_glow()
+        };
         self.flush_image_requests(cx);
         // Renk geçişi sürerken her karede yeniden çiz.
         if self.state.accent_animating(Instant::now()) {
@@ -1720,10 +1887,16 @@ impl Render for Shell {
             .w(px(dock.main_width))
             .flex()
             .flex_col()
-            .when(!self.page_open() && !self.hide_shelf(), |el| el.child(shelf))
+            .when(!self.page_open() && !self.hide_shelf(), |el| {
+                el.child(shelf)
+            })
             .child(list);
         // Sağ tık menüsü, ad kutusu, geri al bildirimi, eşitleme paneli.
-        let mut overlays = if self.now.full.open { Vec::new() } else { self.render_manage_overlays(window, cx) };
+        let mut overlays = if self.now.full.open {
+            Vec::new()
+        } else {
+            self.render_manage_overlays(window, cx)
+        };
         if !self.now.full.open {
             overlays.extend(self.render_settings_overlays(window, cx));
         }
@@ -1749,8 +1922,13 @@ impl Render for Shell {
 
         // Tam ekranda pencereyi tek görünüm kaplar: başlık çubuğu, liste, hap
         // ve ekolayzer hiç çizilmez (pencere düğmelerinin isabet alanı da yok).
-        let full = (self.now.full.open || self.now.full.closing.is_some()).then(|| self.fullscreen_layer());
-        let side = if full.is_none() { self.side_panel_layer(window) } else { None };
+        let full = (self.now.full.open || self.now.full.closing.is_some())
+            .then(|| self.fullscreen_layer());
+        let side = if full.is_none() {
+            self.side_panel_layer(window)
+        } else {
+            None
+        };
         let (glow, equalizer, pill, titlebar_main) = if full.is_some() {
             (None, None, None, None)
         } else {
@@ -1831,7 +2009,11 @@ impl Render for Shell {
             .children(drag_watch)
             // Kare ölçümü (yalnız `OPENIFY_FRAME_STATS` ile): en son boyanan öğe.
             .when(frames::enabled(), |el| {
-                el.child(canvas(|_, _, _| {}, |_, _, _, _| frames::painted()).absolute().size_0())
+                el.child(
+                    canvas(|_, _, _| {}, |_, _, _, _| frames::painted())
+                        .absolute()
+                        .size_0(),
+                )
             });
         frames::render_built();
         root
@@ -1905,12 +2087,18 @@ fn cover_image(
 /// Sahte çalmada çalınan beğenilen şarkının sırası (`OPENIFY_TEST_FAKE_ROW`,
 /// varsayılan 0).
 fn fake_row() -> usize {
-    std::env::var("OPENIFY_TEST_FAKE_ROW").ok().and_then(|v| v.parse().ok()).unwrap_or(0)
+    std::env::var("OPENIFY_TEST_FAKE_ROW")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0)
 }
 
 /// Vurgu rengini zeminde ve ışımada okunur hâle getirir (bkz. `Shell::accent`).
 fn readable_accent(accent: Accent) -> Accent {
-    Accent { text: ensure_contrast(accent.text, glow_top(accent.glow), 4.5), glow: accent.glow }
+    Accent {
+        text: ensure_contrast(accent.text, glow_top(accent.glow), 4.5),
+        glow: accent.glow,
+    }
 }
 
 /// Tab sırası: görsel sıra (başlık çubuğu, sayfa, panel, hap). gpui düğmeleri
@@ -2089,7 +2277,11 @@ enum Drag {
     /// Karaoke miktar sürgüsü: panelde ya da tam ekranda (bkz. `karaoke`).
     Karaoke(lyrics_view::Place),
     /// Kaydırma çubuğu tutamacı: tutulduğu andaki fare ve kaydırma konumu.
-    Scroll { bar: ScrollBar, start_y: f32, start_offset: f32 },
+    Scroll {
+        bar: ScrollBar,
+        start_y: f32,
+        start_offset: f32,
+    },
 }
 
 /// Hapın zamanla değişen kısmı (bkz. `Shell::bar_signature_at`).
@@ -2126,7 +2318,11 @@ impl ScrollMetrics {
     /// Tutamacın yüksekliği ve üst kenarı.
     fn thumb(&self) -> (f32, f32) {
         let h = (self.viewport * self.viewport / self.content).max(SCROLL_THUMB_MIN);
-        let top = if self.max() > 0. { self.offset / self.max() * (self.viewport - h) } else { 0. };
+        let top = if self.max() > 0. {
+            self.offset / self.max() * (self.viewport - h)
+        } else {
+            0.
+        };
         (h, top)
     }
 }
@@ -2138,9 +2334,15 @@ const SCROLL_THUMB_WIDTH: f32 = 6.;
 /// Kayıtlarda kapak baytları ve uzun listeler yer kaplamasın.
 fn short_debug(event: &engine::Event) -> String {
     match event {
-        engine::Event::Cover { track_uri, accent, .. } => format!("Cover {{ {track_uri}, {accent:?} }}"),
+        engine::Event::Cover {
+            track_uri, accent, ..
+        } => format!("Cover {{ {track_uri}, {accent:?} }}"),
         engine::Event::CollectionLoaded { id, tracks } => {
-            format!("CollectionLoaded {{ {}, {} şarkı }}", id.key(), tracks.len())
+            format!(
+                "CollectionLoaded {{ {}, {} şarkı }}",
+                id.key(),
+                tracks.len()
+            )
         }
         engine::Event::SearchIndex(t) => format!("SearchIndex({} şarkı)", t.len()),
         other => {

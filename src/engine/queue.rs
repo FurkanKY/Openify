@@ -226,7 +226,13 @@ pub(super) fn artist_groups(rows: &[TrackRow]) -> Vec<u32> {
     let mut ids: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
     rows.iter()
         .map(|r| {
-            let primary = r.artists.split(", ").next().unwrap_or("").trim().to_lowercase();
+            let primary = r
+                .artists
+                .split(", ")
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_lowercase();
             if primary.is_empty() {
                 return 0;
             }
@@ -259,7 +265,11 @@ impl Counts {
     }
 
     fn of(&self, a: u32) -> usize {
-        if a == 0 { 0 } else { self.of.get(a as usize).copied().unwrap_or(0) }
+        if a == 0 {
+            0
+        } else {
+            self.of.get(a as usize).copied().unwrap_or(0)
+        }
     }
 
     /// `a` dışındaki sanatçıların en büyük sayısı.
@@ -267,7 +277,10 @@ impl Counts {
         if a == 0 || self.of(a) != self.max || self.num_at[self.max] > 1 {
             return self.max;
         }
-        (1..self.max).rev().find(|c| self.num_at[*c] > 0).unwrap_or(0)
+        (1..self.max)
+            .rev()
+            .find(|c| self.num_at[*c] > 0)
+            .unwrap_or(0)
     }
 
     fn take(&mut self, a: u32) {
@@ -362,7 +375,9 @@ pub fn balanced_shuffle(items: &mut [usize], artists: &[u32], prev: u32, seed: u
         flat.extend_from_slice(&spread);
         units.extend(spread.iter().enumerate().map(|(k, i)| (artist(*i), k, 1)));
     } else {
-        let dom = (1..=groups as u32).max_by_key(|a| (all.of(*a), std::cmp::Reverse(*a))).unwrap_or(0);
+        let dom = (1..=groups as u32)
+            .max_by_key(|a| (all.of(*a), std::cmp::Reverse(*a)))
+            .unwrap_or(0);
         let c = all.of(dom);
         let others = n - c;
         // Hemen önce çalan da bu sanatçıysa o, ilk öbeğin başı sayılır (öbek
@@ -370,7 +385,11 @@ pub fn balanced_shuffle(items: &mut [usize], artists: &[u32], prev: u32, seed: u
         let lead = usize::from(prev == dom);
         let total = c + lead;
         let k = (others + 1).clamp(1, total);
-        let dom_items: Vec<usize> = spread.iter().copied().filter(|i| artist(*i) == dom).collect();
+        let dom_items: Vec<usize> = spread
+            .iter()
+            .copied()
+            .filter(|i| artist(*i) == dom)
+            .collect();
         // j. öbeğin sınırları (öncekiyle birlikte sayılarak): büyük öbekler de
         // eşit aralıkla dağılır.
         let bound = |j: usize| (j * total / k).saturating_sub(lead);
@@ -441,7 +460,8 @@ pub fn balanced_shuffle(items: &mut [usize], artists: &[u32], prev: u32, seed: u
             let a = units[j].0;
             if counts.can_take(a, prev, remaining) {
                 hard.get_or_insert(j);
-                let gap_ok = a == 0 || last[a as usize].is_none_or(|l| out + 1 - l >= soft[a as usize]);
+                let gap_ok =
+                    a == 0 || last[a as usize].is_none_or(|l| out + 1 - l >= soft[a as usize]);
                 if gap_ok {
                     pick = Some(j);
                     break;
@@ -545,7 +565,16 @@ impl Queue {
         seed: u64,
         keep_user: bool,
     ) -> Option<String> {
-        self.restart_with(context, uris, rows, index, seed, keep_user, None, Vec::new())
+        self.restart_with(
+            context,
+            uris,
+            rows,
+            index,
+            seed,
+            keep_user,
+            None,
+            Vec::new(),
+        )
     }
 
     /// `restart` + kurallar için bilgi: `info` (satırlar, `rows` yoksa) ve
@@ -569,7 +598,11 @@ impl Queue {
         }
         if let Some(cur) = self.current.take() {
             let track = cur.track.or_else(|| self.row_of(&cur.origin));
-            self.push_history(Played { uri: cur.uri, origin: Origin::User, track });
+            self.push_history(Played {
+                uri: cur.uri,
+                origin: Origin::User,
+                track,
+            });
         }
         // Eski bağlamın indeksleri yeni bağlamda anlamsız.
         for h in self.history.iter_mut() {
@@ -591,7 +624,11 @@ impl Queue {
             .filter(|r| r.len() == uris.len())
             .map(|r| artist_groups(r))
             .unwrap_or_default();
-        self.traits = if traits.len() == uris.len() { traits } else { Vec::new() };
+        self.traits = if traits.len() == uris.len() {
+            traits
+        } else {
+            Vec::new()
+        };
         self.info = info;
         self.ctx = uris;
         self.rows = rows;
@@ -599,7 +636,11 @@ impl Queue {
         self.lap = 0;
         self.last_ctx = Some(index);
         let uri = self.ctx[index].clone();
-        self.current = Some(Played { uri: uri.clone(), origin: Origin::Context(index), track: None });
+        self.current = Some(Played {
+            uri: uri.clone(),
+            origin: Origin::Context(index),
+            track: None,
+        });
         self.rebuild_order(Some(index));
         Some(uri)
     }
@@ -635,10 +676,18 @@ impl Queue {
                 .collect();
             &visible
         };
-        let rows = self.rows.as_deref().or(self.info.as_deref()).filter(|r| r.len() == n);
+        let rows = self
+            .rows
+            .as_deref()
+            .or(self.info.as_deref())
+            .filter(|r| r.len() == n);
         match rows {
             Some(rows) if !self.rules.is_empty() => {
-                let traits: &[Traits] = if self.traits.len() == n { &self.traits } else { &[] };
+                let traits: &[Traits] = if self.traits.len() == n {
+                    &self.traits
+                } else {
+                    &[]
+                };
                 rules::select(rows, traits, &self.rules, dedupe, heard, candidates)
             }
             _ => candidates.to_vec(),
@@ -668,7 +717,12 @@ impl Queue {
             let heard: Vec<usize> = (0..n).filter(|i| played[*i]).collect();
             let mut rest = self.pool(&rest, &heard, true);
             let prev = first.map_or(0, |f| self.artist_of(f));
-            balanced_shuffle(&mut rest, &self.artists, prev, lap_seed(self.seed, self.lap));
+            balanced_shuffle(
+                &mut rest,
+                &self.artists,
+                prev,
+                lap_seed(self.seed, self.lap),
+            );
             self.order.clear();
             if let Some(f) = first {
                 self.order.push(f);
@@ -691,7 +745,6 @@ impl Queue {
     }
 
     // ── Kurallar ───────────────────────────────────────────────────────
-
 
     /// Kuralları değiştirir; bağlamın kalanı (çalınmış kısım ve çalan şarkı
     /// yerinde) yeni kurallara göre yeniden kurulur. Değişti mi?
@@ -773,7 +826,10 @@ impl Queue {
     /// adresleri, en çok `limit` tane (özelliği, yani açık söz işareti, henüz
     /// bilinmeyenleri bulmak için).
     pub fn untraited_upcoming(&self, known: &dyn Fn(&str) -> bool, limit: usize) -> Vec<String> {
-        let rest = self.order.get(self.cursor.min(self.order.len())..).unwrap_or(&[]);
+        let rest = self
+            .order
+            .get(self.cursor.min(self.order.len())..)
+            .unwrap_or(&[]);
         rest.iter()
             .filter_map(|i| self.ctx.get(*i))
             .filter(|u| !known(u))
@@ -789,11 +845,20 @@ impl Queue {
             return false;
         }
         let key = self.context.as_ref().map(CollectionId::key);
-        let shown = |i: usize| self.hidden.filters_nothing() || !self.hidden.hides(key, &self.ctx[i]);
-        let Some(rows) = self.rows.as_deref().or(self.info.as_deref()).filter(|r| r.len() == n) else {
+        let shown =
+            |i: usize| self.hidden.filters_nothing() || !self.hidden.hides(key, &self.ctx[i]);
+        let Some(rows) = self
+            .rows
+            .as_deref()
+            .or(self.info.as_deref())
+            .filter(|r| r.len() == n)
+        else {
             return (0..n).any(shown);
         };
-        (0..n).any(|i| shown(i) && (self.rules.is_empty() || !self.rules.excludes(&rows[i], self.traits.get(i))))
+        (0..n).any(|i| {
+            shown(i)
+                && (self.rules.is_empty() || !self.rules.excludes(&rows[i], self.traits.get(i)))
+        })
     }
 
     /// Kuralların bakacağı bilgi (özellik ya da satırlar) sonradan geldi:
@@ -851,7 +916,12 @@ impl Queue {
             let heard: Vec<usize> = (0..n).filter(|i| played[*i]).collect();
             let mut rest = self.pool(&rest, &heard, true);
             let prev = self.last_ctx.map_or(0, |l| self.artist_of(l));
-            balanced_shuffle(&mut rest, &self.artists, prev, lap_seed(self.seed, self.lap));
+            balanced_shuffle(
+                &mut rest,
+                &self.artists,
+                prev,
+                lap_seed(self.seed, self.lap),
+            );
             self.order.extend(rest);
         } else {
             let start = done.iter().max().map_or(0, |m| m + 1);
@@ -915,8 +985,13 @@ impl Queue {
         let room = super::radio::CTX_MAX.saturating_sub(old_n);
         let fresh: Vec<TrackRow> = {
             // `insert` iki işi birden yapar: bağlamdakileri ve kendi içindeki tekrarları eler.
-            let mut seen: std::collections::HashSet<&str> = self.ctx.iter().map(String::as_str).collect();
-            rows.iter().filter(|r| seen.insert(r.uri.as_str())).take(room).cloned().collect()
+            let mut seen: std::collections::HashSet<&str> =
+                self.ctx.iter().map(String::as_str).collect();
+            rows.iter()
+                .filter(|r| seen.insert(r.uri.as_str()))
+                .take(room)
+                .cloned()
+                .collect()
         };
         if fresh.is_empty() {
             return 0;
@@ -928,7 +1003,12 @@ impl Queue {
             (None, None) => {}
         }
         let n = self.ctx.len();
-        match self.rows.as_deref().or(self.info.as_deref()).filter(|r| r.len() == n) {
+        match self
+            .rows
+            .as_deref()
+            .or(self.info.as_deref())
+            .filter(|r| r.len() == n)
+        {
             Some(all) => self.artists = artist_groups(all),
             None if !self.artists.is_empty() => self.artists.resize(n, 0),
             None => {}
@@ -949,7 +1029,12 @@ impl Queue {
         let mut added = self.pool(&new_idx, &heard, self.shuffle);
         if self.shuffle {
             let prev = self.order.last().map_or(0, |&i| self.artist_of(i));
-            balanced_shuffle(&mut added, &self.artists, prev, lap_seed(self.seed, self.lap) ^ (old_n as u64));
+            balanced_shuffle(
+                &mut added,
+                &self.artists,
+                prev,
+                lap_seed(self.seed, self.lap) ^ (old_n as u64),
+            );
         }
         self.order.extend(added);
         self.bump();
@@ -1014,7 +1099,11 @@ impl Queue {
     /// "hepsi"yse bağlam bitince başa sarar.
     fn take_next(&mut self) -> Option<Played> {
         if let Some(u) = self.user.pop_front() {
-            return Some(Played { uri: u.uri, origin: Origin::User, track: u.track });
+            return Some(Played {
+                uri: u.uri,
+                origin: Origin::User,
+                track: u.track,
+            });
         }
         if self.cursor >= self.order.len() {
             if self.repeat == RepeatMode::All && !self.ctx.is_empty() {
@@ -1025,7 +1114,11 @@ impl Queue {
         }
         let idx = *self.order.get(self.cursor)?;
         self.cursor += 1;
-        Some(Played { uri: self.ctx[idx].clone(), origin: Origin::Context(idx), track: None })
+        Some(Played {
+            uri: self.ctx[idx].clone(),
+            origin: Origin::Context(idx),
+            track: None,
+        })
     }
 
     fn become_current(&mut self, next: Played) -> String {
@@ -1077,7 +1170,11 @@ impl Queue {
             self.cursor -= 1;
             self.last_ctx = Some(pi);
             let uri = self.ctx[pi].clone();
-            self.current = Some(Played { uri: uri.clone(), origin: Origin::Context(pi), track: None });
+            self.current = Some(Played {
+                uri: uri.clone(),
+                origin: Origin::Context(pi),
+                track: None,
+            });
             return Some(uri);
         }
         None
@@ -1086,7 +1183,10 @@ impl Queue {
     /// Çalan şarkı geri alınırken sıranın başına döner (Sonraki onu çalar).
     fn unstep(&mut self, cur: Played) {
         match cur.origin {
-            Origin::User => self.user.push_front(UserItem { uri: cur.uri, track: cur.track }),
+            Origin::User => self.user.push_front(UserItem {
+                uri: cur.uri,
+                track: cur.track,
+            }),
             Origin::Context(ci) => {
                 if self.cursor > 0 && self.order.get(self.cursor - 1) == Some(&ci) {
                     self.cursor -= 1;
@@ -1150,7 +1250,13 @@ impl Queue {
     /// "Sonra çal": verilen sırayla kullanıcı sırasının başına koyar.
     pub fn play_next(&mut self, items: Vec<UserItem>) {
         let room = USER_QUEUE_LIMIT.saturating_sub(self.user.len());
-        for item in items.into_iter().take(room).collect::<Vec<_>>().into_iter().rev() {
+        for item in items
+            .into_iter()
+            .take(room)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+        {
             self.user.push_front(item);
         }
     }
@@ -1234,7 +1340,11 @@ impl Queue {
             // kullanıcı sırası yerinde kalır, bu şarkıdan sonra çalar.
             let idx = self.order[self.cursor];
             self.cursor += 1;
-            let played = Played { uri: self.ctx[idx].clone(), origin: Origin::Context(idx), track: None };
+            let played = Played {
+                uri: self.ctx[idx].clone(),
+                origin: Origin::Context(idx),
+                track: None,
+            };
             return Some(self.become_current(played));
         }
         self.next()
@@ -1242,14 +1352,22 @@ impl Queue {
 
     // ── Görünüm ────────────────────────────────────────────────────────
 
-    fn ctx_entry(&self, idx: usize, resolve: &dyn Fn(&str) -> Option<TrackRow>) -> Option<QueueEntry> {
+    fn ctx_entry(
+        &self,
+        idx: usize,
+        resolve: &dyn Fn(&str) -> Option<TrackRow>,
+    ) -> Option<QueueEntry> {
         let uri = self.ctx.get(idx)?;
         let track = self
             .rows
             .as_ref()
             .and_then(|r| r.get(idx).cloned())
             .or_else(|| resolve(uri));
-        Some(QueueEntry { uri: uri.clone(), track, source: QueueSource::Context })
+        Some(QueueEntry {
+            uri: uri.clone(),
+            track,
+            source: QueueSource::Context,
+        })
     }
 
     /// Arayüze giden görünüm. `resolve`: bilgisi sırada olmayan şarkılar için
@@ -1257,10 +1375,17 @@ impl Queue {
     pub fn view(&self, resolve: &dyn Fn(&str) -> Option<TrackRow>) -> QueueView {
         let current = self.current.as_ref().map(|p| {
             let (track, source) = match p.origin {
-                Origin::Context(i) => (self.rows.as_ref().and_then(|r| r.get(i).cloned()), QueueSource::Context),
+                Origin::Context(i) => (
+                    self.rows.as_ref().and_then(|r| r.get(i).cloned()),
+                    QueueSource::Context,
+                ),
                 Origin::User => (p.track.clone(), QueueSource::User),
             };
-            QueueEntry { uri: p.uri.clone(), track: track.or_else(|| resolve(&p.uri)), source }
+            QueueEntry {
+                uri: p.uri.clone(),
+                track: track.or_else(|| resolve(&p.uri)),
+                source,
+            }
         });
         let mut upcoming: Vec<QueueEntry> = self
             .user
@@ -1273,7 +1398,12 @@ impl Queue {
             .collect();
         let user_len = upcoming.len();
         let remaining = self.order.get(self.cursor..).unwrap_or(&[]);
-        upcoming.extend(remaining.iter().take(VIEW_UPCOMING).filter_map(|i| self.ctx_entry(*i, resolve)));
+        upcoming.extend(
+            remaining
+                .iter()
+                .take(VIEW_UPCOMING)
+                .filter_map(|i| self.ctx_entry(*i, resolve)),
+        );
         // Tekrar "hepsi": bağlam bitince sıradaki tur görünür.
         let shown = upcoming.len() - user_len;
         if self.repeat == RepeatMode::All && shown < VIEW_UPCOMING && !self.ctx.is_empty() {
@@ -1350,7 +1480,10 @@ mod tests {
     }
 
     fn item(uri: &str) -> UserItem {
-        UserItem { uri: uri.into(), track: None }
+        UserItem {
+            uri: uri.into(),
+            track: None,
+        }
     }
 
     /// `n` şarkılı bağlam, `index`'ten başlamış sıra.
@@ -1480,10 +1613,18 @@ mod tests {
     #[test]
     fn user_queue_is_capped() {
         let mut q = Queue::new();
-        q.enqueue((0..USER_QUEUE_LIMIT + 20).map(|i| item(&format!("u{i}"))).collect());
+        q.enqueue(
+            (0..USER_QUEUE_LIMIT + 20)
+                .map(|i| item(&format!("u{i}")))
+                .collect(),
+        );
         assert_eq!(q.user_len(), USER_QUEUE_LIMIT);
         q.play_next(vec![item("x")]);
-        assert_eq!(q.user_len(), USER_QUEUE_LIMIT, "dolu sıraya sonra çal eklenmez");
+        assert_eq!(
+            q.user_len(),
+            USER_QUEUE_LIMIT,
+            "dolu sıraya sonra çal eklenmez"
+        );
     }
 
     #[test]
@@ -1566,7 +1707,14 @@ mod tests {
         let mut all = rest.clone();
         all.push("t7".into());
         assert_eq!(sorted(all), sorted(uris(30)), "her şarkı tam bir kez");
-        assert_ne!(rest, uris(30).into_iter().filter(|u| u != "t7").collect::<Vec<_>>(), "gerçekten karışmış");
+        assert_ne!(
+            rest,
+            uris(30)
+                .into_iter()
+                .filter(|u| u != "t7")
+                .collect::<Vec<_>>(),
+            "gerçekten karışmış"
+        );
     }
 
     #[test]
@@ -1612,7 +1760,11 @@ mod tests {
         q.next(); // t3 çalıyor; t0 t1 t2 geçmişte
         q.set_shuffle(true);
         let rest = q.upcoming_context();
-        assert_eq!(sorted(rest.clone()), ["t4", "t5", "t6", "t7"], "çalınanlar karışmaya girmez");
+        assert_eq!(
+            sorted(rest.clone()),
+            ["t4", "t5", "t6", "t7"],
+            "çalınanlar karışmaya girmez"
+        );
         assert!(q.has_previous());
         assert_eq!(q.previous().as_deref(), Some("t2"));
         assert_eq!(q.previous().as_deref(), Some("t1"));
@@ -1686,7 +1838,15 @@ mod tests {
     fn shuffled(artists: &[String], index: usize, seed: u64) -> Queue {
         let mut q = Queue::new();
         q.set_shuffle(true);
-        q.restart(None, uris(artists.len()), Some(rows_by(artists)), index, seed, true).unwrap();
+        q.restart(
+            None,
+            uris(artists.len()),
+            Some(rows_by(artists)),
+            index,
+            seed,
+            true,
+        )
+        .unwrap();
         q
     }
 
@@ -1701,7 +1861,9 @@ mod tests {
 
     /// Art arda aynı (bilinen) sanatçı sayısı.
     fn adjacent_repeats(seq: &[String]) -> usize {
-        seq.windows(2).filter(|w| !w[0].is_empty() && w[0] == w[1]).count()
+        seq.windows(2)
+            .filter(|w| !w[0].is_empty() && w[0] == w[1])
+            .count()
     }
 
     /// İlk şarkısı sabit (`first` sanatçısı) dizi art arda gelmeden kurulabilir mi?
@@ -1715,7 +1877,11 @@ mod tests {
         }
         let rest = artists.len() - 1;
         counts.iter().all(|(a, c)| {
-            if *a == artists[first].as_str() { *c <= rest / 2 } else { *c <= rest.div_ceil(2) }
+            if *a == artists[first].as_str() {
+                *c <= rest / 2
+            } else {
+                *c <= rest.div_ceil(2)
+            }
         })
     }
 
@@ -1752,21 +1918,37 @@ mod tests {
             assert_eq!(adjacent_repeats(&seq), 0, "tohum {seed}: {seq:?}");
             let mut all: Vec<String> = q.upcoming_context();
             all.push(cur(&q).to_string());
-            assert_eq!(sorted(all), sorted(uris(artists.len())), "tohum {seed}: her şarkı tam bir kez");
+            assert_eq!(
+                sorted(all),
+                sorted(uris(artists.len())),
+                "tohum {seed}: her şarkı tam bir kez"
+            );
         }
         assert!(checked > 500, "yeterince olası durum sınanmadı: {checked}");
 
         // Sınırdaki durumlar: tek bir dizilim mümkün (A B A B … A).
-        let tight: Vec<String> = (0..9).map(|i| if i % 2 == 0 { "A" } else { "B" }.to_string()).collect();
+        let tight: Vec<String> = (0..9)
+            .map(|i| if i % 2 == 0 { "A" } else { "B" }.to_string())
+            .collect();
         for seed in 0..200 {
             let q = shuffled(&tight, 0, seed);
-            assert_eq!(adjacent_repeats(&play_artists(&q, &tight)), 0, "dar durum, tohum {seed}");
+            assert_eq!(
+                adjacent_repeats(&play_artists(&q, &tight)),
+                0,
+                "dar durum, tohum {seed}"
+            );
         }
         // Yarı yarıya iki sanatçı, B'den başlanır.
-        let half: Vec<String> = (0..20).map(|i| if i < 10 { "A" } else { "B" }.to_string()).collect();
+        let half: Vec<String> = (0..20)
+            .map(|i| if i < 10 { "A" } else { "B" }.to_string())
+            .collect();
         for seed in 0..200 {
             let q = shuffled(&half, 15, seed);
-            assert_eq!(adjacent_repeats(&play_artists(&q, &half)), 0, "yarı yarıya, tohum {seed}");
+            assert_eq!(
+                adjacent_repeats(&play_artists(&q, &half)),
+                0,
+                "yarı yarıya, tohum {seed}"
+            );
         }
     }
 
@@ -1775,13 +1957,22 @@ mod tests {
         // 8 A + 2 B: art arda A kaçınılmaz. B'den başlanınca en az 6, A'dan
         // başlanınca en az 5 (A'lar en çok 2 / 3 öbeğe bölünebilir); her
         // tohumda tam bu kadar, B'ler hiç yan yana değil, A öbekleri eşit.
-        let artists: Vec<String> = (0..10).map(|i| if i < 8 { "A" } else { "B" }.to_string()).collect();
+        let artists: Vec<String> = (0..10)
+            .map(|i| if i < 8 { "A" } else { "B" }.to_string())
+            .collect();
         for (start, least) in [(8, 6), (0, 5)] {
             for seed in 0..300 {
                 let q = shuffled(&artists, start, seed);
                 let seq = play_artists(&q, &artists);
-                assert_eq!(adjacent_repeats(&seq), least, "başlangıç {start}, tohum {seed}: {seq:?}");
-                assert!(!seq.windows(2).any(|w| w[0] == "B" && w[1] == "B"), "tohum {seed}: {seq:?}");
+                assert_eq!(
+                    adjacent_repeats(&seq),
+                    least,
+                    "başlangıç {start}, tohum {seed}: {seq:?}"
+                );
+                assert!(
+                    !seq.windows(2).any(|w| w[0] == "B" && w[1] == "B"),
+                    "tohum {seed}: {seq:?}"
+                );
                 let runs: Vec<usize> = seq
                     .chunk_by(|a, b| a == b)
                     .filter(|r| r[0] == "A")
@@ -1806,7 +1997,12 @@ mod tests {
             })
             .collect();
         let gaps = |seq: &[String], who: &str| -> (usize, usize) {
-            let at: Vec<usize> = seq.iter().enumerate().filter(|(_, a)| *a == who).map(|(i, _)| i).collect();
+            let at: Vec<usize> = seq
+                .iter()
+                .enumerate()
+                .filter(|(_, a)| *a == who)
+                .map(|(i, _)| i)
+                .collect();
             let g: Vec<usize> = at.windows(2).map(|w| w[1] - w[0]).collect();
             (*g.iter().min().unwrap(), *g.iter().max().unwrap())
         };
@@ -1897,7 +2093,11 @@ mod tests {
         assert_eq!(q.next_auto().as_deref(), Some("t0"));
         assert_eq!(cur(&q), "t0");
         assert!(!q.has_previous(), "yeniden çalma geçmiş yazmaz");
-        assert_eq!(q.next().as_deref(), Some("t1"), "Sonraki tekrar tek'te de ilerler");
+        assert_eq!(
+            q.next().as_deref(),
+            Some("t1"),
+            "Sonraki tekrar tek'te de ilerler"
+        );
         assert_eq!(q.next_auto().as_deref(), Some("t1"));
         assert_eq!(q.peek_next_auto(), None, "tekrar tek'te önyükleme yok");
     }
@@ -1906,7 +2106,10 @@ mod tests {
     fn repeat_all_wraps_and_has_next_at_end() {
         let mut q = started(3, 0);
         q.set_repeat(RepeatMode::All);
-        assert_eq!(drain_n(&mut q, 7), ["t1", "t2", "t0", "t1", "t2", "t0", "t1"]);
+        assert_eq!(
+            drain_n(&mut q, 7),
+            ["t1", "t2", "t0", "t1", "t2", "t0", "t1"]
+        );
         assert!(q.has_next());
     }
 
@@ -1949,9 +2152,16 @@ mod tests {
             laps.push(seq[10 + lap * 10..20 + lap * 10].to_vec());
         }
         for lap in &laps {
-            assert_eq!(sorted(lap.clone()), sorted(uris(10)), "her tur eksiksiz bir permütasyon");
+            assert_eq!(
+                sorted(lap.clone()),
+                sorted(uris(10)),
+                "her tur eksiksiz bir permütasyon"
+            );
         }
-        assert!(laps[1] != laps[2] || laps[2] != laps[3], "turlar yeniden karışır");
+        assert!(
+            laps[1] != laps[2] || laps[2] != laps[3],
+            "turlar yeniden karışır"
+        );
         for w in seq.windows(2) {
             assert_ne!(w[0], w[1], "aynı şarkı arka arkaya gelmez");
         }
@@ -2001,7 +2211,14 @@ mod tests {
         q.set_repeat(RepeatMode::All);
         q.enqueue(vec![item("u1")]);
         q.next(); // u1
-        q.restart(None, vec!["x0".into(), "x1".into(), "x2".into()], None, 1, 3, true);
+        q.restart(
+            None,
+            vec!["x0".into(), "x1".into(), "x2".into()],
+            None,
+            1,
+            3,
+            true,
+        );
         assert_eq!(cur(&q), "x1");
         assert_eq!(q.repeat(), RepeatMode::All);
         // Önceki: u1'e döner, oradan t0'a, sonra Sonraki ile x1 yeniden.
@@ -2102,11 +2319,19 @@ mod tests {
         assert_eq!(q.context_index(), Some(2));
         q.enqueue(vec![item("u")]);
         q.next();
-        assert_eq!(q.context_index(), None, "kullanıcı şarkısı bağlamdan sayılmaz");
+        assert_eq!(
+            q.context_index(),
+            None,
+            "kullanıcı şarkısı bağlamdan sayılmaz"
+        );
         q.set_shuffle(true);
         q.next();
         let i = q.context_index().unwrap();
-        assert_eq!(cur(&q), format!("t{i}"), "karışıkken indeks özgün bağlam sırasındadır");
+        assert_eq!(
+            cur(&q),
+            format!("t{i}"),
+            "karışıkken indeks özgün bağlam sırasındadır"
+        );
     }
 
     #[test]
@@ -2116,7 +2341,11 @@ mod tests {
         q.next();
         q.enqueue(vec![item("u")]);
         q.next();
-        assert_eq!(q.order_gen(), g, "ilerleme ve sıraya ekleme sırayı değiştirmez");
+        assert_eq!(
+            q.order_gen(),
+            g,
+            "ilerleme ve sıraya ekleme sırayı değiştirmez"
+        );
         q.set_shuffle(true);
         assert!(q.order_gen() != g);
         let g = q.order_gen();
@@ -2139,14 +2368,27 @@ mod tests {
 
     /// `(ad, sanatçılar)` çiftlerinden bağlam satırları (`t{i}` adresli).
     fn rule_rows(items: &[(&str, &str)]) -> Arc<Vec<TrackRow>> {
-        Arc::new(items.iter().enumerate().map(|(i, (n, a))| rule_row(i, n, a, 200_000)).collect())
+        Arc::new(
+            items
+                .iter()
+                .enumerate()
+                .map(|(i, (n, a))| rule_row(i, n, a, 200_000))
+                .collect(),
+        )
     }
 
-    fn started_with(rules: Rules, shuffle: bool, rows: Arc<Vec<TrackRow>>, index: usize, seed: u64) -> Queue {
+    fn started_with(
+        rules: Rules,
+        shuffle: bool,
+        rows: Arc<Vec<TrackRow>>,
+        index: usize,
+        seed: u64,
+    ) -> Queue {
         let mut q = Queue::new();
         q.set_shuffle(shuffle);
         q.set_rules(rules);
-        q.restart(None, uris_of(&rows), Some(rows), index, seed, true).unwrap();
+        q.restart(None, uris_of(&rows), Some(rows), index, seed, true)
+            .unwrap();
         q
     }
 
@@ -2160,9 +2402,19 @@ mod tests {
 
     #[test]
     fn blocked_artist_is_skipped_in_order_and_shuffle() {
-        let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y"), ("d", "Future, Drake"), ("e", "Z")]);
+        let rows = rule_rows(&[
+            ("a", "X"),
+            ("b", "Drake"),
+            ("c", "Y"),
+            ("d", "Future, Drake"),
+            ("e", "Z"),
+        ]);
         let mut q = started_with(blocked(&["drake"]), false, rows.clone(), 0, 1);
-        assert_eq!(drain(&mut q), ["t2", "t4"], "sırayla: kara listedekiler atlanır");
+        assert_eq!(
+            drain(&mut q),
+            ["t2", "t4"],
+            "sırayla: kara listedekiler atlanır"
+        );
         for seed in 0..50 {
             let mut q = started_with(blocked(&["Drake"]), true, rows.clone(), 0, seed);
             assert_eq!(sorted(drain(&mut q)), ["t2", "t4"], "karışık, tohum {seed}");
@@ -2171,7 +2423,13 @@ mod tests {
 
     #[test]
     fn explicitly_picked_blocked_track_plays_and_the_queue_continues_past_blocked_ones() {
-        let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y"), ("d", "Drake"), ("e", "Z")]);
+        let rows = rule_rows(&[
+            ("a", "X"),
+            ("b", "Drake"),
+            ("c", "Y"),
+            ("d", "Drake"),
+            ("e", "Z"),
+        ]);
         // Kullanıcı çift tıkla "b"yi (Drake) seçti: o çalar, ama devamında Drake yok.
         let mut q = started_with(blocked(&["drake"]), false, rows.clone(), 1, 1);
         assert_eq!(cur(&q), "t1");
@@ -2187,7 +2445,11 @@ mod tests {
         let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y")]);
         let mut q = started_with(Rules::new(true, true, ["drake"]), false, rows, 0, 1);
         q.enqueue(vec![item("t1"), item("u2")]);
-        assert_eq!(drain(&mut q), ["t1", "u2", "t2"], "sıraya kendisi eklediği şarkı çalar");
+        assert_eq!(
+            drain(&mut q),
+            ["t1", "u2", "t2"],
+            "sıraya kendisi eklediği şarkı çalar"
+        );
     }
 
     #[test]
@@ -2202,12 +2464,22 @@ mod tests {
     fn skip_explicit_uses_known_flags_and_reacts_when_they_arrive() {
         let rows = rule_rows(&[("a", "X"), ("b", "Y"), ("c", "Z"), ("d", "W")]);
         let mut q = started_with(Rules::new(false, true, []), false, rows, 0, 1);
-        assert_eq!(q.upcoming_context(), ["t1", "t2", "t3"], "işaret bilinmiyor: düşmez");
-        let explicit = Traits { explicit: true, popularity: 0 };
+        assert_eq!(
+            q.upcoming_context(),
+            ["t1", "t2", "t3"],
+            "işaret bilinmiyor: düşmez"
+        );
+        let explicit = Traits {
+            explicit: true,
+            popularity: 0,
+        };
         let found = std::collections::HashMap::from([("t2".to_string(), explicit)]);
         assert!(q.merge_traits(&found));
         assert_eq!(q.upcoming_context(), ["t1", "t3"]);
-        assert!(!q.merge_traits(&found), "aynı bilgi ikinci kez değişiklik sayılmaz");
+        assert!(
+            !q.merge_traits(&found),
+            "aynı bilgi ikinci kez değişiklik sayılmaz"
+        );
         assert!(q.is_consistent());
         assert_eq!(drain(&mut q), ["t1", "t3"]);
     }
@@ -2222,7 +2494,11 @@ mod tests {
         ]);
         let rules = Rules::new(true, false, []);
         let mut q = started_with(rules.clone(), false, rows.clone(), 1, 1);
-        assert_eq!(drain(&mut q), ["t2", "t3"], "sırayla çalarken hiçbir şey elenmez");
+        assert_eq!(
+            drain(&mut q),
+            ["t2", "t3"],
+            "sırayla çalarken hiçbir şey elenmez"
+        );
         for seed in 0..30 {
             let mut q = started_with(rules.clone(), true, rows.clone(), 1, seed);
             let played = drain(&mut q);
@@ -2240,15 +2516,42 @@ mod tests {
             ("Hey Jude - Remastered 2015", "The Beatles"),
             ("Let It Be", "The Beatles"),
         ]);
-        let pop = |p| Traits { explicit: false, popularity: p };
+        let pop = |p| Traits {
+            explicit: false,
+            popularity: p,
+        };
         let mut q = Queue::new();
         q.set_shuffle(true);
         q.set_rules(Rules::new(true, false, []));
         let traits = vec![pop(40), pop(10), pop(80), pop(50)];
-        q.restart_with(None, uris_of(&rows), Some(rows.clone()), 3, 5, true, None, traits.clone()).unwrap();
-        assert_eq!(q.upcoming_context(), ["t2"], "Let It Be çalıyor; en popüler Hey Jude kalır");
+        q.restart_with(
+            None,
+            uris_of(&rows),
+            Some(rows.clone()),
+            3,
+            5,
+            true,
+            None,
+            traits.clone(),
+        )
+        .unwrap();
+        assert_eq!(
+            q.upcoming_context(),
+            ["t2"],
+            "Let It Be çalıyor; en popüler Hey Jude kalır"
+        );
         // Çalan şarkı bir Hey Jude ise öteki sürümlerin hiçbiri çalmaz.
-        q.restart_with(None, uris_of(&rows), Some(rows.clone()), 0, 5, true, None, traits).unwrap();
+        q.restart_with(
+            None,
+            uris_of(&rows),
+            Some(rows.clone()),
+            0,
+            5,
+            true,
+            None,
+            traits,
+        )
+        .unwrap();
         assert_eq!(q.upcoming_context(), ["t3"]);
     }
 
@@ -2277,23 +2580,48 @@ mod tests {
             let mut q = Queue::new();
             q.set_shuffle(true);
             q.set_rules(rules);
-            q.restart(None, uris(artists.len()), Some(rows), first, seed ^ 0xBEEF, true).unwrap();
+            q.restart(
+                None,
+                uris(artists.len()),
+                Some(rows),
+                first,
+                seed ^ 0xBEEF,
+                true,
+            )
+            .unwrap();
             let seq = play_artists(&q, &artists);
-            assert_eq!(adjacent_repeats(&seq), 0, "tohum {seed} (engel {block}): {seq:?}");
-            assert!(seq.iter().skip(1).all(|a| *a != block), "kara listedeki sanatçı çalmamalı: tohum {seed}: {seq:?}");
+            assert_eq!(
+                adjacent_repeats(&seq),
+                0,
+                "tohum {seed} (engel {block}): {seq:?}"
+            );
+            assert!(
+                seq.iter().skip(1).all(|a| *a != block),
+                "kara listedeki sanatçı çalmamalı: tohum {seed}: {seq:?}"
+            );
         }
         assert!(checked > 100, "yeterince olası durum sınanmadı: {checked}");
     }
 
     #[test]
     fn changing_rules_mid_play_keeps_what_was_played_and_rebuilds_the_rest() {
-        let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y"), ("d", "Drake"), ("e", "Z"), ("f", "Drake")]);
+        let rows = rule_rows(&[
+            ("a", "X"),
+            ("b", "Drake"),
+            ("c", "Y"),
+            ("d", "Drake"),
+            ("e", "Z"),
+            ("f", "Drake"),
+        ]);
         let mut q = started_with(Rules::default(), false, rows, 0, 1);
         assert_eq!(q.next().as_deref(), Some("t1"));
         assert!(q.set_rules(blocked(&["drake"])));
         assert_eq!(cur(&q), "t1", "çalan şarkı yerinde");
         assert_eq!(q.upcoming_context(), ["t2", "t4"]);
-        assert!(!q.set_rules(blocked(&["DRAKE"])), "aynı kural değişiklik değil");
+        assert!(
+            !q.set_rules(blocked(&["DRAKE"])),
+            "aynı kural değişiklik değil"
+        );
         // Kural kalkınca kalan geri gelir, çalınanlar gelmez.
         assert!(q.set_rules(Rules::default()));
         assert_eq!(q.upcoming_context(), ["t2", "t3", "t4", "t5"]);
@@ -2321,8 +2649,15 @@ mod tests {
                 all.push(u);
             }
             // "e" (t4) çalınmışsa sayılır; çalınmadıysa artık çalmaz.
-            let want: Vec<String> = uris(8).into_iter().filter(|u| u != "t4" || first_three.contains(u)).collect();
-            assert_eq!(sorted(all), sorted(want), "tohum {seed}: hiçbiri tekrarlanmaz ya da kaybolmaz");
+            let want: Vec<String> = uris(8)
+                .into_iter()
+                .filter(|u| u != "t4" || first_three.contains(u))
+                .collect();
+            assert_eq!(
+                sorted(all),
+                sorted(want),
+                "tohum {seed}: hiçbiri tekrarlanmaz ya da kaybolmaz"
+            );
         }
     }
 
@@ -2351,7 +2686,11 @@ mod tests {
         let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y")]);
         let mut q = started_with(blocked(&["drake"]), false, rows.clone(), 0, 1);
         q.restart(None, uris(3), Some(rows), 0, 2, true).unwrap();
-        assert_eq!(q.upcoming_context(), ["t2"], "yeni bağlamda da kurallar geçerli");
+        assert_eq!(
+            q.upcoming_context(),
+            ["t2"],
+            "yeni bağlamda da kurallar geçerli"
+        );
         // Satırsız bağlam (sanatçı bağlamı): adlar bilinmiyor, hiçbir şey elenmez.
         q.restart(None, uris(3), None, 0, 2, true).unwrap();
         assert_eq!(q.upcoming_context(), ["t1", "t2"]);
@@ -2381,9 +2720,22 @@ mod tests {
 
     #[test]
     fn rules_are_a_pure_function_of_the_inputs() {
-        let rows = rule_rows(&[("a", "X"), ("b", "Drake"), ("c", "Y"), ("d", "Z"), ("e", "X"), ("f", "Y")]);
+        let rows = rule_rows(&[
+            ("a", "X"),
+            ("b", "Drake"),
+            ("c", "Y"),
+            ("d", "Z"),
+            ("e", "X"),
+            ("f", "Y"),
+        ]);
         let run = || {
-            let mut q = started_with(Rules::new(true, false, ["drake"]), true, rows.clone(), 0, 77);
+            let mut q = started_with(
+                Rules::new(true, false, ["drake"]),
+                true,
+                rows.clone(),
+                0,
+                77,
+            );
             drain(&mut q)
         };
         assert_eq!(run(), run());
@@ -2407,12 +2759,19 @@ mod tests {
         ))
     }
 
-    fn hidden_queue(shuffle: bool, hidden: Arc<HiddenList>, context: Option<CollectionId>, index: usize, seed: u64) -> Queue {
+    fn hidden_queue(
+        shuffle: bool,
+        hidden: Arc<HiddenList>,
+        context: Option<CollectionId>,
+        index: usize,
+        seed: u64,
+    ) -> Queue {
         let rows = rule_rows(&[("a", "X"), ("b", "Y"), ("c", "Z"), ("d", "W"), ("e", "V")]);
         let mut q = Queue::new();
         q.set_shuffle(shuffle);
         q.set_hidden(hidden);
-        q.restart(context, uris_of(&rows), Some(rows), index, seed, true).unwrap();
+        q.restart(context, uris_of(&rows), Some(rows), index, seed, true)
+            .unwrap();
         q
     }
 
@@ -2422,7 +2781,10 @@ mod tests {
             let q = hidden_queue(shuffle, hidden_list(&[("t2", None)]), None, 0, 5);
             let mut left = sorted(q.upcoming_context());
             left.retain(|u| u == "t2");
-            assert!(left.is_empty(), "karıştırma {shuffle}: gizli şarkı sırada olmamalı");
+            assert!(
+                left.is_empty(),
+                "karıştırma {shuffle}: gizli şarkı sırada olmamalı"
+            );
             let mut q = q;
             let played = drain(&mut q);
             assert_eq!(played.len(), 3, "t0 çalıyor, t2 yok, kalan üçü: {played:?}");
@@ -2433,18 +2795,40 @@ mod tests {
     #[test]
     fn a_context_hidden_song_is_skipped_only_in_that_context() {
         let hidden = hidden_list(&[("t3", Some("spotify:playlist:aaa"))]);
-        let here = hidden_queue(false, hidden.clone(), Some(CollectionId::Playlist("spotify:playlist:aaa".into())), 0, 1);
+        let here = hidden_queue(
+            false,
+            hidden.clone(),
+            Some(CollectionId::Playlist("spotify:playlist:aaa".into())),
+            0,
+            1,
+        );
         assert_eq!(here.upcoming_context(), ["t1", "t2", "t4"]);
-        let elsewhere = hidden_queue(false, hidden.clone(), Some(CollectionId::Playlist("spotify:playlist:bbb".into())), 0, 1);
+        let elsewhere = hidden_queue(
+            false,
+            hidden.clone(),
+            Some(CollectionId::Playlist("spotify:playlist:bbb".into())),
+            0,
+            1,
+        );
         assert_eq!(elsewhere.upcoming_context(), ["t1", "t2", "t3", "t4"]);
         let none = hidden_queue(false, hidden, None, 0, 1);
-        assert_eq!(none.upcoming_context(), ["t1", "t2", "t3", "t4"], "bağlamsız çalmada yalnız genel gizleme");
+        assert_eq!(
+            none.upcoming_context(),
+            ["t1", "t2", "t3", "t4"],
+            "bağlamsız çalmada yalnız genel gizleme"
+        );
     }
 
     #[test]
     fn a_hidden_song_the_user_picked_still_plays_and_the_queue_goes_on() {
         // Kullanıcı t2'yi seçti (restart'ın index'i): çalar; arkasından kalan gizlenmeyenler.
-        let q = hidden_queue(false, hidden_list(&[("t2", None), ("t3", None)]), None, 2, 1);
+        let q = hidden_queue(
+            false,
+            hidden_list(&[("t2", None), ("t3", None)]),
+            None,
+            2,
+            1,
+        );
         assert_eq!(q.current_uri(), Some("t2"));
         assert_eq!(q.upcoming_context(), ["t4"]);
         // Sıraya elle eklenen gizli şarkı yine çalar (kullanıcı sırası süzülmez).
@@ -2470,7 +2854,10 @@ mod tests {
         // Çalınmış kısım (t0, t1) yerinde; kalandan yalnız t3 düştü.
         assert_eq!(q.upcoming_context(), ["t2", "t4"]);
         assert_eq!(q.current_uri(), Some("t1"));
-        assert!(!q.set_hidden(hidden_list(&[("t3", None), ("t0", None)])), "aynı küme değişiklik değil");
+        assert!(
+            !q.set_hidden(hidden_list(&[("t3", None), ("t0", None)])),
+            "aynı küme değişiklik değil"
+        );
         // Göster: t3 sıraya geri döner (henüz çalınmadığı için).
         assert!(q.set_hidden(Arc::new(HiddenList::default())));
         assert_eq!(q.upcoming_context(), ["t2", "t3", "t4"]);
@@ -2480,15 +2867,36 @@ mod tests {
     #[test]
     fn hidden_songs_stay_out_of_repeat_all_laps_and_have_next_ignores_them() {
         for shuffle in [false, true] {
-            let mut q = hidden_queue(shuffle, hidden_list(&[("t1", None), ("t4", None)]), None, 0, 9);
+            let mut q = hidden_queue(
+                shuffle,
+                hidden_list(&[("t1", None), ("t4", None)]),
+                None,
+                0,
+                9,
+            );
             q.set_repeat(RepeatMode::All);
             for _ in 0..12 {
                 let u = q.next().unwrap();
-                assert!(u == "t0" || u == "t2" || u == "t3", "tur boyunca gizli şarkı yok: {u}");
+                assert!(
+                    u == "t0" || u == "t2" || u == "t3",
+                    "tur boyunca gizli şarkı yok: {u}"
+                );
             }
         }
         // Hepsi gizliyse (çalan dışında) "tekrar hepsi" boş tur çevirmez.
-        let mut q = hidden_queue(false, hidden_list(&[("t1", None), ("t2", None), ("t3", None), ("t4", None), ("t0", None)]), None, 0, 1);
+        let mut q = hidden_queue(
+            false,
+            hidden_list(&[
+                ("t1", None),
+                ("t2", None),
+                ("t3", None),
+                ("t4", None),
+                ("t0", None),
+            ]),
+            None,
+            0,
+            1,
+        );
         q.set_repeat(RepeatMode::All);
         assert!(!q.has_next() && q.next().is_none());
     }
@@ -2501,7 +2909,10 @@ mod tests {
         // Gizli şarkı kalan sırada yoksa kayıtlı sıra olduğu gibi kalır.
         q.adopt_hidden(hidden_list(&[("tx-yok", None)]));
         q.refresh_if_needed();
-        assert_eq!((q.upcoming_context(), q.order_gen()), (order.clone(), gen_before));
+        assert_eq!(
+            (q.upcoming_context(), q.order_gen()),
+            (order.clone(), gen_before)
+        );
         // Varsa yalnız o düşer.
         let victim = order[1].clone();
         q.adopt_hidden(hidden_list(&[(victim.as_str(), None)]));
@@ -2514,15 +2925,28 @@ mod tests {
     // ── radyo: sonsuz bağlam (bkz. radio.rs) ──
 
     fn radio_rows(from: usize, to: usize) -> Vec<TrackRow> {
-        (from..to).map(|i| rule_row(i, &format!("şarkı {i}"), &format!("Sanatçı {}", i % 7), 180_000)).collect()
+        (from..to)
+            .map(|i| {
+                rule_row(
+                    i,
+                    &format!("şarkı {i}"),
+                    &format!("Sanatçı {}", i % 7),
+                    180_000,
+                )
+            })
+            .collect()
     }
 
     fn radio_queue(n: usize, shuffle: bool) -> Queue {
         let rows = Arc::new(radio_rows(0, n));
         let mut q = Queue::new();
         q.set_shuffle(shuffle);
-        q.restart(None, uris_of(&rows), Some(rows), 0, 13, true).unwrap();
-        q.set_radio(Some(RadioInfo { seed: "spotify:track:s".into(), title: "Radyo".into() }));
+        q.restart(None, uris_of(&rows), Some(rows), 0, 13, true)
+            .unwrap();
+        q.set_radio(Some(RadioInfo {
+            seed: "spotify:track:s".into(),
+            title: "Radyo".into(),
+        }));
         q
     }
 
@@ -2534,11 +2958,20 @@ mod tests {
         let before_current = q.current_uri().map(str::to_owned);
         let history = q.has_previous();
         // t4 ve t5 zaten var, iki kez geçen t7 bir kez; üç yeni.
-        let added = q.extend_context(radio_rows(4, 6).into_iter().chain(radio_rows(6, 9)).chain(radio_rows(7, 8)).collect());
+        let added = q.extend_context(
+            radio_rows(4, 6)
+                .into_iter()
+                .chain(radio_rows(6, 9))
+                .chain(radio_rows(7, 8))
+                .collect(),
+        );
         assert_eq!(added, 3);
         assert_eq!(q.context_uris().len(), 9);
         assert_eq!(q.upcoming_context(), ["t3", "t4", "t5", "t6", "t7", "t8"]);
-        assert_eq!((q.current_uri().map(str::to_owned), q.has_previous()), (before_current, history));
+        assert_eq!(
+            (q.current_uri().map(str::to_owned), q.has_previous()),
+            (before_current, history)
+        );
         assert!(q.is_consistent());
         assert_eq!(q.extend_context(radio_rows(0, 9)), 0, "hepsi zaten var");
         assert_eq!(q.context_remaining(), 6);
@@ -2549,7 +2982,10 @@ mod tests {
         let mut q = radio_queue(4, false);
         q.extend_context(radio_rows(4, 8));
         assert_eq!(q.radio().map(|r| r.title.as_str()), Some("Radyo"));
-        assert_eq!(q.view(&|_| None).radio.map(|r| r.seed), Some("spotify:track:s".to_string()));
+        assert_eq!(
+            q.view(&|_| None).radio.map(|r| r.seed),
+            Some("spotify:track:s".to_string())
+        );
         q.restart(None, uris(3), None, 0, 1, true).unwrap();
         assert!(q.radio().is_none() && q.view(&|_| None).radio.is_none());
     }
@@ -2603,12 +3039,31 @@ mod tests {
     #[test]
     fn hidden_and_radio_costs_stay_small() {
         let n = 20_000;
-        let rows = Arc::new((0..n).map(|i| rule_row(i, &format!("s{i}"), &format!("a{}", i % 400), 180_000)).collect::<Vec<_>>());
+        let rows = Arc::new(
+            (0..n)
+                .map(|i| rule_row(i, &format!("s{i}"), &format!("a{}", i % 400), 180_000))
+                .collect::<Vec<_>>(),
+        );
         let mut q = Queue::new();
         q.set_shuffle(true);
-        q.restart(Some(CollectionId::Playlist("spotify:playlist:big".into())), uris_of(&rows), Some(rows), 0, 7, true).unwrap();
-        let entries: Vec<(String, Option<String>)> = (0..2000).map(|i| (format!("t{}", i * 9 + 1), None)).collect();
-        let hidden = hidden_list(&entries.iter().map(|(u, c)| (u.as_str(), c.as_deref())).collect::<Vec<_>>());
+        q.restart(
+            Some(CollectionId::Playlist("spotify:playlist:big".into())),
+            uris_of(&rows),
+            Some(rows),
+            0,
+            7,
+            true,
+        )
+        .unwrap();
+        let entries: Vec<(String, Option<String>)> = (0..2000)
+            .map(|i| (format!("t{}", i * 9 + 1), None))
+            .collect();
+        let hidden = hidden_list(
+            &entries
+                .iter()
+                .map(|(u, c)| (u.as_str(), c.as_deref()))
+                .collect::<Vec<_>>(),
+        );
         let t0 = std::time::Instant::now();
         assert!(q.set_hidden(hidden));
         let hide_ms = t0.elapsed().as_secs_f64() * 1000.;
@@ -2619,7 +3074,9 @@ mod tests {
         let t1 = std::time::Instant::now();
         assert_eq!(radio.extend_context(fresh), 50);
         let extend_ms = t1.elapsed().as_secs_f64() * 1000.;
-        println!("ölçüm: 20 bin şarkı, 2 bin gizli: set_hidden {hide_ms:.1} ms; radyo 50'lik devam (1000 şarkı): {extend_ms:.2} ms");
+        println!(
+            "ölçüm: 20 bin şarkı, 2 bin gizli: set_hidden {hide_ms:.1} ms; radyo 50'lik devam (1000 şarkı): {extend_ms:.2} ms"
+        );
         assert!(hide_ms < 300., "{hide_ms} ms");
         assert!(extend_ms < 20., "{extend_ms} ms");
     }

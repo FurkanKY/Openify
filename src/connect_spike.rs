@@ -39,7 +39,8 @@ use std::{
 use anyhow::{Context, Result, bail};
 use librespot::{
     connect::{
-        ClusterView, ConnectConfig, HostView, LoadRequest, LoadRequestOptions, PlayingTrack, Spirc, SpircEvent,
+        ClusterView, ConnectConfig, HostView, LoadRequest, LoadRequestOptions, PlayingTrack, Spirc,
+        SpircEvent,
     },
     core::{SpotifyUri, config::DeviceType, session::Session},
     metadata::{Metadata, Track},
@@ -73,18 +74,34 @@ struct Options {
 }
 
 fn parse_options(args: &[String]) -> Result<Options> {
-    let mut o = Options { track: DEFAULT_TRACK.to_string(), idle_min: 30, only: None };
+    let mut o = Options {
+        track: DEFAULT_TRACK.to_string(),
+        idle_min: 30,
+        only: None,
+    };
     let mut it = args.iter();
     while let Some(arg) = it.next() {
-        let mut value = |name: &str| it.next().cloned().with_context(|| format!("{name} bir değer ister"));
+        let mut value = |name: &str| {
+            it.next()
+                .cloned()
+                .with_context(|| format!("{name} bir değer ister"))
+        };
         match arg.as_str() {
             "--track" => o.track = value("--track")?,
             "--idle-min" => {
-                o.idle_min = value("--idle-min")?.trim().parse().context("--idle-min bir sayı olmalı (dakika)")?;
+                o.idle_min = value("--idle-min")?
+                    .trim()
+                    .parse()
+                    .context("--idle-min bir sayı olmalı (dakika)")?;
             }
             "--only" => {
                 let list = value("--only")?;
-                o.only = Some(list.split(',').map(|s| s.trim().to_ascii_uppercase()).filter(|s| !s.is_empty()).collect());
+                o.only = Some(
+                    list.split(',')
+                        .map(|s| s.trim().to_ascii_uppercase())
+                        .filter(|s| !s.is_empty())
+                        .collect(),
+                );
             }
             "-h" | "--help" => {
                 println!(
@@ -169,7 +186,9 @@ impl log::Log for SpikeLog {
         }
         let target = record.target();
         let msg = record.args().to_string();
-        if target == "librespot_core::http_client" && let Some(uri) = msg.strip_prefix("Requesting ") {
+        if target == "librespot_core::http_client"
+            && let Some(uri) = msg.strip_prefix("Requesting ")
+        {
             self.count_request(uri);
             return;
         }
@@ -207,7 +226,10 @@ fn spike_dir() -> PathBuf {
 
 /// Takvimsiz UTC damgası (`20261112-153045`): günlük dosya adı için.
 fn utc_stamp() -> String {
-    let secs = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0) as i64;
+    let secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0) as i64;
     let (days, rem) = (secs.div_euclid(86_400), secs.rem_euclid(86_400));
     // Howard Hinnant'ın "civil from days" algoritması.
     let z = days + 719_468;
@@ -220,7 +242,12 @@ fn utc_stamp() -> String {
     let d = doy - (153 * mp + 2) / 5 + 1;
     let m = if mp < 10 { mp + 3 } else { mp - 9 };
     let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}{m:02}{d:02}-{:02}{:02}{:02}", rem / 3600, rem % 3600 / 60, rem % 60)
+    format!(
+        "{y:04}{m:02}{d:02}-{:02}{:02}{:02}",
+        rem / 3600,
+        rem % 3600 / 60,
+        rem % 60
+    )
 }
 
 fn init_log() -> Result<(&'static SpikeLog, PathBuf)> {
@@ -228,8 +255,11 @@ fn init_log() -> Result<(&'static SpikeLog, PathBuf)> {
     std::fs::create_dir_all(&dir).context("Günlük klasörü oluşturulamadı")?;
     let path = dir.join(format!("connect-spike-{}.log", utc_stamp()));
     let file = std::fs::File::create(&path).context("Günlük dosyası oluşturulamadı")?;
-    let log: &'static SpikeLog =
-        Box::leak(Box::new(SpikeLog { start: Instant::now(), file: Mutex::new(file), http: Mutex::new(HttpCounts::default()) }));
+    let log: &'static SpikeLog = Box::leak(Box::new(SpikeLog {
+        start: Instant::now(),
+        file: Mutex::new(file),
+        http: Mutex::new(HttpCounts::default()),
+    }));
     log::set_logger(log).map_err(|e| anyhow::anyhow!("günlük kurulamadı: {e}"))?;
     log::set_max_level(log::LevelFilter::Debug);
     let _ = LOG.set(log);
@@ -268,7 +298,10 @@ struct Observed {
 
 impl Observed {
     fn count_since(&self, mark: usize, kind: Kind) -> usize {
-        self.timeline[mark.min(self.timeline.len())..].iter().filter(|(_, k, _)| *k == kind).count()
+        self.timeline[mark.min(self.timeline.len())..]
+            .iter()
+            .filter(|(_, k, _)| *k == kind)
+            .count()
     }
 
     fn active(&self) -> bool {
@@ -278,18 +311,32 @@ impl Observed {
 
 fn short(event: &PlayerEvent) -> Option<(Kind, String)> {
     Some(match event {
-        PlayerEvent::Playing { position_ms, .. } => (Kind::Playing, format!("çalıyor {position_ms} ms")),
-        PlayerEvent::Paused { position_ms, .. } => (Kind::Paused, format!("duraklatıldı {position_ms} ms")),
+        PlayerEvent::Playing { position_ms, .. } => {
+            (Kind::Playing, format!("çalıyor {position_ms} ms"))
+        }
+        PlayerEvent::Paused { position_ms, .. } => {
+            (Kind::Paused, format!("duraklatıldı {position_ms} ms"))
+        }
         PlayerEvent::Stopped { .. } => (Kind::Stopped, "durdu".into()),
         PlayerEvent::Loading { .. } => (Kind::Loading, "yükleniyor".into()),
         PlayerEvent::EndOfTrack { .. } => (Kind::EndOfTrack, "şarkı bitti".into()),
         PlayerEvent::TimeToPreloadNextTrack { .. } => (Kind::PreloadDue, "önyükleme zamanı".into()),
         PlayerEvent::Unavailable { .. } => (Kind::Unavailable, "şarkı çalınamadı".into()),
-        PlayerEvent::TrackChanged { audio_item } => (Kind::TrackChanged, format!("şarkı: {}", audio_item.name)),
-        PlayerEvent::Seeked { position_ms, .. } => (Kind::Seeked, format!("sarıldı {position_ms} ms")),
+        PlayerEvent::TrackChanged { audio_item } => {
+            (Kind::TrackChanged, format!("şarkı: {}", audio_item.name))
+        }
+        PlayerEvent::Seeked { position_ms, .. } => {
+            (Kind::Seeked, format!("sarıldı {position_ms} ms"))
+        }
         PlayerEvent::VolumeChanged { volume } => (Kind::Volume, format!("ses düzeyi {volume}")),
-        PlayerEvent::SessionConnected { .. } => (Kind::SessionConnected, "oturum bağlandı (Spirc etkin)".into()),
-        PlayerEvent::SessionDisconnected { .. } => (Kind::SessionDisconnected, "oturum ayrıldı (Spirc etkin değil)".into()),
+        PlayerEvent::SessionConnected { .. } => (
+            Kind::SessionConnected,
+            "oturum bağlandı (Spirc etkin)".into(),
+        ),
+        PlayerEvent::SessionDisconnected { .. } => (
+            Kind::SessionDisconnected,
+            "oturum ayrıldı (Spirc etkin değil)".into(),
+        ),
         _ => return None,
     })
 }
@@ -297,18 +344,28 @@ fn short(event: &PlayerEvent) -> Option<(Kind, String)> {
 fn push(obs: &Mutex<Observed>, log: &SpikeLog, kind: Kind, text: String) {
     log.line("EVENT", &text);
     if let Ok(mut o) = obs.lock() {
-        o.timeline.push((log.start.elapsed().as_millis(), kind, text));
+        o.timeline
+            .push((log.start.elapsed().as_millis(), kind, text));
     }
 }
 
 fn describe_cluster(c: &ClusterView, own_id: &str) -> String {
-    let names: Vec<String> =
-        c.devices.iter().map(|d| format!("{}{}", d.name, if d.id == own_id { " (bu)" } else { "" })).collect();
+    let names: Vec<String> = c
+        .devices
+        .iter()
+        .map(|d| format!("{}{}", d.name, if d.id == own_id { " (bu)" } else { "" }))
+        .collect();
     format!(
         "{} aygıt [{}], etkin: {}, çalıyor: {}",
         c.devices.len(),
         names.join(", "),
-        if c.active_device_id.is_empty() { "yok" } else if c.active_device_id == own_id { "bu bilgisayar" } else { "başka aygıt" },
+        if c.active_device_id.is_empty() {
+            "yok"
+        } else if c.active_device_id == own_id {
+            "bu bilgisayar"
+        } else {
+            "başka aygıt"
+        },
         c.playing
     )
 }
@@ -329,20 +386,22 @@ struct Console {
 impl Console {
     fn start() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let _ = std::thread::Builder::new().name("spike-stdin".into()).spawn(move || {
-            let mut line = String::new();
-            loop {
-                line.clear();
-                match std::io::stdin().read_line(&mut line) {
-                    Ok(0) | Err(_) => break,
-                    Ok(_) => {
-                        if tx.send(line.trim().to_string()).is_err() {
-                            break;
+        let _ = std::thread::Builder::new()
+            .name("spike-stdin".into())
+            .spawn(move || {
+                let mut line = String::new();
+                loop {
+                    line.clear();
+                    match std::io::stdin().read_line(&mut line) {
+                        Ok(0) | Err(_) => break,
+                        Ok(_) => {
+                            if tx.send(line.trim().to_string()).is_err() {
+                                break;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
         Self { lines: rx }
     }
 
@@ -438,7 +497,13 @@ impl Spike {
         println!("\n  ? {question}");
         println!("    (e = evet, h = hayır, Enter = atla)");
         self.log.line("ASK", question);
-        let answer = match self.console.line().await.as_deref().map(|s| s.to_lowercase()) {
+        let answer = match self
+            .console
+            .line()
+            .await
+            .as_deref()
+            .map(|s| s.to_lowercase())
+        {
             Some(s) if matches!(s.as_str(), "e" | "evet" | "y" | "yes") => Answer::Yes,
             Some(s) if matches!(s.as_str(), "h" | "hayır" | "hayir" | "n" | "no") => Answer::No,
             _ => Answer::Skip,
@@ -456,7 +521,8 @@ impl Spike {
     fn record(&mut self, id: &'static str, verdict: Verdict, note: impl Into<String>) {
         let note = note.into();
         self.say(&format!("\n  => {id}: {} {note}", verdict.word()));
-        self.log.line("RESULT", &format!("{id} {} {note}", verdict.word()));
+        self.log
+            .line("RESULT", &format!("{id} {} {note}", verdict.word()));
         self.results.push((id, verdict, note));
     }
 
@@ -469,10 +535,14 @@ impl Spike {
             initial_volume: START_VOLUME,
             ..ConnectConfig::default()
         };
-        let (spirc, task, events) =
-            Spirc::with_session(config, self.session.clone(), self.player.clone(), self.mixer.clone())
-                .await
-                .map_err(|e| anyhow::anyhow!("Spirc::with_session başarısız: {e}"))?;
+        let (spirc, task, events) = Spirc::with_session(
+            config,
+            self.session.clone(),
+            self.player.clone(),
+            self.mixer.clone(),
+        )
+        .await
+        .map_err(|e| anyhow::anyhow!("Spirc::with_session başarısız: {e}"))?;
         let task = tokio::spawn(task);
         let (obs, log, own_id) = (self.obs.clone(), self.log, self.device_id.clone());
         tokio::spawn(pump_spirc(events, obs, log, own_id));
@@ -495,13 +565,17 @@ impl Spike {
 
     async fn s1(&mut self) {
         self.say("\n=== S1: bağlı oturumla Spirc (dealer dinleyicileri bağlı oturuma eklenebiliyor mu?) ===");
-        let got = self.wait_for(Duration::from_secs(25), |o| o.clusters > 0).await;
+        let got = self
+            .wait_for(Duration::from_secs(25), |o| o.clusters > 0)
+            .await;
         let (own, summary) = self
             .with_obs(|o| {
                 let c = o.cluster.clone();
                 (
-                    c.as_ref().is_some_and(|c| c.devices.iter().any(|d| d.id == self.device_id)),
-                    c.map(|c| describe_cluster(&c, &self.device_id)).unwrap_or_default(),
+                    c.as_ref()
+                        .is_some_and(|c| c.devices.iter().any(|d| d.id == self.device_id)),
+                    c.map(|c| describe_cluster(&c, &self.device_id))
+                        .unwrap_or_default(),
                 )
             })
             .unwrap_or_default();
@@ -510,41 +584,74 @@ impl Spike {
         } else {
             self.say("  25 sn içinde Spotify'dan küme bilgisi GELMEDİ (dealer / NEW_DEVICE kaydı yürümedi).");
         }
-        self.say(&format!("  Bu bilgisayar aygıt listesinde: {}", if own { "evet" } else { "hayır" }));
+        self.say(&format!(
+            "  Bu bilgisayar aygıt listesinde: {}",
+            if own { "evet" } else { "hayır" }
+        ));
         self.say(&format!("\n  TELEFONDA: Spotify'ı aç, çalan şarkı çubuğundan / 'Cihazlara bağlan'dan cihaz listesine bak. '{DEVICE_NAME}' görünmeli."));
-        let seen = self.ask(&format!("Telefonun cihaz listesinde '{DEVICE_NAME}' görünüyor mu?")).await;
+        let seen = self
+            .ask(&format!(
+                "Telefonun cihaz listesinde '{DEVICE_NAME}' görünüyor mu?"
+            ))
+            .await;
         let verdict = match (got && own, seen) {
             (true, Answer::Yes) => Verdict::Pass,
             (_, Answer::Skip) if got && own => Verdict::Skipped,
             _ => Verdict::Fail,
         };
-        self.record("S1", verdict, format!("(küme geldi: {got}, listede: {own}, telefon: {seen:?})"));
+        self.record(
+            "S1",
+            verdict,
+            format!("(küme geldi: {got}, listede: {own}, telefon: {seen:?})"),
+        );
     }
 
     async fn s2(&mut self) {
         self.say("\n=== S2: Spirc etkin değilken yerel çalmaya KARIŞMAZ ===");
         if self.with_obs(|o| o.active()).unwrap_or(false) {
-            self.record("S2", Verdict::Skipped, "(Spirc etkin: önce S4 gibi telefonu geri al)");
+            self.record(
+                "S2",
+                Verdict::Skipped,
+                "(Spirc etkin: önce S4 gibi telefonu geri al)",
+            );
             return;
         }
         // Şarkının son ~12 sn'sinden çal: şarkı sonu ve önyükleme olayları hemen gelsin.
         let duration_ms = match Track::get(&self.session, &self.track).await {
             Ok(t) => t.duration.max(0) as u32,
             Err(e) => {
-                self.record("S2", Verdict::Skipped, format!("(şarkı bilgisi alınamadı: {e})"));
+                self.record(
+                    "S2",
+                    Verdict::Skipped,
+                    format!("(şarkı bilgisi alınamadı: {e})"),
+                );
                 return;
             }
         };
         let start = duration_ms.saturating_sub(12_000);
-        self.say(&format!("  Şarkı bu bilgisayarda yerel çalınıyor: son ~12 sn ({start} ms'den). Sesi duyacaksın."));
+        self.say(&format!(
+            "  Şarkı bu bilgisayarda yerel çalınıyor: son ~12 sn ({start} ms'den). Sesi duyacaksın."
+        ));
         let mark = self.mark();
         self.player.load(self.track.clone(), true, start);
-        let playing = self.wait_for(Duration::from_secs(20), |o| o.count_since(mark, Kind::Playing) > 0).await;
+        let playing = self
+            .wait_for(Duration::from_secs(20), |o| {
+                o.count_since(mark, Kind::Playing) > 0
+            })
+            .await;
         if !playing {
-            self.record("S2", Verdict::Fail, "(yerel şarkı 20 sn'de çalmaya başlamadı)");
+            self.record(
+                "S2",
+                Verdict::Fail,
+                "(yerel şarkı 20 sn'de çalmaya başlamadı)",
+            );
             return;
         }
-        let ended = self.wait_for(Duration::from_secs(40), |o| o.count_since(mark, Kind::EndOfTrack) > 0).await;
+        let ended = self
+            .wait_for(Duration::from_secs(40), |o| {
+                o.count_since(mark, Kind::EndOfTrack) > 0
+            })
+            .await;
         if !ended {
             self.player.stop();
             self.record("S2", Verdict::Fail, "(şarkı sonu olayı 40 sn'de gelmedi)");
@@ -568,7 +675,11 @@ impl Spike {
         ));
         let clean = stopped == 0 && loading == 0 && playing_again == 0;
         let still_inactive = !self.with_obs(|o| o.active()).unwrap_or(false);
-        let verdict = if clean && still_inactive { Verdict::Pass } else { Verdict::Fail };
+        let verdict = if clean && still_inactive {
+            Verdict::Pass
+        } else {
+            Verdict::Fail
+        };
         self.record(
             "S2",
             verdict,
@@ -584,16 +695,28 @@ impl Spike {
         let mark = self.mark();
         let activated = self.wait_for(Duration::from_secs(60), |o| o.active()).await;
         if !activated {
-            self.record("S3", Verdict::Fail, "(60 sn içinde aktarma gelmedi: Spirc etkinleşmedi)");
+            self.record(
+                "S3",
+                Verdict::Fail,
+                "(60 sn içinde aktarma gelmedi: Spirc etkinleşmedi)",
+            );
             return;
         }
         let t0 = Instant::now();
-        let playing = self.wait_for(Duration::from_secs(15), |o| o.count_since(mark, Kind::Playing) > 0).await;
+        let playing = self
+            .wait_for(Duration::from_secs(15), |o| {
+                o.count_since(mark, Kind::Playing) > 0
+            })
+            .await;
         let to_sound = t0.elapsed();
         let (track, ctx, volume) = self
             .with_obs(|o| {
                 let h = o.host.clone().unwrap_or_default();
-                (h.track_uri, h.context_uri, o.count_since(mark, Kind::Volume))
+                (
+                    h.track_uri,
+                    h.context_uri,
+                    o.count_since(mark, Kind::Volume),
+                )
             })
             .unwrap_or_default();
         self.say(&format!(
@@ -606,7 +729,8 @@ impl Spike {
 
         self.say("\n  TELEFONDAN dene (sırayla): duraklat, sürdür, şarkıyı ileri sar, sonraki şarkıya geç, ses düzeyini değiştir.");
         let control_mark = self.mark();
-        self.press_enter("Hepsini denedikten sonra Enter'a bas.").await;
+        self.press_enter("Hepsini denedikten sonra Enter'a bas.")
+            .await;
         let (paused, resumed, seeked, tracks, volumes) = self
             .with_obs(|o| {
                 (
@@ -621,7 +745,9 @@ impl Spike {
         self.say(&format!(
             "  Bilgisayarın gördüğü: duraklatma={paused}, çalma={resumed}, sarma={seeked}, şarkı değişimi={tracks}, ses düzeyi={volumes}"
         ));
-        let control = self.ask("Telefondan denetim (duraklat / sürdür / sar / sonraki / ses) doğru çalıştı mı?").await;
+        let control = self
+            .ask("Telefondan denetim (duraklat / sürdür / sar / sonraki / ses) doğru çalıştı mı?")
+            .await;
         let verdict = match (playing, heard, control) {
             (true, Answer::Yes, Answer::Yes) => Verdict::Pass,
             (true, _, _) if heard == Answer::Skip || control == Answer::Skip => Verdict::Skipped,
@@ -630,51 +756,80 @@ impl Spike {
         self.record(
             "S3",
             verdict,
-            format!("(sese kadar {} ms, ses bilgisayardan: {heard:?}, telefon denetimi: {control:?})", to_sound.as_millis()),
+            format!(
+                "(sese kadar {} ms, ses bilgisayardan: {heard:?}, telefon denetimi: {control:?})",
+                to_sound.as_millis()
+            ),
         );
     }
 
     async fn s4(&mut self) {
         self.say("\n=== S4: telefon çalmayı geri alınca ===");
         if !self.with_obs(|o| o.active()).unwrap_or(false) {
-            self.record("S4", Verdict::Skipped, "(Spirc etkin değil: S3 geçmedi ya da atlandı)");
+            self.record(
+                "S4",
+                Verdict::Skipped,
+                "(Spirc etkin değil: S3 geçmedi ya da atlandı)",
+            );
             return;
         }
         self.say("  TELEFONDA: cihaz listesinden telefonu (kendisini) seç; çalma telefona dönmeli. 45 sn bekliyorum...");
         let mark = self.mark();
-        let inactive = self.wait_for(Duration::from_secs(45), |o| !o.active()).await;
+        let inactive = self
+            .wait_for(Duration::from_secs(45), |o| !o.active())
+            .await;
         if !inactive {
-            self.record("S4", Verdict::Fail, "(45 sn içinde Spirc etkinlikten çıkmadı)");
+            self.record(
+                "S4",
+                Verdict::Fail,
+                "(45 sn içinde Spirc etkinlikten çıkmadı)",
+            );
             return;
         }
         tokio::time::sleep(Duration::from_secs(3)).await;
-        let (stopped, playing) =
-            self.with_obs(|o| (o.count_since(mark, Kind::Stopped) + o.count_since(mark, Kind::Paused), o.count_since(mark, Kind::Playing))).unwrap_or_default();
+        let (stopped, playing) = self
+            .with_obs(|o| {
+                (
+                    o.count_since(mark, Kind::Stopped) + o.count_since(mark, Kind::Paused),
+                    o.count_since(mark, Kind::Playing),
+                )
+            })
+            .unwrap_or_default();
         let queued = self.out.queued_frames();
         self.say(&format!("  Etkinlikten çıktı. Bilgisayar: durdu/duraklatıldı olayı={stopped}, yeniden çalma={playing}, çıkışta bekleyen kare={queued}"));
-        let silent = self.ask("Bilgisayardan ses KESİLDİ mi (telefon çalıyor)?").await;
+        let silent = self
+            .ask("Bilgisayardan ses KESİLDİ mi (telefon çalıyor)?")
+            .await;
         let verdict = match silent {
             Answer::Yes if playing == 0 => Verdict::Pass,
             Answer::Skip => Verdict::Skipped,
             _ => Verdict::Fail,
         };
-        self.record("S4", verdict, format!("(durdu olayı: {stopped}, sonradan çalma: {playing}, sessiz: {silent:?})"));
+        self.record(
+            "S4",
+            verdict,
+            format!("(durdu olayı: {stopped}, sonradan çalma: {playing}, sessiz: {silent:?})"),
+        );
     }
 
     async fn s5(&mut self) {
         self.say("\n=== S5: yeniden bağlanmada aynı device_id (hayalet aygıt yok) ===");
         let before = self.device_id.clone();
-        self.say(&format!("  device_id (ilk 8): {}…; Spirc kapatılıyor, oturum yenileniyor.", &before[..before.len().min(8)]));
+        self.say(&format!(
+            "  device_id (ilk 8): {}…; Spirc kapatılıyor, oturum yenileniyor.",
+            &before[..before.len().min(8)]
+        ));
         self.stop_spirc().await;
         self.session.shutdown();
         tokio::time::sleep(Duration::from_secs(3)).await;
-        let session = match auth::connect_saved_with(None, Some(self.device_id.as_str()), false).await {
-            Ok(s) => s,
-            Err(e) => {
-                self.record("S5", Verdict::Fail, format!("(yeni oturum açılamadı: {e})"));
-                return;
-            }
-        };
+        let session =
+            match auth::connect_saved_with(None, Some(self.device_id.as_str()), false).await {
+                Ok(s) => s,
+                Err(e) => {
+                    self.record("S5", Verdict::Fail, format!("(yeni oturum açılamadı: {e})"));
+                    return;
+                }
+            };
         let same = session.device_id() == before;
         self.player.set_session(session.clone());
         self.session = session;
@@ -687,7 +842,9 @@ impl Spike {
             self.record("S5", Verdict::Fail, format!("(yeni Spirc kurulamadı: {e})"));
             return;
         }
-        let got = self.wait_for(Duration::from_secs(25), |o| o.clusters > 0).await;
+        let got = self
+            .wait_for(Duration::from_secs(25), |o| o.clusters > 0)
+            .await;
         let (own_count, same_name, summary) = self
             .with_obs(|o| {
                 let c = o.cluster.clone().unwrap_or_default();
@@ -698,20 +855,33 @@ impl Spike {
                 )
             })
             .unwrap_or_default();
-        self.say(&format!("  Yeni oturum {} ms sonra kaydoldu: {summary}", t0.elapsed().as_millis()));
+        self.say(&format!(
+            "  Yeni oturum {} ms sonra kaydoldu: {summary}",
+            t0.elapsed().as_millis()
+        ));
         self.say(&format!("  Oturumun device_id'si öncekiyle aynı: {same}; listede bu kimlik {own_count} kez, bu adla {same_name} aygıt."));
-        let one = self.ask(&format!("Telefonun cihaz listesinde '{DEVICE_NAME}' TAM 1 kez mi (çift / hayalet yok)?")).await;
+        let one = self
+            .ask(&format!(
+                "Telefonun cihaz listesinde '{DEVICE_NAME}' TAM 1 kez mi (çift / hayalet yok)?"
+            ))
+            .await;
         let auto_ok = got && same && own_count == 1 && same_name == 1;
         let verdict = match (auto_ok, one) {
             (true, Answer::Yes) => Verdict::Pass,
             (true, Answer::Skip) => Verdict::Skipped,
             _ => Verdict::Fail,
         };
-        self.record("S5", verdict, format!("(aynı kimlik: {same}, listede: {own_count}/{same_name}, telefon: {one:?})"));
+        self.record(
+            "S5",
+            verdict,
+            format!("(aynı kimlik: {same}, listede: {own_count}/{same_name}, telefon: {one:?})"),
+        );
     }
 
     async fn s6(&mut self, idle_min: u64) {
-        self.say(&format!("\n=== S6: Spotify'ı yormama: {idle_min} dk boşta (Ctrl+C: erken bitir) ==="));
+        self.say(&format!(
+            "\n=== S6: Spotify'ı yormama: {idle_min} dk boşta (Ctrl+C: erken bitir) ==="
+        ));
         self.say("  Spirc kayıtlı, hiçbir şey çalmıyor. Telefonda bu cihaza DOKUNMA. Spotify'a giden connect-state isteklerini sayıyorum.");
         let base = self.log.http_snapshot();
         let states_before = self.with_obs(|o| o.states).unwrap_or(0);
@@ -743,13 +913,19 @@ impl Spike {
             ran.as_secs() / 60,
             ran.as_secs() % 60
         ));
-        for (path, n) in now.by_path.iter().filter(|(p, n)| **n > base.by_path.get(*p).copied().unwrap_or(0)) {
+        for (path, n) in now
+            .by_path
+            .iter()
+            .filter(|(p, n)| **n > base.by_path.get(*p).copied().unwrap_or(0))
+        {
             let delta = n - base.by_path.get(path).copied().unwrap_or(0);
             self.say(&format!("    +{delta}  {path}"));
         }
         let problems = now.problems.len().saturating_sub(base.problems.len());
         if problems > 0 {
-            self.say(&format!("  Boşta {problems} uyarı / hata günlüğe düştü (günlük dosyasına bak)."));
+            self.say(&format!(
+                "  Boşta {problems} uyarı / hata günlüğe düştü (günlük dosyasına bak)."
+            ));
         }
         let full = ran >= total;
         let verdict = if state_reqs > 0 {
@@ -762,14 +938,22 @@ impl Spike {
         self.record(
             "S6",
             verdict,
-            format!("({} sn boşta, connect-state isteği: {state_reqs}{})", ran.as_secs(), if full { "" } else { "; süre dolmadan kesildi" }),
+            format!(
+                "({} sn boşta, connect-state isteği: {state_reqs}{})",
+                ran.as_secs(),
+                if full { "" } else { "; süre dolmadan kesildi" }
+            ),
         );
     }
 
     async fn s7(&mut self) {
         self.say("\n=== S7 (isteğe bağlı): ayna: yerelde başlayan çalma telefonda görünür mü? ===");
         if self.with_obs(|o| o.active()).unwrap_or(false) {
-            self.record("S7", Verdict::Skipped, "(Spirc etkin: önce telefonu geri al)");
+            self.record(
+                "S7",
+                Verdict::Skipped,
+                "(Spirc etkin: önce telefonu geri al)",
+            );
             return;
         }
         let Some(handle) = self.spirc.as_ref() else {
@@ -781,7 +965,11 @@ impl Spike {
         let mark = self.mark();
         self.say("  Şarkı bu bilgisayarda yerel (Spirc'siz) çalınıyor, ~8 sn sonra Spirc'e aynı şarkıyı aynı konumdan yüklettireceğim.");
         self.player.load(self.track.clone(), true, 0);
-        let playing = self.wait_for(Duration::from_secs(20), |o| o.count_since(mark, Kind::Playing) > 0).await;
+        let playing = self
+            .wait_for(Duration::from_secs(20), |o| {
+                o.count_since(mark, Kind::Playing) > 0
+            })
+            .await;
         if !playing {
             self.record("S7", Verdict::Fail, "(yerel şarkı çalmadı)");
             return;
@@ -804,17 +992,33 @@ impl Spike {
                 },
             ));
         }
-        let sound = self.wait_for(Duration::from_secs(15), |o| o.count_since(mark2, Kind::Playing) > 0).await;
+        let sound = self
+            .wait_for(Duration::from_secs(15), |o| {
+                o.count_since(mark2, Kind::Playing) > 0
+            })
+            .await;
         let took = t0.elapsed();
-        let shown = self.wait_for(Duration::from_secs(5), |o| o.host.as_ref().is_some_and(|h| h.active && !h.track_uri.is_empty())).await;
+        let shown = self
+            .wait_for(Duration::from_secs(5), |o| {
+                o.host
+                    .as_ref()
+                    .is_some_and(|h| h.active && !h.track_uri.is_empty())
+            })
+            .await;
         self.say(&format!(
             "  Spirc etkinleşti ve şarkıyı yükledi: {shown}; ses yeniden başladı: {sound} (yüklemeden ~{} ms sonra)",
             took.as_millis()
         ));
         self.say(&format!("  TELEFONDA: '{DEVICE_NAME}' çalan cihaz olarak görünmeli; şarkı adı, ilerleme ve duraklat / sar çalışmalı."));
         let seen = self.ask("Telefon bu bilgisayarı ÇALAN cihaz olarak, doğru şarkı ve ilerlemeyle gösteriyor mu?").await;
-        let glitch = self.ask("Aynayı kurarken ses kesintisi ya da şarkının başa dönmesi DUYDUN mu? (e = duydum)").await;
-        let ctl = self.ask("Telefondan duraklat / ileri sar bu bilgisayarı yönetiyor mu?").await;
+        let glitch = self
+            .ask(
+                "Aynayı kurarken ses kesintisi ya da şarkının başa dönmesi DUYDUN mu? (e = duydum)",
+            )
+            .await;
+        let ctl = self
+            .ask("Telefondan duraklat / ileri sar bu bilgisayarı yönetiyor mu?")
+            .await;
         // Temizlik: Spirc etkinliğini bırak, çalmayı durdur.
         if let Some(handle) = self.spirc.as_ref() {
             let _ = handle.spirc.disconnect(true);
@@ -832,7 +1036,12 @@ impl Spike {
 }
 
 /// Spirc'in durum bildirimlerini gözlem listesine aktarır.
-async fn pump_spirc(mut events: mpsc::UnboundedReceiver<SpircEvent>, obs: Arc<Mutex<Observed>>, log: &'static SpikeLog, own_id: String) {
+async fn pump_spirc(
+    mut events: mpsc::UnboundedReceiver<SpircEvent>,
+    obs: Arc<Mutex<Observed>>,
+    log: &'static SpikeLog,
+    own_id: String,
+) {
     while let Some(event) = events.recv().await {
         match event {
             SpircEvent::State(h) => {
@@ -842,7 +1051,13 @@ async fn pump_spirc(mut events: mpsc::UnboundedReceiver<SpircEvent>, obs: Arc<Mu
                     Kind::SpircState,
                     format!(
                         "Spirc durumu: etkin={} çalıyor={} duraklatıldı={} şarkı={} bağlam={} konum={}ms ses={}",
-                        h.active, h.playing, h.paused, h.track_uri, h.context_uri, h.position_ms, h.volume
+                        h.active,
+                        h.playing,
+                        h.paused,
+                        h.track_uri,
+                        h.context_uri,
+                        h.position_ms,
+                        h.volume
                     ),
                 );
                 if let Ok(mut o) = obs.lock() {
@@ -851,7 +1066,12 @@ async fn pump_spirc(mut events: mpsc::UnboundedReceiver<SpircEvent>, obs: Arc<Mu
                 }
             }
             SpircEvent::Cluster(c) => {
-                push(&obs, log, Kind::SpircCluster, format!("Küme: {}", describe_cluster(&c, &own_id)));
+                push(
+                    &obs,
+                    log,
+                    Kind::SpircCluster,
+                    format!("Küme: {}", describe_cluster(&c, &own_id)),
+                );
                 if let Ok(mut o) = obs.lock() {
                     o.clusters += 1;
                     o.cluster = Some(c);
@@ -886,20 +1106,33 @@ async fn pump_player(
 /// `openify connect-spike [...]`
 pub fn run(args: &[String]) -> Result<()> {
     let options = parse_options(args)?;
-    tokio::runtime::Builder::new_multi_thread().worker_threads(3).enable_all().build()?.block_on(run_async(options))
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(3)
+        .enable_all()
+        .build()?
+        .block_on(run_async(options))
 }
 
 fn wants(options: &Options, id: &str) -> bool {
-    options.only.as_ref().is_none_or(|only| only.iter().any(|s| s == id))
+    options
+        .only
+        .as_ref()
+        .is_none_or(|only| only.iter().any(|s| s == id))
 }
 
 /// Kayıtlı giriş yoksa ya da bağlanamıyorsa açıklayıcı hata.
 async fn connect(device_id: &str) -> Result<Session> {
     match auth::connect_saved_with(None, Some(device_id), false).await {
         Ok(s) => Ok(s),
-        Err(auth::ConnectError::NoCredentials) => bail!("Kayıtlı Spotify girişi yok: önce Openify'ı normal aç ve Spotify'a giriş yap, sonra bu denemeyi çalıştır."),
-        Err(auth::ConnectError::Rejected) => bail!("Spotify kayıtlı girişi reddetti (kayıt SİLİNMEDİ): Openify'ı normal aç, gerekirse yeniden giriş yap."),
-        Err(auth::ConnectError::NeedsPremium) => bail!("Bu hesap Premium değil; Connect denemesi yapılamaz."),
+        Err(auth::ConnectError::NoCredentials) => bail!(
+            "Kayıtlı Spotify girişi yok: önce Openify'ı normal aç ve Spotify'a giriş yap, sonra bu denemeyi çalıştır."
+        ),
+        Err(auth::ConnectError::Rejected) => bail!(
+            "Spotify kayıtlı girişi reddetti (kayıt SİLİNMEDİ): Openify'ı normal aç, gerekirse yeniden giriş yap."
+        ),
+        Err(auth::ConnectError::NeedsPremium) => {
+            bail!("Bu hesap Premium değil; Connect denemesi yapılamaz.")
+        }
         Err(auth::ConnectError::Offline(e)) => bail!("Spotify'a bağlanılamadı: {e:#}"),
     }
 }
@@ -929,45 +1162,81 @@ async fn run_async(options: Options) -> Result<()> {
             }
             let n = INTERRUPTS.fetch_add(1, Ordering::SeqCst) + 1;
             if n >= 2 {
-                eprintln!("\nİkinci Ctrl+C: hemen çıkılıyor (cihaz Spotify listesinde bir süre kalabilir).");
+                eprintln!(
+                    "\nİkinci Ctrl+C: hemen çıkılıyor (cihaz Spotify listesinde bir süre kalabilir)."
+                );
                 std::process::exit(130);
             }
-            eprintln!("\nCtrl+C: bu adım bitirilip özetle çıkılacak (tekrar basarsan hemen çıkar).");
+            eprintln!(
+                "\nCtrl+C: bu adım bitirilip özetle çıkılacak (tekrar basarsan hemen çıkar)."
+            );
             INTERRUPT_NOTIFY.get_or_init(Notify::new).notify_waiters();
         }
     });
 
     println!("Openify Spotify Connect denemesi\n");
-    println!("Bu deneme GERÇEK hesabına bağlanır ve hesapta '{DEVICE_NAME}' adlı bir Connect aygıtı kaydeder");
-    println!("(deneme bitince silinir). Hesap ayarlarını, kütüphaneni, listelerini DEĞİŞTİRMEZ; Openify'ın ayar");
-    println!("dosyasına ve önbelleğine dokunmaz. Bu bilgisayardan ses çıkacak; telefonun elinin altında olsun.");
+    println!(
+        "Bu deneme GERÇEK hesabına bağlanır ve hesapta '{DEVICE_NAME}' adlı bir Connect aygıtı kaydeder"
+    );
+    println!(
+        "(deneme bitince silinir). Hesap ayarlarını, kütüphaneni, listelerini DEĞİŞTİRMEZ; Openify'ın ayar"
+    );
+    println!(
+        "dosyasına ve önbelleğine dokunmaz. Bu bilgisayardan ses çıkacak; telefonun elinin altında olsun."
+    );
     println!("Günlük: {}\n", log_path.display());
     if !engine::has_output_device() {
         bail!("Ses çıkışı (hoparlör / kulaklık) bulunamadı.");
     }
     let track = parse_track(&options.track).context("--track geçersiz")?;
-    let track_uri = track.to_uri().map_err(|e| anyhow::anyhow!("şarkı adresi çözülemedi: {e}"))?;
+    let track_uri = track
+        .to_uri()
+        .map_err(|e| anyhow::anyhow!("şarkı adresi çözülemedi: {e}"))?;
 
     let mut console = Console::start();
     println!("Devam edilsin mi? (e = evet, başka tuş = çık)");
-    if !matches!(console.line().await.as_deref().map(str::to_lowercase).as_deref(), Some("e" | "evet" | "y" | "yes")) {
+    if !matches!(
+        console
+            .line()
+            .await
+            .as_deref()
+            .map(str::to_lowercase)
+            .as_deref(),
+        Some("e" | "evet" | "y" | "yes")
+    ) {
         println!("İptal edildi; hiçbir şey yapılmadı.");
         return Ok(());
     }
 
     let device_id = load_device_id()?;
-    log.line("SETUP", &format!("device_id {}…, şarkı {track_uri}", &device_id[..8]));
+    log.line(
+        "SETUP",
+        &format!("device_id {}…, şarkı {track_uri}", &device_id[..8]),
+    );
     println!("\nSpotify'a bağlanılıyor (kayıtlı girişle)...");
     let session = connect(&device_id).await?;
     println!("Bağlandı.");
 
-    let mixer: Arc<dyn Mixer> = Arc::new(SoftMixer::open(MixerConfig::default()).map_err(|e| anyhow::anyhow!("ses düzeyi açılamadı: {e}"))?);
+    let mixer: Arc<dyn Mixer> = Arc::new(
+        SoftMixer::open(MixerConfig::default())
+            .map_err(|e| anyhow::anyhow!("ses düzeyi açılamadı: {e}"))?,
+    );
     mixer.set_volume(START_VOLUME);
     let gain = mixer.get_soft_volume().attenuation_factor() as f32;
-    let config = PlayerConfig { bitrate: Bitrate::Bitrate320, normalisation: true, ..PlayerConfig::default() };
+    let config = PlayerConfig {
+        bitrate: Bitrate::Bitrate320,
+        normalisation: true,
+        ..PlayerConfig::default()
+    };
     let (player, out) = engine::new_player(config, session.clone(), AudioLevels::new(), gain, 0);
     let obs = Arc::new(Mutex::new(Observed::default()));
-    tokio::spawn(pump_player(player.get_player_event_channel(), obs.clone(), log, mixer.clone(), out.clone()));
+    tokio::spawn(pump_player(
+        player.get_player_event_channel(),
+        obs.clone(),
+        log,
+        mixer.clone(),
+        out.clone(),
+    ));
 
     let mut spike = Spike {
         log,
@@ -1034,14 +1303,27 @@ async fn finish(mut spike: Spike) -> Result<()> {
     for (id, verdict, note) in &results {
         spike.say(&format!("{id}  {:<8} {note}", verdict.word()));
     }
-    spike.say(&format!("\nToplam Spotify HTTP isteği: {} (connect-state: {})", counts.total, counts.connect_state));
-    let failed: Vec<&str> = results.iter().filter(|(_, v, _)| *v == Verdict::Fail).map(|(id, ..)| *id).collect();
+    spike.say(&format!(
+        "\nToplam Spotify HTTP isteği: {} (connect-state: {})",
+        counts.total, counts.connect_state
+    ));
+    let failed: Vec<&str> = results
+        .iter()
+        .filter(|(_, v, _)| *v == Verdict::Fail)
+        .map(|(id, ..)| *id)
+        .collect();
     if failed.is_empty() {
         spike.say("Kalan senaryo yok (atlananlar hariç).");
     } else {
-        spike.say(&format!("KALAN: {}. S2–S6'dan biri kalırsa Connect v1'den çıkar (plan).", failed.join(", ")));
+        spike.say(&format!(
+            "KALAN: {}. S2–S6'dan biri kalırsa Connect v1'den çıkar (plan).",
+            failed.join(", ")
+        ));
     }
-    spike.say(&format!("\nGünlük dosyası: {}\nBu dosyayı (ve yukarıdaki özeti) geliştiriciye ilet.", spike.log_path.display()));
+    spike.say(&format!(
+        "\nGünlük dosyası: {}\nBu dosyayı (ve yukarıdaki özeti) geliştiriciye ilet.",
+        spike.log_path.display()
+    ));
     spike.log.flush_all();
     Ok(())
 }
@@ -1057,8 +1339,13 @@ mod tests {
     use super::*;
 
     fn temp_log() -> SpikeLog {
-        let path = std::env::temp_dir().join(format!("openify-spike-test-{}.log", std::process::id()));
-        SpikeLog { start: Instant::now(), file: Mutex::new(std::fs::File::create(path).unwrap()), http: Mutex::new(HttpCounts::default()) }
+        let path =
+            std::env::temp_dir().join(format!("openify-spike-test-{}.log", std::process::id()));
+        SpikeLog {
+            start: Instant::now(),
+            file: Mutex::new(std::fs::File::create(path).unwrap()),
+            http: Mutex::new(HttpCounts::default()),
+        }
     }
 
     fn args(list: &[&str]) -> Vec<String> {
@@ -1068,12 +1355,26 @@ mod tests {
     #[test]
     fn options_have_defaults_and_parse() {
         let o = parse_options(&[]).unwrap();
-        assert_eq!((o.idle_min, o.only.is_none(), o.track.as_str()), (30, true, DEFAULT_TRACK));
-        let o = parse_options(&args(&["--only", "s1, S3,,", "--idle-min", "2", "--track", "spotify:track:abc"])).unwrap();
+        assert_eq!(
+            (o.idle_min, o.only.is_none(), o.track.as_str()),
+            (30, true, DEFAULT_TRACK)
+        );
+        let o = parse_options(&args(&[
+            "--only",
+            "s1, S3,,",
+            "--idle-min",
+            "2",
+            "--track",
+            "spotify:track:abc",
+        ]))
+        .unwrap();
         assert_eq!(o.only, Some(vec!["S1".to_string(), "S3".to_string()]));
         assert_eq!((o.idle_min, o.track.as_str()), (2, "spotify:track:abc"));
         assert!(wants(&o, "S3") && !wants(&o, "S2"));
-        assert!(wants(&parse_options(&[]).unwrap(), "S6"), "--only yoksa hepsi");
+        assert!(
+            wants(&parse_options(&[]).unwrap(), "S6"),
+            "--only yoksa hepsi"
+        );
         assert!(parse_options(&args(&["--idle-min", "x"])).is_err());
         assert!(parse_options(&args(&["--track"])).is_err());
         assert!(parse_options(&args(&["--bilinmeyen"])).is_err());
@@ -1082,20 +1383,36 @@ mod tests {
     #[test]
     fn requests_are_counted_by_path_without_the_query_and_connect_state_is_told_apart() {
         let log = temp_log();
-        log.count_request("https://spclient.wg.spotify.com/connect-state/v1/devices/abc?jeton=GIZLI");
+        log.count_request(
+            "https://spclient.wg.spotify.com/connect-state/v1/devices/abc?jeton=GIZLI",
+        );
         log.count_request("https://spclient.wg.spotify.com/connect-state/v1/devices/abc");
         log.count_request("https://spclient.wg.spotify.com/metadata/4/track/xyz?market=from_token");
         let c = log.http_snapshot();
         assert_eq!((c.total, c.connect_state), (3, 2));
-        assert_eq!(c.by_path["spclient.wg.spotify.com/connect-state/v1/devices/abc"], 2);
-        assert!(c.by_path.keys().all(|k| !k.contains("GIZLI") && !k.contains('?')), "sorgu dizgisi (jeton) sayılmaz: {:?}", c.by_path);
+        assert_eq!(
+            c.by_path["spclient.wg.spotify.com/connect-state/v1/devices/abc"],
+            2
+        );
+        assert!(
+            c.by_path
+                .keys()
+                .all(|k| !k.contains("GIZLI") && !k.contains('?')),
+            "sorgu dizgisi (jeton) sayılmaz: {:?}",
+            c.by_path
+        );
     }
 
     #[test]
     fn utc_stamp_is_a_sortable_timestamp() {
         let s = utc_stamp();
         assert_eq!((s.len(), s.as_bytes()[8]), (15, b'-'), "{s}");
-        assert!(s.chars().enumerate().all(|(i, c)| i == 8 || c.is_ascii_digit()), "{s}");
+        assert!(
+            s.chars()
+                .enumerate()
+                .all(|(i, c)| i == 8 || c.is_ascii_digit()),
+            "{s}"
+        );
         assert!(s.starts_with("20"), "{s}");
     }
 
@@ -1107,9 +1424,16 @@ mod tests {
         o.timeline.push((30, Kind::Playing, "c".into()));
         assert_eq!(o.count_since(0, Kind::Playing), 2);
         assert_eq!(o.count_since(1, Kind::Playing), 1);
-        assert_eq!(o.count_since(99, Kind::Playing), 0, "işaret sonu aşarsa boş");
+        assert_eq!(
+            o.count_since(99, Kind::Playing),
+            0,
+            "işaret sonu aşarsa boş"
+        );
         assert!(!o.active());
-        o.host = Some(HostView { active: true, ..HostView::default() });
+        o.host = Some(HostView {
+            active: true,
+            ..HostView::default()
+        });
         assert!(o.active());
     }
 }

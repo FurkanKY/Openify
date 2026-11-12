@@ -172,7 +172,10 @@ pub fn snapshot(queue: &Queue, position_ms: u32, track: Option<SnapTrack>) -> Sn
         lap: queue.lap,
         position_ms,
         track,
-        radio: queue.radio.as_ref().map(|r| SnapRadio { seed: r.seed.clone(), title: r.title.clone() }),
+        radio: queue.radio.as_ref().map(|r| SnapRadio {
+            seed: r.seed.clone(),
+            title: r.title.clone(),
+        }),
     }
 }
 
@@ -222,7 +225,8 @@ pub fn restore(state: &str, blob: Option<&str>) -> Option<Restore> {
         return None;
     }
     let current = snap.current.clone();
-    let user: std::collections::VecDeque<UserItem> = snap.user.iter().cloned().map(user_item).collect();
+    let user: std::collections::VecDeque<UserItem> =
+        snap.user.iter().cloned().map(user_item).collect();
     let mut queue = Queue::new();
     queue.user = user;
     queue.shuffle = snap.shuffle;
@@ -239,7 +243,11 @@ pub fn restore(state: &str, blob: Option<&str>) -> Option<Restore> {
         let mut full_queue = queue.clone();
         full_queue.context = snap.context.as_deref().and_then(CollectionId::from_key);
         // Sanatçı kimlikleri bağlamla eşleşmiyorsa (bozuk) bilinmiyor sayılır.
-        full_queue.artists = if b.artists.len() == b.uris.len() { b.artists } else { Vec::new() };
+        full_queue.artists = if b.artists.len() == b.uris.len() {
+            b.artists
+        } else {
+            Vec::new()
+        };
         full_queue.ctx = b.uris;
         full_queue.order = b.order;
         full_queue.cursor = snap.cursor;
@@ -250,13 +258,20 @@ pub fn restore(state: &str, blob: Option<&str>) -> Option<Restore> {
             queue = full_queue;
             blob_ok = true;
             // Radyonun bağlamı kayıtlıysa radyo sürer (bağlamsız geri yüklemede değil).
-            queue.radio = snap.radio.clone().map(|r| super::radio::RadioInfo { seed: r.seed, title: r.title });
+            queue.radio = snap.radio.clone().map(|r| super::radio::RadioInfo {
+                seed: r.seed,
+                title: r.title,
+            });
         }
     }
     if !blob_ok {
         // Bağlamsız: çalan şarkı tek başına (geçmişin bağlam indeksleri de
         // anlamsız).
-        queue.current = current.map(|c| Played { uri: c.uri, origin: Origin::User, track: None });
+        queue.current = current.map(|c| Played {
+            uri: c.uri,
+            origin: Origin::User,
+            track: None,
+        });
         for h in queue.history.iter_mut() {
             h.origin = Origin::User;
         }
@@ -290,7 +305,10 @@ impl Saver {
             .name("openify-resume".into())
             .spawn(move || writer(db, rx))
             .ok();
-        Self { tx: Some(tx), handle }
+        Self {
+            tx: Some(tx),
+            handle,
+        }
     }
 
     pub fn save(&self, state: String, blob: Option<String>) {
@@ -373,12 +391,22 @@ mod tests {
         let mut q = Queue::new();
         q.set_shuffle(true);
         q.set_repeat(RepeatMode::All);
-        q.restart(Some(CollectionId::Playlist("spotify:playlist:p".into())), uris(40), None, 4, 0xABCD, true);
+        q.restart(
+            Some(CollectionId::Playlist("spotify:playlist:p".into())),
+            uris(40),
+            None,
+            4,
+            0xABCD,
+            true,
+        );
         for _ in 0..6 {
             q.next();
         }
         q.previous();
-        q.enqueue(vec![item("spotify:track:u1", true), item("spotify:track:u2", false)]);
+        q.enqueue(vec![
+            item("spotify:track:u1", true),
+            item("spotify:track:u2", false),
+        ]);
         q
     }
 
@@ -423,7 +451,10 @@ mod tests {
         assert_eq!(fingerprint(&back.queue), fingerprint(&q));
         assert_eq!(back.queue.order_gen(), q.order_gen());
         // Kullanıcı şarkısının bilgisi de taşınır.
-        assert_eq!(back.queue.user[0].track.as_ref().unwrap().name, "spotify:track:u1 adı");
+        assert_eq!(
+            back.queue.user[0].track.as_ref().unwrap().name,
+            "spotify:track:u1 adı"
+        );
         assert!(back.queue.user[1].track.is_none());
     }
 
@@ -466,7 +497,11 @@ mod tests {
         let q = busy_queue();
         let state = encode(&snapshot(&q, 1_000, track()));
 
-        for blob in [None, Some("{bozuk"), Some(r#"{"generation":777,"uris":[],"order":[]}"#)] {
+        for blob in [
+            None,
+            Some("{bozuk"),
+            Some(r#"{"generation":777,"uris":[],"order":[]}"#),
+        ] {
             let back = restore(&state, blob).unwrap();
             assert!(!back.blob_ok);
             assert_eq!(back.position_ms, 1_000);
@@ -498,7 +533,9 @@ mod tests {
         modes.set_shuffle(true);
         modes.set_repeat(RepeatMode::One);
         let back = restore(&encode(&snapshot(&modes, 0, None)), None).unwrap();
-        assert!(back.queue.is_idle() && back.queue.shuffle() && back.queue.repeat() == RepeatMode::One);
+        assert!(
+            back.queue.is_idle() && back.queue.shuffle() && back.queue.repeat() == RepeatMode::One
+        );
     }
 
     /// Sanatçılı (dengeli karıştırılan) bağlam: 4 sanatçı × 10 şarkı.
@@ -592,7 +629,11 @@ mod tests {
         q.set_shuffle(true);
         q.restart(Some(CollectionId::Liked), uris(6_000), None, 0, 1, true);
         let blob = encode_blob(&q);
-        assert!(blob.len() < 400_000, "6.000 şarkılık bağlam {} bayt", blob.len());
+        assert!(
+            blob.len() < 400_000,
+            "6.000 şarkılık bağlam {} bayt",
+            blob.len()
+        );
         let state = encode(&snapshot(&q, 0, track()));
         assert!(state.len() < 2_000, "küçük kayıt {} bayt", state.len());
     }
@@ -604,11 +645,20 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         assert!(db.load_playback().unwrap().is_none());
         db.save_playback("s1", Some("b1")).unwrap();
-        assert_eq!(db.load_playback().unwrap().unwrap(), ("s1".to_string(), Some("b1".to_string())));
+        assert_eq!(
+            db.load_playback().unwrap().unwrap(),
+            ("s1".to_string(), Some("b1".to_string()))
+        );
         db.save_playback("s2", None).unwrap();
-        assert_eq!(db.load_playback().unwrap().unwrap(), ("s2".to_string(), Some("b1".to_string())));
+        assert_eq!(
+            db.load_playback().unwrap().unwrap(),
+            ("s2".to_string(), Some("b1".to_string()))
+        );
         db.save_playback("s3", Some("b3")).unwrap();
-        assert_eq!(db.load_playback().unwrap().unwrap().1.as_deref(), Some("b3"));
+        assert_eq!(
+            db.load_playback().unwrap().unwrap().1.as_deref(),
+            Some("b3")
+        );
     }
 
     #[test]
@@ -631,7 +681,10 @@ mod tests {
         let db = Arc::new(Db::open_in_memory().unwrap());
         let q = busy_queue();
         let saver = Saver::spawn(db.clone());
-        saver.save(encode(&snapshot(&q, 42_000, track())), Some(encode_blob(&q)));
+        saver.save(
+            encode(&snapshot(&q, 42_000, track())),
+            Some(encode_blob(&q)),
+        );
         assert!(saver.flush(Duration::from_secs(5)));
         let (state, blob) = db.load_playback().unwrap().unwrap();
         let back = restore(&state, blob.as_deref()).unwrap();

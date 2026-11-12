@@ -56,21 +56,23 @@ thread_local! {
 /// satırlar en geç `FLUSH_EVERY` sonra diskte (süreç öldürülse de kalır).
 fn spawn_writer(path: PathBuf, rows: Arc<Mutex<String>>) {
     const FLUSH_EVERY: Duration = Duration::from_millis(200);
-    let _ = std::thread::Builder::new().name("frame-stats".into()).spawn(move || {
-        let mut written = 0;
-        loop {
-            std::thread::sleep(FLUSH_EVERY);
-            let snapshot = {
-                let rows = rows.lock().unwrap_or_else(|e| e.into_inner());
-                (rows.len() != written).then(|| (rows.len(), rows.clone()))
-            };
-            if let Some((len, text)) = snapshot {
-                if std::fs::write(&path, text).is_ok() {
-                    written = len;
+    let _ = std::thread::Builder::new()
+        .name("frame-stats".into())
+        .spawn(move || {
+            let mut written = 0;
+            loop {
+                std::thread::sleep(FLUSH_EVERY);
+                let snapshot = {
+                    let rows = rows.lock().unwrap_or_else(|e| e.into_inner());
+                    (rows.len() != written).then(|| (rows.len(), rows.clone()))
+                };
+                if let Some((len, text)) = snapshot {
+                    if std::fs::write(&path, text).is_ok() {
+                        written = len;
+                    }
                 }
             }
-        }
-    });
+        });
 }
 
 /// Pencerenin `render`'ı başladı.
@@ -124,7 +126,10 @@ pub fn painted() {
             ms(std::mem::take(&mut r.text)),
             std::mem::take(&mut r.text_count)
         );
-        r.rows.lock().unwrap_or_else(|e| e.into_inner()).push_str(&row);
+        r.rows
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push_str(&row);
     });
 }
 

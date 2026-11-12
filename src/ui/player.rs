@@ -11,7 +11,7 @@ use std::{
 
 use super::theme::{DARK_ROOM, DEFAULT_ACCENT, accent_fade, ease_out, mix};
 use crate::engine::{Event, NoticeKind, QueueState, TrackInfo, palette::Accent};
-use crate::{t};
+use crate::t;
 
 /// Çalar hapında gösterilen kısa bildirim.
 #[derive(Debug, Clone)]
@@ -114,7 +114,11 @@ impl PlayerState {
             Event::Connecting => self.connection = Connection::Connecting,
             Event::Connected { username } => {
                 // Bağlantı geri geldi: "yeniden deneniyor" bildirimi bitti.
-                if self.notice.as_ref().is_some_and(|n| n.kind == NoticeKind::Working) {
+                if self
+                    .notice
+                    .as_ref()
+                    .is_some_and(|n| n.kind == NoticeKind::Working)
+                {
                     self.notice = None;
                 }
                 self.connection = Connection::Connected(username);
@@ -147,7 +151,9 @@ impl PlayerState {
             }
             // Giriş / Premium gerektiği için düşen çalma komutu: motor KOD yollar,
             // yazıya burada çevrilir.
-            Event::PlaybackBlocked(block) => self.notify(NoticeKind::Problem, crate::msg::play_block_text(block)),
+            Event::PlaybackBlocked(block) => {
+                self.notify(NoticeKind::Problem, crate::msg::play_block_text(block))
+            }
             Event::EngineStopped(reason) => {
                 log::error!("ses motoru durdu: {reason}");
                 self.pending = None;
@@ -177,7 +183,11 @@ impl PlayerState {
                 // Yeni şarkı geldi: süren ve sorun bildirimleri bitti. Bilgi
                 // ("önceki şarkı çalınamadı") tam bu an için: süresi dolana
                 // kadar kalır.
-                if self.notice.as_ref().is_some_and(|n| n.kind != NoticeKind::Info) {
+                if self
+                    .notice
+                    .as_ref()
+                    .is_some_and(|n| n.kind != NoticeKind::Info)
+                {
                     self.notice = None;
                 }
                 self.set_position(0, now);
@@ -239,7 +249,11 @@ impl PlayerState {
     }
 
     pub fn notify(&mut self, kind: NoticeKind, text: impl Into<String>) {
-        self.notice = Some(Notice { kind, text: text.into(), at: Instant::now() });
+        self.notice = Some(Notice {
+            kind,
+            text: text.into(),
+            at: Instant::now(),
+        });
     }
 
     /// Şu an görünmesi gereken bildirim (süresi dolan bilgi görünmez).
@@ -262,7 +276,8 @@ impl PlayerState {
     /// O anki vurgu rengi (geçiş sürüyorsa iki rengin karışımı).
     pub fn accent_at(&self, now: Instant) -> Accent {
         let t = ease_out(
-            now.saturating_duration_since(self.accent_changed).as_secs_f32()
+            now.saturating_duration_since(self.accent_changed)
+                .as_secs_f32()
                 / accent_fade().as_secs_f32(),
         );
         Accent {
@@ -342,10 +357,20 @@ mod tests {
         let t0 = Instant::now();
         let mut s = PlayerState::new(0.8);
         s.apply(Event::TrackChanged(track(200_000)), t0);
-        s.apply(Event::Playing { position_ms: 10_000 }, t0);
+        s.apply(
+            Event::Playing {
+                position_ms: 10_000,
+            },
+            t0,
+        );
         assert_eq!(s.position_ms(t0 + Duration::from_secs(5)), 15_000);
 
-        s.apply(Event::Paused { position_ms: 15_000 }, t0 + Duration::from_secs(5));
+        s.apply(
+            Event::Paused {
+                position_ms: 15_000,
+            },
+            t0 + Duration::from_secs(5),
+        );
         assert_eq!(s.position_ms(t0 + Duration::from_secs(60)), 15_000);
     }
 

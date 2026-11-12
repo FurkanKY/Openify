@@ -30,20 +30,20 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::Result;
 use crate::t;
+use anyhow::Result;
 
 use super::{
     CollectionId, Engine, Event, Internal, Library, LibraryItem, NoticeKind, TrackRow,
     cache::Db,
+    credits::{self, Credits, CreditsFailure},
     edits::{
         self, AddPosition, ApplyCtx, EditBackend, EditError, EditOp, EditOutcome, EditQueue,
         Enqueued, FailKind, ProcessReport, SpotifyBackend,
     },
-    pages::{self, AlbumPage, ArtistPage, Loaded, PageCache, TrackLinks},
     explore::{self, ExploreData, ExploreKey},
-    credits::{self, Credits, CreditsFailure},
     friends::{self, Friend, FriendsFailure},
+    pages::{self, AlbumPage, ArtistPage, Loaded, PageCache, TrackLinks},
     related::{self, Freshness, RelatedHint, RelatedList},
     search,
 };
@@ -72,14 +72,24 @@ pub enum LibraryCommand {
     /// Bu şarkıların albüm ve sanatçı adresleri (`LibraryEvent::Links`).
     ResolveLinks(Vec<String>),
     /// Tam arama sayfası: sonuç `Event::SearchResults` ile aynı `seq` ile.
-    SearchAll { seq: u64, query: String },
+    SearchAll {
+        seq: u64,
+        query: String,
+    },
     /// Açılan sanatçının benzerleri (`LibraryEvent::Related`; bkz.
     /// `related.rs`). Yalnız ekrana gelen sanatçı için istenir (önceden alma
     /// yok); hata söylenmez. Ad ve popüler şarkı yalnız Deezer yedeği için.
-    OpenRelated { uri: String, name: String, top_track: Option<String> },
+    OpenRelated {
+        uri: String,
+        name: String,
+        top_track: Option<String>,
+    },
     /// Deezer'dan gelen benzer sanatçı kartına tıklandı (`deezer:artist:<id>`):
     /// Spotify adresini bul (`LibraryEvent::ArtistResolved`).
-    ResolveArtist { from: String, name: String },
+    ResolveArtist {
+        from: String,
+        name: String,
+    },
     /// Keşfet / Ana sayfa verisi (`LibraryEvent::Explore`, olmazsa `ExploreFailed`;
     /// bkz. `explore.rs`). Yalnız ekrana gelen sayfa için istenir.
     OpenExplore(ExploreKey),
@@ -94,14 +104,21 @@ pub enum LibraryCommand {
     OpenCredits(String),
     /// Kütüphane yazması. `rows`: işlemdeki şarkıların bilgileri (listeye
     /// yerelde eklenebilsin diye); `item`: albüm kaydederken albümün kartı.
-    Edit { op: EditOp, rows: Vec<TrackRow>, item: Option<LibraryItem> },
+    Edit {
+        op: EditOp,
+        rows: Vec<TrackRow>,
+        item: Option<LibraryItem>,
+    },
     /// Başarısız yazmayı yeniden dene / bırak.
     RetryEdit(i64),
     DismissEdit(i64),
     /// Listeyi / albümü / sanatçıyı en üste sabitle ya da sabitlemeyi kaldır
     /// (`key`: `CollectionId::key()`). Yerel: `library_pins`; Spotify'a hiçbir
     /// şey yazılmaz (arayüz zaten iyimser günceller, cevap yok).
-    Pin { key: String, pinned: bool },
+    Pin {
+        key: String,
+        pinned: bool,
+    },
     /// Listenin şarkılarının eklenme anları (`LibraryEvent::AddedDates`;
     /// önbellekten okunur, ağa gitmez).
     AddedDates(CollectionId),
@@ -114,35 +131,71 @@ pub enum LibraryCommand {
     ExportBackup(std::path::PathBuf),
     /// Şarkıları yerel olarak gizle (`on`) ya da göster (bkz. `hidden.rs`).
     /// Spotify'a hiçbir şey yazılmaz; cevap `LibraryEvent::Hidden`.
-    SetHidden { songs: Vec<super::hidden::HiddenSong>, on: bool },
+    SetHidden {
+        songs: Vec<super::hidden::HiddenSong>,
+        on: bool,
+    },
 }
 
 #[derive(Debug, Clone)]
 pub enum LibraryEvent {
-    Artist { uri: String, page: Arc<ArtistPage> },
-    Album { uri: String, page: Arc<AlbumPage> },
-    PageFailed { uri: String, error: String },
+    Artist {
+        uri: String,
+        page: Arc<ArtistPage>,
+    },
+    Album {
+        uri: String,
+        page: Arc<AlbumPage>,
+    },
+    PageFailed {
+        uri: String,
+        error: String,
+    },
     Links(Vec<TrackLinks>),
     /// Sanatçının benzerleri (boş olabilir: bölüm gösterilmez).
-    Related { uri: String, list: Arc<RelatedList> },
+    Related {
+        uri: String,
+        list: Arc<RelatedList>,
+    },
     /// Deezer kartının Spotify adresi (`None`: bulunamadı).
-    ArtistResolved { from: String, uri: Option<String> },
+    ArtistResolved {
+        from: String,
+        uri: Option<String>,
+    },
     /// Keşfet / Ana sayfa verisi (önbellekten ya da yeni indirilmiş).
-    Explore { key: ExploreKey, data: ExploreData },
+    Explore {
+        key: ExploreKey,
+        data: ExploreData,
+    },
     /// İndirilemedi (gösterilen bayat veri varsa o kalır).
-    ExploreFailed { key: ExploreKey, error: String },
+    ExploreFailed {
+        key: ExploreKey,
+        error: String,
+    },
     /// Arkadaş etkinliği (en yeni önde; boş olabilir).
     Friends(Arc<Vec<Friend>>),
     FriendsFailed(FriendsFailure),
     /// Şarkı künyesi (`LibraryCommand::OpenCredits` cevabı; boş olabilir).
-    Credits { uri: String, result: Result<Arc<Credits>, CreditsFailure> },
+    Credits {
+        uri: String,
+        result: Result<Arc<Credits>, CreditsFailure>,
+    },
     /// Kuyruğun durumu: bekleyen yazma sayısı ve yazılamayanlar.
-    EditStatus { pending: usize, failed: Vec<FailedEdit> },
+    EditStatus {
+        pending: usize,
+        failed: Vec<FailedEdit>,
+    },
     /// Geçici adresle oluşturulan liste Spotify'da oluştu.
-    Created { temp: String, uri: String },
+    Created {
+        temp: String,
+        uri: String,
+    },
     /// `LibraryCommand::AddedDates` cevabı: şarkı adresi → eklenme anı (unix
     /// ms; tarihi bilinmeyen şarkı yok).
-    AddedDates { id: CollectionId, dates: Arc<HashMap<String, i64>> },
+    AddedDates {
+        id: CollectionId,
+        dates: Arc<HashMap<String, i64>>,
+    },
     /// `LibraryCommand::PlayStats` cevabı.
     PlayStats(Arc<super::tools::stats::StatsReport>),
     /// Yedek yazıldı.
@@ -165,13 +218,33 @@ pub struct FailedEdit {
 
 /// Arka plan işlerinin motora dönen sonuçları.
 pub(super) enum WireInternal {
-    Page { uri: String, quiet: bool, cached: bool, result: Result<PageResult, String> },
-    Links { asked: Vec<String>, result: Result<Vec<TrackLinks>, String> },
-    Related { uri: String, result: Result<Arc<RelatedList>, String> },
-    Explore { key: ExploreKey, result: Result<ExploreData, String> },
+    Page {
+        uri: String,
+        quiet: bool,
+        cached: bool,
+        result: Result<PageResult, String>,
+    },
+    Links {
+        asked: Vec<String>,
+        result: Result<Vec<TrackLinks>, String>,
+    },
+    Related {
+        uri: String,
+        result: Result<Arc<RelatedList>, String>,
+    },
+    Explore {
+        key: ExploreKey,
+        result: Result<ExploreData, String>,
+    },
     Friends(Result<Vec<Friend>, FriendsFailure>),
-    Credits { uri: String, result: Result<Arc<Credits>, CreditsFailure> },
-    Resolved { from: String, result: Result<String, String> },
+    Credits {
+        uri: String,
+        result: Result<Arc<Credits>, CreditsFailure>,
+    },
+    Resolved {
+        from: String,
+        result: Result<String, String>,
+    },
     Processed(anyhow::Result<ProcessReport>),
 }
 
@@ -191,7 +264,11 @@ fn page_cache() -> Option<Arc<PageCache>> {
 /// tıklandığı karede açabilsin diye doğrudan okur.
 pub fn cached_artist(uri: &str) -> Option<(Arc<ArtistPage>, bool)> {
     let c = pages::cached_artist(PAGE_CACHE.get()?, uri).ok()??;
-    log::debug!("{uri}: önbellekten ({} dk önce indirilmiş, bayat: {})", c.age_ms / 60_000, c.stale);
+    log::debug!(
+        "{uri}: önbellekten ({} dk önce indirilmiş, bayat: {})",
+        c.age_ms / 60_000,
+        c.stale
+    );
     Some((c.page, c.stale))
 }
 
@@ -215,7 +292,10 @@ pub fn cached_explore(key: &ExploreKey) -> Option<(ExploreData, bool)> {
 /// Keşfet'teki "benzer sanatçılardan öneriler" (yalnız önbellekten; bkz.
 /// `related::suggestions`).
 pub fn suggested_artists(known: &HashSet<String>, limit: usize) -> Vec<pages::ArtistCard> {
-    PAGE_CACHE.get().map(|c| related::suggestions(c, known, limit)).unwrap_or_default()
+    PAGE_CACHE
+        .get()
+        .map(|c| related::suggestions(c, known, limit))
+        .unwrap_or_default()
 }
 
 /// Deezer kartının daha önce bulunmuş Spotify adresi.
@@ -225,7 +305,11 @@ pub fn resolved_artist(deezer_uri: &str) -> Option<String> {
 
 pub fn cached_album(uri: &str) -> Option<(Arc<AlbumPage>, bool)> {
     let c = pages::cached_album(PAGE_CACHE.get()?, uri).ok()??;
-    log::debug!("{uri}: önbellekten ({} dk önce indirilmiş, bayat: {})", c.age_ms / 60_000, c.stale);
+    log::debug!(
+        "{uri}: önbellekten ({} dk önce indirilmiş, bayat: {})",
+        c.age_ms / 60_000,
+        c.stale
+    );
     Some((c.page, c.stale))
 }
 
@@ -256,7 +340,9 @@ fn test_edits() -> Option<Fake> {
 fn parse_test_edits(edits: Option<&str>, test_display: bool) -> Option<Fake> {
     match edits {
         Some("slow") => Some(Fake::Slow(4)),
-        Some(s) if s.starts_with("slow-") => Some(Fake::Slow(s["slow-".len()..].parse().unwrap_or(4).clamp(1, 120))),
+        Some(s) if s.starts_with("slow-") => Some(Fake::Slow(
+            s["slow-".len()..].parse().unwrap_or(4).clamp(1, 120),
+        )),
         Some("fail-notfound") => Some(Fake::Fail(FailKind::NotFound)),
         Some("fail-invalid") => Some(Fake::Fail(FailKind::Invalid)),
         Some(s) if s.starts_with("fail") => Some(Fake::Fail(FailKind::Forbidden)),
@@ -303,7 +389,10 @@ impl EditBackend for FakeBackend {
         }
         Ok(match op {
             EditOp::CreatePlaylist { temp_id, .. } => EditOutcome::Created {
-                uri: format!("spotify:playlist:sinama{}", temp_id.rsplit(':').next().unwrap_or("0")),
+                uri: format!(
+                    "spotify:playlist:sinama{}",
+                    temp_id.rsplit(':').next().unwrap_or("0")
+                ),
             },
             _ => EditOutcome::Done,
         })
@@ -353,7 +442,10 @@ struct EditRows {
 }
 
 fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
 }
 
 /// Şarkı adresi → eklenme anı. Tarihi bilinmeyen şarkı haritada yok; aynı
@@ -382,11 +474,16 @@ impl Engine {
                     Err(e) => log::warn!("Sayfa önbelleği temizlenemedi: {e:#}"),
                 });
             }
-            Err(e) => log::warn!("Sayfa önbelleği açılamadı, sayfalar her seferinde indirilecek: {e:#}"),
+            Err(e) => {
+                log::warn!("Sayfa önbelleği açılamadı, sayfalar her seferinde indirilecek: {e:#}")
+            }
         }
         self.wire.fake = test_edits();
         let queue = if self.wire.fake.is_some() {
-            log::info!("Sınama: yazmalar bellekte, sahte arka uca gidiyor ({:?})", self.wire.fake);
+            log::info!(
+                "Sınama: yazmalar bellekte, sahte arka uca gidiyor ({:?})",
+                self.wire.fake
+            );
             EditQueue::open_in_memory()
         } else {
             EditQueue::open_default()
@@ -412,13 +509,21 @@ impl Engine {
 
     pub(super) fn on_library_command(&mut self, command: LibraryCommand) {
         match command {
-            LibraryCommand::OpenArtist(uri) | LibraryCommand::OpenAlbum(uri) => self.open_page(uri, false),
+            LibraryCommand::OpenArtist(uri) | LibraryCommand::OpenAlbum(uri) => {
+                self.open_page(uri, false)
+            }
             LibraryCommand::Prefetch(uri) => self.open_page(uri, true),
             LibraryCommand::ResolveLinks(uris) => self.resolve_links(uris),
             LibraryCommand::SearchAll { seq, query } => self.search_all(seq, query),
-            LibraryCommand::OpenRelated { uri, name, top_track } => {
-                self.open_related(RelatedHint { uri, name, top_track })
-            }
+            LibraryCommand::OpenRelated {
+                uri,
+                name,
+                top_track,
+            } => self.open_related(RelatedHint {
+                uri,
+                name,
+                top_track,
+            }),
             LibraryCommand::ResolveArtist { from, name } => self.resolve_artist(from, name),
             LibraryCommand::OpenExplore(key) => self.open_explore(key),
             LibraryCommand::OpenFriends => self.open_friends(),
@@ -443,7 +548,12 @@ impl Engine {
 
     pub(super) fn on_wire_internal(&mut self, result: WireInternal) {
         match result {
-            WireInternal::Page { uri, quiet, cached, result } => {
+            WireInternal::Page {
+                uri,
+                quiet,
+                cached,
+                result,
+            } => {
                 self.wire.loading.remove(&uri);
                 let complete = match &result {
                     Ok(PageResult::Artist(l)) => l.complete,
@@ -451,7 +561,9 @@ impl Engine {
                     Err(_) => true,
                 };
                 if !complete {
-                    log::debug!("{uri}: sayfa eksik geldi (bazı şarkı bilgileri yok), önbelleğe yazılmadı");
+                    log::debug!(
+                        "{uri}: sayfa eksik geldi (bazı şarkı bilgileri yok), önbelleğe yazılmadı"
+                    );
                 }
                 match result {
                     Ok(PageResult::Artist(l)) if l.changed || !cached => {
@@ -508,7 +620,9 @@ impl Engine {
                     Err(why) => self.emit(Event::Library(LibraryEvent::FriendsFailed(why))),
                 }
             }
-            WireInternal::Credits { uri, result } => self.emit(Event::Library(LibraryEvent::Credits { uri, result })),
+            WireInternal::Credits { uri, result } => {
+                self.emit(Event::Library(LibraryEvent::Credits { uri, result }))
+            }
             WireInternal::Resolved { from, result } => {
                 self.wire.resolving.remove(&from);
                 let uri = result
@@ -542,11 +656,23 @@ impl Engine {
         if !quiet {
             let hit = if artist {
                 cached_artist(&uri).map(|(page, stale)| {
-                    (stale, LibraryEvent::Artist { uri: uri.clone(), page })
+                    (
+                        stale,
+                        LibraryEvent::Artist {
+                            uri: uri.clone(),
+                            page,
+                        },
+                    )
                 })
             } else {
                 cached_album(&uri).map(|(page, stale)| {
-                    (stale, LibraryEvent::Album { uri: uri.clone(), page })
+                    (
+                        stale,
+                        LibraryEvent::Album {
+                            uri: uri.clone(),
+                            page,
+                        },
+                    )
                 })
             };
             if let Some((stale, event)) = hit {
@@ -586,12 +712,21 @@ impl Engine {
         let internal = self.internal.clone();
         self.bg.spawn(async move {
             let result = if artist {
-                pages::load_artist(&session, &db, &cache, &uri).await.map(PageResult::Artist)
+                pages::load_artist(&session, &db, &cache, &uri)
+                    .await
+                    .map(PageResult::Artist)
             } else {
-                pages::load_album(&session, &db, &cache, &uri).await.map(PageResult::Album)
+                pages::load_album(&session, &db, &cache, &uri)
+                    .await
+                    .map(PageResult::Album)
             };
             let result = result.map_err(|e| format!("{e:#}"));
-            let _ = internal.send(Internal::Wire(WireInternal::Page { uri, quiet, cached, result }));
+            let _ = internal.send(Internal::Wire(WireInternal::Page {
+                uri,
+                quiet,
+                cached,
+                result,
+            }));
         });
     }
 
@@ -608,7 +743,11 @@ impl Engine {
         self.wire.links_asked.extend(want.iter().cloned());
         let found = cache.links(&want);
         let have: HashSet<&str> = found.iter().map(|l| l.uri.as_str()).collect();
-        let missing: Vec<String> = want.iter().filter(|u| !have.contains(u.as_str())).cloned().collect();
+        let missing: Vec<String> = want
+            .iter()
+            .filter(|u| !have.contains(u.as_str()))
+            .cloned()
+            .collect();
         if !found.is_empty() {
             self.emit(Event::Library(LibraryEvent::Links(found)));
         }
@@ -621,14 +760,22 @@ impl Engine {
             for uri in &missing {
                 self.wire.links_asked.remove(uri);
             }
-            self.pending.push(super::Command::Library(LibraryCommand::ResolveLinks(missing)));
+            self.pending
+                .push(super::Command::Library(LibraryCommand::ResolveLinks(
+                    missing,
+                )));
             return;
         };
         let session = conn.session.clone();
         let internal = self.internal.clone();
         self.bg.spawn(async move {
-            let result = pages::load_links(&session, &cache, &missing).await.map_err(|e| format!("{e:#}"));
-            let _ = internal.send(Internal::Wire(WireInternal::Links { asked: missing, result }));
+            let result = pages::load_links(&session, &cache, &missing)
+                .await
+                .map_err(|e| format!("{e:#}"));
+            let _ = internal.send(Internal::Wire(WireInternal::Links {
+                asked: missing,
+                result,
+            }));
         });
     }
 
@@ -640,7 +787,10 @@ impl Engine {
         }
         let Some(cache) = page_cache() else { return };
         if let Some((list, fresh)) = cached_related(&hint.uri) {
-            self.emit(Event::Library(LibraryEvent::Related { uri: hint.uri.clone(), list }));
+            self.emit(Event::Library(LibraryEvent::Related {
+                uri: hint.uri.clone(),
+                list,
+            }));
             if fresh {
                 return;
             }
@@ -650,11 +800,12 @@ impl Engine {
         }
         let Some(conn) = &self.host.conn else {
             // Bağlanınca sorulsun.
-            self.pending.push(super::Command::Library(LibraryCommand::OpenRelated {
-                uri: hint.uri,
-                name: hint.name,
-                top_track: hint.top_track,
-            }));
+            self.pending
+                .push(super::Command::Library(LibraryCommand::OpenRelated {
+                    uri: hint.uri,
+                    name: hint.name,
+                    top_track: hint.top_track,
+                }));
             return;
         };
         let session = conn.session.clone();
@@ -662,8 +813,13 @@ impl Engine {
         let internal = self.internal.clone();
         self.wire.related_loading.insert(hint.uri.clone());
         self.bg.spawn(async move {
-            let result = related::load(&session, db.as_deref(), &cache, &hint).await.map_err(|e| format!("{e:#}"));
-            let _ = internal.send(Internal::Wire(WireInternal::Related { uri: hint.uri, result }));
+            let result = related::load(&session, db.as_deref(), &cache, &hint)
+                .await
+                .map_err(|e| format!("{e:#}"));
+            let _ = internal.send(Internal::Wire(WireInternal::Related {
+                uri: hint.uri,
+                result,
+            }));
         });
     }
 
@@ -672,11 +828,17 @@ impl Engine {
     /// Bağlantı yoksa bağlanınca sorulur.
     fn open_explore(&mut self, key: ExploreKey) {
         let Some(cache) = page_cache() else {
-            self.emit(Event::Library(LibraryEvent::ExploreFailed { key, error: "önbellek yok".into() }));
+            self.emit(Event::Library(LibraryEvent::ExploreFailed {
+                key,
+                error: "önbellek yok".into(),
+            }));
             return;
         };
         if let Some((data, fresh)) = cached_explore(&key) {
-            self.emit(Event::Library(LibraryEvent::Explore { key: key.clone(), data }));
+            self.emit(Event::Library(LibraryEvent::Explore {
+                key: key.clone(),
+                data,
+            }));
             if fresh {
                 return;
             }
@@ -685,7 +847,8 @@ impl Engine {
             return;
         }
         let Some(conn) = &self.host.conn else {
-            self.pending.push(super::Command::Library(LibraryCommand::OpenExplore(key)));
+            self.pending
+                .push(super::Command::Library(LibraryCommand::OpenExplore(key)));
             return;
         };
         let session = conn.session.clone();
@@ -693,7 +856,9 @@ impl Engine {
         let internal = self.internal.clone();
         self.wire.explore_loading.insert(key.clone());
         self.bg.spawn(async move {
-            let result = explore::load(&session, db.as_deref(), &cache, &key).await.map_err(|e| format!("{e:#}"));
+            let result = explore::load(&session, db.as_deref(), &cache, &key)
+                .await
+                .map_err(|e| format!("{e:#}"));
             let _ = internal.send(Internal::Wire(WireInternal::Explore { key, result }));
         });
     }
@@ -703,7 +868,9 @@ impl Engine {
     /// kaybetmesin). Arayüz iyimser günceller: olay göndermeye gerek yok.
     fn pin_item(&mut self, key: String, pinned: bool) {
         let Some(db) = &self.db else { return };
-        let written = db.next_pin_time(now_ms()).and_then(|at| db.set_pinned(&key, pinned, at));
+        let written = db
+            .next_pin_time(now_ms())
+            .and_then(|at| db.set_pinned(&key, pinned, at));
         if let Err(e) = written {
             log::warn!("Sabitleme yazılamadı ({key}): {e:#}");
             return;
@@ -728,7 +895,10 @@ impl Engine {
             }
         };
         let dates = added_dates_of(&entries);
-        self.emit(Event::Library(LibraryEvent::AddedDates { id, dates: Arc::new(dates) }));
+        self.emit(Event::Library(LibraryEvent::AddedDates {
+            id,
+            dates: Arc::new(dates),
+        }));
     }
 
     /// Arkadaş etkinliği: bağlıysa arkadan alınır (aynı anda tek istek), değilse
@@ -738,7 +908,9 @@ impl Engine {
             return;
         }
         let Some(conn) = &self.host.conn else {
-            self.emit(Event::Library(LibraryEvent::FriendsFailed(FriendsFailure::Offline)));
+            self.emit(Event::Library(LibraryEvent::FriendsFailed(
+                FriendsFailure::Offline,
+            )));
             return;
         };
         let session = conn.session.clone();
@@ -754,7 +926,10 @@ impl Engine {
     /// Kullanıcı düğmeye bastığında tek istek; sonuç arayüzün belleğinde durur.
     fn open_credits(&mut self, uri: String) {
         let Some(conn) = &self.host.conn else {
-            self.emit(Event::Library(LibraryEvent::Credits { uri, result: Err(CreditsFailure::Offline) }));
+            self.emit(Event::Library(LibraryEvent::Credits {
+                uri,
+                result: Err(CreditsFailure::Offline),
+            }));
             return;
         };
         let session = conn.session.clone();
@@ -768,11 +943,17 @@ impl Engine {
     /// Deezer kartının Spotify adresi: önbellekte yoksa bir aramayla.
     fn resolve_artist(&mut self, from: String, name: String) {
         if let Some(uri) = resolved_artist(&from) {
-            self.emit(Event::Library(LibraryEvent::ArtistResolved { from, uri: Some(uri) }));
+            self.emit(Event::Library(LibraryEvent::ArtistResolved {
+                from,
+                uri: Some(uri),
+            }));
             return;
         }
         let (Some(conn), Some(cache)) = (&self.host.conn, page_cache()) else {
-            self.emit(Event::Library(LibraryEvent::ArtistResolved { from, uri: None }));
+            self.emit(Event::Library(LibraryEvent::ArtistResolved {
+                from,
+                uri: None,
+            }));
             return;
         };
         if self.wire.resolving.contains(&from) {
@@ -783,7 +964,8 @@ impl Engine {
         let internal = self.internal.clone();
         self.wire.resolving.insert(from.clone());
         self.bg.spawn(async move {
-            let result = related::resolve_deezer(&session, &cache, db.as_deref(), &from, &name).await;
+            let result =
+                related::resolve_deezer(&session, &cache, db.as_deref(), &from, &name).await;
             let result = result.map_err(|e| format!("{e:#}"));
             let _ = internal.send(Internal::Wire(WireInternal::Resolved { from, result }));
         });
@@ -792,7 +974,10 @@ impl Engine {
     /// Tam arama sayfası: paletteki aramanın daha çok sonuçlu hâli.
     fn search_all(&self, seq: u64, query: String) {
         let Some(conn) = &self.host.conn else {
-            self.emit(Event::SearchFailed { seq, error: "network: Spotify'a henüz bağlanılmadı".into() });
+            self.emit(Event::SearchFailed {
+                seq,
+                error: "network: Spotify'a henüz bağlanılmadı".into(),
+            });
             return;
         };
         let session = conn.session.clone();
@@ -801,7 +986,10 @@ impl Engine {
         self.bg.spawn(async move {
             // Hash'i (kayıtlı, eskiyse yenisi) ve kapıyı pathfinder istemcisi yönetir.
             let result = search::run(&session, db.as_deref(), &query, SEARCH_ALL_LIMIT).await;
-            let _ = internal.send(Internal::Search { seq, result: result.map_err(anyhow::Error::from) });
+            let _ = internal.send(Internal::Search {
+                seq,
+                result: result.map_err(anyhow::Error::from),
+            });
         });
     }
 
@@ -814,7 +1002,13 @@ impl Engine {
         };
         match queue.enqueue(&op) {
             Ok(Enqueued::Queued(id)) => {
-                self.wire.rows.insert(id, EditRows { rows: rows.clone(), item: item.clone() });
+                self.wire.rows.insert(
+                    id,
+                    EditRows {
+                        rows: rows.clone(),
+                        item: item.clone(),
+                    },
+                );
             }
             Ok(Enqueued::Cancelled | Enqueued::Duplicate(_)) => {}
             Err(e) => {
@@ -855,7 +1049,9 @@ impl Engine {
     }
 
     fn process_edits(&mut self) {
-        let Some(queue) = self.wire.queue.clone() else { return };
+        let Some(queue) = self.wire.queue.clone() else {
+            return;
+        };
         if self.wire.processing {
             self.wire.again = true;
             return;
@@ -867,7 +1063,10 @@ impl Engine {
         match self.wire.fake {
             Some(mode) => {
                 self.bg.spawn_blocking(move || {
-                    let backend = Stamped { inner: FakeBackend(mode), stamp: &stamp };
+                    let backend = Stamped {
+                        inner: FakeBackend(mode),
+                        stamp: &stamp,
+                    };
                     let report = handle.block_on(queue.process_due(&backend, now));
                     let _ = internal.send(Internal::Wire(WireInternal::Processed(report)));
                 });
@@ -876,7 +1075,10 @@ impl Engine {
                 let Some(conn) = &self.host.conn else { return };
                 let session = conn.session.clone();
                 self.bg.spawn_blocking(move || {
-                    let backend = Stamped { inner: SpotifyBackend { session: &session }, stamp: &stamp };
+                    let backend = Stamped {
+                        inner: SpotifyBackend { session: &session },
+                        stamp: &stamp,
+                    };
                     let report = handle.block_on(queue.process_due(&backend, now));
                     let _ = internal.send(Internal::Wire(WireInternal::Processed(report)));
                 });
@@ -887,7 +1089,9 @@ impl Engine {
 
     /// Kütüphane tazelemesi başladı (bkz. `refresh_is_stale`).
     pub(super) fn mark_refresh_started(&self) {
-        self.wire.refresh_started_ms.store(now_ms(), Ordering::Relaxed);
+        self.wire
+            .refresh_started_ms
+            .store(now_ms(), Ordering::Relaxed);
     }
 
     /// Süren tazeleme, o başladıktan sonra Spotify'a bir yazma ulaşmadan ÖNCE
@@ -904,7 +1108,9 @@ impl Engine {
         let mut refresh = false;
         for (k, (id, outcome)) in report.done.iter().enumerate() {
             let held = self.wire.rows.remove(id).unwrap_or_default();
-            let Some(op) = report.done_ops.get(k) else { continue };
+            let Some(op) = report.done_ops.get(k) else {
+                continue;
+            };
             match (op, outcome) {
                 (EditOp::CreatePlaylist { .. }, EditOutcome::Created { uri }) => {
                     // Ekranın tanımadığı bir oluşturma (önceki oturumdan kalan):
@@ -941,16 +1147,36 @@ impl Engine {
             return;
         }
         let Some(db) = self.db.clone() else { return };
-        let rows = if held.rows.is_empty() { rows_from_cache(&db, op) } else { held.rows.clone() };
-        if let Err(e) = persist_op(&db, op, &rows, held.item.clone().or_else(|| follow_card(op)).as_ref(), &mut self.wire.deleted_truth) {
-            log::warn!("Yazılan değişiklik önbelleğe işlenemedi (sonraki tazelemede düzelir): {e:#}");
+        let rows = if held.rows.is_empty() {
+            rows_from_cache(&db, op)
+        } else {
+            held.rows.clone()
+        };
+        if let Err(e) = persist_op(
+            &db,
+            op,
+            &rows,
+            held.item.clone().or_else(|| follow_card(op)).as_ref(),
+            &mut self.wire.deleted_truth,
+        ) {
+            log::warn!(
+                "Yazılan değişiklik önbelleğe işlenemedi (sonraki tazelemede düzelir): {e:#}"
+            );
         }
     }
 
     /// Geçici adresli liste oluştu: motorun kopyasında gerçek adrese çevir.
     /// Ekran bu listeyi tanıyorsa (aynı oturumda oluşturulmuş) `true`.
     fn created(&mut self, op: &EditOp, uri: String, held: &EditRows) -> bool {
-        let EditOp::CreatePlaylist { temp_id, name, uris, .. } = op else { return false };
+        let EditOp::CreatePlaylist {
+            temp_id,
+            name,
+            uris,
+            ..
+        } = op
+        else {
+            return false;
+        };
         let temp = temp_id.clone();
         let temp_id = CollectionId::Playlist(temp.clone());
         let real_id = CollectionId::Playlist(uri.clone());
@@ -982,7 +1208,9 @@ impl Engine {
     /// Yazılamayan işlemi bırak: işlem kuyruktan ve ekrandan gider, ekran
     /// Spotify'daki son bilinen hâle (artı hâlâ bekleyen başka işlemlere) döner.
     fn dismiss_edit(&mut self, id: i64) {
-        let Some(queue) = self.wire.queue.clone() else { return };
+        let Some(queue) = self.wire.queue.clone() else {
+            return;
+        };
         let removed = queue.dismiss_cascade(id).unwrap_or_else(|e| {
             log::warn!("Değişiklik bırakılamadı: {e:#}");
             Vec::new()
@@ -1018,7 +1246,10 @@ impl Engine {
             }
         }
         if ops.iter().any(affects_library) {
-            let truth = self.db.as_ref().and_then(|db| db.load_library().ok().flatten());
+            let truth = self
+                .db
+                .as_ref()
+                .and_then(|db| db.load_library().ok().flatten());
             if let Some(truth) = truth {
                 let view = self.view_library(truth);
                 if self.library.as_ref() != Some(&view) {
@@ -1038,7 +1269,9 @@ impl Engine {
     /// ile süzülmüş. Bunlar ekranda iyimser uygulanmış ama Spotify'da henüz
     /// yok: Spotify'dan yeni okunan veride görünmezler.
     fn pending_edits(&self, keep: impl Fn(&EditOp) -> bool) -> Vec<PendingEdit> {
-        let Some(queue) = &self.wire.queue else { return Vec::new() };
+        let Some(queue) = &self.wire.queue else {
+            return Vec::new();
+        };
         let mut all = queue.pending().unwrap_or_default();
         all.extend(queue.failed().unwrap_or_default());
         all.retain(|e| keep(&e.op));
@@ -1050,11 +1283,17 @@ impl Engine {
                 // önbellekten.
                 let rows = match held {
                     Some(h) if !h.rows.is_empty() => h.rows.clone(),
-                    _ => self.db.as_ref().map(|db| rows_from_cache(db, &e.op)).unwrap_or_default(),
+                    _ => self
+                        .db
+                        .as_ref()
+                        .map(|db| rows_from_cache(db, &e.op))
+                        .unwrap_or_default(),
                 };
                 PendingEdit {
                     rows,
-                    item: held.and_then(|h| h.item.clone()).or_else(|| follow_card(&e.op)),
+                    item: held
+                        .and_then(|h| h.item.clone())
+                        .or_else(|| follow_card(&e.op)),
                     unsure: e.in_flight || e.maybe_applied,
                     op: e.op,
                 }
@@ -1064,7 +1303,11 @@ impl Engine {
 
     /// Spotify'dan (önbellekten) okunan liste + bekleyen işlemler = gösterilecek
     /// liste.
-    pub(super) fn view_tracks(&self, id: &CollectionId, truth: Arc<Vec<TrackRow>>) -> Arc<Vec<TrackRow>> {
+    pub(super) fn view_tracks(
+        &self,
+        id: &CollectionId,
+        truth: Arc<Vec<TrackRow>>,
+    ) -> Arc<Vec<TrackRow>> {
         let edits = self.pending_edits(|op| touched_collection(op).as_ref() == Some(id));
         if edits.is_empty() {
             return truth;
@@ -1112,7 +1355,9 @@ impl Engine {
     }
 
     fn emit_edit_status(&self) {
-        let Some(queue) = &self.wire.queue else { return };
+        let Some(queue) = &self.wire.queue else {
+            return;
+        };
         let pending = queue.pending().map(|p| p.len()).unwrap_or(0);
         let failed = queue
             .failed()
@@ -1139,7 +1384,9 @@ pub fn touched_collection(op: &EditOp) -> Option<CollectionId> {
         }
         EditOp::AddToPlaylist { playlist, .. }
         | EditOp::RemoveFromPlaylist { playlist, .. }
-        | EditOp::MovePlaylistItems { playlist, .. } => Some(CollectionId::Playlist(playlist.clone())),
+        | EditOp::MovePlaylistItems { playlist, .. } => {
+            Some(CollectionId::Playlist(playlist.clone()))
+        }
         EditOp::CreatePlaylist { temp_id, .. } => Some(CollectionId::Playlist(temp_id.clone())),
         _ => None,
     }
@@ -1187,9 +1434,17 @@ pub fn patch_tracks(op: &EditOp, rows: &[TrackRow], list: &mut Vec<TrackRow>) ->
             }
             !gone.is_empty()
         }
-        EditOp::MovePlaylistItems { from_index, length, to_index, .. } => {
-            edits::apply_move(list, *from_index as usize, *length as usize, *to_index as usize)
-        }
+        EditOp::MovePlaylistItems {
+            from_index,
+            length,
+            to_index,
+            ..
+        } => edits::apply_move(
+            list,
+            *from_index as usize,
+            *length as usize,
+            *to_index as usize,
+        ),
         EditOp::CreatePlaylist { uris, .. } => {
             *list = uris.iter().filter_map(|u| row_of(u)).collect();
             true
@@ -1213,13 +1468,16 @@ pub fn patch_library(
     deleted: &mut HashMap<String, (usize, LibraryItem)>,
 ) -> bool {
     let playlist_pos = |lib: &Library, uri: &str| {
-        lib.playlists.iter().position(|p| matches!(&p.id, CollectionId::Playlist(u) if u == uri))
+        lib.playlists
+            .iter()
+            .position(|p| matches!(&p.id, CollectionId::Playlist(u) if u == uri))
     };
     let recount = |lib: &mut Library, uri: &str, delta: isize| {
         if let Some(p) = playlist_pos(lib, uri)
             && let Some(n) = count_of(&lib.playlists[p].subtitle)
         {
-            lib.playlists[p].subtitle = crate::i18n::canon::songs((n as isize + delta).max(0) as usize);
+            lib.playlists[p].subtitle =
+                crate::i18n::canon::songs((n as isize + delta).max(0) as usize);
             return true;
         }
         false
@@ -1263,8 +1521,15 @@ pub fn patch_library(
             lib.artists.len() != before
         }
         EditOp::AddToPlaylist { playlist, uris, .. } => recount(lib, playlist, uris.len() as isize),
-        EditOp::RemoveFromPlaylist { playlist, uris, .. } => recount(lib, playlist, -(uris.len() as isize)),
-        EditOp::CreatePlaylist { temp_id, name, uris, .. } => {
+        EditOp::RemoveFromPlaylist { playlist, uris, .. } => {
+            recount(lib, playlist, -(uris.len() as isize))
+        }
+        EditOp::CreatePlaylist {
+            temp_id,
+            name,
+            uris,
+            ..
+        } => {
             lib.playlists.insert(
                 0,
                 LibraryItem {
@@ -1306,7 +1571,6 @@ pub fn patch_library(
         EditOp::MovePlaylistItems { .. } => false,
     }
 }
-
 
 // ── Bekleyen işlemleri yenilenen veriye yeniden uygulama (saf) ──────────
 
@@ -1377,7 +1641,10 @@ fn patch_tracks_unsure(op: &EditOp, rows: &[TrackRow], list: &mut Vec<TrackRow>)
 /// değiştiyse `true`.
 pub fn replay_tracks(id: &CollectionId, edits: &[PendingEdit], list: &mut Vec<TrackRow>) -> bool {
     let mut changed = false;
-    for e in edits.iter().filter(|e| touched_collection(&e.op).as_ref() == Some(id)) {
+    for e in edits
+        .iter()
+        .filter(|e| touched_collection(&e.op).as_ref() == Some(id))
+    {
         changed |= if e.unsure {
             patch_tracks_unsure(&e.op, &e.rows, list)
         } else {
@@ -1402,11 +1669,21 @@ pub fn replay_library(
     let mut changed = false;
     for e in edits {
         match (&e.op, liked.as_mut()) {
-            (EditOp::Save { uri } | EditOp::Unsave { uri }, Some(set)) if uri.starts_with("spotify:track:") => {
+            (EditOp::Save { uri } | EditOp::Unsave { uri }, Some(set))
+                if uri.starts_with("spotify:track:") =>
+            {
                 let save = matches!(e.op, EditOp::Save { .. });
-                let moved = if save { set.insert(uri.clone()) } else { set.remove(uri) };
+                let moved = if save {
+                    set.insert(uri.clone())
+                } else {
+                    set.remove(uri)
+                };
                 if moved {
-                    lib.liked_count = if save { lib.liked_count + 1 } else { lib.liked_count.saturating_sub(1) };
+                    lib.liked_count = if save {
+                        lib.liked_count + 1
+                    } else {
+                        lib.liked_count.saturating_sub(1)
+                    };
                     changed = true;
                 }
             }
@@ -1421,7 +1698,9 @@ pub fn replay_library(
 /// önceki oturumdan kalan işlem). Sayfa önbellekte yoksa `None`: kart
 /// sonraki tazelemede Spotify'dan gelir.
 fn follow_card(op: &EditOp) -> Option<LibraryItem> {
-    let EditOp::Follow { uri } = op else { return None };
+    let EditOp::Follow { uri } = op else {
+        return None;
+    };
     let (page, _) = cached_artist(uri)?;
     Some(super::library::artist_item(uri, &page.name, &page.image))
 }
@@ -1456,8 +1735,15 @@ fn stub_row(uri: &str) -> TrackRow {
 /// İşlemi önbellekteki liste (adresler) üzerinde uygular ve kaydeder;
 /// sürüm numarası korunur (yazma Spotify'a ulaşınca sürüm değişir, sonraki
 /// tazeleme gerçeği getirir). Yeni uzunluk, liste değiştiyse.
-fn persist_tracks(db: &Db, id: &CollectionId, op: &EditOp, rows: &[TrackRow]) -> Result<Option<usize>> {
-    let Some(uris) = db.collection_uris(id)? else { return Ok(None) };
+fn persist_tracks(
+    db: &Db,
+    id: &CollectionId,
+    op: &EditOp,
+    rows: &[TrackRow],
+) -> Result<Option<usize>> {
+    let Some(uris) = db.collection_uris(id)? else {
+        return Ok(None);
+    };
     // Sıra numaralı işlemler ekrandaki (yalnız şarkı) dizilimde anlamlı;
     // önbellekte şarkı olmayan öğe (bölüm, yerel dosya) varsa kaydırır:
     // yazmayalım, sonraki tazeleme getirir.
@@ -1465,7 +1751,10 @@ fn persist_tracks(db: &Db, id: &CollectionId, op: &EditOp, rows: &[TrackRow]) ->
         op,
         EditOp::RemoveFromPlaylist { .. }
             | EditOp::MovePlaylistItems { .. }
-            | EditOp::AddToPlaylist { position: AddPosition::At(_), .. }
+            | EditOp::AddToPlaylist {
+                position: AddPosition::At(_),
+                ..
+            }
     );
     if by_index && uris.iter().any(|u| !u.starts_with("spotify:track:")) {
         return Ok(None);
@@ -1515,7 +1804,13 @@ fn persist_op(
 }
 
 /// Spotify'da oluşan listeyi önbelleğe işler (adı ve ilk şarkılarıyla).
-fn persist_created(db: &Db, real: &CollectionId, name: &str, uris: &[String], rows: &[TrackRow]) -> Result<()> {
+fn persist_created(
+    db: &Db,
+    real: &CollectionId,
+    name: &str,
+    uris: &[String],
+    rows: &[TrackRow],
+) -> Result<()> {
     db.save_tracks(rows)?;
     db.save_collection(real, None, uris)?;
     if let Some(mut lib) = db.load_library()?
@@ -1557,11 +1852,23 @@ mod tests {
     #[test]
     fn like_and_unlike_patch_the_liked_list() {
         let mut list = vec![row(1), row(2)];
-        assert!(patch_tracks(&EditOp::Save { uri: row(3).uri }, &[row(3)], &mut list));
+        assert!(patch_tracks(
+            &EditOp::Save { uri: row(3).uri },
+            &[row(3)],
+            &mut list
+        ));
         assert_eq!(uris(&list), [3, 1, 2]);
         // Zaten varsa iki kez eklenmez.
-        assert!(!patch_tracks(&EditOp::Save { uri: row(3).uri }, &[row(3)], &mut list));
-        assert!(patch_tracks(&EditOp::Unsave { uri: row(1).uri }, &[], &mut list));
+        assert!(!patch_tracks(
+            &EditOp::Save { uri: row(3).uri },
+            &[row(3)],
+            &mut list
+        ));
+        assert!(patch_tracks(
+            &EditOp::Unsave { uri: row(1).uri },
+            &[],
+            &mut list
+        ));
         assert_eq!(uris(&list), [3, 2]);
     }
 
@@ -1570,17 +1877,31 @@ mod tests {
         let mut list = vec![row(1), row(2), row(1), row(3)];
         let p = "spotify:playlist:x".to_string();
         // Tek satır: 2. sıradaki kopya gider, ilki kalır.
-        let rm = EditOp::RemoveFromPlaylist { playlist: p.clone(), uris: vec![row(1).uri], indices: vec![2] };
+        let rm = EditOp::RemoveFromPlaylist {
+            playlist: p.clone(),
+            uris: vec![row(1).uri],
+            indices: vec![2],
+        };
         assert!(patch_tracks(&rm, &[], &mut list));
         assert_eq!(uris(&list), [1, 2, 3]);
         // Geri alma: aynı yere döner.
         let undo = rm.inverse().unwrap();
         assert!(patch_tracks(&undo, &[row(1)], &mut list));
         assert_eq!(uris(&list), [1, 2, 1, 3]);
-        let add = EditOp::AddToPlaylist { playlist: p.clone(), uris: vec![row(5).uri, row(6).uri], position: AddPosition::Last };
+        let add = EditOp::AddToPlaylist {
+            playlist: p.clone(),
+            uris: vec![row(5).uri, row(6).uri],
+            position: AddPosition::Last,
+        };
         assert!(patch_tracks(&add, &[row(5), row(6)], &mut list));
         assert_eq!(uris(&list), [1, 2, 1, 3, 5, 6]);
-        let mv = EditOp::MovePlaylistItems { playlist: p, from_index: 4, length: 2, to_index: 0, uris: vec![] };
+        let mv = EditOp::MovePlaylistItems {
+            playlist: p,
+            from_index: 4,
+            length: 2,
+            to_index: 0,
+            uris: vec![],
+        };
         assert!(patch_tracks(&mv, &[], &mut list));
         assert_eq!(uris(&list), [5, 6, 1, 2, 1, 3]);
         // Taşımanın tersi eski sıraya döndürür.
@@ -1601,20 +1922,45 @@ mod tests {
         assert!(patch_library(&create, None, &mut lib, &mut deleted));
         assert_eq!(lib.playlists[0].subtitle, "1 şarkı");
         let p = "local:playlist:1".to_string();
-        let add = EditOp::AddToPlaylist { playlist: p.clone(), uris: vec![row(2).uri], position: AddPosition::Last };
+        let add = EditOp::AddToPlaylist {
+            playlist: p.clone(),
+            uris: vec![row(2).uri],
+            position: AddPosition::Last,
+        };
         assert!(patch_library(&add, None, &mut lib, &mut deleted));
         assert_eq!(lib.playlists[0].subtitle, "2 şarkı");
-        let rename = EditOp::RenamePlaylist { playlist: p.clone(), name: "Sabah".into(), previous_name: Some("Gece".into()) };
+        let rename = EditOp::RenamePlaylist {
+            playlist: p.clone(),
+            name: "Sabah".into(),
+            previous_name: Some("Gece".into()),
+        };
         assert!(patch_library(&rename, None, &mut lib, &mut deleted));
-        assert!(patch_library(&rename.inverse().unwrap(), None, &mut lib, &mut deleted));
+        assert!(patch_library(
+            &rename.inverse().unwrap(),
+            None,
+            &mut lib,
+            &mut deleted
+        ));
         assert_eq!(lib.playlists[0].name, "Gece");
-        let delete = EditOp::DeletePlaylist { playlist: p.clone() };
+        let delete = EditOp::DeletePlaylist {
+            playlist: p.clone(),
+        };
         assert!(patch_library(&delete, None, &mut lib, &mut deleted));
         assert!(lib.playlists.is_empty());
-        assert!(patch_library(&delete.inverse().unwrap(), None, &mut lib, &mut deleted));
+        assert!(patch_library(
+            &delete.inverse().unwrap(),
+            None,
+            &mut lib,
+            &mut deleted
+        ));
         assert_eq!(lib.playlists[0].name, "Gece");
         // Beğenilen sayısı.
-        assert!(patch_library(&EditOp::Save { uri: row(9).uri }, None, &mut lib, &mut deleted));
+        assert!(patch_library(
+            &EditOp::Save { uri: row(9).uri },
+            None,
+            &mut lib,
+            &mut deleted
+        ));
         assert_eq!(lib.liked_count, 1);
     }
 
@@ -1622,7 +1968,9 @@ mod tests {
     fn test_runs_never_reach_spotify() {
         // Sınama penceresi açıkken yazmalar sahte arka uca gider.
         // (Ortam değişkeni bu süreçte yoksa `None`: gerçek açılış.)
-        if std::env::var_os("OPENIFY_TEST_DISPLAY").is_none() && std::env::var_os("OPENIFY_TEST_EDITS").is_none() {
+        if std::env::var_os("OPENIFY_TEST_DISPLAY").is_none()
+            && std::env::var_os("OPENIFY_TEST_EDITS").is_none()
+        {
             assert_eq!(test_edits(), None);
         }
     }
@@ -1630,11 +1978,21 @@ mod tests {
     // ── Bekleyen işlemleri yenilenen veriye yeniden uygulama (saf) ──────
 
     fn pend(op: EditOp, rows: Vec<TrackRow>) -> PendingEdit {
-        PendingEdit { op, rows, item: None, unsure: false }
+        PendingEdit {
+            op,
+            rows,
+            item: None,
+            unsure: false,
+        }
     }
 
     fn unsure(op: EditOp, rows: Vec<TrackRow>) -> PendingEdit {
-        PendingEdit { op, rows, item: None, unsure: true }
+        PendingEdit {
+            op,
+            rows,
+            item: None,
+            unsure: true,
+        }
     }
 
     fn pl(n: u32) -> String {
@@ -1654,22 +2012,40 @@ mod tests {
         // Başka listenin işlemi bu listeye dokunmaz.
         let mut other = vec![row(1), row(2)];
         let for_list = vec![pend(
-            EditOp::AddToPlaylist { playlist: pl(1), uris: vec![row(7).uri], position: AddPosition::Last },
+            EditOp::AddToPlaylist {
+                playlist: pl(1),
+                uris: vec![row(7).uri],
+                position: AddPosition::Last,
+            },
             vec![row(7)],
         )];
         assert!(!replay_tracks(&CollectionId::Liked, &for_list, &mut other));
         assert_eq!(uris(&other), [1, 2]);
-        assert!(replay_tracks(&CollectionId::Playlist(pl(1)), &for_list, &mut other));
+        assert!(replay_tracks(
+            &CollectionId::Playlist(pl(1)),
+            &for_list,
+            &mut other
+        ));
         assert_eq!(uris(&other), [1, 2, 7]);
         // Sıra önemli: önce ekle sonra taşı, taşıma eklenmişi görür.
         let mut list = vec![row(1), row(2)];
         let edits = vec![
             pend(
-                EditOp::AddToPlaylist { playlist: pl(1), uris: vec![row(3).uri], position: AddPosition::Last },
+                EditOp::AddToPlaylist {
+                    playlist: pl(1),
+                    uris: vec![row(3).uri],
+                    position: AddPosition::Last,
+                },
                 vec![row(3)],
             ),
             pend(
-                EditOp::MovePlaylistItems { playlist: pl(1), from_index: 2, length: 1, to_index: 0, uris: vec![row(3).uri] },
+                EditOp::MovePlaylistItems {
+                    playlist: pl(1),
+                    from_index: 2,
+                    length: 1,
+                    to_index: 0,
+                    uris: vec![row(3).uri],
+                },
                 vec![],
             ),
         ];
@@ -1694,31 +2070,65 @@ mod tests {
         let p = pl(1);
         let id = CollectionId::Playlist(p.clone());
         // Ekleme: Spotify verisi eklenenleri zaten sonda gösteriyor → tekrar eklenmez.
-        let add = EditOp::AddToPlaylist { playlist: p.clone(), uris: vec![row(5).uri, row(6).uri], position: AddPosition::Last };
+        let add = EditOp::AddToPlaylist {
+            playlist: p.clone(),
+            uris: vec![row(5).uri, row(6).uri],
+            position: AddPosition::Last,
+        };
         let mut list = vec![row(1), row(2), row(5), row(6)];
-        assert!(!replay_tracks(&id, &[unsure(add.clone(), vec![row(5), row(6)])], &mut list));
+        assert!(!replay_tracks(
+            &id,
+            &[unsure(add.clone(), vec![row(5), row(6)])],
+            &mut list
+        ));
         assert_eq!(uris(&list), [1, 2, 5, 6]);
         // Henüz yoksa eklenir.
         let mut list = vec![row(1), row(2)];
-        assert!(replay_tracks(&id, &[unsure(add.clone(), vec![row(5), row(6)])], &mut list));
+        assert!(replay_tracks(
+            &id,
+            &[unsure(add.clone(), vec![row(5), row(6)])],
+            &mut list
+        ));
         assert_eq!(uris(&list), [1, 2, 5, 6]);
         // Kesin (gönderilmemiş) ekleme aynı veride yine eklerdi: ayrım bu.
         let mut list = vec![row(1), row(2), row(5), row(6)];
-        assert!(replay_tracks(&id, &[pend(add, vec![row(5), row(6)])], &mut list));
+        assert!(replay_tracks(
+            &id,
+            &[pend(add, vec![row(5), row(6)])],
+            &mut list
+        ));
         assert_eq!(list.len(), 6);
         // Çıkarma: sırası bilinen satır artık orada değilse çıkarılmış sayılır,
         // başka kopya silinmez.
-        let rm = EditOp::RemoveFromPlaylist { playlist: p.clone(), uris: vec![row(1).uri], indices: vec![2] };
+        let rm = EditOp::RemoveFromPlaylist {
+            playlist: p.clone(),
+            uris: vec![row(1).uri],
+            indices: vec![2],
+        };
         let mut list = vec![row(1), row(2), row(3)];
-        assert!(!replay_tracks(&id, &[unsure(rm.clone(), vec![])], &mut list));
+        assert!(!replay_tracks(
+            &id,
+            &[unsure(rm.clone(), vec![])],
+            &mut list
+        ));
         assert_eq!(uris(&list), [1, 2, 3]);
         let mut list = vec![row(2), row(3), row(1)];
         assert!(replay_tracks(&id, &[unsure(rm, vec![])], &mut list));
         assert_eq!(uris(&list), [2, 3]);
         // Taşıma: bloğun hedefte durduğu veri zaten taşınmış.
-        let mv = EditOp::MovePlaylistItems { playlist: p, from_index: 3, length: 1, to_index: 0, uris: vec![row(4).uri] };
+        let mv = EditOp::MovePlaylistItems {
+            playlist: p,
+            from_index: 3,
+            length: 1,
+            to_index: 0,
+            uris: vec![row(4).uri],
+        };
         let mut list = vec![row(4), row(1), row(2), row(3)];
-        assert!(!replay_tracks(&id, &[unsure(mv.clone(), vec![])], &mut list));
+        assert!(!replay_tracks(
+            &id,
+            &[unsure(mv.clone(), vec![])],
+            &mut list
+        ));
         assert_eq!(uris(&list), [4, 1, 2, 3]);
         let mut list = vec![row(1), row(2), row(3), row(4)];
         assert!(replay_tracks(&id, &[unsure(mv, vec![])], &mut list));
@@ -1757,19 +2167,45 @@ mod tests {
         assert!(!patch_library(&follow, None, &mut lib, &mut deleted));
         assert!(lib.artists.is_empty());
         // Takip: en son takip edilen başta; ikinci kez eklenmez.
-        assert!(patch_library(&follow, Some(&art_card(1, "Tarkan")), &mut lib, &mut deleted));
-        assert!(patch_library(&EditOp::Follow { uri: art(2) }, Some(&art_card(2, "Sezen")), &mut lib, &mut deleted));
-        assert!(!patch_library(&follow, Some(&art_card(1, "Tarkan")), &mut lib, &mut deleted));
+        assert!(patch_library(
+            &follow,
+            Some(&art_card(1, "Tarkan")),
+            &mut lib,
+            &mut deleted
+        ));
+        assert!(patch_library(
+            &EditOp::Follow { uri: art(2) },
+            Some(&art_card(2, "Sezen")),
+            &mut lib,
+            &mut deleted
+        ));
+        assert!(!patch_library(
+            &follow,
+            Some(&art_card(1, "Tarkan")),
+            &mut lib,
+            &mut deleted
+        ));
         let names: Vec<&str> = lib.artists.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(names, ["Sezen", "Tarkan"]);
         // Takip, şarkı sayısını ya da listeleri değiştirmez.
-        assert_eq!((lib.liked_count, lib.playlists.len(), lib.albums.len()), (0, 1, 0));
+        assert_eq!(
+            (lib.liked_count, lib.playlists.len(), lib.albums.len()),
+            (0, 1, 0)
+        );
         // Takipten çık ve geri al (kart eski hâliyle başa döner).
         let unfollow = follow.inverse().unwrap();
         assert!(patch_library(&unfollow, None, &mut lib, &mut deleted));
         assert_eq!(lib.artists.len(), 1);
-        assert!(!patch_library(&unfollow, None, &mut lib, &mut deleted), "ikinci kez bir şey değişmez");
-        assert!(patch_library(&unfollow.inverse().unwrap(), Some(&art_card(1, "Tarkan")), &mut lib, &mut deleted));
+        assert!(
+            !patch_library(&unfollow, None, &mut lib, &mut deleted),
+            "ikinci kez bir şey değişmez"
+        );
+        assert!(patch_library(
+            &unfollow.inverse().unwrap(),
+            Some(&art_card(1, "Tarkan")),
+            &mut lib,
+            &mut deleted
+        ));
         assert_eq!(lib.artists[0].name, "Tarkan");
         // Takip bir şarkı listesine dokunmaz (arayüz liste yamasından geçirmez).
         assert_eq!(touched_collection(&follow), None);
@@ -1784,10 +2220,20 @@ mod tests {
         truth.artists = vec![art_card(1, "Tarkan"), art_card(2, "Sezen")];
         let mut deleted = HashMap::new();
         let edits = vec![
-            PendingEdit { op: EditOp::Follow { uri: art(3) }, rows: vec![], item: Some(art_card(3, "Ajda")), unsure: false },
+            PendingEdit {
+                op: EditOp::Follow { uri: art(3) },
+                rows: vec![],
+                item: Some(art_card(3, "Ajda")),
+                unsure: false,
+            },
             pend(EditOp::Unfollow { uri: art(2) }, vec![]),
             // Sonucu belirsiz takip de uygulanır (yazma idempotent: iki kez zarar vermez).
-            PendingEdit { op: EditOp::Follow { uri: art(1) }, rows: vec![], item: Some(art_card(1, "Tarkan")), unsure: true },
+            PendingEdit {
+                op: EditOp::Follow { uri: art(1) },
+                rows: vec![],
+                item: Some(art_card(1, "Tarkan")),
+                unsure: true,
+            },
         ];
         assert!(replay_library(&edits, &mut truth, &mut deleted, None));
         let names: Vec<&str> = truth.artists.iter().map(|a| a.name.as_str()).collect();
@@ -1802,13 +2248,20 @@ mod tests {
         persist_op(&db, &follow, &[], Some(&art_card(7, "Ajda")), &mut deleted).unwrap();
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(lib.artists.len(), 1);
-        assert_eq!((lib.artists[0].name.as_str(), lib.artists[0].image.as_str()), ("Ajda", "img"));
+        assert_eq!(
+            (lib.artists[0].name.as_str(), lib.artists[0].image.as_str()),
+            ("Ajda", "img")
+        );
         // Kütüphanenin geri kalanı (beğenilen sayısı, liste) olduğu gibi.
         assert_eq!((lib.liked_count, lib.playlists.len()), (5, 1));
         // Beğenilen şarkı listesi etkilenmez.
         assert_eq!(db_uris(&db, &CollectionId::Liked), [1, 2, 3, 4, 5]);
         // Başka bir yazma (liste adı) takip edilenleri silmez.
-        let rename = EditOp::RenamePlaylist { playlist: pl(1), name: "Sabah".into(), previous_name: None };
+        let rename = EditOp::RenamePlaylist {
+            playlist: pl(1),
+            name: "Sabah".into(),
+            previous_name: None,
+        };
         persist_op(&db, &rename, &[], None, &mut deleted).unwrap();
         assert_eq!(db.load_library().unwrap().unwrap().artists.len(), 1);
         persist_op(&db, &follow.inverse().unwrap(), &[], None, &mut deleted).unwrap();
@@ -1838,11 +2291,30 @@ mod tests {
     fn replay_library_follows_list_ops_and_skips_counts_for_unsure_adds() {
         let mut lib = lib_with(0);
         let mut deleted = HashMap::new();
-        let add = EditOp::AddToPlaylist { playlist: pl(1), uris: vec![row(5).uri], position: AddPosition::Last };
-        let rename = EditOp::RenamePlaylist { playlist: pl(1), name: "Sabah".into(), previous_name: Some("Gece".into()) };
+        let add = EditOp::AddToPlaylist {
+            playlist: pl(1),
+            uris: vec![row(5).uri],
+            position: AddPosition::Last,
+        };
+        let rename = EditOp::RenamePlaylist {
+            playlist: pl(1),
+            name: "Sabah".into(),
+            previous_name: Some("Gece".into()),
+        };
         // Kesin ekleme sayıyı artırır, belirsiz olan artırmaz (uygulanıp uygulanmadığı bilinmiyor).
-        replay_library(&[pend(add.clone(), vec![row(5)]), pend(rename, vec![])], &mut lib, &mut deleted, None);
-        assert_eq!((lib.playlists[0].name.as_str(), lib.playlists[0].subtitle.as_str()), ("Sabah", "4 şarkı"));
+        replay_library(
+            &[pend(add.clone(), vec![row(5)]), pend(rename, vec![])],
+            &mut lib,
+            &mut deleted,
+            None,
+        );
+        assert_eq!(
+            (
+                lib.playlists[0].name.as_str(),
+                lib.playlists[0].subtitle.as_str()
+            ),
+            ("Sabah", "4 şarkı")
+        );
         let mut lib = lib_with(0);
         replay_library(&[unsure(add, vec![row(5)])], &mut lib, &mut deleted, None);
         assert_eq!(lib.playlists[0].subtitle, "3 şarkı");
@@ -1854,25 +2326,43 @@ mod tests {
         let mut lib = lib_with(0);
         let mut deleted = HashMap::new();
         replay_library(
-            &[pend(del.clone(), vec![]), pend(del.inverse().unwrap(), vec![])],
+            &[
+                pend(del.clone(), vec![]),
+                pend(del.inverse().unwrap(), vec![]),
+            ],
             &mut lib,
             &mut deleted,
             None,
         );
         assert_eq!(lib.playlists.len(), 1);
         // Albüm kaydı: kart bekleyen işlemle gelir.
-        let card = LibraryItem { id: CollectionId::Album("spotify:album:a".into()), name: "A".into(), subtitle: "B".into(), image: String::new() };
+        let card = LibraryItem {
+            id: CollectionId::Album("spotify:album:a".into()),
+            name: "A".into(),
+            subtitle: "B".into(),
+            image: String::new(),
+        };
         let mut lib = lib_with(0);
         let save = PendingEdit {
-            op: EditOp::Save { uri: "spotify:album:a".into() },
+            op: EditOp::Save {
+                uri: "spotify:album:a".into(),
+            },
             rows: vec![],
             item: Some(card),
             unsure: false,
         };
         assert!(replay_library(&[save], &mut lib, &mut deleted, None));
         assert_eq!(lib.albums.len(), 1);
-        assert!(affects_library(&EditOp::Unsave { uri: "spotify:album:a".into() }));
-        assert!(!affects_library(&EditOp::MovePlaylistItems { playlist: pl(1), from_index: 0, length: 1, to_index: 1, uris: vec![] }));
+        assert!(affects_library(&EditOp::Unsave {
+            uri: "spotify:album:a".into()
+        }));
+        assert!(!affects_library(&EditOp::MovePlaylistItems {
+            playlist: pl(1),
+            from_index: 0,
+            length: 1,
+            to_index: 1,
+            uris: vec![]
+        }));
     }
 
     // ── Önbelleğe işleme (Spotify'daki son bilinen hâl) ─────────────────
@@ -1882,7 +2372,8 @@ mod tests {
         let rows: Vec<TrackRow> = (1..=5).map(row).collect();
         db.save_tracks(&rows).unwrap();
         let liked: Vec<String> = rows.iter().map(|r| r.uri.clone()).collect();
-        db.save_collection(&CollectionId::Liked, None, &liked).unwrap();
+        db.save_collection(&CollectionId::Liked, None, &liked)
+            .unwrap();
         db.save_collection(
             &CollectionId::Playlist(pl(1)),
             Some(b"rev1"),
@@ -1909,34 +2400,79 @@ mod tests {
         let liked = CollectionId::Liked;
         let list = CollectionId::Playlist(pl(1));
         // Beğenmeme: liste ve beğenilen sayısı (listenin gerçek uzunluğu).
-        persist_op(&db, &EditOp::Unsave { uri: row(2).uri }, &[], None, &mut deleted).unwrap();
+        persist_op(
+            &db,
+            &EditOp::Unsave { uri: row(2).uri },
+            &[],
+            None,
+            &mut deleted,
+        )
+        .unwrap();
         assert_eq!(db_uris(&db, &liked), [1, 3, 4, 5]);
         assert_eq!(db.load_library().unwrap().unwrap().liked_count, 4);
         // Zaten beğenili şarkıyı beğenmek: liste de sayı da değişmez.
-        persist_op(&db, &EditOp::Save { uri: row(1).uri }, &[row(1)], None, &mut deleted).unwrap();
+        persist_op(
+            &db,
+            &EditOp::Save { uri: row(1).uri },
+            &[row(1)],
+            None,
+            &mut deleted,
+        )
+        .unwrap();
         assert_eq!(db_uris(&db, &liked), [1, 3, 4, 5]);
         assert_eq!(db.load_library().unwrap().unwrap().liked_count, 4);
         // Yeni beğeni başa eklenir, şarkı bilgisi de kaydedilir.
-        persist_op(&db, &EditOp::Save { uri: row(9).uri }, &[row(9)], None, &mut deleted).unwrap();
+        persist_op(
+            &db,
+            &EditOp::Save { uri: row(9).uri },
+            &[row(9)],
+            None,
+            &mut deleted,
+        )
+        .unwrap();
         assert_eq!(db_uris(&db, &liked), [9, 1, 3, 4, 5]);
         assert!(db.tracks(&[row(9).uri]).unwrap().contains_key(&row(9).uri));
         assert_eq!(db.load_library().unwrap().unwrap().liked_count, 5);
         // Liste işlemleri: sürüm numarası korunur (sonraki tazeleme gerçeği getirir).
-        let add = EditOp::AddToPlaylist { playlist: pl(1), uris: vec![row(5).uri], position: AddPosition::At(1) };
+        let add = EditOp::AddToPlaylist {
+            playlist: pl(1),
+            uris: vec![row(5).uri],
+            position: AddPosition::At(1),
+        };
         persist_op(&db, &add, &[row(5)], None, &mut deleted).unwrap();
         assert_eq!(db_uris(&db, &list), [1, 5, 2, 3]);
         assert_eq!(db.revision(&list).unwrap().as_deref(), Some(&b"rev1"[..]));
-        assert_eq!(db.load_library().unwrap().unwrap().playlists[0].subtitle, "4 şarkı");
-        let mv = EditOp::MovePlaylistItems { playlist: pl(1), from_index: 1, length: 1, to_index: 3, uris: vec![row(5).uri] };
+        assert_eq!(
+            db.load_library().unwrap().unwrap().playlists[0].subtitle,
+            "4 şarkı"
+        );
+        let mv = EditOp::MovePlaylistItems {
+            playlist: pl(1),
+            from_index: 1,
+            length: 1,
+            to_index: 3,
+            uris: vec![row(5).uri],
+        };
         persist_op(&db, &mv, &[], None, &mut deleted).unwrap();
         assert_eq!(db_uris(&db, &list), [1, 2, 3, 5]);
-        let rm = EditOp::RemoveFromPlaylist { playlist: pl(1), uris: vec![row(2).uri], indices: vec![1] };
+        let rm = EditOp::RemoveFromPlaylist {
+            playlist: pl(1),
+            uris: vec![row(2).uri],
+            indices: vec![1],
+        };
         persist_op(&db, &rm, &[], None, &mut deleted).unwrap();
         assert_eq!(db_uris(&db, &list), [1, 3, 5]);
         // Ad, silme, geri getirme.
-        let rename = EditOp::RenamePlaylist { playlist: pl(1), name: "Sabah".into(), previous_name: None };
+        let rename = EditOp::RenamePlaylist {
+            playlist: pl(1),
+            name: "Sabah".into(),
+            previous_name: None,
+        };
         persist_op(&db, &rename, &[], None, &mut deleted).unwrap();
-        assert_eq!(db.load_library().unwrap().unwrap().playlists[0].name, "Sabah");
+        assert_eq!(
+            db.load_library().unwrap().unwrap().playlists[0].name,
+            "Sabah"
+        );
         let del = EditOp::DeletePlaylist { playlist: pl(1) };
         persist_op(&db, &del, &[], None, &mut deleted).unwrap();
         assert!(db.load_library().unwrap().unwrap().playlists.is_empty());
@@ -1949,31 +2485,75 @@ mod tests {
         let db = seeded_db();
         let mut deleted = HashMap::new();
         // Bilgisi önbellekte olmayan şarkı da kaybolmaz (yalnız adresler uygulanır).
-        db.save_collection(&CollectionId::Liked, None, &[row(1).uri, row(70).uri, row(2).uri]).unwrap();
-        persist_op(&db, &EditOp::Unsave { uri: row(2).uri }, &[], None, &mut deleted).unwrap();
+        db.save_collection(
+            &CollectionId::Liked,
+            None,
+            &[row(1).uri, row(70).uri, row(2).uri],
+        )
+        .unwrap();
+        persist_op(
+            &db,
+            &EditOp::Unsave { uri: row(2).uri },
+            &[],
+            None,
+            &mut deleted,
+        )
+        .unwrap();
         assert_eq!(db_uris(&db, &CollectionId::Liked), [1, 70]);
         // Listede şarkı olmayan öğe (bölüm / yerel dosya) varsa sıra numaralı
         // işlem yazılmaz (indeksler kayar): sonraki tazeleme getirir.
         let list = CollectionId::Playlist(pl(1));
-        db.save_collection(&list, Some(b"r"), &["spotify:episode:e".into(), row(1).uri, row(2).uri]).unwrap();
-        let mv = EditOp::MovePlaylistItems { playlist: pl(1), from_index: 1, length: 1, to_index: 2, uris: vec![] };
+        db.save_collection(
+            &list,
+            Some(b"r"),
+            &["spotify:episode:e".into(), row(1).uri, row(2).uri],
+        )
+        .unwrap();
+        let mv = EditOp::MovePlaylistItems {
+            playlist: pl(1),
+            from_index: 1,
+            length: 1,
+            to_index: 2,
+            uris: vec![],
+        };
         persist_op(&db, &mv, &[], None, &mut deleted).unwrap();
         assert_eq!(db.collection_uris(&list).unwrap().unwrap().len(), 3);
         assert_eq!(db.collection_uris(&list).unwrap().unwrap()[1], row(1).uri);
         // Hiç kaydedilmemiş liste: dokunulmaz, hata değil.
-        let add = EditOp::AddToPlaylist { playlist: pl(9), uris: vec![row(1).uri], position: AddPosition::Last };
+        let add = EditOp::AddToPlaylist {
+            playlist: pl(9),
+            uris: vec![row(1).uri],
+            position: AddPosition::Last,
+        };
         persist_op(&db, &add, &[row(1)], None, &mut deleted).unwrap();
-        assert!(db.collection_uris(&CollectionId::Playlist(pl(9))).unwrap().is_none());
+        assert!(
+            db.collection_uris(&CollectionId::Playlist(pl(9)))
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
     fn created_list_lands_in_the_cache_with_its_real_address() {
         let db = seeded_db();
         let real = CollectionId::Playlist(pl(7));
-        persist_created(&db, &real, "Yeni", &[row(1).uri, row(2).uri], &[row(1), row(2)]).unwrap();
+        persist_created(
+            &db,
+            &real,
+            "Yeni",
+            &[row(1).uri, row(2).uri],
+            &[row(1), row(2)],
+        )
+        .unwrap();
         assert_eq!(db_uris(&db, &real), [1, 2]);
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.playlists[0].id.clone(), lib.playlists[0].subtitle.as_str()), (real.clone(), "2 şarkı"));
+        assert_eq!(
+            (
+                lib.playlists[0].id.clone(),
+                lib.playlists[0].subtitle.as_str()
+            ),
+            (real.clone(), "2 şarkı")
+        );
         // İki kez yazılsa kütüphanede tek kez durur.
         persist_created(&db, &real, "Yeni", &[row(1).uri, row(2).uri], &[]).unwrap();
         assert_eq!(db.load_library().unwrap().unwrap().playlists.len(), 2);
@@ -1995,7 +2575,11 @@ mod tests {
     /// Bağlantısız, bellekte kuyruklu, sahte arka uçlu motor (ağ yok, Spotify'a
     /// ve diske hiçbir şey gitmez); kuyruğu testler elle sürer.
     fn rig(fake: Option<Fake>) -> Rig {
-        let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(1).enable_all().build().unwrap();
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
         let (events_tx, events) = async_channel::unbounded();
         let (playback_tx, _playback) = async_channel::unbounded();
         let (internal_tx, internal) = mpsc::unbounded_channel();
@@ -2014,7 +2598,13 @@ mod tests {
         engine.wire.processing = true;
         engine.show_cached_library();
         engine.open_collection(CollectionId::Liked);
-        Rig { engine, events, internal, db, _rt: rt }
+        Rig {
+            engine,
+            events,
+            internal,
+            db,
+            _rt: rt,
+        }
     }
 
     fn drain(rig: &Rig) -> Vec<Event> {
@@ -2037,7 +2627,9 @@ mod tests {
 
     fn status(events: &[Event]) -> Option<(usize, Vec<FailedEdit>)> {
         events.iter().rev().find_map(|e| match e {
-            Event::Library(LibraryEvent::EditStatus { pending, failed }) => Some((*pending, failed.clone())),
+            Event::Library(LibraryEvent::EditStatus { pending, failed }) => {
+                Some((*pending, failed.clone()))
+            }
             _ => None,
         })
     }
@@ -2047,7 +2639,11 @@ mod tests {
     }
 
     fn send_edit(rig: &mut Rig, op: EditOp, rows: Vec<TrackRow>) {
-        rig.engine.on_library_command(LibraryCommand::Edit { op, rows, item: None });
+        rig.engine.on_library_command(LibraryCommand::Edit {
+            op,
+            rows,
+            item: None,
+        });
     }
 
     /// Kuyruğu sahte arka uçla işleyip sonucu motora iletir.
@@ -2068,7 +2664,8 @@ mod tests {
                 }
             }
         };
-        rig.engine.on_internal(Internal::Wire(WireInternal::Processed(report)));
+        rig.engine
+            .on_internal(Internal::Wire(WireInternal::Processed(report)));
         // `on_internal` bekleyen işleme "tekrar" demiş olabilir: kuyruk yine test sürsün.
         rig.engine.wire.processing = true;
     }
@@ -2087,7 +2684,11 @@ mod tests {
         drain(&rig);
         assert!(rig.engine.refresh_is_stale());
         // Tazelemenin eski verisi (şarkı hâlâ beğenili, sayı 5) ekrana verilmez.
-        let refresh = Refresh { library: lib_with(5), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(5),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
         let ev = drain(&rig);
         assert!(lib_event(&ev).is_none(), "{ev:?}");
@@ -2097,7 +2698,11 @@ mod tests {
         rig.engine.mark_refresh_started();
         assert!(!rig.engine.refresh_is_stale());
         rig.engine.library = Some(lib_with(9));
-        let refresh = Refresh { library: lib_with(4), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(4),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
         assert_eq!(lib_event(&drain(&rig)).unwrap().liked_count, 4);
     }
@@ -2109,21 +2714,37 @@ mod tests {
         send_edit(&mut rig, EditOp::Unsave { uri: row(2).uri }, vec![row(2)]);
         assert_eq!(status(&drain(&rig)).map(|s| s.0), Some(1));
         // Spotify'dan taze (henüz yazılmamış) veri: 5 şarkı, sayı 5.
-        let refresh = Refresh { library: lib_with(5), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(5),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
         let ev = drain(&rig);
         // Eski hâl (5) hiç gösterilmez; ekranla aynı (4) olduğundan olay bile gitmez.
         assert!(lib_event(&ev).is_none_or(|l| l.liked_count == 4), "{ev:?}");
         assert_eq!(rig.engine.library.as_ref().unwrap().liked_count, 4);
         // Liste yenilenince de satır geri gelmez; sıra korunur.
-        rig.engine.on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
+        rig.engine
+            .on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
         let ev = drain(&rig);
-        assert_eq!(loaded(&ev, &CollectionId::Liked), Some(vec![1, 3, 4, 5]), "{ev:?}");
-        assert_eq!(uris(&rig.engine.collections[&CollectionId::Liked]), [1, 3, 4, 5]);
+        assert_eq!(
+            loaded(&ev, &CollectionId::Liked),
+            Some(vec![1, 3, 4, 5]),
+            "{ev:?}"
+        );
+        assert_eq!(
+            uris(&rig.engine.collections[&CollectionId::Liked]),
+            [1, 3, 4, 5]
+        );
         // Ekrandaki kopya eskiyse (arayüzün göreceği durum) yenileme onu düzeltir:
         // sayı 5'e değil 4'e gider.
         rig.engine.library = Some(lib_with(5));
-        let refresh = Refresh { library: lib_with(5), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(5),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
         assert_eq!(lib_event(&drain(&rig)).unwrap().liked_count, 4);
     }
@@ -2140,15 +2761,23 @@ mod tests {
         assert_eq!(failed[0].kind, FailKind::Forbidden);
         assert_eq!(failed[0].op, EditOp::Unsave { uri: row(2).uri });
         // Yazılamayan işlem iyimser hâlde kalır; yenileme onu geri getirmez.
-        rig.engine.on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
-        assert_eq!(loaded(&drain(&rig), &CollectionId::Liked), Some(vec![1, 3, 4, 5]));
+        rig.engine
+            .on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
+        assert_eq!(
+            loaded(&drain(&rig), &CollectionId::Liked),
+            Some(vec![1, 3, 4, 5])
+        );
         // "Yeniden dene": yine bekliyor.
         let id = failed[0].id;
         rig.engine.on_library_command(LibraryCommand::RetryEdit(id));
         let (pending, failed) = status(&drain(&rig)).unwrap();
         assert_eq!((pending, failed.len()), (1, 0));
-        rig.engine.on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
-        assert_eq!(loaded(&drain(&rig), &CollectionId::Liked), Some(vec![1, 3, 4, 5]));
+        rig.engine
+            .on_internal(Internal::Tracks(CollectionId::Liked, Ok(truth_liked())));
+        assert_eq!(
+            loaded(&drain(&rig), &CollectionId::Liked),
+            Some(vec![1, 3, 4, 5])
+        );
     }
 
     #[test]
@@ -2156,18 +2785,29 @@ mod tests {
         let mut rig = rig(Some(Fake::Fail(FailKind::Forbidden)));
         drain(&rig);
         send_edit(&mut rig, EditOp::Unsave { uri: row(2).uri }, vec![row(2)]);
-        assert_eq!(uris(&rig.engine.collections[&CollectionId::Liked]), [1, 3, 4, 5]);
+        assert_eq!(
+            uris(&rig.engine.collections[&CollectionId::Liked]),
+            [1, 3, 4, 5]
+        );
         assert_eq!(rig.engine.library.as_ref().unwrap().liked_count, 4);
         run_queue(&mut rig, Fake::Fail(FailKind::Forbidden));
         let id = status(&drain(&rig)).unwrap().1[0].id;
         // Bırak: satır ORİJİNAL yerinde (2. sıra) geri gelir, sayı 5, kuyruk boş.
-        rig.engine.on_library_command(LibraryCommand::DismissEdit(id));
+        rig.engine
+            .on_library_command(LibraryCommand::DismissEdit(id));
         let ev = drain(&rig);
-        assert_eq!(loaded(&ev, &CollectionId::Liked), Some(vec![1, 2, 3, 4, 5]), "{ev:?}");
+        assert_eq!(
+            loaded(&ev, &CollectionId::Liked),
+            Some(vec![1, 2, 3, 4, 5]),
+            "{ev:?}"
+        );
         assert_eq!(lib_event(&ev).unwrap().liked_count, 5);
         let (pending, failed) = status(&ev).unwrap();
         assert_eq!((pending, failed.len()), (0, 0));
-        assert_eq!(uris(&rig.engine.collections[&CollectionId::Liked]), [1, 2, 3, 4, 5]);
+        assert_eq!(
+            uris(&rig.engine.collections[&CollectionId::Liked]),
+            [1, 2, 3, 4, 5]
+        );
         // Sınamada önbellek (Spotify'daki hâl) hiç değişmedi.
         assert_eq!(db_uris(&rig.db, &CollectionId::Liked), [1, 2, 3, 4, 5]);
     }
@@ -2182,10 +2822,15 @@ mod tests {
         // Başka bir beğenmeme bekliyor (işlem gelince arka planda gitmeyecek).
         send_edit(&mut rig, EditOp::Unsave { uri: row(4).uri }, vec![row(4)]);
         drain(&rig);
-        rig.engine.on_library_command(LibraryCommand::DismissEdit(id));
+        rig.engine
+            .on_library_command(LibraryCommand::DismissEdit(id));
         let ev = drain(&rig);
         // 2 geri geldi, 4 hâlâ yok (bekleyen işlem yeniden uygulandı).
-        assert_eq!(loaded(&ev, &CollectionId::Liked), Some(vec![1, 2, 3, 5]), "{ev:?}");
+        assert_eq!(
+            loaded(&ev, &CollectionId::Liked),
+            Some(vec![1, 2, 3, 5]),
+            "{ev:?}"
+        );
         assert_eq!(lib_event(&ev).unwrap().liked_count, 4);
     }
 
@@ -2195,8 +2840,16 @@ mod tests {
         let mut rig = rig(Some(Fake::Fail(FailKind::Forbidden)));
         rig.engine.open_collection(list.clone());
         drain(&rig);
-        let add = EditOp::AddToPlaylist { playlist: pl(1), uris: vec![row(5).uri], position: AddPosition::Last };
-        let rename = EditOp::RenamePlaylist { playlist: pl(1), name: "Sabah".into(), previous_name: Some("Gece".into()) };
+        let add = EditOp::AddToPlaylist {
+            playlist: pl(1),
+            uris: vec![row(5).uri],
+            position: AddPosition::Last,
+        };
+        let rename = EditOp::RenamePlaylist {
+            playlist: pl(1),
+            name: "Sabah".into(),
+            previous_name: Some("Gece".into()),
+        };
         send_edit(&mut rig, add, vec![row(5)]);
         send_edit(&mut rig, rename, vec![]);
         assert_eq!(uris(&rig.engine.collections[&list]), [1, 2, 3, 5]);
@@ -2204,12 +2857,19 @@ mod tests {
         let failed = status(&drain(&rig)).unwrap().1;
         assert_eq!(failed.len(), 2);
         for f in &failed {
-            rig.engine.on_library_command(LibraryCommand::DismissEdit(f.id));
+            rig.engine
+                .on_library_command(LibraryCommand::DismissEdit(f.id));
         }
         let ev = drain(&rig);
         assert_eq!(loaded(&ev, &list), Some(vec![1, 2, 3]), "{ev:?}");
         let lib = lib_event(&ev).unwrap();
-        assert_eq!((lib.playlists[0].name.as_str(), lib.playlists[0].subtitle.as_str()), ("Gece", "3 şarkı"));
+        assert_eq!(
+            (
+                lib.playlists[0].name.as_str(),
+                lib.playlists[0].subtitle.as_str()
+            ),
+            ("Gece", "3 şarkı")
+        );
     }
 
     #[test]
@@ -2217,24 +2877,46 @@ mod tests {
         let temp = edits::new_temp_id();
         let mut rig = rig(Some(Fake::Fail(FailKind::Forbidden)));
         drain(&rig);
-        let create = EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![row(1).uri], created: None };
+        let create = EditOp::CreatePlaylist {
+            temp_id: temp.clone(),
+            name: "Yeni".into(),
+            uris: vec![row(1).uri],
+            created: None,
+        };
         send_edit(&mut rig, create, vec![row(1)]);
-        let add = EditOp::AddToPlaylist { playlist: temp.clone(), uris: vec![row(2).uri], position: AddPosition::Last };
+        let add = EditOp::AddToPlaylist {
+            playlist: temp.clone(),
+            uris: vec![row(2).uri],
+            position: AddPosition::Last,
+        };
         send_edit(&mut rig, add, vec![row(2)]);
-        assert_eq!(rig.engine.library.as_ref().unwrap().playlists[0].name, "Yeni");
+        assert_eq!(
+            rig.engine.library.as_ref().unwrap().playlists[0].name,
+            "Yeni"
+        );
         run_queue(&mut rig, Fake::Fail(FailKind::Forbidden));
         let failed = status(&drain(&rig)).unwrap().1;
         assert_eq!(failed.len(), 2);
         assert_eq!(failed[1].kind, FailKind::ParentFailed);
         // Oluşturmayı bırakmak ona bağlı yazılamayanı da bırakır.
         let create_id = failed[0].id;
-        rig.engine.on_library_command(LibraryCommand::DismissEdit(create_id));
+        rig.engine
+            .on_library_command(LibraryCommand::DismissEdit(create_id));
         let ev = drain(&rig);
         let (pending, failed) = status(&ev).unwrap();
         assert_eq!((pending, failed.len()), (0, 0));
         let lib = lib_event(&ev).unwrap();
-        assert!(lib.playlists.iter().all(|p| p.id != CollectionId::Playlist(temp.clone())), "{lib:?}");
-        assert!(!rig.engine.collections.contains_key(&CollectionId::Playlist(temp)));
+        assert!(
+            lib.playlists
+                .iter()
+                .all(|p| p.id != CollectionId::Playlist(temp.clone())),
+            "{lib:?}"
+        );
+        assert!(
+            !rig.engine
+                .collections
+                .contains_key(&CollectionId::Playlist(temp))
+        );
     }
 
     #[test]
@@ -2249,12 +2931,18 @@ mod tests {
         assert_eq!(db_uris(&rig.db, &CollectionId::Liked), [1, 2, 3, 4, 5]);
         assert_eq!(rig.db.load_library().unwrap().unwrap().liked_count, 5);
         // Ekranda ise işlem uygulanmış kalır.
-        assert_eq!(uris(&rig.engine.collections[&CollectionId::Liked]), [1, 3, 4, 5]);
+        assert_eq!(
+            uris(&rig.engine.collections[&CollectionId::Liked]),
+            [1, 3, 4, 5]
+        );
         // Bağlantı yokken sahte olmayan kuyruk hiçbir şey göndermez (işleme başlamaz).
         let mut real = rig_without_fake();
         real.engine.wire.processing = false;
         real.engine.process_edits();
-        assert!(!real.engine.wire.processing, "bağlantısız gerçek kuyruk işlenmemeli");
+        assert!(
+            !real.engine.wire.processing,
+            "bağlantısız gerçek kuyruk işlenmemeli"
+        );
     }
 
     fn rig_without_fake() -> Rig {
@@ -2273,7 +2961,8 @@ mod tests {
             ..ProcessReport::default()
         };
         rig.engine.wire.processing = true;
-        rig.engine.on_internal(Internal::Wire(WireInternal::Processed(Ok(report))));
+        rig.engine
+            .on_internal(Internal::Wire(WireInternal::Processed(Ok(report))));
         assert_eq!(db_uris(&rig.db, &CollectionId::Liked), [1, 3, 4, 5]);
         assert_eq!(rig.db.load_library().unwrap().unwrap().liked_count, 4);
     }
@@ -2285,7 +2974,12 @@ mod tests {
         let temp = edits::new_temp_id();
         let queue = rig.engine.wire.queue.clone().unwrap();
         queue
-            .enqueue(&EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yarım".into(), uris: vec![row(3).uri, row(4).uri], created: None })
+            .enqueue(&EditOp::CreatePlaylist {
+                temp_id: temp.clone(),
+                name: "Yarım".into(),
+                uris: vec![row(3).uri, row(4).uri],
+                created: None,
+            })
             .unwrap();
         // Kütüphanede geçici adresiyle görünür, açılınca şarkıları gelir.
         rig.engine.show_cached_library();
@@ -2309,7 +3003,10 @@ mod tests {
         queue.enqueue(&EditOp::Unsave { uri: row(2).uri }).unwrap();
         rig.engine.collections.clear();
         rig.engine.open_collection(CollectionId::Liked);
-        assert_eq!(loaded(&drain(&rig), &CollectionId::Liked), Some(vec![8, 3, 4, 5]));
+        assert_eq!(
+            loaded(&drain(&rig), &CollectionId::Liked),
+            Some(vec![8, 3, 4, 5])
+        );
         rig.engine.show_cached_library();
         // Beğenilen sayısı: 5 + 1 - 2.
         assert_eq!(lib_event(&drain(&rig)).unwrap().liked_count, 4);
@@ -2318,8 +3015,16 @@ mod tests {
     // ── Sanatçı takibi, motor düzeyinde ─────────────────────────────────
 
     fn send_follow(rig: &mut Rig, n: u32, name: &str, on: bool) {
-        let op = if on { EditOp::Follow { uri: art(n) } } else { EditOp::Unfollow { uri: art(n) } };
-        rig.engine.on_library_command(LibraryCommand::Edit { op, rows: vec![], item: Some(art_card(n, name)) });
+        let op = if on {
+            EditOp::Follow { uri: art(n) }
+        } else {
+            EditOp::Unfollow { uri: art(n) }
+        };
+        rig.engine.on_library_command(LibraryCommand::Edit {
+            op,
+            rows: vec![],
+            item: Some(art_card(n, name)),
+        });
     }
 
     fn artist_names(lib: &Library) -> Vec<&str> {
@@ -2333,16 +3038,36 @@ mod tests {
         send_follow(&mut rig, 1, "Tarkan", true);
         // Anında kütüphanede; yazma henüz Spotify'a gitmedi (bekliyor).
         let ev = drain(&rig);
-        assert_eq!(artist_names(rig.engine.library.as_ref().expect("kütüphane")), ["Tarkan"]);
+        assert_eq!(
+            artist_names(rig.engine.library.as_ref().expect("kütüphane")),
+            ["Tarkan"]
+        );
         assert_eq!(status(&ev).map(|s| s.0), Some(1));
         // Spotify'dan gelen taze veri takibi henüz bilmiyor: bekleyen işlem üstüne
         // uygulanır, sanatçı kaybolmaz.
-        let refresh = Refresh { library: lib_with(5), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(5),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
-        assert_eq!(artist_names(rig.engine.library.as_ref().unwrap()), ["Tarkan"]);
+        assert_eq!(
+            artist_names(rig.engine.library.as_ref().unwrap()),
+            ["Tarkan"]
+        );
         // Aynı karta ikinci "takip et" kuyruğa ikinci kez girmez.
         send_follow(&mut rig, 1, "Tarkan", true);
-        assert_eq!(rig.engine.wire.queue.as_ref().unwrap().pending().unwrap().len(), 1);
+        assert_eq!(
+            rig.engine
+                .wire
+                .queue
+                .as_ref()
+                .unwrap()
+                .pending()
+                .unwrap()
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -2355,7 +3080,16 @@ mod tests {
         // Hiçbir şey yazılmayacak, ekran eski hâlde.
         assert!(rig.engine.library.as_ref().unwrap().artists.is_empty());
         assert_eq!(status(&ev).map(|s| s.0), Some(0));
-        assert!(rig.engine.wire.queue.as_ref().unwrap().pending().unwrap().is_empty());
+        assert!(
+            rig.engine
+                .wire
+                .queue
+                .as_ref()
+                .unwrap()
+                .pending()
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -2364,14 +3098,21 @@ mod tests {
         let mut rig = rig(None);
         drain(&rig);
         let follow = EditOp::Follow { uri: art(2) };
-        rig.engine.wire.rows.insert(7, EditRows { rows: vec![], item: Some(art_card(2, "Sezen")) });
+        rig.engine.wire.rows.insert(
+            7,
+            EditRows {
+                rows: vec![],
+                item: Some(art_card(2, "Sezen")),
+            },
+        );
         let report = ProcessReport {
             done: vec![(7, EditOutcome::Done)],
             done_ops: vec![follow],
             ..ProcessReport::default()
         };
         rig.engine.wire.processing = true;
-        rig.engine.on_internal(Internal::Wire(WireInternal::Processed(Ok(report))));
+        rig.engine
+            .on_internal(Internal::Wire(WireInternal::Processed(Ok(report))));
         let cached = rig.db.load_library().unwrap().unwrap();
         assert_eq!(artist_names(&cached), ["Sezen"]);
         // Önbelleğin geri kalanı değişmedi.
@@ -2393,11 +3134,16 @@ mod tests {
         assert_eq!(failed[0].kind, FailKind::Forbidden);
         assert_eq!(failed[0].op, EditOp::Follow { uri: art(3) });
         // Reddedilen takip iyimser hâlde kalır, yenileme onu silmez.
-        let refresh = Refresh { library: lib_with(5), changed: vec![], liked_changed: false };
+        let refresh = Refresh {
+            library: lib_with(5),
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
         assert_eq!(artist_names(rig.engine.library.as_ref().unwrap()), ["Ajda"]);
         // "Bırak": kart Spotify'daki son bilinen hâle döner (sanatçı yok).
-        rig.engine.on_library_command(LibraryCommand::DismissEdit(failed[0].id));
+        rig.engine
+            .on_library_command(LibraryCommand::DismissEdit(failed[0].id));
         let ev = drain(&rig);
         assert!(lib_event(&ev).unwrap().artists.is_empty(), "{ev:?}");
         assert_eq!(status(&ev).map(|s| s.1.len()), Some(0));
@@ -2411,13 +3157,26 @@ mod tests {
         truth.artists = vec![art_card(1, "Tarkan"), art_card(2, "Sezen")];
         rig.db.save_library(&truth).unwrap();
         rig.engine.show_cached_library();
-        assert_eq!(artist_names(&lib_event(&drain(&rig)).unwrap()), ["Tarkan", "Sezen"]);
+        assert_eq!(
+            artist_names(&lib_event(&drain(&rig)).unwrap()),
+            ["Tarkan", "Sezen"]
+        );
         send_follow(&mut rig, 1, "Tarkan", false);
         drain(&rig);
-        assert_eq!(artist_names(rig.engine.library.as_ref().unwrap()), ["Sezen"]);
-        let refresh = Refresh { library: truth, changed: vec![], liked_changed: false };
+        assert_eq!(
+            artist_names(rig.engine.library.as_ref().unwrap()),
+            ["Sezen"]
+        );
+        let refresh = Refresh {
+            library: truth,
+            changed: vec![],
+            liked_changed: false,
+        };
         rig.engine.on_internal(Internal::Library(Ok(refresh)));
-        assert_eq!(artist_names(rig.engine.library.as_ref().unwrap()), ["Sezen"]);
+        assert_eq!(
+            artist_names(rig.engine.library.as_ref().unwrap()),
+            ["Sezen"]
+        );
     }
 
     /// Ekran sınaması için tohum önbelleği: takip edilen sanatçılı bir kütüphane,
@@ -2427,9 +3186,13 @@ mod tests {
     #[test]
     #[ignore = "ekran sınaması için tohum önbelleği yazar (OPENIFY_TEST_CACHE_DIR, adı 'tohum' içeren klasör)"]
     fn seed_screenshot_cache() {
-        let dir = std::env::var_os("OPENIFY_TEST_CACHE_DIR").expect("OPENIFY_TEST_CACHE_DIR verilmeli");
+        let dir =
+            std::env::var_os("OPENIFY_TEST_CACHE_DIR").expect("OPENIFY_TEST_CACHE_DIR verilmeli");
         let dir = std::path::PathBuf::from(dir);
-        assert!(dir.to_string_lossy().contains("tohum"), "yalnız adında 'tohum' geçen klasöre yazılır: {dir:?}");
+        assert!(
+            dir.to_string_lossy().contains("tohum"),
+            "yalnız adında 'tohum' geçen klasöre yazılır: {dir:?}"
+        );
         std::fs::create_dir_all(&dir).unwrap();
 
         let id = |n: u32| format!("spotify:artist:seed{n:018}");
@@ -2465,7 +3228,11 @@ mod tests {
                     _ => (c, 0., x),
                 };
                 let m = v - c;
-                [((r + m) * 255.) as u8, ((g + m) * 255.) as u8, ((b + m) * 255.) as u8]
+                [
+                    ((r + m) * 255.) as u8,
+                    ((g + m) * 255.) as u8,
+                    ((b + m) * 255.) as u8,
+                ]
             };
             let (a, b) = (hsv(hue, 0.55, 0.42), hsv(hue + 45., 0.45, 0.9));
             let img = image::RgbImage::from_fn(320, 320, |x, y| {
@@ -2473,18 +3240,25 @@ mod tests {
                 let t = (x + y) as f32 / 640.;
                 let (dx, dy) = (x as f32 - 160., y as f32 - 200.);
                 let glow = (1. - (dx * dx + dy * dy).sqrt() / 190.).clamp(0., 1.);
-                let mix = |i: usize| ((a[i] as f32 * (1. - t) + b[i] as f32 * t) * (0.75 + 0.35 * glow)).min(255.) as u8;
+                let mix = |i: usize| {
+                    ((a[i] as f32 * (1. - t) + b[i] as f32 * t) * (0.75 + 0.35 * glow)).min(255.)
+                        as u8
+                };
                 image::Rgb([mix(0), mix(1), mix(2)])
             });
             let mut out = Vec::new();
-            img.write_with_encoder(image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 88)).unwrap();
+            img.write_with_encoder(image::codecs::jpeg::JpegEncoder::new_with_quality(
+                &mut out, 88,
+            ))
+            .unwrap();
             out
         };
         for n in 1..=names.len() as u32 {
             super::super::cache::write_cover(&image(n), &portrait(n));
         }
 
-        let item = |n: u32| super::super::library::artist_item(&id(n), names[n as usize - 1], &image(n));
+        let item =
+            |n: u32| super::super::library::artist_item(&id(n), names[n as usize - 1], &image(n));
         let playlist = |n: u32, name: &str, subtitle: &str| LibraryItem {
             id: CollectionId::Playlist(format!("spotify:playlist:seed{n:018}")),
             name: name.into(),
@@ -2522,8 +3296,14 @@ mod tests {
             kind,
             image: image(n + 3),
         };
-        let cards: Vec<pages::ArtistCard> =
-            [4, 7, 9, 5].iter().map(|&n| pages::ArtistCard { uri: id(n), name: names[n as usize - 1].into(), image: image(n) }).collect();
+        let cards: Vec<pages::ArtistCard> = [4, 7, 9, 5]
+            .iter()
+            .map(|&n| pages::ArtistCard {
+                uri: id(n),
+                name: names[n as usize - 1].into(),
+                image: image(n),
+            })
+            .collect();
         let page = |n: u32| {
             Arc::new(ArtistPage {
                 uri: id(n),
@@ -2550,9 +3330,16 @@ mod tests {
         };
         let cache = PageCache::open_default().unwrap();
         for n in [1, 4, 13] {
-            cache.put(&format!("artist:{}", id(n)), &page(n), now_ms()).unwrap();
+            cache
+                .put(&format!("artist:{}", id(n)), &page(n), now_ms())
+                .unwrap();
         }
-        println!("tohum yazıldı: {dir:?}; sanatçı sayfaları: {} (takipte), {} (takipte), {} (takipte değil)", id(1), id(4), id(13));
+        println!(
+            "tohum yazıldı: {dir:?}; sanatçı sayfaları: {} (takipte), {} (takipte), {} (takipte değil)",
+            id(1),
+            id(4),
+            id(13)
+        );
     }
 
     /// Sabitleme yerel: tabloya yazılır, motorun kopyası güncellenir, kuyruğa
@@ -2561,16 +3348,38 @@ mod tests {
     fn pinning_is_local_and_survives_a_library_rewrite() {
         let mut rig = rig(None);
         let key = pl(1);
-        rig.engine.on_library_command(LibraryCommand::Pin { key: key.clone(), pinned: true });
-        rig.engine.on_library_command(LibraryCommand::Pin { key: "liked".into(), pinned: true });
-        assert_eq!(rig.db.pinned_keys().unwrap(), [key.clone(), "liked".to_string()]);
+        rig.engine.on_library_command(LibraryCommand::Pin {
+            key: key.clone(),
+            pinned: true,
+        });
+        rig.engine.on_library_command(LibraryCommand::Pin {
+            key: "liked".into(),
+            pinned: true,
+        });
+        assert_eq!(
+            rig.db.pinned_keys().unwrap(),
+            [key.clone(), "liked".to_string()]
+        );
         let mine = rig.engine.library.as_ref().unwrap().meta.pinned.clone();
         assert_eq!(mine, [key.clone(), "liked".to_string()]);
-        assert!(rig.engine.wire.queue.as_ref().unwrap().pending().unwrap().is_empty(), "Spotify'a yazma yok");
+        assert!(
+            rig.engine
+                .wire
+                .queue
+                .as_ref()
+                .unwrap()
+                .pending()
+                .unwrap()
+                .is_empty(),
+            "Spotify'a yazma yok"
+        );
         // Kütüphane baştan yazılsa da (tazeleme) sabitlemeler yerinde.
         rig.db.save_library(&lib_with(5)).unwrap();
         assert_eq!(rig.db.load_library().unwrap().unwrap().meta.pinned, mine);
-        rig.engine.on_library_command(LibraryCommand::Pin { key: key.clone(), pinned: false });
+        rig.engine.on_library_command(LibraryCommand::Pin {
+            key: key.clone(),
+            pinned: false,
+        });
         assert_eq!(rig.db.pinned_keys().unwrap(), ["liked"]);
         assert_eq!(rig.engine.library.as_ref().unwrap().meta.pinned, ["liked"]);
     }
@@ -2581,17 +3390,29 @@ mod tests {
     fn added_dates_are_read_from_the_cache() {
         let mut rig = rig(None);
         let entries = [
-            super::super::library::Entry { track: row(1).uri, added_at: Some(1_700_000_000_000) },
+            super::super::library::Entry {
+                track: row(1).uri,
+                added_at: Some(1_700_000_000_000),
+            },
             super::super::library::Entry::untimed(row(2).uri),
-            super::super::library::Entry { track: row(3).uri, added_at: Some(1_600_000_000_000) },
-            super::super::library::Entry { track: row(1).uri, added_at: Some(5) },
+            super::super::library::Entry {
+                track: row(3).uri,
+                added_at: Some(1_600_000_000_000),
+            },
+            super::super::library::Entry {
+                track: row(1).uri,
+                added_at: Some(5),
+            },
         ];
         let dates = added_dates_of(&entries);
         assert_eq!(dates.len(), 2);
         assert_eq!(dates[&row(1).uri], 1_700_000_000_000, "ilk satır");
-        rig.db.save_collection_entries(&CollectionId::Playlist(pl(1)), Some(b"r"), &entries[..3]).unwrap();
+        rig.db
+            .save_collection_entries(&CollectionId::Playlist(pl(1)), Some(b"r"), &entries[..3])
+            .unwrap();
         drain(&rig);
-        rig.engine.on_library_command(LibraryCommand::AddedDates(CollectionId::Playlist(pl(1))));
+        rig.engine
+            .on_library_command(LibraryCommand::AddedDates(CollectionId::Playlist(pl(1))));
         let got = drain(&rig).into_iter().find_map(|e| match e {
             Event::Library(LibraryEvent::AddedDates { id, dates }) => Some((id, dates)),
             _ => None,
@@ -2599,21 +3420,46 @@ mod tests {
         let (id, dates) = got.expect("AddedDates olayı");
         assert_eq!(id, CollectionId::Playlist(pl(1)));
         assert_eq!(dates.len(), 2);
-        rig.engine.on_library_command(LibraryCommand::AddedDates(CollectionId::Playlist(pl(99))));
-        assert!(drain(&rig).iter().all(|e| !matches!(e, Event::Library(LibraryEvent::AddedDates { .. }))));
+        rig.engine
+            .on_library_command(LibraryCommand::AddedDates(CollectionId::Playlist(pl(99))));
+        assert!(
+            drain(&rig)
+                .iter()
+                .all(|e| !matches!(e, Event::Library(LibraryEvent::AddedDates { .. })))
+        );
     }
 
     #[test]
     fn test_edit_modes_parse_and_default_to_the_fake_backend() {
-        assert_eq!(parse_test_edits(None, false), None, "normal açılış: gerçek Spotify");
-        assert_eq!(parse_test_edits(None, true), Some(Fake::Ok), "sınama penceresi: sahte");
+        assert_eq!(
+            parse_test_edits(None, false),
+            None,
+            "normal açılış: gerçek Spotify"
+        );
+        assert_eq!(
+            parse_test_edits(None, true),
+            Some(Fake::Ok),
+            "sınama penceresi: sahte"
+        );
         assert_eq!(parse_test_edits(Some("slow"), false), Some(Fake::Slow(4)));
-        assert_eq!(parse_test_edits(Some("slow-15"), true), Some(Fake::Slow(15)));
+        assert_eq!(
+            parse_test_edits(Some("slow-15"), true),
+            Some(Fake::Slow(15))
+        );
         assert_eq!(parse_test_edits(Some("slow-x"), true), Some(Fake::Slow(4)));
         assert_eq!(parse_test_edits(Some("ok"), false), Some(Fake::Ok));
-        assert_eq!(parse_test_edits(Some("fail"), false), Some(Fake::Fail(FailKind::Forbidden)));
-        assert_eq!(parse_test_edits(Some("fail-notfound"), true), Some(Fake::Fail(FailKind::NotFound)));
-        assert_eq!(parse_test_edits(Some("fail-invalid"), true), Some(Fake::Fail(FailKind::Invalid)));
+        assert_eq!(
+            parse_test_edits(Some("fail"), false),
+            Some(Fake::Fail(FailKind::Forbidden))
+        );
+        assert_eq!(
+            parse_test_edits(Some("fail-notfound"), true),
+            Some(Fake::Fail(FailKind::NotFound))
+        );
+        assert_eq!(
+            parse_test_edits(Some("fail-invalid"), true),
+            Some(Fake::Fail(FailKind::Invalid))
+        );
         // Tanınmayan değer bile sahteye gider (yanlış yazım gerçeğe yazdırmaz).
         assert_eq!(parse_test_edits(Some("kaçırdım"), false), Some(Fake::Ok));
     }

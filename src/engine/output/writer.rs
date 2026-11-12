@@ -14,10 +14,11 @@ use librespot::playback::{
 };
 
 use super::{
+    CHANNELS, Curve, DEVICE_LOST, FADE_FRAMES, GATE_LIMIT_FRAMES, GUARD_FRAMES, MIN_OVERLAP_FRAMES,
+    OutputCtl, PARK, PRODUCER_GAP_NS, RATE, STALL, TAIL_MS, Transition,
     automix::{LeadSkip, TailTrim},
     beat::Analysis,
-    CHANNELS, Curve, DEVICE_LOST, FADE_FRAMES, GATE_LIMIT_FRAMES, GUARD_FRAMES, MIN_OVERLAP_FRAMES, OutputCtl, PARK,
-    PRODUCER_GAP_NS, RATE, STALL, TAIL_MS, Transition, mark_of, ms_to_frames,
+    mark_of, ms_to_frames,
 };
 
 /// Bindirmede `read`i yeniden okuma aralığı (kare): yazar her dilimin başında
@@ -52,7 +53,11 @@ enum Gate {
     Open,
     /// `flush`tan sonra: önce `marker`, sonra komutun sonucu görülene dek
     /// paketler atılır.
-    Closed { marker: u64, marker_seen: bool, dropped: u64 },
+    Closed {
+        marker: u64,
+        marker_seen: bool,
+        dropped: u64,
+    },
 }
 
 /// Komutun çalarda işlendiğini gösteren olaylar (`flush`tan sonraki ilk
@@ -137,7 +142,10 @@ impl Writer {
 
     pub(super) fn with_stall(ctl: Arc<OutputCtl>, stall: Option<Duration>) -> Self {
         if let Some(d) = stall {
-            log::warn!("OPENIFY_TEST_TRANSITION_STALL_MS: her yeni şarkının ilk paketinden önce {} ms uyunacak", d.as_millis());
+            log::warn!(
+                "OPENIFY_TEST_TRANSITION_STALL_MS: her yeni şarkının ilk paketinden önce {} ms uyunacak",
+                d.as_millis()
+            );
         }
         Self {
             ctl,
@@ -183,7 +191,10 @@ impl Writer {
 
     /// Sıradaki çalınacak kare (atılacak eski ses atlanmış).
     pub fn read_frame(&self) -> u64 {
-        self.ctl.read.load(SeqCst).max(self.ctl.discard_to.load(SeqCst))
+        self.ctl
+            .read
+            .load(SeqCst)
+            .max(self.ctl.discard_to.load(SeqCst))
     }
 
     /// Motor komutlarını ve çalar olaylarını işler. Bir `flush` bu çağrıda
@@ -222,7 +233,11 @@ impl Writer {
             ctl.head.store(ctl.written.load(SeqCst), SeqCst);
             ctl.flush_ack.store(req, SeqCst);
             self.gate = if self.events.is_some() {
-                Gate::Closed { marker: req, marker_seen: false, dropped: 0 }
+                Gate::Closed {
+                    marker: req,
+                    marker_seen: false,
+                    dropped: 0,
+                }
             } else {
                 // Olay kanalı yok (terminal çalar): kapı yok, yarış kabul.
                 Gate::Open
@@ -242,7 +257,11 @@ impl Writer {
         if let Some(events) = &mut self.events {
             while let Ok(event) = events.try_recv() {
                 if let Some(mark) = mark_of(&event) {
-                    if let Gate::Closed { marker, marker_seen, .. } = &mut self.gate
+                    if let Gate::Closed {
+                        marker,
+                        marker_seen,
+                        ..
+                    } = &mut self.gate
                         && mark == *marker
                     {
                         *marker_seen = true;
@@ -252,7 +271,14 @@ impl Writer {
                     }
                     continue;
                 }
-                if matches!(self.gate, Gate::Closed { marker_seen: true, .. }) && confirms(&event) {
+                if matches!(
+                    self.gate,
+                    Gate::Closed {
+                        marker_seen: true,
+                        ..
+                    }
+                ) && confirms(&event)
+                {
                     self.gate = Gate::Open;
                     ctl.trace("gate_open");
                 }
@@ -260,7 +286,13 @@ impl Writer {
                 // sıradaki yazılacak kare o konumdur. İşaretten önceki (atılacak
                 // eski sese ait) olaylar sayılmaz. Devamdaki `Playing` (çözülmüş
                 // son paketin başı) taban değiştirmez: kuyruk atılmadı, aynı.
-                if !matches!(self.gate, Gate::Closed { marker_seen: false, .. }) {
+                if !matches!(
+                    self.gate,
+                    Gate::Closed {
+                        marker_seen: false,
+                        ..
+                    }
+                ) {
                     match &event {
                         PlayerEvent::EndOfTrack { .. } => self.eot = Some(ctl.written.load(SeqCst)),
                         PlayerEvent::TrackChanged { audio_item } => {
@@ -374,13 +406,19 @@ impl Writer {
             rest = lead.skip(samples);
             if lead.dropped != before {
                 // Yeni şarkının 0. karesi atılan kadar geride kalır.
-                self.ctl.track_base.store(self.lead_anchor - lead.dropped as i64, SeqCst);
+                self.ctl
+                    .track_base
+                    .store(self.lead_anchor - lead.dropped as i64, SeqCst);
             }
             if lead.is_done() {
                 self.lead = None;
             }
         }
-        if self.trim_active() { self.trim.apply(rest) } else { Cow::Borrowed(rest) }
+        if self.trim_active() {
+            self.trim.apply(rest)
+        } else {
+            Cow::Borrowed(rest)
+        }
     }
 
     fn trim_active(&self) -> bool {
@@ -396,7 +434,9 @@ impl Writer {
     /// EKLENMEZ, karışır; yazma ucu ilerlemez). Seviye çözümleyici bunları
     /// atlar (bkz. `tap.rs`).
     pub fn overlap_in(&self, frames: u64) -> u64 {
-        self.xf.as_ref().map_or(0, |xf| (xf.overlap - xf.k).min(frames))
+        self.xf
+            .as_ref()
+            .map_or(0, |xf| (xf.overlap - xf.k).min(frames))
     }
 
     /// Örnekleri halkaya koyar (yer yoksa yer açılana dek bekler). Bu arada
@@ -413,7 +453,8 @@ impl Writer {
             && self.is_live()
             && now.saturating_sub(free) > PRODUCER_GAP_NS
         {
-            self.ctl.trace_arg("producer_gap", (now - free) as f64 / 1e6);
+            self.ctl
+                .trace_arg("producer_gap", (now - free) as f64 / 1e6);
         }
         if first {
             self.ctl.trace("first_write");
@@ -427,7 +468,9 @@ impl Writer {
             let cap = ctl.write_cap();
             let free = cap - used.min(cap);
             if free == 0 {
-                if self.block_until(|c| c.written.load(SeqCst) - c.read.load(SeqCst) < c.write_cap())? {
+                if self
+                    .block_until(|c| c.written.load(SeqCst) - c.read.load(SeqCst) < c.write_cap())?
+                {
                     return Ok(true);
                 }
                 continue;
@@ -494,7 +537,9 @@ impl Writer {
         // görmez) ve SİLİNMEZ: şarkı sonu payı bindirme bitene dek derin kalmalı
         // (yoksa yazar hedefin altına inene dek bekler, bindirme geç kalır);
         // pay kapanınca (`OutputCtl::set_tail(false)`) istek de silinir.
-        let Some(eot) = eot.filter(|_| candidate) else { return };
+        let Some(eot) = eot.filter(|_| candidate) else {
+            return;
+        };
         let spec = ctl.armed_spec();
         if spec.is_none() {
             return;
@@ -509,29 +554,48 @@ impl Writer {
             self.lead_anchor = eot as i64;
         }
         let floor = self.read_frame() + GUARD_FRAMES;
-        let prev_len = (self.prev_base != i64::MIN && (self.prev_base as u64) < eot).then(|| eot - self.prev_base as u64);
+        let prev_len = (self.prev_base != i64::MIN && (self.prev_base as u64) < eot)
+            .then(|| eot - self.prev_base as u64);
         // Planlanan bindirme: AutoMix'te biten şarkının canlı çözümlemesinden
         // (giden son ucu) ve önbellekteki gelen baş ucundan; çözümleme yoksa
         // istekteki sabit süre.
-        let planned = match prev_live.as_ref().and_then(|a| a.plan(ctl.armed_incoming().as_ref())) {
+        let planned = match prev_live
+            .as_ref()
+            .and_then(|a| a.plan(ctl.armed_incoming().as_ref()))
+        {
             Some(plan) if spec.auto => {
                 ctl.trace_arg(
-                    if plan.aligned { "automix_aligned" } else { "automix" },
+                    if plan.aligned {
+                        "automix_aligned"
+                    } else {
+                        "automix"
+                    },
                     plan.overlap as f64 * 1000.0 / RATE as f64,
                 );
                 plan.overlap as u64
             }
             _ => spec.overlap as u64,
         };
-        let want = planned.min(prev_len.map_or(u64::MAX, |l| l / 2)).min(next_len.map_or(u64::MAX, |l| l / 2));
+        let want = planned
+            .min(prev_len.map_or(u64::MAX, |l| l / 2))
+            .min(next_len.map_or(u64::MAX, |l| l / 2));
         let room = eot.saturating_sub(floor);
         let overlap = want.min(room);
         if overlap < MIN_OVERLAP_FRAMES {
             return;
         }
         let start = eot - overlap;
-        self.xf = Some(Xf { start, overlap, k: 0, curve: spec.curve, blend: 0 });
-        ctl.begin_transition(Transition { start, overlap: overlap as u32 });
+        self.xf = Some(Xf {
+            start,
+            overlap,
+            k: 0,
+            curve: spec.curve,
+            blend: 0,
+        });
+        ctl.begin_transition(Transition {
+            start,
+            overlap: overlap as u32,
+        });
         // Yeni şarkının 0. karesi `start`ta (`set_track_base` `written`a göre koymuştu).
         ctl.track_base.store(start as i64, SeqCst);
         self.lead_anchor = start as i64;
@@ -547,7 +611,9 @@ impl Writer {
     /// Bütün işlem atomik hücrelerde: ses iş parçacığı kilitsiz okumayı sürer.
     /// İşlenen kare sayısını döner.
     fn mix_overlap(&mut self, samples: &[f64], frames: u64) -> u64 {
-        let Some(mut xf) = self.xf.take() else { return 0 };
+        let Some(mut xf) = self.xf.take() else {
+            return 0;
+        };
         let ctl = Arc::clone(&self.ctl);
         let n = frames.min(xf.overlap - xf.k);
         let mut i = 0u64;
@@ -572,8 +638,13 @@ impl Writer {
                 let (old_l, old_r) = ring.load(pos);
                 let src = (j as usize) * CHANNELS;
                 #[cfg(test)]
-                ctl.min_lead.fetch_min(pos.saturating_sub(self.read_frame()), Relaxed);
-                ring.store(pos, old_l * out + samples[src] as f32 * inn, old_r * out + samples[src + 1] as f32 * inn);
+                ctl.min_lead
+                    .fetch_min(pos.saturating_sub(self.read_frame()), Relaxed);
+                ring.store(
+                    pos,
+                    old_l * out + samples[src] as f32 * inn,
+                    old_r * out + samples[src + 1] as f32 * inn,
+                );
             }
             i += chunk;
         }
@@ -593,7 +664,10 @@ impl Writer {
     /// bir `flush` onaylandıysa `true`.
     pub fn wait(&mut self) -> SinkResult<bool> {
         let flushed = self.block_until(|c| {
-            !c.running.load(SeqCst) || c.duck.load(SeqCst) || c.queued_raw() <= c.target_frames() || c.reroute_due()
+            !c.running.load(SeqCst)
+                || c.duck.load(SeqCst)
+                || c.queued_raw() <= c.target_frames()
+                || c.reroute_due()
         })?;
         // Çözücü bundan sonra serbest: bir sonraki pakete dek geçen süre
         // üreticinin (çözme, disk, ağ).
@@ -644,7 +718,10 @@ impl Writer {
                 return Ok(false);
             }
             ctl.writer_waiting.store(true, SeqCst);
-            if ready(&ctl) || ctl.flush_req.load(SeqCst) != self.flush_seen || ctl.device_lost.load(SeqCst) {
+            if ready(&ctl)
+                || ctl.flush_req.load(SeqCst) != self.flush_seen
+                || ctl.device_lost.load(SeqCst)
+            {
                 ctl.writer_waiting.store(false, SeqCst);
                 continue;
             }
@@ -656,7 +733,10 @@ impl Writer {
                 since = Instant::now();
             } else if since.elapsed() > STALL {
                 // Haber vermeden ölen aygıt: gitmiş say, Çal yeniden açsın.
-                log::error!("Ses çıkışı {} sn'dir ilerlemiyor (aygıt gitti mi?)", STALL.as_secs());
+                log::error!(
+                    "Ses çıkışı {} sn'dir ilerlemiyor (aygıt gitti mi?)",
+                    STALL.as_secs()
+                );
                 ctl.signal_device_lost("çıkış ilerlemiyor");
                 ctl.device_notice.store(DEVICE_LOST, SeqCst);
                 return Err(SinkError::OnWrite("ses çıkışı ilerlemiyor".into()));

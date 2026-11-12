@@ -100,7 +100,11 @@ pub fn on_failure(f: Failure) -> Recovery {
     if f.retried {
         return Recovery::Skip;
     }
-    if may_reconnect { Recovery::RetryAfterReconnect } else { Recovery::Skip }
+    if may_reconnect {
+        Recovery::RetryAfterReconnect
+    } else {
+        Recovery::Skip
+    }
 }
 
 /// Yükleme `elapsed` süredir sürüyor ve hâlâ ne çalma ne hata geldi: oturumu
@@ -173,7 +177,11 @@ mod tests {
     fn startup_connect_backoff_starts_short_and_is_capped() {
         let secs: Vec<u64> = (0..8).map(|n| connect_backoff_for(n).as_secs()).collect();
         assert_eq!(secs, [5, 10, 20, 40, 60, 60, 60, 60]);
-        assert_eq!(connect_backoff_for(u32::MAX), RECONNECT_BACKOFF_MAX, "taşma yok");
+        assert_eq!(
+            connect_backoff_for(u32::MAX),
+            RECONNECT_BACKOFF_MAX,
+            "taşma yok"
+        );
     }
 
     #[test]
@@ -192,58 +200,112 @@ mod tests {
 
     #[test]
     fn second_failure_of_same_track_is_skipped_not_looped() {
-        let f = Failure { retried: true, ..base() };
+        let f = Failure {
+            retried: true,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Skip);
         // Bağlanma serbest olsa bile.
-        let f = Failure { retried: true, since_reconnect: Some(S(600)), ..base() };
+        let f = Failure {
+            retried: true,
+            since_reconnect: Some(S(600)),
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Skip);
     }
 
     #[test]
     fn recent_reconnect_blocks_another_one() {
-        let f = Failure { since_reconnect: Some(S(3)), ..base() };
-        assert_eq!(on_failure(f), Recovery::Skip, "geri çekilme: Spotify boğulmaz");
-        let f = Failure { since_reconnect: Some(S(11)), ..base() };
+        let f = Failure {
+            since_reconnect: Some(S(3)),
+            ..base()
+        };
+        assert_eq!(
+            on_failure(f),
+            Recovery::Skip,
+            "geri çekilme: Spotify boğulmaz"
+        );
+        let f = Failure {
+            since_reconnect: Some(S(11)),
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::RetryAfterReconnect);
     }
 
     #[test]
     fn failed_reconnects_stretch_the_backoff() {
-        let f = Failure { since_reconnect: Some(S(15)), reconnect_failures: 2, ..base() };
+        let f = Failure {
+            since_reconnect: Some(S(15)),
+            reconnect_failures: 2,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Skip);
-        let f = Failure { since_reconnect: Some(S(40)), reconnect_failures: 2, ..base() };
+        let f = Failure {
+            since_reconnect: Some(S(40)),
+            reconnect_failures: 2,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::RetryAfterReconnect);
     }
 
     #[test]
     fn failure_during_a_running_reconnect_joins_it() {
         // Geri çekilme süresi dolmamış olsa da süren bağlanmaya katılınır.
-        let f = Failure { reconnecting: true, since_reconnect: Some(S(1)), ..base() };
+        let f = Failure {
+            reconnecting: true,
+            since_reconnect: Some(S(1)),
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::RetryAfterReconnect);
     }
 
     #[test]
     fn too_many_consecutive_failures_give_up() {
-        let f = Failure { consecutive: 4, ..base() };
+        let f = Failure {
+            consecutive: 4,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::GiveUp);
-        let f = Failure { consecutive: 3, ..base() };
+        let f = Failure {
+            consecutive: 3,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::RetryAfterReconnect);
     }
 
     #[test]
     fn preload_failure_never_skips_the_playing_track() {
-        let f = Failure { current: false, ..base() };
+        let f = Failure {
+            current: false,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::ReconnectOnly);
         // Anahtar hatası değilse (ör. şarkı bölgede yok): sessizce geç.
-        let f = Failure { current: false, key_failure: false, ..base() };
+        let f = Failure {
+            current: false,
+            key_failure: false,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Ignore);
         // Geri çekilme sürüyorsa ya da zaten bağlanılıyorsa: dokunma.
-        let f = Failure { current: false, since_reconnect: Some(S(2)), ..base() };
+        let f = Failure {
+            current: false,
+            since_reconnect: Some(S(2)),
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Ignore);
-        let f = Failure { current: false, reconnecting: true, ..base() };
+        let f = Failure {
+            current: false,
+            reconnecting: true,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::Ignore);
         // Önyükleme hatası "üst üste hata" sayısına bakmaz.
-        let f = Failure { current: false, consecutive: 99, ..base() };
+        let f = Failure {
+            current: false,
+            consecutive: 99,
+            ..base()
+        };
         assert_eq!(on_failure(f), Recovery::ReconnectOnly);
     }
 
@@ -251,9 +313,18 @@ mod tests {
     fn stall_reconnects_only_once_and_after_the_threshold() {
         assert!(!stall_should_reconnect(S(4), false, false, None, 0));
         assert!(stall_should_reconnect(S(5), false, false, None, 0));
-        assert!(!stall_should_reconnect(S(30), true, false, None, 0), "tek yeniden deneme");
-        assert!(!stall_should_reconnect(S(30), false, true, None, 0), "bağlanma sürüyor");
-        assert!(!stall_should_reconnect(S(30), false, false, Some(S(5)), 0), "geri çekilme");
+        assert!(
+            !stall_should_reconnect(S(30), true, false, None, 0),
+            "tek yeniden deneme"
+        );
+        assert!(
+            !stall_should_reconnect(S(30), false, true, None, 0),
+            "bağlanma sürüyor"
+        );
+        assert!(
+            !stall_should_reconnect(S(30), false, false, Some(S(5)), 0),
+            "geri çekilme"
+        );
         assert!(stall_should_reconnect(S(30), false, false, Some(S(10)), 0));
     }
 
@@ -268,9 +339,15 @@ mod tests {
     #[test]
     fn retry_resumes_at_the_same_position_with_the_same_intent() {
         // Çalıyordu: geçen süre eklenir, çalarak devam.
-        assert_eq!(retry_target(Some((10_000, S(2), true)), 0, false), Some((12_000, true)));
+        assert_eq!(
+            retry_target(Some((10_000, S(2), true)), 0, false),
+            Some((12_000, true))
+        );
         // Duraklatılmıştı: aynı konumda duraklatılmış.
-        assert_eq!(retry_target(Some((10_000, S(60), false)), 0, false), Some((10_000, false)));
+        assert_eq!(
+            retry_target(Some((10_000, S(60), false)), 0, false),
+            Some((10_000, false))
+        );
         // Yükleme sürerken takıldı (kaldığı yerden sürme): yükleme konumu korunur.
         assert_eq!(retry_target(None, 134_959, true), Some((134_959, true)));
         // Yüklemesi olmayan boş durumda yeniden yükleme yok (kendiliğinden çalmasın).
@@ -280,7 +357,11 @@ mod tests {
     #[test]
     fn retry_position_does_not_overflow() {
         assert_eq!(
-            retry_target(Some((u32::MAX - 5, Duration::from_secs(10), true)), 0, false),
+            retry_target(
+                Some((u32::MAX - 5, Duration::from_secs(10), true)),
+                0,
+                false
+            ),
             Some((u32::MAX, true))
         );
     }

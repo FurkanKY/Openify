@@ -85,8 +85,21 @@ impl SmoothScroll {
 
     /// Tekerlek olayını sınıflandır. `viewport`: kaydırılan alanın yüksekliği.
     /// Dikey bileşen yoksa (Shift ile yatay) `None`.
-    pub fn classify(&self, delta: ScrollDelta, line_height: Pixels, viewport: f32, now: Instant) -> Option<Wheel> {
-        self.classify_with(delta, line_height, viewport, now, wheel_scroll_lines(), super::theme::animations_enabled())
+    pub fn classify(
+        &self,
+        delta: ScrollDelta,
+        line_height: Pixels,
+        viewport: f32,
+        now: Instant,
+    ) -> Option<Wheel> {
+        self.classify_with(
+            delta,
+            line_height,
+            viewport,
+            now,
+            wheel_scroll_lines(),
+            super::theme::animations_enabled(),
+        )
     }
 
     fn classify_with(
@@ -127,13 +140,21 @@ impl SmoothScroll {
             return Some(Wheel::Now(d));
         }
         let precise = self.precise_until.get().is_some_and(|until| now < until);
-        Some(if precise || !animate { Wheel::Now(d) } else { Wheel::Glide(d) })
+        Some(if precise || !animate {
+            Wheel::Now(d)
+        } else {
+            Wheel::Glide(d)
+        })
     }
 
     /// Yola `delta` ekle (aynı yönde birikir, ters yönde baştan başlar).
     pub fn push(&self, delta: f32, viewport: f32, now: Instant) {
         let left = self.remaining.get();
-        let base = if left != 0. && left.signum() != delta.signum() { 0. } else { left };
+        let base = if left != 0. && left.signum() != delta.signum() {
+            0.
+        } else {
+            left
+        };
         let cap = (MAX_BACKLOG * viewport).max(delta.abs());
         self.remaining.set((base + delta).clamp(-cap, cap));
         if self.last_tick.get().is_none() {
@@ -149,7 +170,11 @@ impl SmoothScroll {
         let raw = measured.clamp(DT_MIN, DT_MAX).as_secs_f32() * 1000.;
         let estimate = self.frame_ms.get();
         if self.fresh.replace(false) {
-            return if estimate > 0. { estimate } else { raw.min(1000. / 60.) };
+            return if estimate > 0. {
+                estimate
+            } else {
+                raw.min(1000. / 60.)
+            };
         }
         if estimate <= 0. {
             self.frame_ms.set(raw);
@@ -174,11 +199,18 @@ impl SmoothScroll {
             return false;
         }
         // Konumu başka biri değiştirdiyse onunla yarışma.
-        if self.last_position.get().is_some_and(|p| (p - position).abs() > SNAP_PX) {
+        if self
+            .last_position
+            .get()
+            .is_some_and(|p| (p - position).abs() > SNAP_PX)
+        {
             self.cancel();
             return false;
         }
-        let measured = self.last_tick.get().map_or(DT_MIN, |t| now.saturating_duration_since(t));
+        let measured = self
+            .last_tick
+            .get()
+            .map_or(DT_MIN, |t| now.saturating_duration_since(t));
         let dt_ms = self.step_ms(measured);
         let mut step = left * (1. - (-dt_ms / TAU_MS).exp());
         if (left - step).abs() <= SNAP_PX {
@@ -240,7 +272,14 @@ fn wheel_scroll_lines() -> f32 {
 /// onların altındaki satırlar tekerlekle kaymaya devam eder. `on_wheel`
 /// (olay, alanın boyu, çizen görünüm) işlediyse `true` döner, olay orada biter.
 pub fn wheel_zone(
-    on_wheel: impl Fn(&gpui::ScrollWheelEvent, gpui::Bounds<Pixels>, gpui::EntityId, &mut gpui::Window, &mut gpui::App) -> bool + 'static,
+    on_wheel: impl Fn(
+        &gpui::ScrollWheelEvent,
+        gpui::Bounds<Pixels>,
+        gpui::EntityId,
+        &mut gpui::Window,
+        &mut gpui::App,
+    ) -> bool
+    + 'static,
 ) -> gpui::Canvas<gpui::Hitbox> {
     use gpui::{DispatchPhase, HitboxBehavior, ScrollWheelEvent, Styled};
     gpui::canvas(
@@ -279,18 +318,36 @@ mod tests {
         let s = SmoothScroll::default();
         let t = Instant::now();
         // Bir çentik aşağı (gpui: -3 satır).
-        assert_eq!(s.classify_with(lines(-3.), px(LINE), 600., t, 3., true), Some(Wheel::Glide(3. * LINE)));
+        assert_eq!(
+            s.classify_with(lines(-3.), px(LINE), 600., t, 3., true),
+            Some(Wheel::Glide(3. * LINE))
+        );
         // Dokunmatik yüzey: kesirli, hemen ve bire bir.
-        assert_eq!(s.classify_with(lines(0.3), px(LINE), 600., t, 3., true), Some(Wheel::Now(-0.3 * LINE)));
+        assert_eq!(
+            s.classify_with(lines(0.3), px(LINE), 600., t, 3., true),
+            Some(Wheel::Now(-0.3 * LINE))
+        );
         // Hemen ardından gelen tam çentik de hemen uygulanır.
         let soon = t + Duration::from_millis(50);
-        assert_eq!(s.classify_with(lines(-3.), px(LINE), 600., soon, 3., true), Some(Wheel::Now(3. * LINE)));
+        assert_eq!(
+            s.classify_with(lines(-3.), px(LINE), 600., soon, 3., true),
+            Some(Wheel::Now(3. * LINE))
+        );
         let later = t + Duration::from_millis(400);
-        assert_eq!(s.classify_with(lines(-3.), px(LINE), 600., later, 3., true), Some(Wheel::Glide(3. * LINE)));
+        assert_eq!(
+            s.classify_with(lines(-3.), px(LINE), 600., later, 3., true),
+            Some(Wheel::Glide(3. * LINE))
+        );
         // Animasyonlar kapalı: hemen.
-        assert_eq!(s.classify_with(lines(-6.), px(LINE), 600., later, 3., false), Some(Wheel::Now(6. * LINE)));
+        assert_eq!(
+            s.classify_with(lines(-6.), px(LINE), 600., later, 3., false),
+            Some(Wheel::Now(6. * LINE))
+        );
         // Yatay (Shift) ya da 0 satır ayarı: dokunulmaz.
-        assert_eq!(s.classify_with(lines(0.), px(LINE), 600., later, 3., true), None);
+        assert_eq!(
+            s.classify_with(lines(0.), px(LINE), 600., later, 3., true),
+            None
+        );
     }
 
     #[test]
@@ -336,7 +393,10 @@ mod tests {
         assert!(!s.is_active());
         // Adımlar küçülerek gider (son adım kalan yarım pikseli de alır);
         // ~150 ms'de oturur.
-        assert!(steps.windows(2).all(|w| w[1] <= w[0] + SNAP_PX), "{steps:?}");
+        assert!(
+            steps.windows(2).all(|w| w[1] <= w[0] + SNAP_PX),
+            "{steps:?}"
+        );
         assert!(steps.len() <= 14, "{} kare", steps.len());
         assert!(steps[0] < 40., "ilk adım {}", steps[0]);
     }
@@ -378,7 +438,9 @@ mod tests {
         }
         assert!((pos - 78.).abs() < 1e-3, "{pos}");
         let ratios: Vec<f32> = steps.windows(2).take(10).map(|w| w[1] / w[0]).collect();
-        let (lo, hi) = ratios.iter().fold((f32::MAX, f32::MIN), |(a, b), r| (a.min(*r), b.max(*r)));
+        let (lo, hi) = ratios
+            .iter()
+            .fold((f32::MAX, f32::MIN), |(a, b), r| (a.min(*r), b.max(*r)));
         assert!(hi - lo < 0.08, "adım oranları {ratios:?}");
     }
 

@@ -21,7 +21,10 @@ use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use super::{
     conns::Conns,
-    library::{CollectionId, Entry, Folder, ItemKind, Library, LibraryItem, LibraryNode, TrackRow, library_nodes},
+    library::{
+        CollectionId, Entry, Folder, ItemKind, Library, LibraryItem, LibraryNode, TrackRow,
+        library_nodes,
+    },
     migrate::{self, Step},
     rules::Traits,
     traits,
@@ -95,13 +98,41 @@ pub fn audio_dir() -> Option<PathBuf> {
 //   kullanıcı durumu, ASLA düşürülmez  playback (kaldığı yer), library_pins (sabitleme),
 //                                      play_history (yerel çalma geçmişi), hidden_songs (gizlenen şarkılar)
 const MIGRATIONS: [Step; 7] = [
-    Step { to: 3, name: "baseline", up: baseline },
-    Step { to: 4, name: "folders, pins, added_at", up: library_model },
-    Step { to: 5, name: "followed artists", up: followed_artists },
-    Step { to: 6, name: "library item stamps", up: item_stamps },
-    Step { to: 7, name: "play history", up: play_history },
-    Step { to: 8, name: "hidden songs", up: super::hidden::hidden_songs_step },
-    Step { to: 9, name: "track analysis", up: super::automix::track_analysis_step },
+    Step {
+        to: 3,
+        name: "baseline",
+        up: baseline,
+    },
+    Step {
+        to: 4,
+        name: "folders, pins, added_at",
+        up: library_model,
+    },
+    Step {
+        to: 5,
+        name: "followed artists",
+        up: followed_artists,
+    },
+    Step {
+        to: 6,
+        name: "library item stamps",
+        up: item_stamps,
+    },
+    Step {
+        to: 7,
+        name: "play history",
+        up: play_history,
+    },
+    Step {
+        to: 8,
+        name: "hidden songs",
+        up: super::hidden::hidden_songs_step,
+    },
+    Step {
+        to: 9,
+        name: "track analysis",
+        up: super::automix::track_analysis_step,
+    },
 ];
 
 /// Sürüm 3'ün şeması (`IF NOT EXISTS`: göçten önce sürümlenmiş dosyaları da devralır).
@@ -275,12 +306,16 @@ impl Db {
         // Önce yazıcı: şemayı kurar / yükseltir, WAL dosyalarını oluşturur;
         // okuma bağlantıları ondan sonra açılır.
         let writer = init_writer(Connection::open(path).context("Önbellek veritabanı açılamadı")?)?;
-        Ok(Self { conns: Conns::file(path, writer) })
+        Ok(Self {
+            conns: Conns::file(path, writer),
+        })
     }
 
     #[cfg(test)]
     pub fn open_in_memory() -> Result<Self> {
-        Ok(Self { conns: Conns::memory(init_writer(Connection::open_in_memory()?)?) })
+        Ok(Self {
+            conns: Conns::memory(init_writer(Connection::open_in_memory()?)?),
+        })
     }
 
     /// Yazıcı bağlantı (tek, sıralı).
@@ -298,7 +333,11 @@ impl Db {
     pub fn load_library(&self) -> Result<Option<Library>> {
         let conn = self.r();
         let liked_count: Option<String> = conn
-            .query_row("SELECT value FROM meta WHERE key = 'liked_count'", [], |r| r.get(0))
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'liked_count'",
+                [],
+                |r| r.get(0),
+            )
             .optional()?;
         let Some(liked_count) = liked_count else {
             return Ok(None);
@@ -330,7 +369,12 @@ impl Db {
         for (key, kind, parent, name, subtitle, image, added_at, creator) in rows {
             if ItemKind::from_tag(&kind) == ItemKind::Folder {
                 let at = library.playlists.len();
-                library.meta.folders.push(Folder { key, name, parent, at });
+                library.meta.folders.push(Folder {
+                    key,
+                    name,
+                    parent,
+                    at,
+                });
                 continue;
             }
             let Some(id) = CollectionId::from_key(&key) else {
@@ -363,24 +407,37 @@ impl Db {
 
     fn read_pins(conn: &Connection) -> Result<Vec<String>> {
         let mut stmt = conn.prepare("SELECT id FROM library_pins ORDER BY pinned_at, id")?;
-        let keys = stmt.query_map([], |r| r.get(0))?.collect::<rusqlite::Result<Vec<String>>>()?;
+        let keys = stmt
+            .query_map([], |r| r.get(0))?
+            .collect::<rusqlite::Result<Vec<String>>>()?;
         Ok(keys)
     }
 
     /// Takip edilen sanatçılar, en son takip edilen önde.
     fn read_artists(conn: &Connection) -> Result<Vec<LibraryItem>> {
-        let mut stmt = conn.prepare("SELECT uri, name, image FROM library_artists ORDER BY position")?;
+        let mut stmt =
+            conn.prepare("SELECT uri, name, image FROM library_artists ORDER BY position")?;
         let rows = stmt
-            .query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?, r.get::<_, String>(2)?)))?
+            .query_map([], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, String>(2)?,
+                ))
+            })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows.into_iter().map(|(uri, name, image)| super::library::artist_item(&uri, &name, &image)).collect())
+        Ok(rows
+            .into_iter()
+            .map(|(uri, name, image)| super::library::artist_item(&uri, &name, &image))
+            .collect())
     }
 
     /// Takip edilen sanatçıları baştan yazar (sıra = verilen sıra).
     fn save_artists(tx: &Transaction, artists: &[LibraryItem]) -> Result<()> {
         tx.execute("DELETE FROM library_artists", [])?;
-        let mut insert =
-            tx.prepare("INSERT INTO library_artists (position, uri, name, image) VALUES (?1, ?2, ?3, ?4)")?;
+        let mut insert = tx.prepare(
+            "INSERT INTO library_artists (position, uri, name, image) VALUES (?1, ?2, ?3, ?4)",
+        )?;
         for (i, a) in artists.iter().enumerate() {
             insert.execute(params![i as i64, a.id.key(), a.name, a.image])?;
         }
@@ -464,7 +521,10 @@ impl Db {
     pub fn set_pinned(&self, key: &str, pinned: bool, now_ms: i64) -> Result<()> {
         let conn = self.w();
         if pinned {
-            conn.execute("INSERT OR IGNORE INTO library_pins (id, pinned_at) VALUES (?1, ?2)", params![key, now_ms])?;
+            conn.execute(
+                "INSERT OR IGNORE INTO library_pins (id, pinned_at) VALUES (?1, ?2)",
+                params![key, now_ms],
+            )?;
         } else {
             conn.execute("DELETE FROM library_pins WHERE id = ?1", [key])?;
         }
@@ -480,7 +540,9 @@ impl Db {
     /// sabitlemeden kesinlikle sonra (aynı milisaniyedeki iki sabitleme
     /// sırasını korusun).
     pub fn next_pin_time(&self, now_ms: i64) -> Result<i64> {
-        let latest: Option<i64> = self.w().query_row("SELECT MAX(pinned_at) FROM library_pins", [], |r| r.get(0))?;
+        let latest: Option<i64> =
+            self.w()
+                .query_row("SELECT MAX(pinned_at) FROM library_pins", [], |r| r.get(0))?;
         Ok(latest.map_or(now_ms, |l| now_ms.max(l + 1)))
     }
 
@@ -502,7 +564,9 @@ impl Db {
     pub fn collection_uris(&self, id: &CollectionId) -> Result<Option<Vec<String>>> {
         let conn = self.r();
         let known: Option<i64> = conn
-            .query_row("SELECT 1 FROM collections WHERE id = ?1", [id.key()], |r| r.get(0))
+            .query_row("SELECT 1 FROM collections WHERE id = ?1", [id.key()], |r| {
+                r.get(0)
+            })
             .optional()?;
         if known.is_none() {
             return Ok(None);
@@ -520,7 +584,9 @@ impl Db {
     pub fn collection_entries(&self, id: &CollectionId) -> Result<Option<Vec<Entry>>> {
         let conn = self.r();
         let known: Option<i64> = conn
-            .query_row("SELECT 1 FROM collections WHERE id = ?1", [id.key()], |r| r.get(0))
+            .query_row("SELECT 1 FROM collections WHERE id = ?1", [id.key()], |r| {
+                r.get(0)
+            })
             .optional()?;
         if known.is_none() {
             return Ok(None);
@@ -529,7 +595,12 @@ impl Db {
             "SELECT track_uri, added_at FROM collection_tracks WHERE collection = ?1 ORDER BY position",
         )?;
         let entries = stmt
-            .query_map([id.key()], |r| Ok(Entry { track: r.get(0)?, added_at: r.get(1)? }))?
+            .query_map([id.key()], |r| {
+                Ok(Entry {
+                    track: r.get(0)?,
+                    added_at: r.get(1)?,
+                })
+            })?
             .collect::<rusqlite::Result<Vec<Entry>>>()?;
         Ok(Some(entries))
     }
@@ -580,7 +651,9 @@ impl Db {
                 "SELECT track_uri, added_at FROM collection_tracks
                  WHERE collection = ?1 AND added_at IS NOT NULL ORDER BY position",
             )?;
-            for row in stmt.query_map([id.key()], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))? {
+            for row in stmt.query_map([id.key()], |r| {
+                Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))
+            })? {
                 let (uri, at) = row?;
                 known.entry(uri).or_insert(at);
             }
@@ -589,7 +662,10 @@ impl Db {
             "INSERT OR REPLACE INTO collections (id, revision) VALUES (?1, ?2)",
             params![id.key(), revision],
         )?;
-        tx.execute("DELETE FROM collection_tracks WHERE collection = ?1", [id.key()])?;
+        tx.execute(
+            "DELETE FROM collection_tracks WHERE collection = ?1",
+            [id.key()],
+        )?;
         {
             let mut insert = tx.prepare(
                 "INSERT INTO collection_tracks (collection, position, track_uri, added_at)
@@ -642,7 +718,14 @@ impl Db {
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
             )?;
             for t in rows {
-                insert.execute(params![t.uri, t.name, t.artists, t.album, t.duration_ms, t.image])?;
+                insert.execute(params![
+                    t.uri,
+                    t.name,
+                    t.artists,
+                    t.album,
+                    t.duration_ms,
+                    t.image
+                ])?;
             }
         }
         tx.commit()?;
@@ -668,7 +751,9 @@ impl Db {
         let mut found = HashMap::with_capacity(uris.len());
         for chunk in uris.chunks(TRACK_QUERY_CHUNK) {
             let marks = vec!["?"; chunk.len()].join(",");
-            let query = format!("SELECT uri, explicit, popularity FROM track_traits WHERE uri IN ({marks})");
+            let query = format!(
+                "SELECT uri, explicit, popularity FROM track_traits WHERE uri IN ({marks})"
+            );
             let mut stmt = match conn.prepare_cached(&query) {
                 Ok(stmt) => stmt,
                 // Tablo henüz kurulmadı: hiçbir özellik bilinmiyor.
@@ -676,7 +761,13 @@ impl Db {
                 Err(e) => return Err(e.into()),
             };
             let rows = stmt.query_map(rusqlite::params_from_iter(chunk), |r| {
-                Ok((r.get::<_, String>(0)?, Traits { explicit: r.get::<_, i64>(1)? != 0, popularity: r.get::<_, i64>(2)?.clamp(0, 100) as u8 }))
+                Ok((
+                    r.get::<_, String>(0)?,
+                    Traits {
+                        explicit: r.get::<_, i64>(1)? != 0,
+                        popularity: r.get::<_, i64>(2)?.clamp(0, 100) as u8,
+                    },
+                ))
             })?;
             for row in rows {
                 let (uri, traits) = row?;
@@ -772,7 +863,9 @@ impl Db {
         let conn = self.r();
         let get = |key: &str| -> Result<Option<String>> {
             Ok(conn
-                .query_row("SELECT value FROM playback WHERE key = ?1", [key], |r| r.get(0))
+                .query_row("SELECT value FROM playback WHERE key = ?1", [key], |r| {
+                    r.get(0)
+                })
                 .optional()?)
         };
         let Some(state) = get("state")? else {
@@ -791,7 +884,12 @@ impl Db {
             .query_row(
                 "SELECT body, expires_at FROM lyrics WHERE uri = ?1 AND source = ?2",
                 [uri, source],
-                |r| Ok(LyricsRow { body: r.get(0)?, expires_at: r.get(1)? }),
+                |r| {
+                    Ok(LyricsRow {
+                        body: r.get(0)?,
+                        expires_at: r.get(1)?,
+                    })
+                },
             )
             .optional()?)
     }
@@ -886,7 +984,8 @@ fn legacy_cover_path(url: &str) -> Option<PathBuf> {
 /// da çözülemiyorsa baytlar olduğu gibi döner. Çözme ve küçültme birkaç ms
 /// sürer: arayüz iş parçacığında çağrılmamalı.
 pub fn shrink_cover(bytes: &[u8]) -> Vec<u8> {
-    let Ok(reader) = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format() else {
+    let Ok(reader) = image::ImageReader::new(std::io::Cursor::new(bytes)).with_guessed_format()
+    else {
         return bytes.to_vec();
     };
     // Önce yalnız başlıktan boyut: küçük resim hiç çözülmez.
@@ -898,7 +997,11 @@ pub fn shrink_cover(bytes: &[u8]) -> Vec<u8> {
         return bytes.to_vec();
     };
     let small = image
-        .resize(COVER_MAX_SIDE, COVER_MAX_SIDE, image::imageops::FilterType::Lanczos3)
+        .resize(
+            COVER_MAX_SIDE,
+            COVER_MAX_SIDE,
+            image::imageops::FilterType::Lanczos3,
+        )
         .to_rgb8();
     let mut out = Vec::new();
     let encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, COVER_JPEG_QUALITY);
@@ -966,7 +1069,9 @@ pub fn store_cover(url: &str, bytes: &[u8]) -> Vec<u8> {
 /// Kapak klasörü sınırı aşıyorsa en uzun süredir görülmeyenleri siler.
 pub fn prune_covers() {
     let Some(dir) = cover_dir() else { return };
-    let Ok(entries) = fs::read_dir(&dir) else { return };
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return;
+    };
     let mut files: Vec<(SystemTime, u64, PathBuf)> = entries
         .filter_map(|e| {
             let e = e.ok()?;
@@ -1009,12 +1114,15 @@ pub fn settings_cache_dir() -> Option<PathBuf> {
 
 /// Temizleme bu çalışmada izinli mi (sınama kopyasında yalnız sahte klasörle)?
 pub fn clearing_allowed() -> bool {
-    std::env::var_os("OPENIFY_TEST_DISPLAY").is_none() || std::env::var_os("OPENIFY_TEST_CACHE_DIR").is_some()
+    std::env::var_os("OPENIFY_TEST_DISPLAY").is_none()
+        || std::env::var_os("OPENIFY_TEST_CACHE_DIR").is_some()
 }
 
 /// Klasörün (alt klasörleriyle) toplam boyutu, bayt. Okunamayanlar sayılmaz.
 pub fn dir_size(path: &Path) -> u64 {
-    let Ok(entries) = fs::read_dir(path) else { return 0 };
+    let Ok(entries) = fs::read_dir(path) else {
+        return 0;
+    };
     entries
         .flatten()
         .map(|e| match e.metadata() {
@@ -1031,11 +1139,21 @@ pub fn clear_subdirs(root: &Path, names: &[&str]) -> u64 {
     let mut freed = 0;
     for name in names {
         let dir = root.join(name);
-        let Ok(entries) = fs::read_dir(&dir) else { continue };
+        let Ok(entries) = fs::read_dir(&dir) else {
+            continue;
+        };
         for entry in entries.flatten() {
             let path = entry.path();
-            let size = if path.is_dir() { dir_size(&path) } else { entry.metadata().map_or(0, |m| m.len()) };
-            let removed = if path.is_dir() { fs::remove_dir_all(&path) } else { fs::remove_file(&path) };
+            let size = if path.is_dir() {
+                dir_size(&path)
+            } else {
+                entry.metadata().map_or(0, |m| m.len())
+            };
+            let removed = if path.is_dir() {
+                fs::remove_dir_all(&path)
+            } else {
+                fs::remove_file(&path)
+            };
             if removed.is_ok() {
                 freed += size;
             }
@@ -1087,7 +1205,11 @@ mod tests {
                 },
             ],
             artists: vec![
-                super::super::library::artist_item("spotify:artist:y", "Yeni takip", "https://i.scdn.co/image/y"),
+                super::super::library::artist_item(
+                    "spotify:artist:y",
+                    "Yeni takip",
+                    "https://i.scdn.co/image/y",
+                ),
                 super::super::library::artist_item("spotify:artist:e", "Eski takip", ""),
             ],
             ..Default::default()
@@ -1100,12 +1222,27 @@ mod tests {
         let names: Vec<_> = back.playlists.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(names, ["B", "C"]);
         // Takip edilen sanatçılar: sıra (en son takip edilen önde), ad, portre, kanonik altyazı.
-        let artists: Vec<_> = back.artists.iter().map(|a| (a.id.key(), a.name.as_str(), a.image.as_str())).collect();
+        let artists: Vec<_> = back
+            .artists
+            .iter()
+            .map(|a| (a.id.key(), a.name.as_str(), a.image.as_str()))
+            .collect();
         assert_eq!(
             artists,
-            [("spotify:artist:y", "Yeni takip", "https://i.scdn.co/image/y"), ("spotify:artist:e", "Eski takip", "")]
+            [
+                (
+                    "spotify:artist:y",
+                    "Yeni takip",
+                    "https://i.scdn.co/image/y"
+                ),
+                ("spotify:artist:e", "Eski takip", "")
+            ]
         );
-        assert!(back.artists.iter().all(|a| a.subtitle == crate::i18n::canon::ARTIST));
+        assert!(
+            back.artists
+                .iter()
+                .all(|a| a.subtitle == crate::i18n::canon::ARTIST)
+        );
         // Sanatçılar ayrı tabloda: kütüphanenin geri kalanı değişince kaybolmazlar,
         // sanatçıları boşaltmak da listelere dokunmaz.
         let mut changed = back.clone();
@@ -1121,7 +1258,9 @@ mod tests {
     }
 
     fn jpeg(w: u32, h: u32) -> Vec<u8> {
-        let img = image::RgbImage::from_fn(w, h, |x, y| image::Rgb([(x % 256) as u8, (y % 256) as u8, 90]));
+        let img = image::RgbImage::from_fn(w, h, |x, y| {
+            image::Rgb([(x % 256) as u8, (y % 256) as u8, 90])
+        });
         let mut out = Vec::new();
         let enc = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, 90);
         img.write_with_encoder(enc).unwrap();
@@ -1131,13 +1270,19 @@ mod tests {
     #[test]
     fn shrink_cover_limits_long_side_and_keeps_aspect() {
         let small = shrink_cover(&jpeg(640, 400));
-        let (w, h) = image::load_from_memory(&small).unwrap().to_rgb8().dimensions();
+        let (w, h) = image::load_from_memory(&small)
+            .unwrap()
+            .to_rgb8()
+            .dimensions();
         assert_eq!(w, COVER_MAX_SIDE);
         assert_eq!(h, 160);
 
         // Dikey resim: yükseklik sınırlanır.
         let tall = shrink_cover(&jpeg(300, 600));
-        let (w, h) = image::load_from_memory(&tall).unwrap().to_rgb8().dimensions();
+        let (w, h) = image::load_from_memory(&tall)
+            .unwrap()
+            .to_rgb8()
+            .dimensions();
         assert_eq!(h, COVER_MAX_SIDE);
         assert_eq!(w, 128);
     }
@@ -1182,23 +1327,54 @@ mod tests {
     fn lyrics_rows_roundtrip_and_prune() {
         let db = Db::open_in_memory().unwrap();
         assert_eq!(db.lyrics_row("spotify:track:a", "spotify").unwrap(), None);
-        db.save_lyrics("spotify:track:a", "spotify", Some("{}"), None, 10).unwrap();
-        db.save_lyrics("spotify:track:a", "lrclib", None, Some(99), 11).unwrap();
-        let hit = db.lyrics_row("spotify:track:a", "spotify").unwrap().unwrap();
+        db.save_lyrics("spotify:track:a", "spotify", Some("{}"), None, 10)
+            .unwrap();
+        db.save_lyrics("spotify:track:a", "lrclib", None, Some(99), 11)
+            .unwrap();
+        let hit = db
+            .lyrics_row("spotify:track:a", "spotify")
+            .unwrap()
+            .unwrap();
         assert_eq!((hit.body.as_deref(), hit.expires_at), (Some("{}"), None));
         let none = db.lyrics_row("spotify:track:a", "lrclib").unwrap().unwrap();
         assert_eq!((none.body, none.expires_at), (None, Some(99)));
         // Üzerine yazma.
-        db.save_lyrics("spotify:track:a", "lrclib", Some("x"), None, 12).unwrap();
-        assert_eq!(db.lyrics_row("spotify:track:a", "lrclib").unwrap().unwrap().body.as_deref(), Some("x"));
+        db.save_lyrics("spotify:track:a", "lrclib", Some("x"), None, 12)
+            .unwrap();
+        assert_eq!(
+            db.lyrics_row("spotify:track:a", "lrclib")
+                .unwrap()
+                .unwrap()
+                .body
+                .as_deref(),
+            Some("x")
+        );
         // Sınır aşılınca en eskiler silinir, yenisi kalır.
         for i in 0..(LYRICS_KEEP + 5) {
-            db.save_lyrics(&format!("spotify:track:{i}"), "spotify", Some("b"), None, 100 + i).unwrap();
+            db.save_lyrics(
+                &format!("spotify:track:{i}"),
+                "spotify",
+                Some("b"),
+                None,
+                100 + i,
+            )
+            .unwrap();
         }
-        let n: i64 = db.w().query_row("SELECT COUNT(*) FROM lyrics", [], |r| r.get(0)).unwrap();
+        let n: i64 = db
+            .w()
+            .query_row("SELECT COUNT(*) FROM lyrics", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, LYRICS_KEEP);
-        assert!(db.lyrics_row("spotify:track:a", "spotify").unwrap().is_none());
-        assert!(db.lyrics_row(&format!("spotify:track:{}", LYRICS_KEEP + 4), "spotify").unwrap().is_some());
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            db.lyrics_row(&format!("spotify:track:{}", LYRICS_KEEP + 4), "spotify")
+                .unwrap()
+                .is_some()
+        );
     }
 
     #[test]
@@ -1215,7 +1391,8 @@ mod tests {
 
     /// Sahte önbellek klasörü (gerçek `%LOCALAPPDATA%\Openify`'a dokunmaz).
     fn fake_cache(tag: &str) -> PathBuf {
-        let root = std::env::temp_dir().join(format!("openify-cache-test-{tag}-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("openify-cache-test-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("audio").join("ab")).unwrap();
         fs::create_dir_all(root.join("covers")).unwrap();
@@ -1240,7 +1417,10 @@ mod tests {
         let freed = clear_subdirs(&root, &CLEARABLE);
         assert_eq!(freed, 1700);
         assert_eq!(dir_size(&root), 300, "yalnız library.db kalır");
-        assert!(root.join("audio").is_dir() && root.join("covers").is_dir(), "klasörlerin kendisi kalır");
+        assert!(
+            root.join("audio").is_dir() && root.join("covers").is_dir(),
+            "klasörlerin kendisi kalır"
+        );
         assert!(root.join("library.db").is_file());
         // İkinci temizlik zararsız.
         assert_eq!(clear_subdirs(&root, &CLEARABLE), 0);
@@ -1252,7 +1432,8 @@ mod tests {
     use std::sync::Arc;
 
     fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-db-test-{tag}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-db-test-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -1270,7 +1451,11 @@ mod tests {
     /// şema), içinde her tabloda veriyle.
     fn legacy_file(path: &Path, version: i64) {
         let conn = Connection::open(path).unwrap();
-        let image = if version >= 3 { ", image TEXT NOT NULL DEFAULT ''" } else { "" };
+        let image = if version >= 3 {
+            ", image TEXT NOT NULL DEFAULT ''"
+        } else {
+            ""
+        };
         conn.execute_batch(&format!(
             "CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
              CREATE TABLE library_items (position INTEGER PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL, subtitle TEXT NOT NULL{image});
@@ -1299,36 +1484,81 @@ mod tests {
         let want = migrate::schema_columns(&fresh.w());
         assert_eq!(
             want["library_items"],
-            ["position", "id", "name", "subtitle", "image", "kind", "parent", "added_at", "creator"]
+            [
+                "position", "id", "name", "subtitle", "image", "kind", "parent", "added_at",
+                "creator"
+            ]
         );
-        assert_eq!(want["collection_tracks"], ["collection", "position", "track_uri", "added_at"]);
+        assert_eq!(
+            want["collection_tracks"],
+            ["collection", "position", "track_uri", "added_at"]
+        );
         assert!(want.contains_key("library_pins"));
-        assert_eq!(want["library_artists"], ["position", "uri", "name", "image"]);
+        assert_eq!(
+            want["library_artists"],
+            ["position", "uri", "name", "image"]
+        );
         assert_eq!(
             want["play_history"],
-            ["id", "played_at", "uri", "name", "artists", "album", "duration_ms", "listened_ms"]
+            [
+                "id",
+                "played_at",
+                "uri",
+                "name",
+                "artists",
+                "album",
+                "duration_ms",
+                "listened_ms"
+            ]
         );
-        assert_eq!(want["hidden_songs"], ["uri", "context", "name", "artists", "hidden_at"]);
+        assert_eq!(
+            want["hidden_songs"],
+            ["uri", "context", "name", "artists", "hidden_at"]
+        );
         assert_eq!(want["track_analysis"][..3], ["uri", "algo", "flags"]);
         for v in [1, 2, 3] {
             let path = dir.join(format!("v{v}.db"));
             legacy_file(&path, v);
             let db = Db::open(&path).unwrap();
             assert_eq!(version(&db), 9, "sürüm {v}");
-            assert_eq!(migrate::schema_columns(&db.w()), want, "sürüm {v} aynı şemaya varmalı");
+            assert_eq!(
+                migrate::schema_columns(&db.w()),
+                want,
+                "sürüm {v} aynı şemaya varmalı"
+            );
             // Kullanıcı durumu ve pahalı veri HİÇBİR sürümde silinmez.
             assert_eq!(
                 db.load_playback().unwrap(),
                 Some(("durum".to_string(), Some("büyük".to_string()))),
                 "sürüm {v}: kaldığı yer"
             );
-            assert_eq!(db.lyrics_row("spotify:track:a", "spotify").unwrap().unwrap().body.as_deref(), Some("{}"));
+            assert_eq!(
+                db.lyrics_row("spotify:track:a", "spotify")
+                    .unwrap()
+                    .unwrap()
+                    .body
+                    .as_deref(),
+                Some("{}")
+            );
             if v == 3 {
                 // Şimdiki sürüm: yeniden indirilebilir veri de aynen durur.
                 let lib = db.load_library().unwrap().unwrap();
-                assert_eq!((lib.liked_count, lib.playlists.len(), lib.playlists[0].name.as_str()), (7, 1, "Eski"));
+                assert_eq!(
+                    (
+                        lib.liked_count,
+                        lib.playlists.len(),
+                        lib.playlists[0].name.as_str()
+                    ),
+                    (7, 1, "Eski")
+                );
                 let entries = db.collection_entries(&pl(1)).unwrap().unwrap();
-                assert_eq!(entries, [Entry::untimed("spotify:track:a"), Entry::untimed("spotify:track:b")]);
+                assert_eq!(
+                    entries,
+                    [
+                        Entry::untimed("spotify:track:a"),
+                        Entry::untimed("spotify:track:b")
+                    ]
+                );
                 assert_eq!(db.revision(&pl(1)).unwrap().unwrap(), [1, 2]);
                 assert_eq!(db.tracks(&["spotify:track:a".into()]).unwrap().len(), 1);
             } else {
@@ -1369,15 +1599,36 @@ mod tests {
         assert_eq!(version(&db), 9);
         // Mevcut veri aynen: liste, sabitleme, eklenme anı, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.liked_count, lib.playlists[0].name.as_str(), lib.artists.len()), (7, "Eski", 0));
+        assert_eq!(
+            (
+                lib.liked_count,
+                lib.playlists[0].name.as_str(),
+                lib.artists.len()
+            ),
+            (7, "Eski", 0)
+        );
         assert_eq!(db.pinned_keys().unwrap(), ["spotify:playlist:1"]);
         let entries = db.collection_entries(&pl(1)).unwrap().unwrap();
-        assert_eq!(entries[0], Entry { track: "spotify:track:a".into(), added_at: Some(1_700_000_000_000) });
+        assert_eq!(
+            entries[0],
+            Entry {
+                track: "spotify:track:a".into(),
+                added_at: Some(1_700_000_000_000)
+            }
+        );
         assert_eq!(db.load_playback().unwrap().unwrap().0, "durum");
-        assert!(db.lyrics_row("spotify:track:a", "spotify").unwrap().is_some());
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_some()
+        );
         // Yeni tablo çalışıyor ve sonraki açılış değiştirmiyor.
         let mut with_artists = lib.clone();
-        with_artists.artists = vec![super::super::library::artist_item("spotify:artist:a", "A", "i")];
+        with_artists.artists = vec![super::super::library::artist_item(
+            "spotify:artist:a",
+            "A",
+            "i",
+        )];
         db.save_library(&with_artists).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
@@ -1391,16 +1642,24 @@ mod tests {
         let dir = temp_dir("too-new");
         let path = dir.join("library.db");
         legacy_file(&path, 3);
-        Connection::open(&path).unwrap().pragma_update(None, "user_version", 10).unwrap();
+        Connection::open(&path)
+            .unwrap()
+            .pragma_update(None, "user_version", 10)
+            .unwrap();
         let err = Db::open(&path).err().expect("daha yeni sürüm açılmamalı");
         assert!(format!("{err:#}").contains("version 10"), "{err:#}");
         // Dosyaya dokunulmadı: sürüm ve veri aynı.
         let raw = Connection::open(&path).unwrap();
         assert_eq!(migrate::user_version(&raw).unwrap(), 10);
-        let n: i64 = raw.query_row("SELECT COUNT(*) FROM collection_tracks", [], |r| r.get(0)).unwrap();
+        let n: i64 = raw
+            .query_row("SELECT COUNT(*) FROM collection_tracks", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 2);
         let cols = migrate::schema_columns(&raw);
-        assert_eq!(cols["collection_tracks"], ["collection", "position", "track_uri"]);
+        assert_eq!(
+            cols["collection_tracks"],
+            ["collection", "position", "track_uri"]
+        );
         drop(raw);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1411,34 +1670,67 @@ mod tests {
         let id = pl(1);
         assert_eq!(db.collection_entries(&id).unwrap(), None);
         let entries = vec![
-            Entry { track: "spotify:track:1".into(), added_at: Some(1_700_000_000_000) },
+            Entry {
+                track: "spotify:track:1".into(),
+                added_at: Some(1_700_000_000_000),
+            },
             Entry::untimed("spotify:track:2"),
-            Entry { track: "spotify:track:3".into(), added_at: Some(1_600_000_000_000) },
+            Entry {
+                track: "spotify:track:3".into(),
+                added_at: Some(1_600_000_000_000),
+            },
         ];
-        db.save_collection_entries(&id, Some(b"r1"), &entries).unwrap();
+        db.save_collection_entries(&id, Some(b"r1"), &entries)
+            .unwrap();
         assert_eq!(db.collection_entries(&id).unwrap().unwrap(), entries);
         // Eski arayüz (yalnız adresler) aynı sırada sonuç verir.
-        assert_eq!(db.collection_uris(&id).unwrap().unwrap(), ["spotify:track:1", "spotify:track:2", "spotify:track:3"]);
+        assert_eq!(
+            db.collection_uris(&id).unwrap().unwrap(),
+            ["spotify:track:1", "spotify:track:2", "spotify:track:3"]
+        );
 
         // Düzenleme yaması listeyi adreslerle baştan yazar: bilinen tarihler
         // korunur, yeni gelen şarkının tarihi yok, silinenin tarihi gider.
-        let patched: Vec<String> = ["spotify:track:9", "spotify:track:3", "spotify:track:1"].map(String::from).to_vec();
+        let patched: Vec<String> = ["spotify:track:9", "spotify:track:3", "spotify:track:1"]
+            .map(String::from)
+            .to_vec();
         db.save_collection(&id, Some(b"r2"), &patched).unwrap();
         assert_eq!(
             db.collection_entries(&id).unwrap().unwrap(),
             [
                 Entry::untimed("spotify:track:9"),
-                Entry { track: "spotify:track:3".into(), added_at: Some(1_600_000_000_000) },
-                Entry { track: "spotify:track:1".into(), added_at: Some(1_700_000_000_000) },
+                Entry {
+                    track: "spotify:track:3".into(),
+                    added_at: Some(1_600_000_000_000)
+                },
+                Entry {
+                    track: "spotify:track:1".into(),
+                    added_at: Some(1_700_000_000_000)
+                },
             ]
         );
         assert_eq!(db.revision(&id).unwrap().unwrap(), b"r2");
 
         // Verilen tarih her zaman eskisini geçer; bir başka listeninki karışmaz.
-        db.save_collection_entries(&id, None, &[Entry { track: "spotify:track:1".into(), added_at: Some(5) }]).unwrap();
-        assert_eq!(db.collection_entries(&id).unwrap().unwrap()[0].added_at, Some(5));
-        db.save_collection(&pl(2), None, &["spotify:track:1".to_string()]).unwrap();
-        assert_eq!(db.collection_entries(&pl(2)).unwrap().unwrap()[0].added_at, None);
+        db.save_collection_entries(
+            &id,
+            None,
+            &[Entry {
+                track: "spotify:track:1".into(),
+                added_at: Some(5),
+            }],
+        )
+        .unwrap();
+        assert_eq!(
+            db.collection_entries(&id).unwrap().unwrap()[0].added_at,
+            Some(5)
+        );
+        db.save_collection(&pl(2), None, &["spotify:track:1".to_string()])
+            .unwrap();
+        assert_eq!(
+            db.collection_entries(&pl(2)).unwrap().unwrap()[0].added_at,
+            None
+        );
     }
 
     #[test]
@@ -1456,8 +1748,18 @@ mod tests {
         };
         let nodes = vec![
             node("spotify:album:a", ItemKind::Playlist, None, "Albüm"),
-            node("spotify:start-group:f1:Klasör", ItemKind::Folder, None, "Klasör"),
-            node("spotify:playlist:1", ItemKind::Playlist, Some("spotify:start-group:f1:Klasör"), "İçeride"),
+            node(
+                "spotify:start-group:f1:Klasör",
+                ItemKind::Folder,
+                None,
+                "Klasör",
+            ),
+            node(
+                "spotify:playlist:1",
+                ItemKind::Playlist,
+                Some("spotify:start-group:f1:Klasör"),
+                "İçeride",
+            ),
             node("spotify:playlist:2", ItemKind::Playlist, None, "Kökte"),
         ];
         db.save_library_nodes(&nodes, 11).unwrap();
@@ -1493,12 +1795,33 @@ mod tests {
                 image: String::new(),
             }],
             // Kökte: L1; Yaz klasöründe: L2, (Yol klasöründe: L3), L4; kökte L5; sondaki boş klasör.
-            playlists: vec![list(1, "L1"), list(2, "L2"), list(3, "L3"), list(4, "L4"), list(5, "L5")],
+            playlists: vec![
+                list(1, "L1"),
+                list(2, "L2"),
+                list(3, "L3"),
+                list(4, "L4"),
+                list(5, "L5"),
+            ],
             meta: LibraryMeta {
                 folders: vec![
-                    Folder { key: f1.clone(), name: "Yaz".into(), parent: None, at: 1 },
-                    Folder { key: f2.clone(), name: "Yol".into(), parent: Some(f1.clone()), at: 2 },
-                    Folder { key: "spotify:start-group:f3:Boş".into(), name: "Boş".into(), parent: None, at: 5 },
+                    Folder {
+                        key: f1.clone(),
+                        name: "Yaz".into(),
+                        parent: None,
+                        at: 1,
+                    },
+                    Folder {
+                        key: f2.clone(),
+                        name: "Yol".into(),
+                        parent: Some(f1.clone()),
+                        at: 2,
+                    },
+                    Folder {
+                        key: "spotify:start-group:f3:Boş".into(),
+                        name: "Boş".into(),
+                        parent: None,
+                        at: 5,
+                    },
                 ],
                 parents: [
                     (pl(2).key().to_string(), f1.clone()),
@@ -1506,7 +1829,11 @@ mod tests {
                     (pl(4).key().to_string(), f1.clone()),
                 ]
                 .into(),
-                added: [("spotify:album:a".to_string(), 5_000), (pl(3).key().to_string(), 9_000)].into(),
+                added: [
+                    ("spotify:album:a".to_string(), 5_000),
+                    (pl(3).key().to_string(), 9_000),
+                ]
+                .into(),
                 creators: [(pl(3).key().to_string(), "ayse".to_string())].into(),
                 pinned: Vec::new(),
             },
@@ -1518,7 +1845,10 @@ mod tests {
         library.meta.pinned = vec!["liked".into(), pl(4).key().to_string()];
         let back = db.load_library().unwrap().unwrap();
         assert_eq!(back, library, "her şey aynen geri gelmeli");
-        assert_eq!(folder_id(&back.meta.folders[0].key), "spotify:start-group:f1");
+        assert_eq!(
+            folder_id(&back.meta.folders[0].key),
+            "spotify:start-group:f1"
+        );
         // Düz görünüm hâlâ klasörsüz sıra: albüm + listeler sırasıyla.
         let names: Vec<_> = back.playlists.iter().map(|p| p.name.as_str()).collect();
         assert_eq!(names, ["L1", "L2", "L3", "L4", "L5"]);
@@ -1542,7 +1872,9 @@ mod tests {
             assert_eq!(migrate::user_version(&conn).unwrap(), 5);
             assert_eq!(
                 migrate::schema_columns(&conn)["library_items"],
-                ["position", "id", "name", "subtitle", "image", "kind", "parent"]
+                [
+                    "position", "id", "name", "subtitle", "image", "kind", "parent"
+                ]
             );
             conn.execute_batch(
                 "INSERT INTO library_pins (id, pinned_at) VALUES ('spotify:playlist:1', 77);
@@ -1553,8 +1885,15 @@ mod tests {
         let db = Db::open(&path).unwrap();
         assert_eq!(version(&db), 9);
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.playlists[0].name.as_str(), lib.artists.len()), ("Eski", 1));
-        assert!(lib.meta.added.is_empty() && lib.meta.creators.is_empty() && lib.meta.folders.is_empty());
+        assert_eq!(
+            (lib.playlists[0].name.as_str(), lib.artists.len()),
+            ("Eski", 1)
+        );
+        assert!(
+            lib.meta.added.is_empty()
+                && lib.meta.creators.is_empty()
+                && lib.meta.folders.is_empty()
+        );
         assert_eq!(lib.meta.pinned, ["spotify:playlist:1"]);
         assert_eq!(db.collection_entries(&pl(1)).unwrap().unwrap().len(), 2);
         let _ = fs::remove_dir_all(&dir);
@@ -1583,14 +1922,24 @@ mod tests {
         assert_eq!(version(&db), 9);
         // Mevcut veri aynen.
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.playlists[0].name.as_str(), lib.artists.len()), ("Eski", 1));
+        assert_eq!(
+            (lib.playlists[0].name.as_str(), lib.artists.len()),
+            ("Eski", 1)
+        );
         assert_eq!(lib.meta.added["spotify:playlist:1"], 1_700_000_000_000);
         assert_eq!(lib.meta.pinned, ["spotify:playlist:1"]);
         assert_eq!(db.collection_entries(&pl(1)).unwrap().unwrap().len(), 2);
         assert_eq!(db.load_playback().unwrap().unwrap().0, "durum");
-        assert!(db.lyrics_row("spotify:track:a", "spotify").unwrap().is_some());
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_some()
+        );
         // Yeni tablo boş, yazılabilir.
-        let n: i64 = db.r().query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0)).unwrap();
+        let n: i64 = db
+            .r()
+            .query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 0);
         db.w()
             .execute(
@@ -1604,8 +1953,14 @@ mod tests {
         drop(db);
         let again = Db::open(&path).unwrap();
         assert_eq!(version(&again), 9);
-        let n: i64 = again.r().query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0)).unwrap();
-        assert_eq!(n, 1, "çalma geçmişi tazelemede ve yeniden açılışta silinmez");
+        let n: i64 = again
+            .r()
+            .query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(
+            n, 1,
+            "çalma geçmişi tazelemede ve yeniden açılışta silinmez"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1632,11 +1987,21 @@ mod tests {
         assert_eq!(version(&db), 9);
         // Mevcut veri aynen: kütüphane, sabitleme, çalma geçmişi, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.playlists[0].name.as_str(), lib.meta.pinned.clone()), ("Eski", vec!["spotify:playlist:1".to_string()]));
-        let plays: i64 = db.r().query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0)).unwrap();
+        assert_eq!(
+            (lib.playlists[0].name.as_str(), lib.meta.pinned.clone()),
+            ("Eski", vec!["spotify:playlist:1".to_string()])
+        );
+        let plays: i64 = db
+            .r()
+            .query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(plays, 1);
         assert_eq!(db.load_playback().unwrap().unwrap().0, "durum");
-        assert!(db.lyrics_row("spotify:track:a", "spotify").unwrap().is_some());
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_some()
+        );
         // Yeni tablo boş, yazılabilir.
         assert!(db.hidden_songs().unwrap().is_empty());
         db.hide_song(&crate::engine::hidden::HiddenSong {
@@ -1654,7 +2019,11 @@ mod tests {
         let again = Db::open(&path).unwrap();
         assert_eq!(version(&again), 9);
         let kept = again.hidden_songs().unwrap();
-        assert_eq!(kept.len(), 1, "gizlenen şarkılar tazelemede ve yeniden açılışta silinmez");
+        assert_eq!(
+            kept.len(),
+            1,
+            "gizlenen şarkılar tazelemede ve yeniden açılışta silinmez"
+        );
         assert_eq!(kept[0].context.as_deref(), Some("spotify:playlist:1"));
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1682,10 +2051,17 @@ mod tests {
         assert_eq!(version(&db), 9);
         // Mevcut veri aynen: kütüphane, sabitleme, gizlenenler, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
-        assert_eq!((lib.playlists[0].name.as_str(), lib.meta.pinned.clone()), ("Eski", vec!["spotify:playlist:1".to_string()]));
+        assert_eq!(
+            (lib.playlists[0].name.as_str(), lib.meta.pinned.clone()),
+            ("Eski", vec!["spotify:playlist:1".to_string()])
+        );
         assert_eq!(db.hidden_songs().unwrap().len(), 1);
         assert_eq!(db.load_playback().unwrap().unwrap().0, "durum");
-        assert!(db.lyrics_row("spotify:track:a", "spotify").unwrap().is_some());
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_some()
+        );
         // Yeni tablo boş, yazılabilir.
         assert!(db.load_analyses(10).unwrap().is_empty());
         let mut a = Analysis::EMPTY;
@@ -1698,7 +2074,10 @@ mod tests {
         drop(db);
         let again = Db::open(&path).unwrap();
         assert_eq!(version(&again), 9);
-        assert_eq!(again.analysis("spotify:track:a").unwrap().unwrap().tail_ms, 900);
+        assert_eq!(
+            again.analysis("spotify:track:a").unwrap().unwrap().tail_ms,
+            900
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1710,10 +2089,16 @@ mod tests {
         db.set_pinned("spotify:playlist:1", true, 100).unwrap();
         // Yeniden sabitlemek ilk anı korur (sıra bozulmaz).
         db.set_pinned("spotify:playlist:2", true, 900).unwrap();
-        assert_eq!(db.pinned_keys().unwrap(), ["spotify:playlist:1", "spotify:playlist:2"]);
+        assert_eq!(
+            db.pinned_keys().unwrap(),
+            ["spotify:playlist:1", "spotify:playlist:2"]
+        );
         // Kütüphane (düz ve ağaç yazıcıları) baştan yazılsa da sabitleme durur,
         // listenin o an kütüphanede olmaması da (alınamayan liste) onu silmez.
-        let lib = Library { liked_count: 1, ..Default::default() };
+        let lib = Library {
+            liked_count: 1,
+            ..Default::default()
+        };
         db.save_library(&lib).unwrap();
         db.save_library_nodes(&[], 1).unwrap();
         assert_eq!(db.pinned_keys().unwrap().len(), 2);
@@ -1741,7 +2126,9 @@ mod tests {
     #[test]
     fn tracks_lookup_handles_many_duplicates_and_missing_uris() {
         let db = Db::open_in_memory().unwrap();
-        let rows: Vec<TrackRow> = (0..1203).map(|i| row(&format!("spotify:track:{i}"))).collect();
+        let rows: Vec<TrackRow> = (0..1203)
+            .map(|i| row(&format!("spotify:track:{i}")))
+            .collect();
         db.save_tracks(&rows).unwrap();
         let mut ask: Vec<String> = (0..1500).map(|i| format!("spotify:track:{i}")).collect();
         ask.push("spotify:track:7".into());
@@ -1758,18 +2145,26 @@ mod tests {
         let dir = temp_dir("readers");
         let db = Arc::new(Db::open(&dir.join("library.db")).unwrap());
         assert_eq!(db.conns.reader_count(), 2);
-        let lib = Library { liked_count: 3, ..Default::default() };
+        let lib = Library {
+            liked_count: 3,
+            ..Default::default()
+        };
         db.save_library(&lib).unwrap();
         db.save_playback("s", None).unwrap();
         // Okuma bağlantısı yazıcının işlediğini görür.
         assert_eq!(db.load_library().unwrap().unwrap().liked_count, 3);
         assert_eq!(db.load_playback().unwrap().unwrap().0, "s");
-        assert!(db.r().is_readonly(rusqlite::MAIN_DB).unwrap(), "okuma bağlantısı salt-okunur");
+        assert!(
+            db.r().is_readonly(rusqlite::MAIN_DB).unwrap(),
+            "okuma bağlantısı salt-okunur"
+        );
 
         // Yazıcı açık bir yazma işleminde takılıyken okumalar beklemeden döner
         // ve işlenmemiş yazmayı görmez.
         let writer = db.w();
-        writer.execute_batch("BEGIN IMMEDIATE; INSERT INTO meta VALUES ('beklemede', '1');").unwrap();
+        writer
+            .execute_batch("BEGIN IMMEDIATE; INSERT INTO meta VALUES ('beklemede', '1');")
+            .unwrap();
         let (tx, rx) = std::sync::mpsc::channel();
         let reader = Arc::clone(&db);
         std::thread::spawn(move || {

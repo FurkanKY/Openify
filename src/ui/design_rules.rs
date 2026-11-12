@@ -83,8 +83,7 @@ mod tests {
     #[test]
     fn spacing_comes_from_the_scale() {
         let methods = [
-            "gap", "p", "px", "py", "pt", "pb", "pl", "pr", "m", "mx", "my", "mt", "mb", "ml",
-            "mr",
+            "gap", "p", "px", "py", "pt", "pb", "pl", "pr", "m", "mx", "my", "mt", "mb", "ml", "mr",
         ];
         let v = violations(|code| methods.iter().any(|m| literal_px(code, m)));
         assert!(v.is_empty(), "ölçek dışı boşluk:\n{}", v.join("\n"));
@@ -99,7 +98,8 @@ mod tests {
     #[test]
     fn type_comes_from_roles() {
         // Stil olarak verilen boyut (`window.line_height()` gibi okumalar değil).
-        let v = violations(|code| code.contains(".text_size(") || code.contains(".line_height(px("));
+        let v =
+            violations(|code| code.contains(".text_size(") || code.contains(".line_height(px("));
         assert!(v.is_empty(), "yazı rolü dışında boyut:\n{}", v.join("\n"));
     }
 
@@ -111,7 +111,11 @@ mod tests {
                 || code.contains(".shadow_lg()")
                 || code.contains(".shadow_xl()")
         });
-        assert!(v.is_empty(), "float_shadow dışında gölge:\n{}", v.join("\n"));
+        assert!(
+            v.is_empty(),
+            "float_shadow dışında gölge:\n{}",
+            v.join("\n")
+        );
     }
 
     #[test]
@@ -128,11 +132,18 @@ mod tests {
         let order = super::super::tab::ORDER;
         for pair in order.windows(2) {
             let ((a, ia), (b, ib)) = (pair[0], pair[1]);
-            assert!(ia <= ib, "Tab sırası görsel sırayı bozuyor: {a} ({ia}) sonra {b} ({ib})");
+            assert!(
+                ia <= ib,
+                "Tab sırası görsel sırayı bozuyor: {a} ({ia}) sonra {b} ({ib})"
+            );
         }
         // Gruplar arası boşluk: yeni duraklar araya sığsın.
         let group = |name: &str| order.iter().find(|(n, _)| *n == name).unwrap().1;
-        assert!(group("kapat") < group("raf") && group("sayfa") < group("panel") && group("panel") < group("kalp"));
+        assert!(
+            group("kapat") < group("raf")
+                && group("sayfa") < group("panel")
+                && group("panel") < group("kalp")
+        );
     }
 
     /// Ayarlar sayfasındaki her etkileşimli denetim klavye durağıdır (Tab,
@@ -147,12 +158,24 @@ mod tests {
             let code = line.split("//").next().unwrap_or("");
             let call = ["switch(", "segment(", "select_field(", "secondary_button("]
                 .iter()
-                .any(|c| code.contains(&format!("= {c}")) || code.trim_start().starts_with(c) || code.contains(&format!("({c}")));
-            if call && !code.contains("fn ") && !code.contains("confirm-") && code.contains("Look::Live") {
+                .any(|c| {
+                    code.contains(&format!("= {c}"))
+                        || code.trim_start().starts_with(c)
+                        || code.contains(&format!("({c}"))
+                });
+            if call
+                && !code.contains("fn ")
+                && !code.contains("confirm-")
+                && code.contains("Look::Live")
+            {
                 bad.push(format!("settings.rs:{}: {}", n + 1, line.trim()));
             }
         }
-        assert!(bad.is_empty(), "klavye odağı olmayan ayar denetimi:\n{}", bad.join("\n"));
+        assert!(
+            bad.is_empty(),
+            "klavye odağı olmayan ayar denetimi:\n{}",
+            bad.join("\n")
+        );
         // Çok satırlı çağrılar için: Look::Live yerine stop_look sonucu.
         let stops = src.matches("self.stop_look(").count();
         assert!(stops >= 10, "ayarlardaki Tab durakları eksik ({stops})");
@@ -175,6 +198,10 @@ mod tests {
                 }
             }
         }
-        assert!(missing.is_empty(), "ipucusuz simge düğmesi:\n{}", missing.join("\n"));
+        assert!(
+            missing.is_empty(),
+            "ipucusuz simge düğmesi:\n{}",
+            missing.join("\n")
+        );
     }
 }

@@ -112,7 +112,9 @@ impl ImageStore {
         self.ready.borrow_mut().insert(url.to_string());
         // İndirme şimdi bitti: kapak ilk görünüşünde yumuşakça açılsın.
         if animations_enabled() {
-            self.fades.borrow_mut().insert(url.to_string(), Instant::now());
+            self.fades
+                .borrow_mut()
+                .insert(url.to_string(), Instant::now());
         }
     }
 

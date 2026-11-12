@@ -18,7 +18,8 @@ impl Playback {
     /// uyanılacak an. Yalnız bağlıyken, bağlanma sürmüyorken ve bu yükleme için
     /// henüz işlem yapılmadıysa. `current`: sıradaki çalan şarkı.
     pub fn stall_deadline(&self, current: Option<&str>, reconnecting: bool) -> Option<Instant> {
-        if self.deck.is_none() || reconnecting || self.stall_fired || self.retried_current(current) {
+        if self.deck.is_none() || reconnecting || self.stall_fired || self.retried_current(current)
+        {
             return None;
         }
         self.load_started.map(|t| t + recovery::LOAD_STALL)
@@ -29,7 +30,9 @@ impl Playback {
     /// edilmeden; bkz. `recovery.rs`).
     pub fn on_load_stall(&mut self, cx: &mut Cx<'_>) {
         self.stall_fired = true;
-        let Some(started) = self.load_started else { return };
+        let Some(started) = self.load_started else {
+            return;
+        };
         if !recovery::stall_should_reconnect(
             started.elapsed(),
             self.retried_current(cx.queue.current_uri()),
@@ -39,7 +42,10 @@ impl Playback {
         ) {
             return;
         }
-        log::warn!("Şarkı yüklemesi {} sn'dir sürüyor, oturum ölü sayıldı", started.elapsed().as_secs());
+        log::warn!(
+            "Şarkı yüklemesi {} sn'dir sürüyor, oturum ölü sayıldı",
+            started.elapsed().as_secs()
+        );
         cx.fx.push(Effect::Reconnect {
             retry_current: true,
             skip_if_refused: false,
@@ -89,11 +95,17 @@ impl Playback {
             consecutive: self.failures,
             max_consecutive: MAX_CONSECUTIVE_FAILURES,
         });
-        log::info!("Şarkı çalınamadı (anahtar hatası: {key_failure}, çalan: {current}) → {action:?}");
+        log::info!(
+            "Şarkı çalınamadı (anahtar hatası: {key_failure}, çalan: {current}) → {action:?}"
+        );
         match action {
             recovery::Recovery::Ignore => {}
             recovery::Recovery::ReconnectOnly => {
-                cx.fx.push(Effect::Reconnect { retry_current: false, skip_if_refused: false, started: None });
+                cx.fx.push(Effect::Reconnect {
+                    retry_current: false,
+                    skip_if_refused: false,
+                    started: None,
+                });
             }
             recovery::Recovery::GiveUp => {
                 self.failures = 0;
@@ -134,7 +146,8 @@ impl Playback {
         let retry = std::mem::take(&mut self.retry_after_reconnect);
         let target = if retry {
             recovery::retry_target(
-                self.last_position.map(|(ms, at, playing)| (ms, at.elapsed(), playing)),
+                self.last_position
+                    .map(|(ms, at, playing)| (ms, at.elapsed(), playing)),
                 self.load_position,
                 self.load_started.is_some(),
             )

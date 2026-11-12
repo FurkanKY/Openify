@@ -7,8 +7,8 @@ use std::{
 };
 
 use super::{
-    BLOCK, BURST_GAP_NS, CHANNELS, DEFAULT_PERIOD_NS, FADE_FRAMES, GAIN_RAMP_FRAMES, OutputCtl, RATE, XRUN_GROW_MS,
-    frames_to_ns, ms_to_frames,
+    BLOCK, BURST_GAP_NS, CHANNELS, DEFAULT_PERIOD_NS, FADE_FRAMES, GAIN_RAMP_FRAMES, OutputCtl,
+    RATE, XRUN_GROW_MS, frames_to_ns, ms_to_frames,
 };
 
 use super::{eq::Eq, karaoke::Karaoke};
@@ -169,7 +169,16 @@ impl RingSource {
         // Yeni ekolayzır ayarı yayınlandıysa al (blok başına bir atomik okuma).
         self.eq.poll(&ctl.eq);
         self.karaoke.poll(&ctl.karaoke);
-        let silent = |r: u64| Plan { now, gain_target, hold: true, r, w: r, avail: 0, silent: true, direct: true };
+        let silent = |r: u64| Plan {
+            now,
+            gain_target,
+            hold: true,
+            r,
+            w: r,
+            avail: 0,
+            silent: true,
+            direct: true,
+        };
 
         // Aygıt değişimi: bekleme kipindeki yeni kaynak (önceki henüz
         // bırakmadı) ve emekli eski kaynak halkaya dokunmaz, sessiz çalar.
@@ -232,7 +241,16 @@ impl RingSource {
 
         let w = ctl.written.load(SeqCst);
         let avail = (w - r.min(w)).min(BLOCK as u64) as usize;
-        Plan { now, gain_target, hold, r, w, avail, silent: false, direct: !(self.eq.running() || self.karaoke.running()) }
+        Plan {
+            now,
+            gain_target,
+            hold,
+            r,
+            w,
+            avail,
+            silent: false,
+            direct: !(self.eq.running() || self.karaoke.running()),
+        }
     }
 
     /// 2. aşama: halkadan ham kareleri `buf`a, her karenin çarpanını `coef`a
@@ -269,7 +287,15 @@ impl RingSource {
         // `HIGH` / `BOTH` yalnız `big_from` konduktan sonra (yazar `big`i koyduktan
         // sonra) seçilir: yuva vardır.
         let high = ctl.big.get().unwrap_or(low);
-        let Plan { now, gain_target, hold, r, w, avail, .. } = *plan;
+        let Plan {
+            now,
+            gain_target,
+            hold,
+            r,
+            w,
+            avail,
+            ..
+        } = *plan;
         let mut r = r;
         let env_step = 1.0 / FADE_FRAMES as f32;
         let was_starving = self.starving;
@@ -278,7 +304,11 @@ impl RingSource {
         for i in 0..BLOCK {
             if self.gain_left > 0 {
                 self.gain_left -= 1;
-                self.gain = if self.gain_left == 0 { gain_target } else { self.gain + self.gain_step };
+                self.gain = if self.gain_left == 0 {
+                    gain_target
+                } else {
+                    self.gain + self.gain_step
+                };
             }
             if stopped {
                 continue;
@@ -336,7 +366,10 @@ impl RingSource {
                 ctl.t_xrun.store(now.max(1), Relaxed);
                 let target = ctl.target.load(Relaxed);
                 if target < ctl.target_limit {
-                    ctl.target.store((target + ms_to_frames(XRUN_GROW_MS)).min(ctl.target_limit), Relaxed);
+                    ctl.target.store(
+                        (target + ms_to_frames(XRUN_GROW_MS)).min(ctl.target_limit),
+                        Relaxed,
+                    );
                 }
             }
             if self.resumed {
@@ -400,7 +433,11 @@ impl RingSource {
         if plan.silent {
             return;
         }
-        let n = if plan.direct { self.pull_baseline::<true>(&plan) } else { self.pull_baseline::<false>(&plan) };
+        let n = if plan.direct {
+            self.pull_baseline::<true>(&plan)
+        } else {
+            self.pull_baseline::<false>(&plan)
+        };
         self.shape(&plan, n);
     }
 
@@ -408,7 +445,15 @@ impl RingSource {
         const MASK: u64 = super::CAP_FRAMES - 1;
         let ctl = &self.ctl;
         let cells = ctl.ring.raw();
-        let Plan { now, gain_target, hold, r, w, avail, .. } = *plan;
+        let Plan {
+            now,
+            gain_target,
+            hold,
+            r,
+            w,
+            avail,
+            ..
+        } = *plan;
         let mut r = r;
         let env_step = 1.0 / FADE_FRAMES as f32;
         let was_starving = self.starving;
@@ -417,12 +462,20 @@ impl RingSource {
         for i in 0..BLOCK {
             if self.gain_left > 0 {
                 self.gain_left -= 1;
-                self.gain = if self.gain_left == 0 { gain_target } else { self.gain + self.gain_step };
+                self.gain = if self.gain_left == 0 {
+                    gain_target
+                } else {
+                    self.gain + self.gain_step
+                };
             }
             if stopped {
                 continue;
             }
-            self.env = if hold { (self.env - env_step).max(0.0) } else { (self.env + env_step).min(1.0) };
+            self.env = if hold {
+                (self.env - env_step).max(0.0)
+            } else {
+                (self.env + env_step).min(1.0)
+            };
             if hold && self.env <= 0.0 {
                 stopped = true;
             } else if i >= avail {
@@ -462,7 +515,10 @@ impl RingSource {
                 ctl.t_xrun.store(now.max(1), Relaxed);
                 let target = ctl.target.load(Relaxed);
                 if target < ctl.target_limit {
-                    ctl.target.store((target + ms_to_frames(XRUN_GROW_MS)).min(ctl.target_limit), Relaxed);
+                    ctl.target.store(
+                        (target + ms_to_frames(XRUN_GROW_MS)).min(ctl.target_limit),
+                        Relaxed,
+                    );
                 }
             }
             if self.resumed {

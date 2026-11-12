@@ -36,7 +36,10 @@ pub(super) type Bar = Rc<Cell<Option<Bounds<Pixels>>>>;
 impl Shell {
     /// Motora güncel karaoke ayarını yollar (beklemez; motor tutar ve çıkışa verir).
     pub(super) fn karaoke_send(&self) {
-        self.engine.send(Command::SetKaraoke { enabled: self.prefs.karaoke_enabled, amount: self.prefs.karaoke_amount });
+        self.engine.send(Command::SetKaraoke {
+            enabled: self.prefs.karaoke_enabled,
+            amount: self.prefs.karaoke_amount,
+        });
     }
 
     fn karaoke_bar(&self, place: Place) -> &Bar {
@@ -60,7 +63,9 @@ impl Shell {
 
     /// Panelde sürgü klavye odağında mı.
     pub(super) fn karaoke_slider_focused(&self, window: &Window) -> bool {
-        self.nav.extra_focused(window).is_some_and(|(key, _)| key == SLIDER_KEY)
+        self.nav
+            .extra_focused(window)
+            .is_some_and(|(key, _)| key == SLIDER_KEY)
     }
 
     /// Sürgüde ← / →: bir adım. Klavye değişimi hemen kaydedilir.
@@ -72,7 +77,12 @@ impl Shell {
 
     /// "Karaoke" hapı ve (açıkken) miktar sürgüsü. `Place::Panel`de Tab durağı
     /// ve odak halkası var; `Place::Full`de denetimler gibi yalnız fare.
-    pub(super) fn karaoke_group(&self, place: Place, window: &Window, cx: &mut Context<Self>) -> gpui::AnyElement {
+    pub(super) fn karaoke_group(
+        &self,
+        place: Place,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> gpui::AnyElement {
         let on = self.prefs.karaoke_enabled;
         let amount = self.prefs.karaoke_amount;
         let accent = self.accent().text;
@@ -84,10 +94,21 @@ impl Shell {
         } else {
             (None, Look::Live, None)
         };
-        let id = if place == Place::Panel { "lyrics-karaoke" } else { "full-karaoke" };
+        let id = if place == Place::Panel {
+            "lyrics-karaoke"
+        } else {
+            "full-karaoke"
+        };
         let pill = chip(id, t!(Karaoke), on, look, accent)
             .when_some(stop, |el, h| el.track_focus(&h))
-            .tooltip(Tooltip::text(if on { t!(KaraokeOffTip) } else { t!(KaraokeOnTip) }, None))
+            .tooltip(Tooltip::text(
+                if on {
+                    t!(KaraokeOffTip)
+                } else {
+                    t!(KaraokeOnTip)
+                },
+                None,
+            ))
             .on_click(cx.listener(|this, ev: &gpui::ClickEvent, window, cx| {
                 this.leave_button(ev, window);
                 this.toggle_karaoke(cx);
@@ -95,31 +116,52 @@ impl Shell {
         let bar = self.karaoke_bar(place).clone();
         let control = on.then(|| {
             div()
-                .id(if place == Place::Panel { "lyrics-karaoke-amount" } else { "full-karaoke-amount" })
+                .id(if place == Place::Panel {
+                    "lyrics-karaoke-amount"
+                } else {
+                    "full-karaoke-amount"
+                })
                 .w(px(SLIDER_W))
                 .flex_none()
                 .flex()
                 .tooltip(Tooltip::text(t!(KaraokeAmount), None))
                 .child(slider(
-                    if place == Place::Panel { "karaoke-amount" } else { "karaoke-amount-full" },
+                    if place == Place::Panel {
+                        "karaoke-amount"
+                    } else {
+                        "karaoke-amount-full"
+                    },
                     amount,
                     accent,
                     true,
                     slider_focus,
                     bar,
-                    Some(Box::new(cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
-                        if let Some(f) = fraction(this.karaoke_bar(place), ev.position) {
-                            this.dragging = Some(Drag::Karaoke(place));
-                            this.set_karaoke_amount(f, cx);
-                        }
-                    }))),
+                    Some(Box::new(cx.listener(
+                        move |this, ev: &MouseDownEvent, _, cx| {
+                            if let Some(f) = fraction(this.karaoke_bar(place), ev.position) {
+                                this.dragging = Some(Drag::Karaoke(place));
+                                this.set_karaoke_amount(f, cx);
+                            }
+                        },
+                    ))),
                 ))
         });
-        div().flex().items_center().gap(px(S2)).child(pill).children(control).into_any_element()
+        div()
+            .flex()
+            .items_center()
+            .gap(px(S2))
+            .child(pill)
+            .children(control)
+            .into_any_element()
     }
 
     /// Sürükleme: fare konumuna göre miktar.
-    pub(super) fn karaoke_drag_to(&mut self, place: Place, position: gpui::Point<Pixels>, cx: &mut Context<Self>) {
+    pub(super) fn karaoke_drag_to(
+        &mut self,
+        place: Place,
+        position: gpui::Point<Pixels>,
+        cx: &mut Context<Self>,
+    ) {
         if let Some(f) = fraction(self.karaoke_bar(place), position) {
             self.set_karaoke_amount(f, cx);
         }

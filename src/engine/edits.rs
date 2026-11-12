@@ -226,7 +226,9 @@ impl EditError {
             | ErrorKind::Aborted
             | ErrorKind::DataLoss
             | ErrorKind::Cancelled => Self::Offline(text),
-            ErrorKind::ResourceExhausted => Self::RateLimited { retry_after_ms: None },
+            ErrorKind::ResourceExhausted => Self::RateLimited {
+                retry_after_ms: None,
+            },
             ErrorKind::Unauthenticated => Self::Unauthorized(text),
             ErrorKind::PermissionDenied => Self::Forbidden(text),
             ErrorKind::NotFound => Self::NotFound(text),
@@ -306,7 +308,9 @@ fn backoff_ms(attempts: u32, error: &EditError) -> i64 {
     let exp = BACKOFF_BASE_MS.saturating_mul(3_i64.saturating_pow(attempts.saturating_sub(1)));
     let delay = exp.min(BACKOFF_MAX_MS);
     match error.inner() {
-        EditError::RateLimited { retry_after_ms: Some(ms) } => delay.max(*ms as i64),
+        EditError::RateLimited {
+            retry_after_ms: Some(ms),
+        } => delay.max(*ms as i64),
         _ => delay,
     }
 }
@@ -329,12 +333,20 @@ pub enum AddPosition {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum EditOp {
     /// Şarkıyı (spotify:track:) ya da albümü (spotify:album:) kütüphaneye kaydet.
-    Save { uri: String },
-    Unsave { uri: String },
+    Save {
+        uri: String,
+    },
+    Unsave {
+        uri: String,
+    },
     /// Sanatçıyı (spotify:artist:) takip et / takipten çık: koleksiyon
     /// servisinin `artist` kümesine yazılır (`ARTIST_SET`).
-    Follow { uri: String },
-    Unfollow { uri: String },
+    Follow {
+        uri: String,
+    },
+    Unfollow {
+        uri: String,
+    },
     AddToPlaylist {
         playlist: String,
         uris: Vec<String>,
@@ -370,9 +382,13 @@ pub enum EditOp {
     },
     /// Kök listeden çıkarır (sahibi sensen liste silinmiş olur, değilsen
     /// takipten çıkarsın). Spotify bir süre geri getirmeye izin veriyor.
-    DeletePlaylist { playlist: String },
+    DeletePlaylist {
+        playlist: String,
+    },
     /// `DeletePlaylist`'in geri alınması: kök listeye yeniden ekler.
-    RestorePlaylist { playlist: String },
+    RestorePlaylist {
+        playlist: String,
+    },
     /// `from_index`'ten başlayan `length` öğelik bloğu, sonuçta ilk öğesi
     /// `to_index`'te olacak şekilde taşır. `uris` taşınan öğeler (yeniden
     /// denemede uygulanıp uygulanmadığını anlamak için).
@@ -419,7 +435,11 @@ impl EditOp {
             // Tek satır çıkarıldıysa eski yerine döner; çoklu çıkarmada yerler
             // bilinmiyor: sona eklenir (arayüz yerlerini biliyorsa kendi
             // `AddToPlaylist`'ini kurabilir).
-            Self::RemoveFromPlaylist { playlist, uris, indices } => Self::AddToPlaylist {
+            Self::RemoveFromPlaylist {
+                playlist,
+                uris,
+                indices,
+            } => Self::AddToPlaylist {
                 playlist: playlist.clone(),
                 uris: uris.clone(),
                 position: match indices.as_slice() {
@@ -427,22 +447,34 @@ impl EditOp {
                     _ => AddPosition::Last,
                 },
             },
-            Self::RenamePlaylist { playlist, name, previous_name } => Self::RenamePlaylist {
+            Self::RenamePlaylist {
+                playlist,
+                name,
+                previous_name,
+            } => Self::RenamePlaylist {
                 playlist: playlist.clone(),
                 name: previous_name.clone()?,
                 previous_name: Some(name.clone()),
             },
-            Self::DeletePlaylist { playlist } => Self::RestorePlaylist { playlist: playlist.clone() },
-            Self::RestorePlaylist { playlist } => Self::DeletePlaylist { playlist: playlist.clone() },
-            Self::MovePlaylistItems { playlist, from_index, length, to_index, uris } => {
-                Self::MovePlaylistItems {
-                    playlist: playlist.clone(),
-                    from_index: *to_index,
-                    length: *length,
-                    to_index: *from_index,
-                    uris: uris.clone(),
-                }
-            }
+            Self::DeletePlaylist { playlist } => Self::RestorePlaylist {
+                playlist: playlist.clone(),
+            },
+            Self::RestorePlaylist { playlist } => Self::DeletePlaylist {
+                playlist: playlist.clone(),
+            },
+            Self::MovePlaylistItems {
+                playlist,
+                from_index,
+                length,
+                to_index,
+                uris,
+            } => Self::MovePlaylistItems {
+                playlist: playlist.clone(),
+                from_index: *to_index,
+                length: *length,
+                to_index: *from_index,
+                uris: uris.clone(),
+            },
             Self::CreatePlaylist { .. } => return None,
         })
     }
@@ -483,7 +515,12 @@ impl EditOp {
                     return bad("liste adı boş");
                 }
             }
-            Self::MovePlaylistItems { length, from_index, to_index, .. } => {
+            Self::MovePlaylistItems {
+                length,
+                from_index,
+                to_index,
+                ..
+            } => {
                 if *length == 0 {
                     return bad("taşınacak öğe yok");
                 }
@@ -570,8 +607,18 @@ pub(crate) fn move_applied(order: &[String], to: usize, uris: &[String]) -> bool
 pub fn same_edit(a: &EditOp, b: &EditOp) -> bool {
     match (a, b) {
         (
-            EditOp::CreatePlaylist { temp_id: ta, name: na, uris: ua, .. },
-            EditOp::CreatePlaylist { temp_id: tb, name: nb, uris: ub, .. },
+            EditOp::CreatePlaylist {
+                temp_id: ta,
+                name: na,
+                uris: ua,
+                ..
+            },
+            EditOp::CreatePlaylist {
+                temp_id: tb,
+                name: nb,
+                uris: ub,
+                ..
+            },
         ) => ta == tb && na == nb && ua == ub,
         _ => a == b,
     }
@@ -579,7 +626,11 @@ pub fn same_edit(a: &EditOp, b: &EditOp) -> bool {
 
 /// Telde `to_index` olarak gidecek değer.
 fn wire_to_index(from: u32, length: u32, to: u32) -> i32 {
-    let wire = if MOV_TO_IS_AFTER_REMOVAL || to <= from { to } else { to + length };
+    let wire = if MOV_TO_IS_AFTER_REMOVAL || to <= from {
+        to
+    } else {
+        to + length
+    };
     wire as i32
 }
 
@@ -621,11 +672,14 @@ pub fn changes_add(base: &[u8], uris: &[String], position: AddPosition) -> ListC
         },
         ..Default::default()
     };
-    changes(base, vec![Op {
-        kind: Some(Kind::ADD.into()),
-        add: Some(add).into(),
-        ..Default::default()
-    }])
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::ADD.into()),
+            add: Some(add).into(),
+            ..Default::default()
+        }],
+    )
 }
 
 pub fn changes_remove(base: &[u8], uris: &[String]) -> ListChanges {
@@ -634,11 +688,14 @@ pub fn changes_remove(base: &[u8], uris: &[String]) -> ListChanges {
         items_as_key: Some(true),
         ..Default::default()
     };
-    changes(base, vec![Op {
-        kind: Some(Kind::REM.into()),
-        rem: Some(rem).into(),
-        ..Default::default()
-    }])
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::REM.into()),
+            rem: Some(rem).into(),
+            ..Default::default()
+        }],
+    )
 }
 
 /// Hangi satırların silineceği: `uris[i]` için `indices[i]` sırasındaki satır
@@ -713,11 +770,14 @@ pub fn changes_rename(base: &[u8], name: &str) -> ListChanges {
         .into(),
         ..Default::default()
     };
-    changes(base, vec![Op {
-        kind: Some(Kind::UPDATE_LIST_ATTRIBUTES.into()),
-        update_list_attributes: Some(update).into(),
-        ..Default::default()
-    }])
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::UPDATE_LIST_ATTRIBUTES.into()),
+            update_list_attributes: Some(update).into(),
+            ..Default::default()
+        }],
+    )
 }
 
 pub fn changes_move(base: &[u8], from: u32, length: u32, to: u32) -> ListChanges {
@@ -727,11 +787,14 @@ pub fn changes_move(base: &[u8], from: u32, length: u32, to: u32) -> ListChanges
         to_index: Some(wire_to_index(from, length, to)),
         ..Default::default()
     };
-    changes(base, vec![Op {
-        kind: Some(Kind::MOV.into()),
-        mov: Some(mov).into(),
-        ..Default::default()
-    }])
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::MOV.into()),
+            mov: Some(mov).into(),
+            ..Default::default()
+        }],
+    )
 }
 
 /// Yeni liste isteği (adlı, isteğe bağlı başlangıç şarkılarıyla).
@@ -828,7 +891,9 @@ fn playlist_id(uri: &str) -> Result<&str, EditError> {
 pub enum EditOutcome {
     Done,
     /// `CreatePlaylist` tamamlandı: gerçek adres.
-    Created { uri: String },
+    Created {
+        uri: String,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -858,28 +923,35 @@ impl EditBackend for SpotifyBackend<'_> {
         op.validate()?;
         let s = self.session;
         match op {
-            EditOp::Save { uri } => {
-                write_collection(s, COLLECTION_SET, uri, false, ctx).await.map(|()| EditOutcome::Done)
-            }
-            EditOp::Unsave { uri } => {
-                write_collection(s, COLLECTION_SET, uri, true, ctx).await.map(|()| EditOutcome::Done)
-            }
+            EditOp::Save { uri } => write_collection(s, COLLECTION_SET, uri, false, ctx)
+                .await
+                .map(|()| EditOutcome::Done),
+            EditOp::Unsave { uri } => write_collection(s, COLLECTION_SET, uri, true, ctx)
+                .await
+                .map(|()| EditOutcome::Done),
             // Takip: aynı servis, "artist" kümesi. Yazma "olması gereken hâli"
             // söyler (idempotent): belirsiz bir önceki deneme yeniden gönderilince
             // zarar vermez.
-            EditOp::Follow { uri } => {
-                write_collection(s, ARTIST_SET, uri, false, ctx).await.map(|()| EditOutcome::Done)
-            }
-            EditOp::Unfollow { uri } => {
-                write_collection(s, ARTIST_SET, uri, true, ctx).await.map(|()| EditOutcome::Done)
-            }
-            EditOp::AddToPlaylist { playlist, uris, position } => {
+            EditOp::Follow { uri } => write_collection(s, ARTIST_SET, uri, false, ctx)
+                .await
+                .map(|()| EditOutcome::Done),
+            EditOp::Unfollow { uri } => write_collection(s, ARTIST_SET, uri, true, ctx)
+                .await
+                .map(|()| EditOutcome::Done),
+            EditOp::AddToPlaylist {
+                playlist,
+                uris,
+                position,
+            } => {
                 // Belirsiz önceki deneme: listede zaten olanları yeniden ekleme.
                 let uris = if ctx.maybe_applied {
                     let present = playlist_state(s, playlist).await?;
                     let present: HashSet<&str> = present.uris.iter().map(String::as_str).collect();
-                    let rest: Vec<String> =
-                        uris.iter().filter(|u| !present.contains(u.as_str())).cloned().collect();
+                    let rest: Vec<String> = uris
+                        .iter()
+                        .filter(|u| !present.contains(u.as_str()))
+                        .cloned()
+                        .collect();
                     if rest.is_empty() {
                         return Ok(EditOutcome::Done);
                     }
@@ -887,9 +959,16 @@ impl EditBackend for SpotifyBackend<'_> {
                 } else {
                     uris.clone()
                 };
-                post_playlist_changes(s, playlist, |st| Some(changes_add(&st.revision, &uris, *position))).await
+                post_playlist_changes(s, playlist, |st| {
+                    Some(changes_add(&st.revision, &uris, *position))
+                })
+                .await
             }
-            EditOp::RemoveFromPlaylist { playlist, uris, indices } => {
+            EditOp::RemoveFromPlaylist {
+                playlist,
+                uris,
+                indices,
+            } => {
                 // Tek satır: sıra numarasıyla (aynı şarkının öbür kopyaları kalır).
                 // Belirsiz önceki denemede listede artık olmayan şarkı çıkarılmış sayılır.
                 post_playlist_changes(s, playlist, |st| {
@@ -899,9 +978,16 @@ impl EditBackend for SpotifyBackend<'_> {
                 .await
             }
             EditOp::RenamePlaylist { playlist, name, .. } => {
-                post_playlist_changes(s, playlist, |st| Some(changes_rename(&st.revision, name))).await
+                post_playlist_changes(s, playlist, |st| Some(changes_rename(&st.revision, name)))
+                    .await
             }
-            EditOp::MovePlaylistItems { playlist, from_index, length, to_index, uris } => {
+            EditOp::MovePlaylistItems {
+                playlist,
+                from_index,
+                length,
+                to_index,
+                uris,
+            } => {
                 if ctx.maybe_applied {
                     let state = playlist_state(s, playlist).await?;
                     if move_applied(&state.uris, *to_index as usize, uris) {
@@ -913,7 +999,12 @@ impl EditBackend for SpotifyBackend<'_> {
                 })
                 .await
             }
-            EditOp::CreatePlaylist { name, uris, created, .. } => {
+            EditOp::CreatePlaylist {
+                name,
+                uris,
+                created,
+                ..
+            } => {
                 let uri = match created {
                     Some(uri) => uri.clone(),
                     None => create_playlist(s, name, uris).await?,
@@ -958,7 +1049,13 @@ impl EditBackend for SpotifyBackend<'_> {
 #[cfg_attr(not(test), allow(dead_code))] // canlı sınama (edits/live.rs)
 pub async fn apply_now(session: &Session, op: &EditOp) -> Result<EditOutcome, EditError> {
     SpotifyBackend { session }
-        .apply(op, ApplyCtx { id: 0, maybe_applied: false })
+        .apply(
+            op,
+            ApplyCtx {
+                id: 0,
+                maybe_applied: false,
+            },
+        )
         .await
 }
 
@@ -978,14 +1075,19 @@ async fn write_collection(
         &format!("openify-{}-{}", ctx.id, now_ms()),
     )?;
     let mut headers = http::HeaderMap::new();
-    let ct: http::HeaderValue = COLLECTION_CONTENT_TYPE.parse().map_err(|e| {
-        EditError::Invalid(format!("başlık: {e}"))
-    })?;
+    let ct: http::HeaderValue = COLLECTION_CONTENT_TYPE
+        .parse()
+        .map_err(|e| EditError::Invalid(format!("başlık: {e}")))?;
     headers.insert(http::header::CONTENT_TYPE, ct.clone());
     headers.insert(http::header::ACCEPT, ct);
     session
         .spclient()
-        .request(&http::Method::POST, "/collection/v2/write", Some(headers), Some(&body))
+        .request(
+            &http::Method::POST,
+            "/collection/v2/write",
+            Some(headers),
+            Some(&body),
+        )
         .await?;
     Ok(())
 }
@@ -997,7 +1099,10 @@ pub(crate) struct PlaylistState {
     pub(crate) uris: Vec<String>,
 }
 
-pub(crate) async fn playlist_state(session: &Session, playlist: &str) -> Result<PlaylistState, EditError> {
+pub(crate) async fn playlist_state(
+    session: &Session,
+    playlist: &str,
+) -> Result<PlaylistState, EditError> {
     let id = playlist_id(playlist)?;
     let endpoint = format!("/playlist/v2/playlist/{id}");
     let bytes = session
@@ -1009,7 +1114,12 @@ pub(crate) async fn playlist_state(session: &Session, playlist: &str) -> Result<
     Ok(PlaylistState {
         name: list.attributes.name().to_string(),
         revision: list.revision().to_vec(),
-        uris: list.contents.items.iter().map(|i| i.uri().to_string()).collect(),
+        uris: list
+            .contents
+            .items
+            .iter()
+            .map(|i| i.uri().to_string())
+            .collect(),
     })
 }
 
@@ -1051,9 +1161,8 @@ async fn post_rootlist_changes(
     build: impl Fn(&[u8]) -> ListChanges,
 ) -> Result<(), EditError> {
     let user = session.username();
-    let list_endpoint = format!(
-        "/playlist/v2/user/{user}/rootlist?decorate=revision&from=0&length=1"
-    );
+    let list_endpoint =
+        format!("/playlist/v2/user/{user}/rootlist?decorate=revision&from=0&length=1");
     let endpoint = format!("/playlist/v2/user/{user}/rootlist/changes");
     let mut last = None;
     for _ in 0..2 {
@@ -1106,12 +1215,21 @@ pub fn changes_fill(base: &[u8], name: Option<&str>, uris: &[String]) -> Option<
         ops.extend(changes_rename(base, name).deltas.remove(0).ops);
     }
     if !uris.is_empty() {
-        ops.extend(changes_add(base, uris, AddPosition::Last).deltas.remove(0).ops);
+        ops.extend(
+            changes_add(base, uris, AddPosition::Last)
+                .deltas
+                .remove(0)
+                .ops,
+        );
     }
     (!ops.is_empty()).then(|| changes(base, ops))
 }
 
-async fn create_playlist(session: &Session, name: &str, uris: &[String]) -> Result<String, EditError> {
+async fn create_playlist(
+    session: &Session,
+    name: &str,
+    uris: &[String],
+) -> Result<String, EditError> {
     let body = create_request(name, uris);
     let bytes = session
         .spclient()
@@ -1186,8 +1304,16 @@ pub struct ProcessReport {
 ///   1  temel şema (göçten önce sürümlenmemiş dosyalar da burada devralınır)
 ///   2  `error_kind` sütunu (eski kayıtlarda boş: tür bilinmiyor)
 const MIGRATIONS: [Step; 2] = [
-    Step { to: 1, name: "baseline", up: baseline },
-    Step { to: 2, name: "error_kind column", up: add_error_kind },
+    Step {
+        to: 1,
+        name: "baseline",
+        up: baseline,
+    },
+    Step {
+        to: 2,
+        name: "error_kind column",
+        up: add_error_kind,
+    },
 ];
 
 fn baseline(tx: &Transaction, _from: i64) -> rusqlite::Result<()> {
@@ -1227,7 +1353,9 @@ impl EditQueue {
     /// durmaz (silinirse kayıp olurdu). Varsayılan yer ayar dosyasının yanı
     /// (`%APPDATA%\Openify\edits.db`).
     pub fn open_default() -> Result<Self> {
-        let dir = dirs::data_dir().context("Veri klasörü bulunamadı")?.join("Openify");
+        let dir = dirs::data_dir()
+            .context("Veri klasörü bulunamadı")?
+            .join("Openify");
         std::fs::create_dir_all(&dir)?;
         Self::open(&dir.join("edits.db"))
     }
@@ -1253,7 +1381,9 @@ impl EditQueue {
             "UPDATE edits SET in_flight = 0, maybe_applied = 1 WHERE in_flight = 1",
             [],
         )?;
-        Ok(Self { conn: Mutex::new(conn) })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     fn conn(&self) -> std::sync::MutexGuard<'_, Connection> {
@@ -1291,7 +1421,9 @@ impl EditQueue {
                 )
                 .map_err(db_err)?;
             let rows = stmt
-                .query_map([&target], |r| Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?)))
+                .query_map([&target], |r| {
+                    Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+                })
                 .map_err(db_err)?;
             for row in rows {
                 let (id, stored) = row.map_err(db_err)?;
@@ -1312,7 +1444,8 @@ impl EditQueue {
                 return Ok(Enqueued::Duplicate(id));
             }
             Some((id, _)) => {
-                tx.execute("DELETE FROM edits WHERE id = ?1", [id]).map_err(db_err)?;
+                tx.execute("DELETE FROM edits WHERE id = ?1", [id])
+                    .map_err(db_err)?;
                 tx.commit().map_err(db_err)?;
                 return Ok(Enqueued::Cancelled);
             }
@@ -1338,14 +1471,20 @@ impl EditQueue {
         Ok(QueuedEdit {
             id: r.get(0)?,
             op,
-            state: if state == "failed" { EditState::Failed } else { EditState::Pending },
+            state: if state == "failed" {
+                EditState::Failed
+            } else {
+                EditState::Pending
+            },
             attempts: r.get::<_, i64>(3)? as u32,
             next_attempt_ms: r.get(4)?,
             last_error: r.get(5)?,
             maybe_applied: r.get::<_, i64>(6)? != 0,
             created_ms: r.get(7)?,
             in_flight: r.get::<_, i64>(8)? != 0,
-            error_kind: r.get::<_, Option<String>>(9)?.map(|t| FailKind::from_tag(&t)),
+            error_kind: r
+                .get::<_, Option<String>>(9)?
+                .map(|t| FailKind::from_tag(&t)),
         })
     }
 
@@ -1358,7 +1497,9 @@ impl EditQueue {
             "SELECT {} FROM edits WHERE {filter} ORDER BY id",
             Self::COLUMNS
         ))?;
-        Ok(stmt.query_map([], Self::row)?.collect::<rusqlite::Result<_>>()?)
+        Ok(stmt
+            .query_map([], Self::row)?
+            .collect::<rusqlite::Result<_>>()?)
     }
 
     pub fn get(&self, id: i64) -> Result<Option<QueuedEdit>> {
@@ -1402,8 +1543,10 @@ impl EditQueue {
             }
         }
         for e in &removed {
-            self.conn()
-                .execute("DELETE FROM edits WHERE id = ?1 AND state = 'failed'", [e.id])?;
+            self.conn().execute(
+                "DELETE FROM edits WHERE id = ?1 AND state = 'failed'",
+                [e.id],
+            )?;
         }
         Ok(removed)
     }
@@ -1442,7 +1585,8 @@ impl EditQueue {
     }
 
     fn finish_ok(&self, id: i64) -> Result<()> {
-        self.conn().execute("DELETE FROM edits WHERE id = ?1", [id])?;
+        self.conn()
+            .execute("DELETE FROM edits WHERE id = ?1", [id])?;
         Ok(())
     }
 
@@ -1454,7 +1598,9 @@ impl EditQueue {
     ) -> Result<()> {
         // Yarım kalmış oluşturmanın adresi işleme yazılır.
         let mut op = edit.op.clone();
-        if let (Some(uri), EditOp::CreatePlaylist { created, .. }) = (error.partial_create(), &mut op) {
+        if let (Some(uri), EditOp::CreatePlaylist { created, .. }) =
+            (error.partial_create(), &mut op)
+        {
             *created = Some(uri.to_string());
         }
         self.conn().execute(
@@ -1465,7 +1611,11 @@ impl EditQueue {
             params![
                 edit.id,
                 serde_json::to_string(&op)?,
-                if retry_at.is_some() { "pending" } else { "failed" },
+                if retry_at.is_some() {
+                    "pending"
+                } else {
+                    "failed"
+                },
                 edit.attempts + 1,
                 retry_at.unwrap_or(0),
                 error.to_string(),
@@ -1504,7 +1654,11 @@ impl EditQueue {
     ///   birbirini beklemez.
     /// - Bağlantı yoksa tur hemen biter (boşuna istek atılmaz).
     /// - Kilit, ağ çağrısı boyunca tutulmaz.
-    pub async fn process_due<B: EditBackend>(&self, backend: &B, now: i64) -> Result<ProcessReport> {
+    pub async fn process_due<B: EditBackend>(
+        &self,
+        backend: &B,
+        now: i64,
+    ) -> Result<ProcessReport> {
         let mut report = ProcessReport::default();
         let mut blocked: HashSet<String> = HashSet::new();
         let ids: Vec<i64> = self.pending()?.into_iter().map(|e| e.id).collect();
@@ -1522,7 +1676,9 @@ impl EditQueue {
             if edit.next_attempt_ms > now {
                 blocked.insert(target);
                 report.next_due_ms = Some(
-                    report.next_due_ms.map_or(edit.next_attempt_ms, |t| t.min(edit.next_attempt_ms)),
+                    report
+                        .next_due_ms
+                        .map_or(edit.next_attempt_ms, |t| t.min(edit.next_attempt_ms)),
                 );
                 continue;
             }
@@ -1537,7 +1693,10 @@ impl EditQueue {
             }
 
             self.set_in_flight(id)?;
-            let ctx = ApplyCtx { id, maybe_applied: edit.maybe_applied };
+            let ctx = ApplyCtx {
+                id,
+                maybe_applied: edit.maybe_applied,
+            };
             match backend.apply(&edit.op, ctx).await {
                 Ok(outcome) => {
                     self.finish_ok(id)?;
@@ -1566,7 +1725,9 @@ impl EditQueue {
                         self.record_failure(&edit, &error, None)?;
                         report.failed.push(id);
                         if let EditOp::CreatePlaylist { temp_id, .. } = &edit.op {
-                            report.failed.extend(self.fail_dependents(temp_id, &error.to_string())?);
+                            report
+                                .failed
+                                .extend(self.fail_dependents(temp_id, &error.to_string())?);
                         }
                     }
                 }
@@ -1597,8 +1758,14 @@ mod tests {
 
     #[test]
     fn collection_write_roundtrip() {
-        let body = collection_write_body("kullanici", &[track(1), track(2)], true, 1_700_000_000, "u1")
-            .unwrap();
+        let body = collection_write_body(
+            "kullanici",
+            &[track(1), track(2)],
+            true,
+            1_700_000_000,
+            "u1",
+        )
+        .unwrap();
         let mut is = protobuf::CodedInputStream::from_bytes(&body);
         let mut username = String::new();
         let mut set = String::new();
@@ -1629,7 +1796,13 @@ mod tests {
         assert_eq!(username, "kullanici");
         assert_eq!(set, "collection");
         assert_eq!(update_id, "u1");
-        assert_eq!(items, vec![(track(1), 1_700_000_000, true), (track(2), 1_700_000_000, true)]);
+        assert_eq!(
+            items,
+            vec![
+                (track(1), 1_700_000_000, true),
+                (track(2), 1_700_000_000, true)
+            ]
+        );
         // Ekleme gövdesinde is_removed hiç yazılmaz.
         let add = collection_write_body("k", &[track(1)], false, 5, "x").unwrap();
         assert!(!add.windows(2).any(|w| w == [0x18, 0x01]));
@@ -1641,14 +1814,21 @@ mod tests {
 
     #[test]
     fn add_changes_encode_position_and_items() {
-        let c = roundtrip(&changes_add(b"rev1", &[track(1), track(2)], AddPosition::Last));
+        let c = roundtrip(&changes_add(
+            b"rev1",
+            &[track(1), track(2)],
+            AddPosition::Last,
+        ));
         assert_eq!(c.base_revision(), b"rev1");
         assert!(c.want_resulting_revisions());
         let op = &c.deltas[0].ops[0];
         assert_eq!(op.kind(), Kind::ADD);
         assert!(op.add.add_last());
         assert!(!op.add.add_first());
-        assert_eq!(op.add.items.iter().map(|i| i.uri()).collect::<Vec<_>>(), [track(1), track(2)]);
+        assert_eq!(
+            op.add.items.iter().map(|i| i.uri()).collect::<Vec<_>>(),
+            [track(1), track(2)]
+        );
         let first = roundtrip(&changes_add(b"", &[track(1)], AddPosition::First));
         assert!(first.deltas[0].ops[0].add.add_first());
         // Sürüm yoksa alan hiç yazılmaz.
@@ -1666,7 +1846,10 @@ mod tests {
         let c = roundtrip(&changes_rename(b"r", "Yeni Ad"));
         let op = &c.deltas[0].ops[0];
         assert_eq!(op.kind(), Kind::UPDATE_LIST_ATTRIBUTES);
-        assert_eq!(op.update_list_attributes.new_attributes.values.name(), "Yeni Ad");
+        assert_eq!(
+            op.update_list_attributes.new_attributes.values.name(),
+            "Yeni Ad"
+        );
 
         let c = roundtrip(&changes_move(b"r", 3, 2, 8));
         let op = &c.deltas[0].ops[0];
@@ -1683,7 +1866,9 @@ mod tests {
     #[test]
     fn create_request_and_rootlist_ops() {
         let r = ListUpdateRequest::parse_from_bytes(
-            &create_request("Yolculuk", &[track(1)]).write_to_bytes().unwrap(),
+            &create_request("Yolculuk", &[track(1)])
+                .write_to_bytes()
+                .unwrap(),
         )
         .unwrap();
         assert_eq!(r.attributes.name(), "Yolculuk");
@@ -1722,10 +1907,21 @@ mod tests {
         }
         .inverse()
         .unwrap();
-        let EditOp::MovePlaylistItems { from_index, length, to_index, .. } = undo else {
+        let EditOp::MovePlaylistItems {
+            from_index,
+            length,
+            to_index,
+            ..
+        } = undo
+        else {
             panic!()
         };
-        assert!(apply_move(&mut v, from_index as usize, length as usize, to_index as usize));
+        assert!(apply_move(
+            &mut v,
+            from_index as usize,
+            length as usize,
+            to_index as usize
+        ));
         assert_eq!(v, base);
         // Sınır dışı: dokunulmaz.
         let mut w = base.clone();
@@ -1792,11 +1988,20 @@ mod tests {
         // [a b a c a]: üç kopya.
         let state = vec![track(1), track(2), track(1), track(3), track(1)];
         // Sıra verilmemiş: ilk kopya.
-        assert_eq!(resolve_rows(&state, &[track(1)], &[], false), [(0, track(1))]);
+        assert_eq!(
+            resolve_rows(&state, &[track(1)], &[], false),
+            [(0, track(1))]
+        );
         // Sıra verilmiş ve doğru: o satır.
-        assert_eq!(resolve_rows(&state, &[track(1)], &[4], false), [(4, track(1))]);
+        assert_eq!(
+            resolve_rows(&state, &[track(1)], &[4], false),
+            [(4, track(1))]
+        );
         // Sıra verilmiş ama orada başka şarkı var: ilk kopyaya düşer (liste kaymış).
-        assert_eq!(resolve_rows(&state, &[track(1)], &[3], false), [(0, track(1))]);
+        assert_eq!(
+            resolve_rows(&state, &[track(1)], &[3], false),
+            [(0, track(1))]
+        );
         // Belirsiz yeniden denemede (strict) kaymış sıra başka kopyayı silmez.
         assert!(resolve_rows(&state, &[track(1)], &[3], true).is_empty());
         // Aynı adres iki kez: iki FARKLI kopya; büyükten küçüğe.
@@ -1828,8 +2033,14 @@ mod tests {
         assert_eq!(add.from_index(), 1);
         assert!(!add.add_first() && !add.add_last());
         // Eski JSON kaydı ("last") ve yeni biçim ({"at":n}) birlikte okunur.
-        assert_eq!(serde_json::from_str::<AddPosition>("\"last\"").unwrap(), AddPosition::Last);
-        assert_eq!(serde_json::from_str::<AddPosition>("{\"at\":3}").unwrap(), AddPosition::At(3));
+        assert_eq!(
+            serde_json::from_str::<AddPosition>("\"last\"").unwrap(),
+            AddPosition::Last
+        );
+        assert_eq!(
+            serde_json::from_str::<AddPosition>("{\"at\":3}").unwrap(),
+            AddPosition::At(3)
+        );
 
         // Yeni liste: ad + şarkılar tek delta'da; yazılacak şey yoksa None.
         let fill = roundtrip(&changes_fill(b"r", Some("Ad"), &[track(1), track(2)]).unwrap());
@@ -1837,7 +2048,12 @@ mod tests {
         assert_eq!(fill.deltas[0].ops[0].kind(), Kind::UPDATE_LIST_ATTRIBUTES);
         assert_eq!(fill.deltas[0].ops[1].kind(), Kind::ADD);
         assert!(changes_fill(b"r", None, &[]).is_none());
-        assert_eq!(changes_fill(b"r", None, &[track(1)]).unwrap().deltas[0].ops.len(), 1);
+        assert_eq!(
+            changes_fill(b"r", None, &[track(1)]).unwrap().deltas[0]
+                .ops
+                .len(),
+            1
+        );
 
         // Tek satır çıkarmanın tersi eski yerine ekler.
         let rem = EditOp::RemoveFromPlaylist {
@@ -1845,7 +2061,9 @@ mod tests {
             uris: vec![track(1)],
             indices: vec![4],
         };
-        let EditOp::AddToPlaylist { position, .. } = rem.inverse().unwrap() else { panic!() };
+        let EditOp::AddToPlaylist { position, .. } = rem.inverse().unwrap() else {
+            panic!()
+        };
         assert_eq!(position, AddPosition::At(4));
     }
 
@@ -1870,55 +2088,108 @@ mod tests {
             name: "B".into(),
             previous_name: Some("A".into()),
         };
-        let EditOp::RenamePlaylist { name, previous_name, .. } = rename.inverse().unwrap() else {
+        let EditOp::RenamePlaylist {
+            name,
+            previous_name,
+            ..
+        } = rename.inverse().unwrap()
+        else {
             panic!()
         };
         assert_eq!((name.as_str(), previous_name.as_deref()), ("A", Some("B")));
         // Eski ad bilinmiyorsa geri alınamaz.
         assert!(
-            EditOp::RenamePlaylist { playlist: playlist(1), name: "B".into(), previous_name: None }
-                .inverse()
-                .is_none()
+            EditOp::RenamePlaylist {
+                playlist: playlist(1),
+                name: "B".into(),
+                previous_name: None
+            }
+            .inverse()
+            .is_none()
         );
         assert!(
-            EditOp::CreatePlaylist { temp_id: new_temp_id(), name: "x".into(), uris: vec![], created: None }
-                .inverse()
-                .is_none()
+            EditOp::CreatePlaylist {
+                temp_id: new_temp_id(),
+                name: "x".into(),
+                uris: vec![],
+                created: None
+            }
+            .inverse()
+            .is_none()
         );
         // Doğrulama.
-        assert!(EditOp::Save { uri: "spotify:artist:x".into() }.validate().is_err());
-        assert!(EditOp::AddToPlaylist { playlist: playlist(1), uris: vec![], position: AddPosition::Last }
+        assert!(
+            EditOp::Save {
+                uri: "spotify:artist:x".into()
+            }
             .validate()
-            .is_err());
-        assert!(EditOp::AddToPlaylist {
-            playlist: playlist(1),
-            uris: vec!["spotify:episode:e".into()],
-            position: AddPosition::Last
-        }
-        .validate()
-        .is_err());
-        assert!(EditOp::RenamePlaylist { playlist: playlist(1), name: "  ".into(), previous_name: None }
+            .is_err()
+        );
+        assert!(
+            EditOp::AddToPlaylist {
+                playlist: playlist(1),
+                uris: vec![],
+                position: AddPosition::Last
+            }
             .validate()
-            .is_err());
-        assert!(EditOp::MovePlaylistItems {
-            playlist: playlist(1),
-            from_index: 2,
-            length: 1,
-            to_index: 2,
-            uris: vec![]
-        }
-        .validate()
-        .is_err());
+            .is_err()
+        );
+        assert!(
+            EditOp::AddToPlaylist {
+                playlist: playlist(1),
+                uris: vec!["spotify:episode:e".into()],
+                position: AddPosition::Last
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            EditOp::RenamePlaylist {
+                playlist: playlist(1),
+                name: "  ".into(),
+                previous_name: None
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            EditOp::MovePlaylistItems {
+                playlist: playlist(1),
+                from_index: 2,
+                length: 1,
+                to_index: 2,
+                uris: vec![]
+            }
+            .validate()
+            .is_err()
+        );
     }
 
     #[test]
     fn ops_roundtrip_through_json() {
         let ops = vec![
             EditOp::Save { uri: track(1) },
-            EditOp::AddToPlaylist { playlist: playlist(1), uris: vec![track(1)], position: AddPosition::First },
-            EditOp::CreatePlaylist { temp_id: "local:playlist:1".into(), name: "A".into(), uris: vec![], created: Some(playlist(9)) },
-            EditOp::MovePlaylistItems { playlist: playlist(1), from_index: 1, length: 2, to_index: 4, uris: vec![track(1), track(2)] },
-            EditOp::DeletePlaylist { playlist: playlist(2) },
+            EditOp::AddToPlaylist {
+                playlist: playlist(1),
+                uris: vec![track(1)],
+                position: AddPosition::First,
+            },
+            EditOp::CreatePlaylist {
+                temp_id: "local:playlist:1".into(),
+                name: "A".into(),
+                uris: vec![],
+                created: Some(playlist(9)),
+            },
+            EditOp::MovePlaylistItems {
+                playlist: playlist(1),
+                from_index: 1,
+                length: 2,
+                to_index: 4,
+                uris: vec![track(1), track(2)],
+            },
+            EditOp::DeletePlaylist {
+                playlist: playlist(2),
+            },
         ];
         for op in ops {
             let json = serde_json::to_string(&op).unwrap();
@@ -1937,14 +2208,35 @@ mod tests {
         use librespot::core::Error;
         let c = |e: Error| EditError::from_spotify(&e);
         assert!(matches!(c(Error::unavailable("x")), EditError::Offline(_)));
-        assert!(matches!(c(Error::deadline_exceeded("x")), EditError::Offline(_)));
-        assert!(matches!(c(Error::resource_exhausted("x")), EditError::RateLimited { .. }));
-        assert!(matches!(c(Error::unauthenticated("x")), EditError::Unauthorized(_)));
-        assert!(matches!(c(Error::permission_denied("x")), EditError::Forbidden(_)));
+        assert!(matches!(
+            c(Error::deadline_exceeded("x")),
+            EditError::Offline(_)
+        ));
+        assert!(matches!(
+            c(Error::resource_exhausted("x")),
+            EditError::RateLimited { .. }
+        ));
+        assert!(matches!(
+            c(Error::unauthenticated("x")),
+            EditError::Unauthorized(_)
+        ));
+        assert!(matches!(
+            c(Error::permission_denied("x")),
+            EditError::Forbidden(_)
+        ));
         assert!(matches!(c(Error::not_found("x")), EditError::NotFound(_)));
-        assert!(matches!(c(Error::failed_precondition("x")), EditError::Conflict(_)));
-        assert!(matches!(c(Error::invalid_argument("x")), EditError::Invalid(_)));
-        assert!(matches!(c(Error::unimplemented("x")), EditError::Unsupported(_)));
+        assert!(matches!(
+            c(Error::failed_precondition("x")),
+            EditError::Conflict(_)
+        ));
+        assert!(matches!(
+            c(Error::invalid_argument("x")),
+            EditError::Invalid(_)
+        ));
+        assert!(matches!(
+            c(Error::unimplemented("x")),
+            EditError::Unsupported(_)
+        ));
         assert!(matches!(c(Error::unknown("x")), EditError::Server(_)));
 
         // HTTP durum kodu olan `Unavailable` (500 / 503 / 421) sunucu hatasıdır,
@@ -1985,7 +2277,9 @@ mod tests {
         assert_eq!(backoff_ms(2, &off), 15_000);
         assert_eq!(backoff_ms(3, &off), 45_000);
         assert_eq!(backoff_ms(50, &off), BACKOFF_MAX_MS);
-        let limited = EditError::RateLimited { retry_after_ms: Some(120_000) };
+        let limited = EditError::RateLimited {
+            retry_after_ms: Some(120_000),
+        };
         assert_eq!(backoff_ms(1, &limited), 120_000);
     }
 
@@ -2005,13 +2299,21 @@ mod tests {
             }
         }
         fn applied(&self) -> Vec<EditOp> {
-            self.applied.lock().unwrap().iter().map(|(o, _)| o.clone()).collect()
+            self.applied
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(o, _)| o.clone())
+                .collect()
         }
     }
 
     impl EditBackend for Fake {
         async fn apply(&self, op: &EditOp, ctx: ApplyCtx) -> Result<EditOutcome, EditError> {
-            self.applied.lock().unwrap().push((op.clone(), ctx.maybe_applied));
+            self.applied
+                .lock()
+                .unwrap()
+                .push((op.clone(), ctx.maybe_applied));
             self.results
                 .lock()
                 .unwrap()
@@ -2029,8 +2331,14 @@ mod tests {
         let q = EditQueue::open_in_memory().unwrap();
         let save = EditOp::Save { uri: track(1) };
         let unsave = EditOp::Unsave { uri: track(1) };
-        assert!(matches!(q.enqueue_at(&save, 0).unwrap(), Enqueued::Queued(_)));
-        assert!(matches!(q.enqueue_at(&save, 0).unwrap(), Enqueued::Duplicate(_)));
+        assert!(matches!(
+            q.enqueue_at(&save, 0).unwrap(),
+            Enqueued::Queued(_)
+        ));
+        assert!(matches!(
+            q.enqueue_at(&save, 0).unwrap(),
+            Enqueued::Duplicate(_)
+        ));
         assert_eq!(q.enqueue_at(&unsave, 0).unwrap(), Enqueued::Cancelled);
         assert!(q.pending().unwrap().is_empty());
         // Başka şarkı etkilenmez.
@@ -2079,10 +2387,18 @@ mod tests {
 
     #[test]
     fn follow_writes_go_to_the_artist_set_and_tracks_stay_in_collection() {
-        let follow = collection_write_body_in(ARTIST_SET, "k", &[artist(1)], false, 5, "u").unwrap();
-        assert_eq!(decode_write(&follow), ("artist".to_string(), vec![(artist(1), false)]));
-        let unfollow = collection_write_body_in(ARTIST_SET, "k", &[artist(1)], true, 5, "u").unwrap();
-        assert_eq!(decode_write(&unfollow), ("artist".to_string(), vec![(artist(1), true)]));
+        let follow =
+            collection_write_body_in(ARTIST_SET, "k", &[artist(1)], false, 5, "u").unwrap();
+        assert_eq!(
+            decode_write(&follow),
+            ("artist".to_string(), vec![(artist(1), false)])
+        );
+        let unfollow =
+            collection_write_body_in(ARTIST_SET, "k", &[artist(1)], true, 5, "u").unwrap();
+        assert_eq!(
+            decode_write(&unfollow),
+            ("artist".to_string(), vec![(artist(1), true)])
+        );
         // Şarkı / albüm yazması değişmedi: hâlâ "collection".
         let like = collection_write_body("k", &[track(1)], false, 5, "u").unwrap();
         assert_eq!(decode_write(&like).0, "collection");
@@ -2091,12 +2407,24 @@ mod tests {
     #[test]
     fn follow_validation_inverse_and_json() {
         let follow = EditOp::Follow { uri: artist(1) };
-        assert_eq!(follow.inverse().unwrap(), EditOp::Unfollow { uri: artist(1) });
+        assert_eq!(
+            follow.inverse().unwrap(),
+            EditOp::Unfollow { uri: artist(1) }
+        );
         assert_eq!(follow.inverse().unwrap().inverse().unwrap(), follow);
         assert!(follow.validate().is_ok());
         // Yalnız sanatçı takip edilir; şarkı / albüm / boş / bozuk kimlik reddedilir.
-        for bad in [track(1), "spotify:album:x".to_string(), "spotify:artist:".to_string(), "spotify:artist:a b".to_string(), String::new()] {
-            assert!(EditOp::Follow { uri: bad.clone() }.validate().is_err(), "{bad:?}");
+        for bad in [
+            track(1),
+            "spotify:album:x".to_string(),
+            "spotify:artist:".to_string(),
+            "spotify:artist:a b".to_string(),
+            String::new(),
+        ] {
+            assert!(
+                EditOp::Follow { uri: bad.clone() }.validate().is_err(),
+                "{bad:?}"
+            );
             assert!(EditOp::Unfollow { uri: bad }.validate().is_err());
         }
         // Takip, şarkı / albüm kaydetmenin yerine geçmez.
@@ -2106,9 +2434,16 @@ mod tests {
             let json = serde_json::to_string(&op).unwrap();
             assert_eq!(serde_json::from_str::<EditOp>(&json).unwrap(), op);
         }
-        assert!(serde_json::to_string(&follow).unwrap().contains("\"op\":\"follow\""));
+        assert!(
+            serde_json::to_string(&follow)
+                .unwrap()
+                .contains("\"op\":\"follow\"")
+        );
         assert_ne!(follow.target(), EditOp::Save { uri: track(1) }.target());
-        assert_eq!(follow.target(), EditOp::Unfollow { uri: artist(9) }.target());
+        assert_eq!(
+            follow.target(),
+            EditOp::Unfollow { uri: artist(9) }.target()
+        );
     }
 
     #[test]
@@ -2116,14 +2451,21 @@ mod tests {
         let q = EditQueue::open_in_memory().unwrap();
         let follow = EditOp::Follow { uri: artist(1) };
         let unfollow = EditOp::Unfollow { uri: artist(1) };
-        assert!(matches!(q.enqueue_at(&follow, 0).unwrap(), Enqueued::Queued(_)));
-        assert!(matches!(q.enqueue_at(&follow, 0).unwrap(), Enqueued::Duplicate(_)));
+        assert!(matches!(
+            q.enqueue_at(&follow, 0).unwrap(),
+            Enqueued::Queued(_)
+        ));
+        assert!(matches!(
+            q.enqueue_at(&follow, 0).unwrap(),
+            Enqueued::Duplicate(_)
+        ));
         // Takip + takipten çık (geri al): Spotify'a hiçbir şey gitmez.
         assert_eq!(q.enqueue_at(&unfollow, 0).unwrap(), Enqueued::Cancelled);
         assert!(q.pending().unwrap().is_empty());
         // Başka sanatçı etkilenmez; takip, aynı adresli şarkı beğenisiyle karışmaz.
         q.enqueue_at(&follow, 0).unwrap();
-        q.enqueue_at(&EditOp::Unfollow { uri: artist(2) }, 0).unwrap();
+        q.enqueue_at(&EditOp::Unfollow { uri: artist(2) }, 0)
+            .unwrap();
         assert_eq!(q.pending().unwrap().len(), 2);
     }
 
@@ -2146,13 +2488,19 @@ mod tests {
         assert!(early.applied().is_empty());
         // Ağ geldi: aynı işlem, "belirsiz" bayrağıyla yeniden gider ve kuyruktan düşer.
         let again = Fake::new(vec![]);
-        let report = q.process_due(&again, 1_000 + BACKOFF_BASE_MS + 1).await.unwrap();
+        let report = q
+            .process_due(&again, 1_000 + BACKOFF_BASE_MS + 1)
+            .await
+            .unwrap();
         assert_eq!(report.done_ops, vec![follow.clone()]);
         assert_eq!(again.applied.lock().unwrap()[0], (follow.clone(), true));
         assert!(q.pending().unwrap().is_empty() && q.failed().unwrap().is_empty());
         // Geri al (Ctrl+Z): ters işlem normal sıraya girer ve yazılır.
         let undo = follow.inverse().unwrap();
-        assert!(matches!(q.enqueue_at(&undo, 10_000_000).unwrap(), Enqueued::Queued(_)));
+        assert!(matches!(
+            q.enqueue_at(&undo, 10_000_000).unwrap(),
+            Enqueued::Queued(_)
+        ));
         let last = Fake::new(vec![]);
         q.process_due(&last, 10_000_001).await.unwrap();
         assert_eq!(last.applied(), vec![EditOp::Unfollow { uri: artist(1) }]);
@@ -2180,7 +2528,12 @@ mod tests {
     #[test]
     fn enqueue_rejects_invalid_ops_without_writing() {
         let q = EditQueue::open_in_memory().unwrap();
-        assert!(q.enqueue(&EditOp::Save { uri: "spotify:artist:x".into() }).is_err());
+        assert!(
+            q.enqueue(&EditOp::Save {
+                uri: "spotify:artist:x".into()
+            })
+            .is_err()
+        );
         assert!(q.pending().unwrap().is_empty());
     }
 
@@ -2188,8 +2541,15 @@ mod tests {
     async fn successful_edits_are_removed_in_order() {
         let q = EditQueue::open_in_memory().unwrap();
         for n in 1..=3 {
-            q.enqueue_at(&EditOp::AddToPlaylist { playlist: playlist(1), uris: vec![track(n)], position: AddPosition::Last }, 0)
-                .unwrap();
+            q.enqueue_at(
+                &EditOp::AddToPlaylist {
+                    playlist: playlist(1),
+                    uris: vec![track(n)],
+                    position: AddPosition::Last,
+                },
+                0,
+            )
+            .unwrap();
         }
         let fake = Fake::new(vec![]);
         let report = q.process_due(&fake, 1000).await.unwrap();
@@ -2210,8 +2570,15 @@ mod tests {
     async fn offline_keeps_everything_and_stops_early() {
         let q = EditQueue::open_in_memory().unwrap();
         q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap();
-        q.enqueue_at(&EditOp::RenamePlaylist { playlist: playlist(1), name: "A".into(), previous_name: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::RenamePlaylist {
+                playlist: playlist(1),
+                name: "A".into(),
+                previous_name: None,
+            },
+            0,
+        )
+        .unwrap();
         let fake = Fake::new(vec![Err(offline())]);
         let report = q.process_due(&fake, 1000).await.unwrap();
         assert!(report.offline);
@@ -2266,7 +2633,8 @@ mod tests {
         let path = std::env::temp_dir().join(format!("openify-edits-crash-{}.db", now_ms()));
         {
             let q = EditQueue::open(&path).unwrap();
-            let Enqueued::Queued(id) = q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap() else {
+            let Enqueued::Queued(id) = q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap()
+            else {
                 panic!()
             };
             q.set_in_flight(id).unwrap();
@@ -2289,8 +2657,15 @@ mod tests {
     #[tokio::test]
     async fn permanent_failure_is_kept_visible_not_dropped() {
         let q = EditQueue::open_in_memory().unwrap();
-        q.enqueue_at(&EditOp::RenamePlaylist { playlist: playlist(1), name: "A".into(), previous_name: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::RenamePlaylist {
+                playlist: playlist(1),
+                name: "A".into(),
+                previous_name: None,
+            },
+            0,
+        )
+        .unwrap();
         q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap();
         let fake = Fake::new(vec![Err(EditError::Forbidden("senin değil".into()))]);
         let report = q.process_due(&fake, 10).await.unwrap();
@@ -2298,7 +2673,13 @@ mod tests {
         // Başarısız olan kaydı duruyor, gerekçesiyle; sonraki farklı hedef yazıldı.
         let failed = q.failed().unwrap();
         assert_eq!(failed.len(), 1);
-        assert!(failed[0].last_error.as_deref().unwrap().contains("senin değil"));
+        assert!(
+            failed[0]
+                .last_error
+                .as_deref()
+                .unwrap()
+                .contains("senin değil")
+        );
         assert_eq!(report.done.len(), 1);
         // Tekrar işlenince yeniden denenmez (kalıcı), ama silinmez.
         let fake2 = Fake::new(vec![]);
@@ -2344,7 +2725,11 @@ mod tests {
     async fn server_errors_give_up_after_budget_and_stay_visible() {
         let q = EditQueue::open_in_memory().unwrap();
         q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap();
-        let fake = Fake::new((0..20).map(|_| Err(EditError::Server("500".into()))).collect());
+        let fake = Fake::new(
+            (0..20)
+                .map(|_| Err(EditError::Server("500".into())))
+                .collect(),
+        );
         let mut now = 0;
         for _ in 0..SERVER_ERROR_ATTEMPTS {
             now += BACKOFF_MAX_MS + 1;
@@ -2365,20 +2750,48 @@ mod tests {
         let report = q.process_due(&fake, MAX_AGE_MS + 1).await.unwrap();
         assert_eq!(report.failed.len(), 1);
         assert!(fake.applied().is_empty());
-        assert!(q.failed().unwrap()[0].last_error.as_deref().unwrap().contains("gündür"));
+        assert!(
+            q.failed().unwrap()[0]
+                .last_error
+                .as_deref()
+                .unwrap()
+                .contains("gündür")
+        );
     }
 
     #[tokio::test]
     async fn offline_create_then_edit_rewrites_to_real_uri() {
         let q = EditQueue::open_in_memory().unwrap();
         let temp = new_temp_id();
-        q.enqueue_at(&EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![], created: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::CreatePlaylist {
+                temp_id: temp.clone(),
+                name: "Yeni".into(),
+                uris: vec![],
+                created: None,
+            },
+            0,
+        )
+        .unwrap();
         // Liste henüz Spotify'da yokken ona ekleme ve ad değiştirme.
-        q.enqueue_at(&EditOp::AddToPlaylist { playlist: temp.clone(), uris: vec![track(1)], position: AddPosition::Last }, 0)
-            .unwrap();
-        q.enqueue_at(&EditOp::RenamePlaylist { playlist: temp.clone(), name: "Yeni 2".into(), previous_name: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::AddToPlaylist {
+                playlist: temp.clone(),
+                uris: vec![track(1)],
+                position: AddPosition::Last,
+            },
+            0,
+        )
+        .unwrap();
+        q.enqueue_at(
+            &EditOp::RenamePlaylist {
+                playlist: temp.clone(),
+                name: "Yeni 2".into(),
+                previous_name: None,
+            },
+            0,
+        )
+        .unwrap();
         // Önce ağ yok: üçü de sırada, sıra korunur.
         let fake = Fake::new(vec![Err(offline())]);
         q.process_due(&fake, 0).await.unwrap();
@@ -2389,8 +2802,12 @@ mod tests {
         let report = q.process_due(&fake, 10_000).await.unwrap();
         assert_eq!(report.done.len(), 3);
         let applied = fake.applied();
-        assert!(matches!(applied[1], EditOp::AddToPlaylist { ref playlist, .. } if *playlist == real));
-        assert!(matches!(applied[2], EditOp::RenamePlaylist { ref playlist, .. } if *playlist == real));
+        assert!(
+            matches!(applied[1], EditOp::AddToPlaylist { ref playlist, .. } if *playlist == real)
+        );
+        assert!(
+            matches!(applied[2], EditOp::RenamePlaylist { ref playlist, .. } if *playlist == real)
+        );
         assert!(q.pending().unwrap().is_empty());
     }
 
@@ -2398,8 +2815,16 @@ mod tests {
     async fn partial_create_remembers_created_uri_to_avoid_duplicates() {
         let q = EditQueue::open_in_memory().unwrap();
         let temp = new_temp_id();
-        q.enqueue_at(&EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![], created: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::CreatePlaylist {
+                temp_id: temp.clone(),
+                name: "Yeni".into(),
+                uris: vec![],
+                created: None,
+            },
+            0,
+        )
+        .unwrap();
         let real = playlist(5);
         let fake = Fake::new(vec![Err(EditError::PartialCreate {
             created_uri: real.clone(),
@@ -2421,16 +2846,37 @@ mod tests {
     async fn failed_create_fails_dependents_visibly() {
         let q = EditQueue::open_in_memory().unwrap();
         let temp = new_temp_id();
-        q.enqueue_at(&EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![], created: None }, 0)
-            .unwrap();
-        q.enqueue_at(&EditOp::AddToPlaylist { playlist: temp, uris: vec![track(1)], position: AddPosition::Last }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::CreatePlaylist {
+                temp_id: temp.clone(),
+                name: "Yeni".into(),
+                uris: vec![],
+                created: None,
+            },
+            0,
+        )
+        .unwrap();
+        q.enqueue_at(
+            &EditOp::AddToPlaylist {
+                playlist: temp,
+                uris: vec![track(1)],
+                position: AddPosition::Last,
+            },
+            0,
+        )
+        .unwrap();
         let fake = Fake::new(vec![Err(EditError::Forbidden("izin yok".into()))]);
         let report = q.process_due(&fake, 0).await.unwrap();
         assert_eq!(report.failed.len(), 2);
         let failed = q.failed().unwrap();
         assert_eq!(failed.len(), 2);
-        assert!(failed[1].last_error.as_deref().unwrap().contains("oluşturulamadı"));
+        assert!(
+            failed[1]
+                .last_error
+                .as_deref()
+                .unwrap()
+                .contains("oluşturulamadı")
+        );
         assert!(q.pending().unwrap().is_empty());
         // Türleri: oluşturma izin hatası, ardıl "bağlı olduğu liste" hatası.
         assert_eq!(failed[0].error_kind, Some(FailKind::Forbidden));
@@ -2443,7 +2889,12 @@ mod tests {
     fn error_kinds_map_one_to_one_and_survive_the_tag_roundtrip() {
         let cases: Vec<(EditError, FailKind)> = vec![
             (EditError::Offline("x".into()), FailKind::Offline),
-            (EditError::RateLimited { retry_after_ms: None }, FailKind::RateLimited),
+            (
+                EditError::RateLimited {
+                    retry_after_ms: None,
+                },
+                FailKind::RateLimited,
+            ),
             (EditError::Unauthorized("x".into()), FailKind::Unauthorized),
             (EditError::Forbidden("x".into()), FailKind::Forbidden),
             (EditError::NotFound("x".into()), FailKind::NotFound),
@@ -2475,8 +2926,15 @@ mod tests {
         // (eski arayüz metne bakıp "reddedildi" geçen her hatayı "izin yok" sanıyordu).
         let q = EditQueue::open_in_memory().unwrap();
         q.enqueue_at(&EditOp::Unsave { uri: track(1) }, 0).unwrap();
-        q.enqueue_at(&EditOp::RenamePlaylist { playlist: playlist(1), name: "A".into(), previous_name: None }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::RenamePlaylist {
+                playlist: playlist(1),
+                name: "A".into(),
+                previous_name: None,
+            },
+            0,
+        )
+        .unwrap();
         let fake = Fake::new(vec![
             Err(EditError::NotFound("izin yok, reddedildi".into())),
             Err(EditError::Forbidden("bulunamadı".into())),
@@ -2494,14 +2952,19 @@ mod tests {
         assert_eq!(retrying.error_kind, Some(FailKind::Server));
         q.retry(failed[0].id).unwrap();
         let again = q.get(failed[0].id).unwrap().unwrap();
-        assert_eq!((again.state, again.error_kind, again.last_error), (EditState::Pending, None, None));
+        assert_eq!(
+            (again.state, again.error_kind, again.last_error),
+            (EditState::Pending, None, None)
+        );
     }
 
     #[tokio::test]
     async fn giving_up_after_days_is_its_own_kind() {
         let q = EditQueue::open_in_memory().unwrap();
         q.enqueue_at(&EditOp::Save { uri: track(1) }, 0).unwrap();
-        q.process_due(&Fake::new(vec![]), MAX_AGE_MS + 1).await.unwrap();
+        q.process_due(&Fake::new(vec![]), MAX_AGE_MS + 1)
+            .await
+            .unwrap();
         assert_eq!(q.failed().unwrap()[0].error_kind, Some(FailKind::Expired));
     }
 
@@ -2532,7 +2995,13 @@ mod tests {
         assert_eq!(failed.len(), 1);
         // Eski kayıt: tür saklanmamış, metni korunmuş; kuyruk çalışıyor.
         assert_eq!(failed[0].error_kind, None);
-        assert!(failed[0].last_error.as_deref().unwrap().contains("izin yok"));
+        assert!(
+            failed[0]
+                .last_error
+                .as_deref()
+                .unwrap()
+                .contains("izin yok")
+        );
         q.enqueue_at(&EditOp::Save { uri: track(2) }, 6).unwrap();
         assert_eq!(q.pending().unwrap().len(), 1);
         // İkinci açılış sütunu yeniden eklemeye çalışmaz.
@@ -2586,7 +3055,12 @@ mod tests {
         drop(fresh);
 
         // (sürümlenmemiş sütunsuz, sürümlenmemiş sütunlu, 1, 2)
-        for (tag, with_kind, version) in [("v0", false, 0), ("v0-sutunlu", true, 0), ("v1", false, 1), ("v2", true, 2)] {
+        for (tag, with_kind, version) in [
+            ("v0", false, 0),
+            ("v0-sutunlu", true, 0),
+            ("v1", false, 1),
+            ("v2", true, 2),
+        ] {
             let path = dir.join(format!("{tag}.db"));
             legacy_queue_file(&path, with_kind, version);
             let q = EditQueue::open(&path).unwrap();
@@ -2597,7 +3071,14 @@ mod tests {
             let failed = q.failed().unwrap();
             assert_eq!((pending.len(), failed.len()), (2, 1), "{tag}");
             assert_eq!(pending[0].op, EditOp::Save { uri: track(1) });
-            assert_eq!((pending[0].attempts, pending[0].created_ms, pending[0].maybe_applied), (2, 10, false));
+            assert_eq!(
+                (
+                    pending[0].attempts,
+                    pending[0].created_ms,
+                    pending[0].maybe_applied
+                ),
+                (2, 10, false)
+            );
             // Gönderimde kapanan: sonucu belirsiz diye işaretlenir (kayıp değil).
             assert_eq!(pending[1].op, EditOp::Save { uri: track(2) });
             assert!(pending[1].maybe_applied && !pending[1].in_flight, "{tag}");
@@ -2610,26 +3091,47 @@ mod tests {
 
         // Daha yeni uygulamanın yazdığı kuyruk açılmaz ve dokunulmaz.
         let path = dir.join("v2.db");
-        Connection::open(&path).unwrap().pragma_update(None, "user_version", 5).unwrap();
-        let err = EditQueue::open(&path).err().expect("daha yeni sürüm açılmamalı");
+        Connection::open(&path)
+            .unwrap()
+            .pragma_update(None, "user_version", 5)
+            .unwrap();
+        let err = EditQueue::open(&path)
+            .err()
+            .expect("daha yeni sürüm açılmamalı");
         assert!(format!("{err:#}").contains("version 5"), "{err:#}");
         let raw = Connection::open(&path).unwrap();
         assert_eq!(migrate::user_version(&raw).unwrap(), 5);
-        let n: i64 = raw.query_row("SELECT COUNT(*) FROM edits", [], |r| r.get(0)).unwrap();
+        let n: i64 = raw
+            .query_row("SELECT COUNT(*) FROM edits", [], |r| r.get(0))
+            .unwrap();
         assert_eq!(n, 4);
         drop(raw);
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-
     #[tokio::test]
     async fn dismiss_only_drops_failed_and_cascades_from_a_failed_create() {
         let q = EditQueue::open_in_memory().unwrap();
         let temp = new_temp_id();
-        q.enqueue_at(&EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![], created: None }, 0)
-            .unwrap();
-        q.enqueue_at(&EditOp::AddToPlaylist { playlist: temp.clone(), uris: vec![track(1)], position: AddPosition::Last }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::CreatePlaylist {
+                temp_id: temp.clone(),
+                name: "Yeni".into(),
+                uris: vec![],
+                created: None,
+            },
+            0,
+        )
+        .unwrap();
+        q.enqueue_at(
+            &EditOp::AddToPlaylist {
+                playlist: temp.clone(),
+                uris: vec![track(1)],
+                position: AddPosition::Last,
+            },
+            0,
+        )
+        .unwrap();
         q.enqueue_at(&EditOp::Save { uri: track(5) }, 0).unwrap();
         q.process_due(&Fake::new(vec![Err(EditError::Forbidden("x".into()))]), 0)
             .await
@@ -2655,17 +3157,31 @@ mod tests {
     async fn report_carries_the_applied_ops_in_order_and_rows_show_in_flight() {
         let q = EditQueue::open_in_memory().unwrap();
         let temp = new_temp_id();
-        let create = EditOp::CreatePlaylist { temp_id: temp.clone(), name: "Yeni".into(), uris: vec![], created: None };
+        let create = EditOp::CreatePlaylist {
+            temp_id: temp.clone(),
+            name: "Yeni".into(),
+            uris: vec![],
+            created: None,
+        };
         q.enqueue_at(&create, 0).unwrap();
-        q.enqueue_at(&EditOp::AddToPlaylist { playlist: temp.clone(), uris: vec![track(1)], position: AddPosition::Last }, 0)
-            .unwrap();
+        q.enqueue_at(
+            &EditOp::AddToPlaylist {
+                playlist: temp.clone(),
+                uris: vec![track(1)],
+                position: AddPosition::Last,
+            },
+            0,
+        )
+        .unwrap();
         let real = playlist(7);
         let fake = Fake::new(vec![Ok(EditOutcome::Created { uri: real.clone() })]);
         let report = q.process_due(&fake, 0).await.unwrap();
         assert_eq!(report.done.len(), report.done_ops.len());
         assert_eq!(report.done_ops[0], create);
         // Ardıl, oluşturmadan sonra gerçek adresle yazıldı; rapor da onu taşır.
-        assert!(matches!(&report.done_ops[1], EditOp::AddToPlaylist { playlist, .. } if *playlist == real));
+        assert!(
+            matches!(&report.done_ops[1], EditOp::AddToPlaylist { playlist, .. } if *playlist == real)
+        );
         // Gönderimdeki işlem kuyruk kaydında görünür (sonucu belirsiz).
         q.enqueue_at(&EditOp::Save { uri: track(2) }, 1).unwrap();
         let id = q.pending().unwrap()[0].id;
@@ -2685,10 +3201,15 @@ mod tests {
         };
         assert!(same_edit(&mk(None, "A"), &mk(Some(playlist(1)), "A")));
         assert!(!same_edit(&mk(None, "A"), &mk(None, "B")));
-        assert!(same_edit(&EditOp::Save { uri: track(1) }, &EditOp::Save { uri: track(1) }));
-        assert!(!same_edit(&EditOp::Save { uri: track(1) }, &EditOp::Unsave { uri: track(1) }));
+        assert!(same_edit(
+            &EditOp::Save { uri: track(1) },
+            &EditOp::Save { uri: track(1) }
+        ));
+        assert!(!same_edit(
+            &EditOp::Save { uri: track(1) },
+            &EditOp::Unsave { uri: track(1) }
+        ));
     }
-
 }
 
 #[cfg(test)]

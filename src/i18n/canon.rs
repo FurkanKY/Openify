@@ -68,7 +68,9 @@ pub fn localize(raw: &str) -> Cow<'_, str> {
         PLAYLIST => return Cow::Borrowed(t!(Playlist)),
         _ => {}
     }
-    let Some(n) = song_count(raw) else { return Cow::Borrowed(raw) };
+    let Some(n) = song_count(raw) else {
+        return Cow::Borrowed(raw);
+    };
     if raw == songs(n) {
         Cow::Owned(tp!(Songs, n))
     } else if raw == followed(n) {
@@ -103,7 +105,11 @@ mod tests {
             assert_eq!(localize("1 şarkı"), "1 song");
             assert_eq!(localize("29 şarkı"), "29 songs");
             assert_eq!(localize("Takip edilen · 29 şarkı"), "Followed · 29 songs");
-            assert_eq!(localize("Spotify · 1.234 şarkı"), "Spotify · 1.234 şarkı", "gruplanmış sayı kanonik değil: olduğu gibi kalır");
+            assert_eq!(
+                localize("Spotify · 1.234 şarkı"),
+                "Spotify · 1.234 şarkı",
+                "gruplanmış sayı kanonik değil: olduğu gibi kalır"
+            );
             assert_eq!(localize("Spotify · 1234 şarkı"), "Spotify · 1,234 songs");
             assert_eq!(localize("Sanatçı"), "Artist");
             assert_eq!(localize("Liste"), "Playlist");
@@ -111,7 +117,10 @@ mod tests {
         });
         with_lang(Lang::Tr, || {
             assert_eq!(localize("29 şarkı"), "29 şarkı");
-            assert_eq!(localize("Takip edilen · 29 şarkı"), "Takip edilen · 29 şarkı");
+            assert_eq!(
+                localize("Takip edilen · 29 şarkı"),
+                "Takip edilen · 29 şarkı"
+            );
             assert_eq!(localize("Sanatçı"), "Sanatçı");
         });
     }

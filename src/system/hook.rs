@@ -27,7 +27,7 @@ use windows::{
 };
 
 use super::{MediaButton, SystemEvent, emit};
-use crate::{t};
+use crate::t;
 
 /// Tepsi simgesinin geri çağrı iletisi.
 pub const WM_TRAY: u32 = WM_APP + 0x51;
@@ -145,7 +145,11 @@ impl Hotkey {
                 log::warn!(
                     "{} kaydedilemedi ({}): {e}",
                     hotkey_label(),
-                    if taken { "başka bir uygulama kullanıyor" } else { "bilinmeyen hata" }
+                    if taken {
+                        "başka bir uygulama kullanıyor"
+                    } else {
+                        "bilinmeyen hata"
+                    }
                 );
                 if taken { Hotkey::Taken } else { Hotkey::Failed }
             }

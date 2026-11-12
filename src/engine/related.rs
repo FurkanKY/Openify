@@ -137,7 +137,9 @@ pub fn cached(cache: &PageCache, uri: &str) -> Option<(Arc<RelatedList>, Freshne
 }
 
 fn cached_at(cache: &PageCache, uri: &str, now: i64) -> Option<(Arc<RelatedList>, Freshness)> {
-    let hit = cache.get::<RelatedList>(Kind::Related, &key(uri), now).ok()??;
+    let hit = cache
+        .get::<RelatedList>(Kind::Related, &key(uri), now)
+        .ok()??;
     let state = freshness(hit.age_ms, hit.page.artists.is_empty());
     Some((hit.page, state))
 }
@@ -215,9 +217,16 @@ pub fn parse_spotify(value: &Value, self_uri: &str) -> Result<Vec<ArtistCard>> {
         .iter()
         .filter_map(|item| {
             // Bazı GraphQL listeleri öğeyi `data` içine sarıyor.
-            let d = if item.get("uri").is_some() { item } else { &item["data"] };
+            let d = if item.get("uri").is_some() {
+                item
+            } else {
+                &item["data"]
+            };
             let uri = d["uri"].as_str()?;
-            if !uri.starts_with("spotify:artist:") || uri == self_uri || !seen.insert(uri.to_string()) {
+            if !uri.starts_with("spotify:artist:")
+                || uri == self_uri
+                || !seen.insert(uri.to_string())
+            {
                 return None;
             }
             let name = str_of(&d["profile"]["name"]).trim().to_string();
@@ -246,19 +255,31 @@ enum SpotifyFail {
 fn classify(error: PathfinderError) -> SpotifyFail {
     match error {
         PathfinderError::CircuitOpen => SpotifyFail::Dead("devre açık".into()),
-        PathfinderError::Blocked { remaining } => {
-            SpotifyFail::Failed(anyhow!("429 sonrası bekleniyor ({} sn kaldı)", remaining.as_secs()))
-        }
-        PathfinderError::RateLimited { circuit_open: true, .. } => kill_spotify("üst üste iki 429".into()),
-        PathfinderError::StaleHash { detail, cause: StaleCause::Rejected, .. } => {
-            kill_spotify(format!("yeni hash de reddedildi: {detail}"))
-        }
-        PathfinderError::StaleHash { cause: StaleCause::Unchanged, .. } => kill_spotify("güncel hash reddediliyor".into()),
+        PathfinderError::Blocked { remaining } => SpotifyFail::Failed(anyhow!(
+            "429 sonrası bekleniyor ({} sn kaldı)",
+            remaining.as_secs()
+        )),
+        PathfinderError::RateLimited {
+            circuit_open: true, ..
+        } => kill_spotify("üst üste iki 429".into()),
+        PathfinderError::StaleHash {
+            detail,
+            cause: StaleCause::Rejected,
+            ..
+        } => kill_spotify(format!("yeni hash de reddedildi: {detail}")),
+        PathfinderError::StaleHash {
+            cause: StaleCause::Unchanged,
+            ..
+        } => kill_spotify("güncel hash reddediliyor".into()),
         PathfinderError::StaleHash { detail, .. } => {
             // Bu oturumda zaten arandı (başka bir sanatçıda): bir daha değil.
-            SpotifyFail::Failed(anyhow!("hash eskimiş ({detail}), bu oturumda yeniden aranmıştı"))
+            SpotifyFail::Failed(anyhow!(
+                "hash eskimiş ({detail}), bu oturumda yeniden aranmıştı"
+            ))
         }
-        PathfinderError::OperationGone { operation } => kill_spotify(format!("{operation} artık yok")),
+        PathfinderError::OperationGone { operation } => {
+            kill_spotify(format!("{operation} artık yok"))
+        }
         PathfinderError::Denied { status: 403 } => kill_spotify("izin yok: 403".into()),
         other => SpotifyFail::Failed(other.into()),
     }
@@ -270,13 +291,23 @@ fn kill_spotify(why: String) -> SpotifyFail {
     SpotifyFail::Dead(why)
 }
 
-async fn from_spotify(session: &Session, db: Option<&Db>, uri: &str) -> Result<Vec<ArtistCard>, SpotifyFail> {
+async fn from_spotify(
+    session: &Session,
+    db: Option<&Db>,
+    uri: &str,
+) -> Result<Vec<ArtistCard>, SpotifyFail> {
     if SPOTIFY_DEAD.load(Ordering::Relaxed) {
         return Err(SpotifyFail::Dead("önceden kapandı".into()));
     }
-    let value = pathfinder::query(session, db, &pathfinder::ARTIST_RELATED, json!({ "uri": uri }), Priority::Background)
-        .await
-        .map_err(classify)?;
+    let value = pathfinder::query(
+        session,
+        db,
+        &pathfinder::ARTIST_RELATED,
+        json!({ "uri": uri }),
+        Priority::Background,
+    )
+    .await
+    .map_err(classify)?;
     parse_spotify(&value, uri).map_err(SpotifyFail::Failed)
 }
 
@@ -284,7 +315,12 @@ async fn from_spotify(session: &Session, db: Option<&Db>, uri: &str) -> Result<V
 
 /// Ad karşılaştırması: büyük/küçük harf ve boşluk farkı yok sayılır.
 pub fn same_name(a: &str, b: &str) -> bool {
-    let norm = |s: &str| s.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let norm = |s: &str| {
+        s.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase()
+    };
     let (a, b) = (norm(a), norm(b));
     !a.is_empty() && a == b
 }
@@ -308,7 +344,10 @@ pub fn parse_deezer_track(value: &Value, name: &str) -> Option<u64> {
 /// `artist/<id>/related` → kartlar (`deezer:artist:<id>`).
 pub fn parse_deezer_related(value: &Value) -> Result<Vec<ArtistCard>> {
     if let Some(e) = value.get("error") {
-        bail!("Deezer: {}", e["message"].as_str().unwrap_or("bilinmeyen hata"));
+        bail!(
+            "Deezer: {}",
+            e["message"].as_str().unwrap_or("bilinmeyen hata")
+        );
     }
     let Some(items) = value["data"].as_array() else {
         return Ok(Vec::new());
@@ -330,7 +369,11 @@ pub fn parse_deezer_related(value: &Value) -> Result<Vec<ArtistCard>> {
                 .find(|u| !u.is_empty() && !u.contains("/artist//"))
                 .unwrap_or_default()
                 .to_string();
-            Some(ArtistCard { uri: format!("deezer:artist:{id}"), name, image })
+            Some(ArtistCard {
+                uri: format!("deezer:artist:{id}"),
+                name,
+                image,
+            })
         })
         .take(MAX_CARDS)
         .collect())
@@ -338,13 +381,23 @@ pub fn parse_deezer_related(value: &Value) -> Result<Vec<ArtistCard>> {
 
 /// Deezer'a GET (kapıdan geçerek). 200 içindeki kota hatası 429 sayılır.
 async fn deezer_get(client: &reqwest::Client, path: &str) -> Result<Value> {
-    pass(&DEEZER_GATE).await.map_err(|a| anyhow!("Deezer kapısı kapalı: {a:?}"))?;
-    let response = client.get(format!("{DEEZER_API}{path}")).send().await.context("Deezer'a ulaşılamadı")?;
+    pass(&DEEZER_GATE)
+        .await
+        .map_err(|a| anyhow!("Deezer kapısı kapalı: {a:?}"))?;
+    let response = client
+        .get(format!("{DEEZER_API}{path}"))
+        .send()
+        .await
+        .context("Deezer'a ulaşılamadı")?;
     if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
         lock(&DEEZER_GATE).on_rate_limited(Instant::now(), None);
         bail!("Deezer 429");
     }
-    let bytes = response.error_for_status()?.bytes().await.context("Deezer yanıtı okunamadı")?;
+    let bytes = response
+        .error_for_status()?
+        .bytes()
+        .await
+        .context("Deezer yanıtı okunamadı")?;
     let value: Value = serde_json::from_slice(&bytes).context("Deezer yanıtı çözülemedi")?;
     if value["error"]["code"].as_i64() == Some(DEEZER_QUOTA) {
         lock(&DEEZER_GATE).on_rate_limited(Instant::now(), Some(Duration::from_secs(5)));
@@ -377,7 +430,11 @@ async fn track_isrc(session: &Session, track_uri: &str) -> Result<String> {
         .context("şarkının ISRC'si yok")
 }
 
-async fn from_deezer(session: &Session, cache: &PageCache, hint: &RelatedHint) -> Result<Vec<ArtistCard>> {
+async fn from_deezer(
+    session: &Session,
+    cache: &PageCache,
+    hint: &RelatedHint,
+) -> Result<Vec<ArtistCard>> {
     let client = deezer_client()?;
     let deezer_id = match link(cache, &deezer_of_key(&hint.uri)) {
         Some(id) => id,
@@ -392,7 +449,11 @@ async fn from_deezer(session: &Session, cache: &PageCache, hint: &RelatedHint) -
             id
         }
     };
-    let related = deezer_get(&client, &format!("artist/{deezer_id}/related?limit={MAX_CARDS}")).await?;
+    let related = deezer_get(
+        &client,
+        &format!("artist/{deezer_id}/related?limit={MAX_CARDS}"),
+    )
+    .await?;
     parse_deezer_related(&related)
 }
 
@@ -400,13 +461,27 @@ async fn from_deezer(session: &Session, cache: &PageCache, hint: &RelatedHint) -
 
 /// Benzer sanatçıları indirir ve önbelleğe yazar (boş sonuç da yazılır:
 /// 24 saat yeniden sorulmaz). Hata önbelleğe yazılmaz.
-pub async fn load(session: &Session, db: Option<&Db>, cache: &PageCache, hint: &RelatedHint) -> Result<Arc<RelatedList>> {
+pub async fn load(
+    session: &Session,
+    db: Option<&Db>,
+    cache: &PageCache,
+    hint: &RelatedHint,
+) -> Result<Arc<RelatedList>> {
     let started = Instant::now();
     let list = match from_spotify(session, db, &hint.uri).await {
-        Ok(artists) => RelatedList { source: RelatedSource::Spotify, artists },
+        Ok(artists) => RelatedList {
+            source: RelatedSource::Spotify,
+            artists,
+        },
         Err(SpotifyFail::Dead(why)) => {
-            log::debug!("benzer sanatçılar {}: Spotify yolu kapalı ({why}), Deezer'dan", hint.uri);
-            RelatedList { source: RelatedSource::Deezer, artists: from_deezer(session, cache, hint).await? }
+            log::debug!(
+                "benzer sanatçılar {}: Spotify yolu kapalı ({why}), Deezer'dan",
+                hint.uri
+            );
+            RelatedList {
+                source: RelatedSource::Deezer,
+                artists: from_deezer(session, cache, hint).await?,
+            }
         }
         Err(SpotifyFail::Failed(e)) => return Err(e),
     };
@@ -441,7 +516,9 @@ pub fn suggestions(cache: &PageCache, known: &HashSet<String>, limit: usize) -> 
     let mut found: HashMap<String, (usize, usize, ArtistCard)> = HashMap::new();
     let mut order = Vec::new();
     for seed in &seeds {
-        let Some((list, state)) = cached_at(cache, seed, now) else { continue };
+        let Some((list, state)) = cached_at(cache, seed, now) else {
+            continue;
+        };
         if state == Freshness::Expired || list.source != RelatedSource::Spotify {
             continue;
         }
@@ -460,14 +537,24 @@ pub fn suggestions(cache: &PageCache, known: &HashSet<String>, limit: usize) -> 
             entry.1 = entry.1.min(rank);
         }
     }
-    let mut ranked: Vec<(usize, usize, usize, ArtistCard)> =
-        order.iter().enumerate().filter_map(|(i, u)| found.remove(u).map(|(n, r, c)| (n, r, i, c))).collect();
+    let mut ranked: Vec<(usize, usize, usize, ArtistCard)> = order
+        .iter()
+        .enumerate()
+        .filter_map(|(i, u)| found.remove(u).map(|(n, r, c)| (n, r, i, c)))
+        .collect();
     ranked.sort_by_key(|(n, r, i, _)| (std::cmp::Reverse(*n), *r, *i));
-    ranked.into_iter().take(limit).map(|(_, _, _, c)| c).collect()
+    ranked
+        .into_iter()
+        .take(limit)
+        .map(|(_, _, _, c)| c)
+        .collect()
 }
 
 /// Aynı adı taşıyanlar arasında en popüler (eşitlikte arama sırası).
-pub fn pick_by_popularity(exact: &[&SearchHit], popularity: &HashMap<String, i32>) -> Option<String> {
+pub fn pick_by_popularity(
+    exact: &[&SearchHit],
+    popularity: &HashMap<String, i32>,
+) -> Option<String> {
     let mut best: Option<(&SearchHit, i32)> = None;
     for hit in exact {
         let p = popularity.get(&hit.uri).copied().unwrap_or(0);
@@ -481,12 +568,22 @@ pub fn pick_by_popularity(exact: &[&SearchHit], popularity: &HashMap<String, i32
 /// Deezer kartına tıklandı: Spotify adresini bul (tek `searchDesktop`;
 /// aynı adlı birden çok sanatçı varsa popülerliğe bir ARTIST_V4 isteği).
 /// Arama hash'ini pathfinder istemcisi yönetir (`db`: kalıcı kayıt).
-pub async fn resolve_deezer(session: &Session, cache: &PageCache, db: Option<&Db>, deezer_uri: &str, name: &str) -> Result<String> {
+pub async fn resolve_deezer(
+    session: &Session,
+    cache: &PageCache,
+    db: Option<&Db>,
+    deezer_uri: &str,
+    name: &str,
+) -> Result<String> {
     if let Some(uri) = resolved(cache, deezer_uri) {
         return Ok(uri);
     }
     let results = search::run(session, db, name, 10).await?;
-    let exact: Vec<&SearchHit> = results.artists.iter().filter(|h| same_name(&h.name, name)).collect();
+    let exact: Vec<&SearchHit> = results
+        .artists
+        .iter()
+        .filter(|h| same_name(&h.name, name))
+        .collect();
     let uri = match exact.len() {
         0 => bail!("Spotify'da \"{name}\" adlı sanatçı yok"),
         1 => exact[0].uri.clone(),
@@ -517,15 +614,33 @@ mod tests {
     #[test]
     fn suggestions_come_from_cached_lists_only() {
         let cache = PageCache::open_in_memory().unwrap();
-        let card = |n: u32, name: &str| ArtistCard { uri: format!("spotify:artist:{n}"), name: name.into(), image: String::new() };
+        let card = |n: u32, name: &str| ArtistCard {
+            uri: format!("spotify:artist:{n}"),
+            name: name.into(),
+            image: String::new(),
+        };
         let put = |seed: &str, artists: Vec<ArtistCard>| {
-            let list = Arc::new(RelatedList { source: RelatedSource::Spotify, artists });
+            let list = Arc::new(RelatedList {
+                source: RelatedSource::Spotify,
+                artists,
+            });
             store_at(&cache, seed, &list, now_ms()).unwrap();
         };
         // Seed 1 ve 2 açılmış; her ikisinin benzerlerinde 10 geçiyor, 11 yalnız birinde,
         // 12 kütüphanedeki bir albümün sanatçısı, 2 numara seed'in kendisi.
-        put("spotify:artist:1", vec![card(10, "On"), card(2, "Seed İki"), card(11, "Onbir"), card(12, "Kütüphanede")]);
-        put("spotify:artist:2", vec![card(11, "Onbir"), card(10, "On"), card(13, "Onüç")]);
+        put(
+            "spotify:artist:1",
+            vec![
+                card(10, "On"),
+                card(2, "Seed İki"),
+                card(11, "Onbir"),
+                card(12, "Kütüphanede"),
+            ],
+        );
+        put(
+            "spotify:artist:2",
+            vec![card(11, "Onbir"), card(10, "On"), card(13, "Onüç")],
+        );
         let known: HashSet<String> = ["kütüphanede".to_string()].into();
         let got = suggestions(&cache, &known, 10);
         let names: Vec<&str> = got.iter().map(|c| c.name.as_str()).collect();
@@ -538,7 +653,6 @@ mod tests {
 
     #[test]
     fn parses_real_spotify_response() {
-
         let value: Value = serde_json::from_str(SPOTIFY_FIXTURE).unwrap();
         let cards = parse_spotify(&value, ADAMLAR).unwrap();
         // Örnekte 22 öğe (Spotify 40 döndürdü): en çok 20 kart, Spotify'ın sırası.
@@ -546,7 +660,10 @@ mod tests {
         assert_eq!(cards[0].name, "Duman");
         assert_eq!(cards[0].uri, "spotify:artist:6RTC1abMgBC7Krg6qJQHJh");
         // 160 / 320 / 640 arasından kart için 320.
-        assert_eq!(cards[0].image, "https://i.scdn.co/image/ab676161000051745eedfda3da66eb4591be4fa7");
+        assert_eq!(
+            cards[0].image,
+            "https://i.scdn.co/image/ab676161000051745eedfda3da66eb4591be4fa7"
+        );
         for c in &cards {
             assert!(c.uri.starts_with("spotify:artist:"), "{}", c.uri);
             assert_ne!(c.uri, ADAMLAR);
@@ -561,8 +678,19 @@ mod tests {
     fn spotify_parsing_is_defensive() {
         // Eksik alanlar → boş liste, çökme yok.
         assert!(parse_spotify(&json!({}), ADAMLAR).unwrap().is_empty());
-        assert!(parse_spotify(&json!({ "data": {} }), ADAMLAR).unwrap().is_empty());
-        assert!(parse_spotify(&json!({ "data": { "artistUnion": { "__typename": "NotFound" } } }), ADAMLAR).unwrap().is_empty());
+        assert!(
+            parse_spotify(&json!({ "data": {} }), ADAMLAR)
+                .unwrap()
+                .is_empty()
+        );
+        assert!(
+            parse_spotify(
+                &json!({ "data": { "artistUnion": { "__typename": "NotFound" } } }),
+                ADAMLAR
+            )
+            .unwrap()
+            .is_empty()
+        );
         assert!(parse_spotify(&json!({ "data": { "artistUnion": { "relatedContent": { "relatedArtists": { "items": "x" } } } } }), ADAMLAR).unwrap().is_empty());
         // Bozuk öğeler atlanır, yinelenen ve kendisi çıkar, `data` sarmalı da okunur.
         let value = json!({ "data": { "artistUnion": { "relatedContent": { "relatedArtists": { "items": [
@@ -605,18 +733,32 @@ mod tests {
 
     #[test]
     fn pathfinder_errors_decide_whether_spotify_is_dead() {
-        let stale = |cause| PathfinderError::StaleHash { operation: "queryArtistRelated", detail: "x".into(), cause };
+        let stale = |cause| PathfinderError::StaleHash {
+            operation: "queryArtistRelated",
+            detail: "x".into(),
+            cause,
+        };
         let dead = |e: PathfinderError| matches!(classify(e), SpotifyFail::Dead(_));
         // Bu oturumda kapanır.
         assert!(dead(PathfinderError::CircuitOpen));
-        assert!(dead(PathfinderError::RateLimited { retry_after: None, circuit_open: true }));
+        assert!(dead(PathfinderError::RateLimited {
+            retry_after: None,
+            circuit_open: true
+        }));
         assert!(dead(stale(StaleCause::Rejected)));
         assert!(dead(stale(StaleCause::Unchanged)));
-        assert!(dead(PathfinderError::OperationGone { operation: "queryArtistRelated" }));
+        assert!(dead(PathfinderError::OperationGone {
+            operation: "queryArtistRelated"
+        }));
         assert!(dead(PathfinderError::Denied { status: 403 }));
         // Bu seferlik.
-        assert!(!dead(PathfinderError::Blocked { remaining: Duration::from_secs(5) }));
-        assert!(!dead(PathfinderError::RateLimited { retry_after: None, circuit_open: false }));
+        assert!(!dead(PathfinderError::Blocked {
+            remaining: Duration::from_secs(5)
+        }));
+        assert!(!dead(PathfinderError::RateLimited {
+            retry_after: None,
+            circuit_open: false
+        }));
         assert!(!dead(stale(StaleCause::AlreadyRediscovered)));
         assert!(!dead(PathfinderError::Denied { status: 401 }));
         assert!(!dead(PathfinderError::Http { status: 503 }));
@@ -647,23 +789,47 @@ mod tests {
         let cache = PageCache::open_in_memory().unwrap();
         let list = Arc::new(RelatedList {
             source: RelatedSource::Spotify,
-            artists: vec![ArtistCard { uri: "spotify:artist:a".into(), name: "A".into(), image: String::new() }],
+            artists: vec![ArtistCard {
+                uri: "spotify:artist:a".into(),
+                name: "A".into(),
+                image: String::new(),
+            }],
         });
         assert!(cached_at(&cache, ADAMLAR, 0).is_none());
         assert!(store_at(&cache, ADAMLAR, &list, 1_000).unwrap());
         let (got, state) = cached_at(&cache, ADAMLAR, 2_000).unwrap();
         assert_eq!(*got, *list);
         assert_eq!(state, Freshness::Fresh);
-        assert_eq!(cached_at(&cache, ADAMLAR, 1_000 + FRESH_MS).unwrap().1, Freshness::Stale);
-        assert_eq!(cached_at(&cache, ADAMLAR, 1_000 + STALE_MAX_MS).unwrap().1, Freshness::Expired);
+        assert_eq!(
+            cached_at(&cache, ADAMLAR, 1_000 + FRESH_MS).unwrap().1,
+            Freshness::Stale
+        );
+        assert_eq!(
+            cached_at(&cache, ADAMLAR, 1_000 + STALE_MAX_MS).unwrap().1,
+            Freshness::Expired
+        );
         // Boş sonuç (olumsuz önbellek).
         let other = "spotify:artist:b";
-        let empty = Arc::new(RelatedList { source: RelatedSource::Spotify, artists: vec![] });
+        let empty = Arc::new(RelatedList {
+            source: RelatedSource::Spotify,
+            artists: vec![],
+        });
         store_at(&cache, other, &empty, 0).unwrap();
-        assert_eq!(cached_at(&cache, other, EMPTY_MS - 1).unwrap().1, Freshness::Fresh);
-        assert_eq!(cached_at(&cache, other, EMPTY_MS).unwrap().1, Freshness::Expired);
+        assert_eq!(
+            cached_at(&cache, other, EMPTY_MS - 1).unwrap().1,
+            Freshness::Fresh
+        );
+        assert_eq!(
+            cached_at(&cache, other, EMPTY_MS).unwrap().1,
+            Freshness::Expired
+        );
         // Sanatçı sayfasıyla aynı tabloda ama kendi anahtarında.
-        assert!(cache.get::<RelatedList>(Kind::Related, &format!("artist:{ADAMLAR}"), 0).unwrap().is_none());
+        assert!(
+            cache
+                .get::<RelatedList>(Kind::Related, &format!("artist:{ADAMLAR}"), 0)
+                .unwrap()
+                .is_none()
+        );
     }
 
     /// Gerçek Deezer yanıtları (7 Kasım 2026, kırpılmış): Adamlar'ın popüler
@@ -678,7 +844,10 @@ mod tests {
         assert_eq!(parse_deezer_track(&track, " adamlar "), Some(6696895));
         // Ad tutmuyorsa yanlış sanatçının benzerleri gösterilmez.
         assert_eq!(parse_deezer_track(&track, "Başkası"), None);
-        assert_eq!(parse_deezer_track(&json!({ "error": { "code": 800 } }), "Adamlar"), None);
+        assert_eq!(
+            parse_deezer_track(&json!({ "error": { "code": 800 } }), "Adamlar"),
+            None
+        );
         assert_eq!(parse_deezer_track(&json!({}), "Adamlar"), None);
         // Konuk sanatçı da katkıcılardan bulunur.
         let featured = json!({ "artist": { "id": 1, "name": "Ana" },
@@ -688,10 +857,18 @@ mod tests {
         let related: Value = serde_json::from_str(DEEZER_RELATED).unwrap();
         let cards = parse_deezer_related(&related).unwrap();
         assert_eq!(cards.len(), 6);
-        assert!(cards.iter().any(|c| c.name == "Duman" && c.uri == "deezer:artist:14826"));
+        assert!(
+            cards
+                .iter()
+                .any(|c| c.name == "Duman" && c.uri == "deezer:artist:14826")
+        );
         for c in &cards {
             assert!(c.uri.starts_with("deezer:artist:"));
-            assert!(c.image.starts_with("https://") && c.image.contains("500x500"), "{}", c.image);
+            assert!(
+                c.image.starts_with("https://") && c.image.contains("500x500"),
+                "{}",
+                c.image
+            );
         }
 
         // Yer tutucu resim, yinelenen, kimliksiz, adsız.
@@ -708,7 +885,12 @@ mod tests {
         assert_eq!(cards.len(), 2);
         assert_eq!(cards[0].image, "", "boş md5'li yer tutucu resim atılır");
         assert_eq!(cards[1].image, "https://x/250x250.jpg");
-        assert!(parse_deezer_related(&json!({ "error": { "message": "Quota limit exceeded", "code": 4 } })).is_err());
+        assert!(
+            parse_deezer_related(
+                &json!({ "error": { "message": "Quota limit exceeded", "code": 4 } })
+            )
+            .is_err()
+        );
         assert!(parse_deezer_related(&json!({})).unwrap().is_empty());
     }
 
@@ -720,21 +902,44 @@ mod tests {
             subtitle: "Sanatçı".into(),
             image: String::new(),
         };
-        let hits = [hit("spotify:artist:1", "Kalben"), hit("spotify:artist:2", "KALBEN "), hit("spotify:artist:3", "Kalbenler")];
-        let exact: Vec<&SearchHit> = hits.iter().filter(|h| same_name(&h.name, "kalben")).collect();
+        let hits = [
+            hit("spotify:artist:1", "Kalben"),
+            hit("spotify:artist:2", "KALBEN "),
+            hit("spotify:artist:3", "Kalbenler"),
+        ];
+        let exact: Vec<&SearchHit> = hits
+            .iter()
+            .filter(|h| same_name(&h.name, "kalben"))
+            .collect();
         assert_eq!(exact.len(), 2);
-        let popularity = HashMap::from([("spotify:artist:1".to_string(), 40), ("spotify:artist:2".to_string(), 61)]);
-        assert_eq!(pick_by_popularity(&exact, &popularity).unwrap(), "spotify:artist:2");
+        let popularity = HashMap::from([
+            ("spotify:artist:1".to_string(), 40),
+            ("spotify:artist:2".to_string(), 61),
+        ]);
+        assert_eq!(
+            pick_by_popularity(&exact, &popularity).unwrap(),
+            "spotify:artist:2"
+        );
         // Eşitlikte arama sırası.
-        assert_eq!(pick_by_popularity(&exact, &HashMap::new()).unwrap(), "spotify:artist:1");
+        assert_eq!(
+            pick_by_popularity(&exact, &HashMap::new()).unwrap(),
+            "spotify:artist:1"
+        );
         assert!(pick_by_popularity(&[], &popularity).is_none());
         assert!(!same_name("", ""));
 
         // Eşleme kalıcı.
         let cache = PageCache::open_in_memory().unwrap();
         assert!(resolved(&cache, "deezer:artist:1").is_none());
-        put_link(&cache, &spotify_of_key("deezer:artist:1"), "spotify:artist:2");
-        assert_eq!(resolved(&cache, "deezer:artist:1").unwrap(), "spotify:artist:2");
+        put_link(
+            &cache,
+            &spotify_of_key("deezer:artist:1"),
+            "spotify:artist:2",
+        );
+        assert_eq!(
+            resolved(&cache, "deezer:artist:1").unwrap(),
+            "spotify:artist:2"
+        );
     }
 }
 
@@ -752,9 +957,15 @@ mod live {
         let uri = "spotify:artist:1g4J8P1JWwanNyyXckRX5W";
         let session = crate::auth::connect(None).await.expect("oturum");
         let t = Instant::now();
-        let value = pathfinder::query(&session, None, &pathfinder::ARTIST_RELATED, json!({ "uri": uri }), Priority::Background)
-            .await
-            .expect("istek");
+        let value = pathfinder::query(
+            &session,
+            None,
+            &pathfinder::ARTIST_RELATED,
+            json!({ "uri": uri }),
+            Priority::Background,
+        )
+        .await
+        .expect("istek");
         eprintln!("istek: {} ms", t.elapsed().as_millis());
         if let Some(path) = std::env::var_os("OPENIFY_RELATED_DUMP") {
             std::fs::write(path, serde_json::to_string_pretty(&value).unwrap()).unwrap();
@@ -765,7 +976,10 @@ mod live {
             eprintln!("  {} | {} | {}", c.name, c.uri, c.image);
         }
         let cache = PageCache::open_default().expect("sayfa önbelleği");
-        let list = Arc::new(RelatedList { source: RelatedSource::Spotify, artists: cards });
+        let list = Arc::new(RelatedList {
+            source: RelatedSource::Spotify,
+            artists: cards,
+        });
         store_at(&cache, uri, &list, now_ms()).unwrap();
         eprintln!("önbelleğe yazıldı: related:{uri}");
     }

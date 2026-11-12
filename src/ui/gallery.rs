@@ -11,13 +11,15 @@ use gpui::{AnyElement, Context, ElementId, FontWeight, Window, div, prelude::*, 
 use super::{
     Shell,
     components::{
-        Look, MenuEntry, MenuItem, Tooltip, chip, explain_error, icon_button, kbd, menu,
-        ghost_button, play_button, primary_button, primary_button_sized, secondary_button, state_view,
+        Look, MenuEntry, MenuItem, Tooltip, chip, explain_error, ghost_button, icon_button, kbd,
+        menu, play_button, primary_button, primary_button_sized, secondary_button, state_view,
     },
     library::skeleton_rows,
     pill::{PILL_CLEARANCE, PILL_MAX_WIDTH, PillLeft, PillModel},
     player::Notice,
-    shelf::{Card, CardAction, CardMeta, CardState, FolderInfo, SHELF_COVER, SHELF_NAME, STRIP_COVER},
+    shelf::{
+        Card, CardAction, CardMeta, CardState, FolderInfo, SHELF_COVER, SHELF_NAME, STRIP_COVER,
+    },
     text::line,
     theme::*,
 };
@@ -48,7 +50,11 @@ fn section(title: &'static str, body: impl IntoElement) -> AnyElement {
 
 /// Durum sütunlarının başlığı.
 fn look_header() -> AnyElement {
-    let mut row = div().flex().items_center().gap(px(S5)).child(div().w(px(120.)));
+    let mut row = div()
+        .flex()
+        .items_center()
+        .gap(px(S5))
+        .child(div().w(px(120.)));
     for look in Look::ALL {
         row = row.child(
             div()
@@ -79,8 +85,16 @@ fn look_row(name: &'static str, make: impl Fn(Look) -> AnyElement) -> AnyElement
 fn sample_track(n: usize) -> TrackRow {
     let (name, artists, album) = [
         ("Sür Eve", "Güneş", "Sür Eve"),
-        ("Bir Pesimistin Gözyaşları", "Sagopa Kajmer", "Bir Pesimistin Gözyaşları"),
-        ("Kışın arabada sohbet gibisi yok, hele radyoda eski bir şarkı varsa", "Uzun Ad Denemesi", "Çok uzun bir albüm adı: kısaltma burada denenir"),
+        (
+            "Bir Pesimistin Gözyaşları",
+            "Sagopa Kajmer",
+            "Bir Pesimistin Gözyaşları",
+        ),
+        (
+            "Kışın arabada sohbet gibisi yok, hele radyoda eski bir şarkı varsa",
+            "Uzun Ad Denemesi",
+            "Çok uzun bir albüm adı: kısaltma burada denenir",
+        ),
         ("Dal", "Adamlar", "Harekete kimse mâni olamaz."),
         ("2036", "AURA", "ELEMENTAL"),
         ("Melekler Ölmez", "mor ve ötesi", "Melekler Ölmez"),
@@ -101,13 +115,21 @@ fn sample_track(n: usize) -> TrackRow {
 /// delikler gpui'nin değil, ekran görüntüsü betiğinin; bkz.
 /// vendor/gpui/OPENIFY.md madde 7).
 fn shadow_test() -> Option<u8> {
-    (std::env::var("OPENIFY_GALLERY").ok()? == "golge")
-        .then(|| std::env::var("OPENIFY_GOLGE_KATMAN").ok().and_then(|v| v.parse().ok()).unwrap_or(1))
+    (std::env::var("OPENIFY_GALLERY").ok()? == "golge").then(|| {
+        std::env::var("OPENIFY_GOLGE_KATMAN")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1)
+    })
 }
 
 impl Shell {
     fn shadow_gallery(&self, layers: u8, cx: &mut Context<Self>) -> AnyElement {
-        let mut shadows = if layers == 0 { Vec::new() } else { float_shadow() };
+        let mut shadows = if layers == 0 {
+            Vec::new()
+        } else {
+            float_shadow()
+        };
         if layers == 2 {
             // DESIGN.md'deki eski ikinci katman (0 2 6 siyah %30).
             shadows.push(gpui::BoxShadow {
@@ -119,7 +141,15 @@ impl Shell {
         }
         let mut rows = div().flex().flex_col();
         for i in 0..14 {
-            rows = rows.child(self.track_row(3000 + i, &sample_track(i), i == 3, i == 5, false, Look::Live, cx));
+            rows = rows.child(self.track_row(
+                3000 + i,
+                &sample_track(i),
+                i == 3,
+                i == 5,
+                false,
+                Look::Live,
+                cx,
+            ));
         }
         let mut panel_rows = div().flex().flex_col().gap(px(S2)).p(px(S4));
         for i in 0..8 {
@@ -129,7 +159,14 @@ impl Shell {
                     .items_center()
                     .gap(px(S3))
                     .child(div().size(px(40.)).rounded(px(R_SM)).bg(rgb(PLACEHOLDER)))
-                    .child(div().flex_1().min_w_0().type_role(T_BODY).text_color(text()).child(line(sample_track(i).name))),
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .type_role(T_BODY)
+                            .text_color(text())
+                            .child(line(sample_track(i).name)),
+                    ),
             );
         }
         // Eski sağ panelle aynı yüzey (bkz. git 5d40f4f `render_side_panel`).
@@ -182,7 +219,13 @@ impl Shell {
                     .flex()
                     .items_center()
                     .gap(px(S5))
-                    .child(div().w(px(160.)).type_role(T_LABEL).text_color(label()).child(name))
+                    .child(
+                        div()
+                            .w(px(160.))
+                            .type_role(T_LABEL)
+                            .text_color(label())
+                            .child(name),
+                    )
                     .child(
                         div()
                             .flex_1()
@@ -216,8 +259,20 @@ impl Shell {
                     .flex_col()
                     .items_center()
                     .gap(px(S1))
-                    .child(div().w(px(step)).h(px(step)).rounded(px(R_XS)).bg(veil(VEIL_SELECTED)))
-                    .child(div().type_role(T_LABEL).tabular().text_color(label()).child(name)),
+                    .child(
+                        div()
+                            .w(px(step))
+                            .h(px(step))
+                            .rounded(px(R_XS))
+                            .bg(veil(VEIL_SELECTED)),
+                    )
+                    .child(
+                        div()
+                            .type_role(T_LABEL)
+                            .tabular()
+                            .text_color(label())
+                            .child(name),
+                    ),
             );
         }
 
@@ -233,7 +288,13 @@ impl Shell {
                     .flex()
                     .flex_col()
                     .gap(px(S1))
-                    .child(div().w(px(120.)).h(px(40.)).rounded(px(R_MD)).bg(veil(alpha)))
+                    .child(
+                        div()
+                            .w(px(120.))
+                            .h(px(40.))
+                            .rounded(px(R_MD))
+                            .bg(veil(alpha)),
+                    )
                     .child(div().type_role(T_LABEL).text_color(label()).child(name)),
             );
         }
@@ -250,7 +311,13 @@ impl Shell {
                     .flex()
                     .flex_col()
                     .gap(px(S1))
-                    .child(div().w(px(120.)).h(px(40.)).rounded(px(R_MD)).bg(accent_veil(accent, alpha)))
+                    .child(
+                        div()
+                            .w(px(120.))
+                            .h(px(40.))
+                            .rounded(px(R_MD))
+                            .bg(accent_veil(accent, alpha)),
+                    )
                     .child(div().type_role(T_LABEL).text_color(label()).child(name)),
             );
         }
@@ -269,12 +336,25 @@ impl Shell {
                 play_button(("g-play", look as usize), false, look, accent).into_any_element()
             }))
             .child(look_row("Asıl düğme", |look| {
-                primary_button(("g-primary", look as usize), "play-fill", "Çal", look, accent)
-                    .into_any_element()
+                primary_button(
+                    ("g-primary", look as usize),
+                    "play-fill",
+                    "Çal",
+                    look,
+                    accent,
+                )
+                .into_any_element()
             }))
             .child(look_row("Asıl düğme, küçük", |look| {
-                primary_button_sized(("g-primary-small", look as usize), "pause-fill", "Duraklat", look, accent, true)
-                    .into_any_element()
+                primary_button_sized(
+                    ("g-primary-small", look as usize),
+                    "pause-fill",
+                    "Duraklat",
+                    look,
+                    accent,
+                    true,
+                )
+                .into_any_element()
             }))
             .child(look_row("Süzgeç hapı", |look| {
                 chip(("g-chip", look as usize), "Albümler", false, look, accent).into_any_element()
@@ -283,10 +363,26 @@ impl Shell {
                 chip(("g-chip-on", look as usize), "Hepsi", true, look, accent).into_any_element()
             }))
             .child(look_row("Sessiz düğme", |look| {
-                ghost_button(("g-ghost", look as usize), "arrow-up-down", "Son çalınan", false, look, accent).into_any_element()
+                ghost_button(
+                    ("g-ghost", look as usize),
+                    "arrow-up-down",
+                    "Son çalınan",
+                    false,
+                    look,
+                    accent,
+                )
+                .into_any_element()
             }))
             .child(look_row("Sessiz düğme, asıl", |look| {
-                ghost_button(("g-ghost-strong", look as usize), "plus", "Yeni liste", true, look, accent).into_any_element()
+                ghost_button(
+                    ("g-ghost-strong", look as usize),
+                    "plus",
+                    "Yeni liste",
+                    true,
+                    look,
+                    accent,
+                )
+                .into_any_element()
             }));
 
         // Satırlar: gerçek şarkı satırı.
@@ -305,7 +401,13 @@ impl Shell {
                 div()
                     .flex()
                     .items_center()
-                    .child(div().w(px(120.)).type_role(T_SECONDARY).text_color(muted()).child(name))
+                    .child(
+                        div()
+                            .w(px(120.))
+                            .type_role(T_SECONDARY)
+                            .text_color(muted())
+                            .child(name),
+                    )
                     .child(div().flex_1().min_w_0().child(self.track_row(
                         1000 + i,
                         &track,
@@ -325,13 +427,37 @@ impl Shell {
             image: String::new(),
             meta: CardMeta::default(),
         };
-        let state = |look, selected, playing| CardState { look, selected, playing };
+        let state = |look, selected, playing| CardState {
+            look,
+            selected,
+            playing,
+        };
         let shelf_states: [(&str, Card, CardState); 9] = [
-            ("Normal", card(0, "Wholesome Mix"), state(Look::Live, false, false)),
-            ("Üzerine gelme", card(1, "2020'ler Mix"), state(Look::Hover, false, false)),
-            ("Basma", card(2, "Lights Out"), state(Look::Pressed, false, false)),
-            ("Klavye odağı", card(3, "Buzuq Mix"), state(Look::Focus, false, false)),
-            ("Seçili", card(4, "Kışın arabada sohbet gibisi yok"), state(Look::Live, true, false)),
+            (
+                "Normal",
+                card(0, "Wholesome Mix"),
+                state(Look::Live, false, false),
+            ),
+            (
+                "Üzerine gelme",
+                card(1, "2020'ler Mix"),
+                state(Look::Hover, false, false),
+            ),
+            (
+                "Basma",
+                card(2, "Lights Out"),
+                state(Look::Pressed, false, false),
+            ),
+            (
+                "Klavye odağı",
+                card(3, "Buzuq Mix"),
+                state(Look::Focus, false, false),
+            ),
+            (
+                "Seçili",
+                card(4, "Kışın arabada sohbet gibisi yok"),
+                state(Look::Live, true, false),
+            ),
             ("Çalıyor", card(5, "666"), state(Look::Live, false, true)),
             (
                 "Beğenilenler, seçili + çalıyor",
@@ -346,7 +472,13 @@ impl Shell {
             ),
             (
                 "Sabitli",
-                Card { meta: CardMeta { pin: Some(0), ..CardMeta::default() }, ..card(6, "Gece sürüşü") },
+                Card {
+                    meta: CardMeta {
+                        pin: Some(0),
+                        ..CardMeta::default()
+                    },
+                    ..card(6, "Gece sürüşü")
+                },
                 state(Look::Live, false, false),
             ),
             (
@@ -357,7 +489,11 @@ impl Shell {
                     subtitle: "5 liste".into(),
                     image: String::new(),
                     meta: CardMeta {
-                        folder: Some(FolderInfo { key: "spotify:start-group:vitrin:Yaz".into(), open: false, count: 5 }),
+                        folder: Some(FolderInfo {
+                            key: "spotify:start-group:vitrin:Yaz".into(),
+                            open: false,
+                            count: 5,
+                        }),
                         ..CardMeta::default()
                     },
                 },
@@ -401,7 +537,11 @@ impl Shell {
 
         // Yüzen hap: bütün durumları.
         let now = Instant::now();
-        let notice = |kind, text: &str| Notice { kind, text: text.into(), at: now };
+        let notice = |kind, text: &str| Notice {
+            kind,
+            text: text.into(),
+            at: now,
+        };
         let model = |left, playing: bool, has_track: bool, glow: bool| PillModel {
             left,
             playing,
@@ -428,24 +568,62 @@ impl Shell {
         let pills: [(&str, PillModel); 8] = [
             ("Çalıyor", model(track(None, false), true, true, true)),
             ("Duraklatıldı", model(track(None, false), false, true, true)),
-            ("Kaldığı yerde, çevrimdışı", model(track(None, true), false, true, true)),
+            (
+                "Kaldığı yerde, çevrimdışı",
+                model(track(None, true), false, true, true),
+            ),
             (
                 "Sorun bildirimi (şarkının ikinci satırında)",
-                model(track(Some(notice(NoticeKind::Problem, "Spotify bu şarkıyı vermedi. Çal'a basıp yeniden dene.")), false), false, true, true),
+                model(
+                    track(
+                        Some(notice(
+                            NoticeKind::Problem,
+                            "Spotify bu şarkıyı vermedi. Çal'a basıp yeniden dene.",
+                        )),
+                        false,
+                    ),
+                    false,
+                    true,
+                    true,
+                ),
             ),
             (
                 "Yükleniyor",
-                model(PillLeft::Pending { name: "Sür Eve".into(), image: String::new(), notice: None }, false, false, false),
+                model(
+                    PillLeft::Pending {
+                        name: "Sür Eve".into(),
+                        image: String::new(),
+                        notice: None,
+                    },
+                    false,
+                    false,
+                    false,
+                ),
             ),
-            ("Boşta (çal düğmesi açık listeyi başlatır)", model(PillLeft::Idle, false, false, false)),
+            (
+                "Boşta (çal düğmesi açık listeyi başlatır)",
+                model(PillLeft::Idle, false, false, false),
+            ),
             (
                 "Boşta, süren iş",
-                model(PillLeft::Notice(notice(NoticeKind::Working, "Spotify bağlantısı yenileniyor…")), false, false, false),
+                model(
+                    PillLeft::Notice(notice(
+                        NoticeKind::Working,
+                        "Spotify bağlantısı yenileniyor…",
+                    )),
+                    false,
+                    false,
+                    false,
+                ),
             ),
             (
                 "Çevrimdışı",
                 model(
-                    PillLeft::Offline { icon: "wifi-off", title: "Çevrimdışı", detail: "Kütüphane önbellekten" },
+                    PillLeft::Offline {
+                        icon: "wifi-off",
+                        title: "Çevrimdışı",
+                        detail: "Kütüphane önbellekten",
+                    },
                     false,
                     false,
                     false,
@@ -460,7 +638,12 @@ impl Shell {
                     .flex_col()
                     .gap(px(S2))
                     .child(caption(name))
-                    .child(div().id(("g-pill", i)).w(px(PILL_MAX_WIDTH)).child(self.pill(m, window, cx))),
+                    .child(
+                        div()
+                            .id(("g-pill", i))
+                            .w(px(PILL_MAX_WIDTH))
+                            .child(self.pill(m, window, cx)),
+                    ),
             );
         }
 
@@ -481,12 +664,18 @@ impl Shell {
             .child(menu(
                 "g-menu",
                 vec![
-                    MenuEntry::Item(MenuItem::new("Sıraya ekle").icon("list-music").shortcut("Q")),
+                    MenuEntry::Item(
+                        MenuItem::new("Sıraya ekle")
+                            .icon("list-music")
+                            .shortcut("Q"),
+                    ),
                     MenuEntry::Item(MenuItem::new("Albüme git").icon("disc-3").look(Look::Hover)),
                     MenuEntry::Item(MenuItem::new("Sanatçıya git").icon("music")),
                     MenuEntry::Separator,
                     MenuEntry::Item(
-                        MenuItem::new("Bağlantıyı kopyala").shortcut("Ctrl C").look(Look::Disabled),
+                        MenuItem::new("Bağlantıyı kopyala")
+                            .shortcut("Ctrl C")
+                            .look(Look::Disabled),
                     ),
                     MenuEntry::Separator,
                     MenuEntry::Item(MenuItem::new("Listeden çıkar").icon("x").danger()),
@@ -504,7 +693,13 @@ impl Shell {
                     .flex_col()
                     .gap(px(S1))
                     .child(div().w(px(80.)).h(px(24.)).rounded(px(R_SM)).bg(rgb(raw)))
-                    .child(div().type_role(T_BODY).font_weight(FontWeight::MEDIUM).text_color(rgb(fixed)).child("Sür Eve"))
+                    .child(
+                        div()
+                            .type_role(T_BODY)
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(rgb(fixed))
+                            .child("Sür Eve"),
+                    )
                     .child(
                         div()
                             .type_role(T_LABEL)
@@ -541,7 +736,10 @@ impl Shell {
                     .child(section("Ton katmanları", veils))
                     .child(section("Düğmeler", buttons))
                     .child(section("Şarkı satırı", rows))
-                    .child(section("Raf kartı ve Tümü karosu (Tümü ızgarasındaki kart aynı)", shelf_cards))
+                    .child(section(
+                        "Raf kartı ve Tümü karosu (Tümü ızgarasındaki kart aynı)",
+                        shelf_cards,
+                    ))
                     .child(section("Şerit: kartlar ve Tümü düğmesi", strip))
                     .child(section("Yüzen hap", pill_states))
                     .child(section("İpucu, kısayol, menü", floating))
@@ -578,8 +776,17 @@ impl Shell {
                     // Adım 12–13: sayfalar, gezinme, kütüphane yönetimi.
                     .child(self.pages_gallery(cx))
                     .child(self.manage_gallery(cx))
-                    .child(section("Yükleniyor: iskelet satırlar", div().h(px(240.)).overflow_hidden().child(skeleton_rows(false))))
-                    .child(section("Kapaktan gelen vurgu (okunur hâle getirilmiş)", accents)),
+                    .child(section(
+                        "Yükleniyor: iskelet satırlar",
+                        div()
+                            .h(px(240.))
+                            .overflow_hidden()
+                            .child(skeleton_rows(false)),
+                    ))
+                    .child(section(
+                        "Kapaktan gelen vurgu (okunur hâle getirilmiş)",
+                        accents,
+                    )),
             )
             .into_any_element()
     }

@@ -39,13 +39,18 @@ pub fn parse_track(input: &str) -> Result<SpotifyUri> {
 /// taşıyamaz). Başka her şey (geçici liste, "liked", bozuk adres) için `None`.
 pub fn app_target(uri: &str) -> Option<String> {
     let mut parts = uri.split(':');
-    let (Some("spotify"), Some(kind), Some(id), None) = (parts.next(), parts.next(), parts.next(), parts.next())
+    let (Some("spotify"), Some(kind), Some(id), None) =
+        (parts.next(), parts.next(), parts.next(), parts.next())
     else {
         return None;
     };
-    let known = matches!(kind, "track" | "album" | "artist" | "playlist" | "show" | "episode" | "user");
+    let known = matches!(
+        kind,
+        "track" | "album" | "artist" | "playlist" | "show" | "episode" | "user"
+    );
     // Kullanıcı kimliği `.`, `_` ve `-` de taşıyabilir (kabuk için zararsız).
-    let plain = |b: u8| b.is_ascii_alphanumeric() || (kind == "user" && matches!(b, b'.' | b'_' | b'-'));
+    let plain =
+        |b: u8| b.is_ascii_alphanumeric() || (kind == "user" && matches!(b, b'.' | b'_' | b'-'));
     (known && !id.is_empty() && id.bytes().all(plain)).then(|| uri.to_string())
 }
 
@@ -70,7 +75,15 @@ pub fn spotify_app_registered() -> bool {
         let mut size = 0u32;
         // SAFETY: yalnız boyut sorgusu; okuma arabelleği verilmiyor.
         let probe = unsafe {
-            RegGetValueW(HKEY_CLASSES_ROOT, &subkey, &value, RRF_RT_REG_SZ, None, None, Some(&mut size))
+            RegGetValueW(
+                HKEY_CLASSES_ROOT,
+                &subkey,
+                &value,
+                RRF_RT_REG_SZ,
+                None,
+                None,
+                Some(&mut size),
+            )
         };
         probe == ERROR_SUCCESS
     }
@@ -88,12 +101,17 @@ mod tests {
 
     #[test]
     fn app_targets_are_only_plain_spotify_uris() {
-        for kind in ["track", "album", "artist", "playlist", "show", "episode", "user"] {
+        for kind in [
+            "track", "album", "artist", "playlist", "show", "episode", "user",
+        ] {
             let uri = format!("spotify:{kind}:{ID}");
             assert_eq!(app_target(&uri).as_deref(), Some(uri.as_str()));
         }
         // Kullanıcı kimliğinde nokta, alt çizgi ve tire olabilir; başka tür kimlikte olamaz.
-        assert_eq!(app_target("spotify:user:ay_se.k-1").as_deref(), Some("spotify:user:ay_se.k-1"));
+        assert_eq!(
+            app_target("spotify:user:ay_se.k-1").as_deref(),
+            Some("spotify:user:ay_se.k-1")
+        );
         assert_eq!(app_target("spotify:track:a.b"), None);
         assert_eq!(app_target("spotify:user:a&calc"), None);
         for bad in [

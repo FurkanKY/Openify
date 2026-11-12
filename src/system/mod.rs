@@ -27,9 +27,9 @@ use std::{
 
 use windows::Win32::Foundation::HWND;
 
+use crate::{t, tf};
 pub use dialog::save_file_dialog;
 pub use hook::hotkey_label;
-use crate::{t, tf};
 
 /// İşletim sisteminden arayüze gelen olaylar.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -81,7 +81,10 @@ pub fn listen() -> async_channel::Receiver<Stamped> {
 /// Olayı kanala bırak. Her iş parçacığından çağrılabilir, beklemez.
 pub(crate) fn emit(event: SystemEvent) {
     if let Some(tx) = EVENTS.get() {
-        let _ = tx.try_send(Stamped { event, at: Instant::now() });
+        let _ = tx.try_send(Stamped {
+            event,
+            at: Instant::now(),
+        });
     }
 }
 
@@ -101,11 +104,24 @@ impl Features {
     /// açılır: "smtc,taskbar,tray,hotkey" ya da "all".
     pub fn from_env() -> Self {
         if std::env::var_os("OPENIFY_TEST_DISPLAY").is_none() {
-            return Self { smtc: true, taskbar: true, tray: true, hotkey: true };
+            return Self {
+                smtc: true,
+                taskbar: true,
+                tray: true,
+                hotkey: true,
+            };
         }
         let list = std::env::var("OPENIFY_TEST_SYSTEM").unwrap_or_default();
-        let on = |name: &str| list.split(',').any(|p| p.trim() == name || p.trim() == "all");
-        Self { smtc: on("smtc"), taskbar: on("taskbar"), tray: on("tray"), hotkey: on("hotkey") }
+        let on = |name: &str| {
+            list.split(',')
+                .any(|p| p.trim() == name || p.trim() == "all")
+        };
+        Self {
+            smtc: on("smtc"),
+            taskbar: on("taskbar"),
+            tray: on("tray"),
+            hotkey: on("hotkey"),
+        }
     }
 }
 
@@ -152,7 +168,12 @@ pub struct NowPlaying {
 
 impl NowPlaying {
     fn metadata_key(&self) -> (&str, &str, &str, Option<&str>) {
-        (&self.title, &self.artist, &self.album, self.cover.as_ref().map(|c| c.key.as_str()))
+        (
+            &self.title,
+            &self.artist,
+            &self.album,
+            self.cover.as_ref().map(|c| c.key.as_str()),
+        )
     }
 
     fn buttons(&self) -> (PlayStatus, bool, bool, bool) {
@@ -186,12 +207,24 @@ impl Integration {
 
         let t = Instant::now();
         // Kısayol hem sistem parçası açıksa hem kullanıcı Ayarlar'dan kapatmadıysa.
-        let hotkey = if features.hotkey && hotkey_pref { hook::Hotkey::register(hwnd) } else { hook::Hotkey::Off };
+        let hotkey = if features.hotkey && hotkey_pref {
+            hook::Hotkey::register(hwnd)
+        } else {
+            hook::Hotkey::Off
+        };
         if features.hotkey && hotkey_pref {
             log::info!("sistem: kısayol {:.2} ms ({hotkey:?})", ms(t));
         }
 
-        Self { hwnd, features, smtc: None, taskbar: None, tray: None, hotkey, last: None }
+        Self {
+            hwnd,
+            features,
+            smtc: None,
+            taskbar: None,
+            tray: None,
+            hotkey,
+            last: None,
+        }
     }
 
     /// İlk kareden sonra: medya kontrolü, görev çubuğu düğmeleri, tepsi.
@@ -201,30 +234,43 @@ impl Integration {
         let light = icons::light_theme();
         let t = Instant::now();
         self.smtc = features.smtc.then(|| smtc::Smtc::new(hwnd)).and_then(|r| {
-            r.inspect_err(|e| log::warn!("Windows medya kontrolü kurulamadı: {e}")).ok()
+            r.inspect_err(|e| log::warn!("Windows medya kontrolü kurulamadı: {e}"))
+                .ok()
         });
         if features.smtc {
             log::info!("sistem: medya kontrolü {:.2} ms", ms(t));
         }
 
         let t = Instant::now();
-        self.taskbar = features.taskbar.then(|| taskbar::Taskbar::new(light)).and_then(|r| {
-            r.inspect_err(|e| log::warn!("Görev çubuğu düğmeleri kurulamadı: {e}")).ok()
-        });
+        self.taskbar = features
+            .taskbar
+            .then(|| taskbar::Taskbar::new(light))
+            .and_then(|r| {
+                r.inspect_err(|e| log::warn!("Görev çubuğu düğmeleri kurulamadı: {e}"))
+                    .ok()
+            });
         if features.taskbar {
             log::info!("sistem: görev çubuğu {:.2} ms", ms(t));
         }
 
         let t = Instant::now();
-        self.tray = features.tray.then(|| tray::Tray::add(hwnd, light)).flatten();
+        self.tray = features
+            .tray
+            .then(|| tray::Tray::add(hwnd, light))
+            .flatten();
         if features.tray {
-            let added = if self.tray.is_some() { "eklendi" } else { "eklenemedi" };
+            let added = if self.tray.is_some() {
+                "eklendi"
+            } else {
+                "eklenemedi"
+            };
             log::info!("sistem: tepsi simgesi {:.2} ms ({added})", ms(t));
         }
 
         // Görev çubuğu düğmesi kurulumdan önce oluşmuş olabilir
         // ("TaskbarButtonCreated" kaçtı): pencere görünürse düğmeleri şimdi ekle.
-        let visible = unsafe { windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(hwnd) }.as_bool();
+        let visible =
+            unsafe { windows::Win32::UI::WindowsAndMessaging::IsWindowVisible(hwnd) }.as_bool();
         let last = self.last.take();
         if let (true, Some(taskbar)) = (visible, &mut self.taskbar) {
             taskbar.on_button_created(hwnd, last.as_ref().unwrap_or(&NowPlaying::default()));
@@ -248,7 +294,10 @@ impl Integration {
             return None;
         }
         if on {
-            if matches!(self.hotkey, hook::Hotkey::Off | hook::Hotkey::Failed | hook::Hotkey::Taken) {
+            if matches!(
+                self.hotkey,
+                hook::Hotkey::Off | hook::Hotkey::Failed | hook::Hotkey::Taken
+            ) {
                 self.hotkey = hook::Hotkey::register(self.hwnd);
             }
             self.hotkey_problem()
@@ -295,7 +344,9 @@ impl Integration {
         if buttons && let Some(taskbar) = &mut self.taskbar {
             taskbar.set_state(self.hwnd, &now);
         }
-        if (metadata || buttons) && let Some(tray) = &mut self.tray {
+        if (metadata || buttons)
+            && let Some(tray) = &mut self.tray
+        {
             tray.set_tip(&tip(&now));
         }
         log::debug!(
@@ -362,7 +413,11 @@ fn tip(now: &NowPlaying) -> String {
 /// Uygulama kimliği (AUMID): "Openify", sınama koşusunda "Openify.Test".
 /// Paketleme (`scripts/surum-hazirla.ps1 --aumid`) kısayola da aynısını yazar.
 pub fn app_id() -> &'static str {
-    if std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() { "Openify.Test" } else { "Openify" }
+    if std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() {
+        "Openify.Test"
+    } else {
+        "Openify"
+    }
 }
 
 /// Uygulamanın Windows'taki kimliği (görev çubuğu gruplaması, medya
@@ -446,7 +501,11 @@ pub fn is_visible(hwnd: HWND) -> bool {
 /// Pencere öndeki pencere mi?
 pub fn is_foreground(hwnd: HWND) -> bool {
     use windows::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, IsIconic, IsWindowVisible};
-    unsafe { GetForegroundWindow() == hwnd && IsWindowVisible(hwnd).as_bool() && !IsIconic(hwnd).as_bool() }
+    unsafe {
+        GetForegroundWindow() == hwnd
+            && IsWindowVisible(hwnd).as_bool()
+            && !IsIconic(hwnd).as_bool()
+    }
 }
 
 /// Şu an öndeki pencere (palet kapanınca odak ona geri verilir).
@@ -531,7 +590,15 @@ pub fn prepare_popup(hwnd: HWND) {
         // DWMWA_COLOR_NONE: kenar çizgisi yok.
         let none: u32 = 0xFFFF_FFFE;
         let _ = DwmSetWindowAttribute(hwnd, DWMWA_BORDER_COLOR, &none as *const _ as _, 4);
-        let _ = SetWindowPos(hwnd, Some(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+        let _ = SetWindowPos(
+            hwnd,
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE,
+        );
     }
 }
 
@@ -584,7 +651,10 @@ fn monitor_from(find: impl FnOnce() -> windows::Win32::Graphics::Gdi::HMONITOR) 
     if monitor.is_invalid() {
         return None;
     }
-    let mut info = MONITORINFO { cbSize: size_of::<MONITORINFO>() as u32, ..Default::default() };
+    let mut info = MONITORINFO {
+        cbSize: size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
     unsafe { GetMonitorInfoW(monitor, &mut info) }.ok().ok()?;
     let (mut dx, mut dy) = (96u32, 96u32);
     let _ = unsafe { GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut dx, &mut dy) };
@@ -595,10 +665,21 @@ fn monitor_from(find: impl FnOnce() -> windows::Win32::Graphics::Gdi::HMONITOR) 
         BOOL::from(true)
     }
     let mut all: Vec<HMONITOR> = Vec::new();
-    let _ = unsafe { EnumDisplayMonitors(None, None, Some(collect), LPARAM(&mut all as *mut _ as isize)) };
+    let _ = unsafe {
+        EnumDisplayMonitors(
+            None,
+            None,
+            Some(collect),
+            LPARAM(&mut all as *mut _ as isize),
+        )
+    };
     let index = all.iter().position(|m| *m == monitor).unwrap_or(0);
     let w = info.rcWork;
-    Some(Monitor { work: (w.left, w.top, w.right, w.bottom), scale: dx as f32 / 96., index })
+    Some(Monitor {
+        work: (w.left, w.top, w.right, w.bottom),
+        scale: dx as f32 / 96.,
+        index,
+    })
 }
 
 fn ms(t: Instant) -> f64 {

@@ -56,7 +56,10 @@ pub enum Action {
     None,
     /// `to` sürümüne dön; `None` = hedef bilinmiyor (kayıt yok): kaynaktaki
     /// bir önceki sürüm. `bad` kara listeye alınacak sürüm.
-    Rollback { to: Option<String>, bad: String },
+    Rollback {
+        to: Option<String>,
+        bad: String,
+    },
 }
 
 fn parse(v: &str) -> Option<Version> {
@@ -91,13 +94,19 @@ pub fn on_start(state: &State, current: &str) -> (State, Action) {
     let action = if s.trial_starts >= ROLLBACK_AT_STARTS {
         match good {
             // Sağlıklı sürüm şimdikinden eski: ona dön.
-            Some(g) if g < cur => Action::Rollback { to: Some(g.to_string()), bad: current.trim().to_string() },
+            Some(g) if g < cur => Action::Rollback {
+                to: Some(g.to_string()),
+                bad: current.trim().to_string(),
+            },
             // Sağlıklı sürüm şimdikinden yeni ya da eşit değil gibi bir tuhaflık
             // (elle eski sürüm kurulmuş): geri alınacak bir şey yok.
             Some(_) => Action::None,
             // Hiç kayıt yok (ilk kurulum ya da kayıtlı geçmişi olmayan ilk sürüm):
             // kaynaktaki bir önceki sürüm denenir, yoksa vazgeçilir.
-            None => Action::Rollback { to: None, bad: current.trim().to_string() },
+            None => Action::Rollback {
+                to: None,
+                bad: current.trim().to_string(),
+            },
         }
     } else {
         Action::None
@@ -107,13 +116,19 @@ pub fn on_start(state: &State, current: &str) -> (State, Action) {
 
 /// Sürüm sağlıklı sayıldı (pencere açık, `HEALTHY_AFTER` çökmeden geçti).
 pub fn on_healthy(state: &State, current: &str) -> State {
-    let Some(cur) = parse(current) else { return state.clone() };
+    let Some(cur) = parse(current) else {
+        return state.clone();
+    };
     let mut s = state.clone();
     s.last_good = Some(current.trim().to_string());
     s.trial_version = None;
     s.trial_starts = 0;
     // Kara listeli sürümden daha yeni bir sürüm sağlıklı çalışıyor: liste artık gereksiz.
-    if s.blocked.as_deref().and_then(parse).is_some_and(|b| cur > b) {
+    if s.blocked
+        .as_deref()
+        .and_then(parse)
+        .is_some_and(|b| cur > b)
+    {
         s.blocked = None;
     }
     s
@@ -157,13 +172,20 @@ pub fn should_backup(state: &State, current: &str) -> bool {
 /// Geri dönülecek sürümü kaynaktaki tam paketlerin sürümlerinden seçer.
 /// `last_good` biliniyorsa yalnız o (kaynakta yoksa `None`); bilinmiyorsa
 /// şimdikinden küçük olanların en büyüğü.
-pub fn pick_rollback_target(full_versions: &[String], last_good: Option<&str>, current: &str) -> Option<String> {
+pub fn pick_rollback_target(
+    full_versions: &[String],
+    last_good: Option<&str>,
+    current: &str,
+) -> Option<String> {
     let cur = parse(current)?;
     if let Some(good) = last_good.and_then(parse) {
         if good >= cur {
             return None;
         }
-        return full_versions.iter().find(|v| parse(v).as_ref() == Some(&good)).cloned();
+        return full_versions
+            .iter()
+            .find(|v| parse(v).as_ref() == Some(&good))
+            .cloned();
     }
     full_versions
         .iter()
@@ -187,7 +209,10 @@ pub fn backup_dir() -> Option<PathBuf> {
 
 /// Dosyayı okur. Yok, boş ya da bozuksa varsayılan (kayıt yok).
 pub fn load_from(path: &Path) -> State {
-    fs::read_to_string(path).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default()
+    fs::read_to_string(path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default()
 }
 
 /// Dosyayı yazar (önce geçici dosya, sonra yer değiştirme: yarım yazı kalmasın).
@@ -207,13 +232,16 @@ pub fn save_to(path: &Path, state: &State) -> io::Result<()> {
 /// `1.2.30` ya da `1.2.3-beta.1` ile karışmaz.
 pub fn package_matches_version(file_name: &str, version: &str) -> bool {
     let name = file_name.to_ascii_lowercase();
-    let Some(stem) = name.strip_suffix("-full.nupkg") else { return false };
+    let Some(stem) = name.strip_suffix("-full.nupkg") else {
+        return false;
+    };
     let want = format!("-{}", version.trim().to_ascii_lowercase());
     if stem.ends_with(&want) {
         return true;
     }
     // Kanal eki: "<kimlik>-<sürüm>-<kanal>"
-    stem.rsplit_once('-').is_some_and(|(id_ver, _channel)| id_ver.ends_with(&want))
+    stem.rsplit_once('-')
+        .is_some_and(|(id_ver, _channel)| id_ver.ends_with(&want))
 }
 
 /// Klasördeki, bu sürümün tam paketi.
@@ -221,7 +249,11 @@ pub fn find_package(dir: &Path, version: &str) -> Option<PathBuf> {
     fs::read_dir(dir)
         .ok()?
         .flatten()
-        .filter(|e| e.file_name().to_str().is_some_and(|n| package_matches_version(n, version)))
+        .filter(|e| {
+            e.file_name()
+                .to_str()
+                .is_some_and(|n| package_matches_version(n, version))
+        })
         .map(|e| e.path())
         .next()
 }
@@ -230,11 +262,19 @@ pub fn find_package(dir: &Path, version: &str) -> Option<PathBuf> {
 /// yedekler; klasördeki diğer dosyalar silinir (hep tek yedek). Zaten aynı
 /// boyutta yedek varsa kopyalamaz. `Ok(true)`: yedek hazır; `Ok(false)`: paket yok.
 pub fn backup_package(packages_dir: &Path, rollback_dir: &Path, version: &str) -> io::Result<bool> {
-    let Some(src) = find_package(packages_dir, version) else { return Ok(false) };
-    let name = src.file_name().ok_or_else(|| io::Error::other("package has no file name"))?.to_owned();
+    let Some(src) = find_package(packages_dir, version) else {
+        return Ok(false);
+    };
+    let name = src
+        .file_name()
+        .ok_or_else(|| io::Error::other("package has no file name"))?
+        .to_owned();
     fs::create_dir_all(rollback_dir)?;
     let dst = rollback_dir.join(&name);
-    let up_to_date = fs::metadata(&dst).ok().zip(fs::metadata(&src).ok()).is_some_and(|(a, b)| a.len() == b.len());
+    let up_to_date = fs::metadata(&dst)
+        .ok()
+        .zip(fs::metadata(&src).ok())
+        .is_some_and(|(a, b)| a.len() == b.len());
     if !up_to_date {
         let tmp = rollback_dir.join(format!("{}.partial", name.to_string_lossy()));
         fs::copy(&src, &tmp)?;
@@ -289,7 +329,8 @@ mod tests {
     }
 
     fn temp(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-health-test-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-health-test-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -328,7 +369,13 @@ mod tests {
         assert_eq!(n.trial_starts, 2);
         s = n;
         let (n, a) = on_start(&s, "1.1.0");
-        assert_eq!(a, Action::Rollback { to: Some("1.0.0".into()), bad: "1.1.0".into() });
+        assert_eq!(
+            a,
+            Action::Rollback {
+                to: Some("1.0.0".into()),
+                bad: "1.1.0".into()
+            }
+        );
         assert_eq!(n.trial_starts, 3);
     }
 
@@ -354,7 +401,10 @@ mod tests {
         // Geri dönüşten sonraki durum: sağlıklı 1.0.0, kara liste 1.1.0.
         let s = st(Some("1.0.0"), None, Some("1.1.0"));
         assert!(is_blocked(&s, "1.1.0"));
-        assert!(is_blocked(&s, "1.0.5"), "kara listeli sürümün altı da engelli");
+        assert!(
+            is_blocked(&s, "1.0.5"),
+            "kara listeli sürümün altı da engelli"
+        );
         assert!(!is_blocked(&s, "1.1.1"), "daha yeni sürüm serbest");
         assert!(!is_blocked(&s, "2.0.0"));
         assert!(!is_blocked(&State::default(), "1.1.0"));
@@ -376,7 +426,13 @@ mod tests {
             if i < 3 {
                 assert_eq!(a, Action::None);
             } else {
-                assert_eq!(a, Action::Rollback { to: None, bad: "1.0.0".into() });
+                assert_eq!(
+                    a,
+                    Action::Rollback {
+                        to: None,
+                        bad: "1.0.0".into()
+                    }
+                );
             }
         }
     }
@@ -393,7 +449,10 @@ mod tests {
     fn clean_exit_undoes_the_start_of_an_unproven_version() {
         let s = st(Some("1.0.0"), Some(("1.1.0", 2)), None);
         assert_eq!(on_clean_exit(&s, "1.1.0").trial_starts, 1);
-        assert_eq!(on_clean_exit(&st(Some("1.0.0"), Some(("1.1.0", 0)), None), "1.1.0").trial_starts, 0);
+        assert_eq!(
+            on_clean_exit(&st(Some("1.0.0"), Some(("1.1.0", 0)), None), "1.1.0").trial_starts,
+            0
+        );
         // Sağlıklı sürümde ya da başka sürümün denemesinde değişmez.
         let good = st(Some("1.1.0"), None, None);
         assert_eq!(on_clean_exit(&good, "1.1.0"), good);
@@ -412,7 +471,13 @@ mod tests {
         // Metin sırasıyla "1.9.0" > "1.10.0"; semver'de tersi.
         let s = st(Some("1.9.0"), Some(("1.10.0", 2)), None);
         let (_, a) = on_start(&s, "1.10.0");
-        assert_eq!(a, Action::Rollback { to: Some("1.9.0".into()), bad: "1.10.0".into() });
+        assert_eq!(
+            a,
+            Action::Rollback {
+                to: Some("1.9.0".into()),
+                bad: "1.10.0".into()
+            }
+        );
         assert!(is_blocked(&st(None, None, Some("1.10.0")), "1.9.0"));
         assert!(!is_blocked(&st(None, None, Some("1.9.0")), "1.10.0"));
         // Ön sürüm, aynı numaralı kararlı sürümden eski.
@@ -438,18 +503,38 @@ mod tests {
     #[test]
     fn backup_only_for_proven_versions() {
         assert!(should_backup(&st(Some("1.0.0"), None, None), "1.0.0"));
-        assert!(!should_backup(&st(Some("1.0.0"), Some(("1.1.0", 1)), None), "1.1.0"));
+        assert!(!should_backup(
+            &st(Some("1.0.0"), Some(("1.1.0", 1)), None),
+            "1.1.0"
+        ));
         assert!(!should_backup(&State::default(), "1.0.0"));
         assert!(!should_backup(&st(Some("1.0.0"), None, None), "yok"));
     }
 
     #[test]
     fn rollback_target_comes_from_the_feed() {
-        let feed: Vec<String> = ["1.0.0", "1.1.0", "1.2.0", "1.10.0"].iter().map(|s| s.to_string()).collect();
-        assert_eq!(pick_rollback_target(&feed, Some("1.1.0"), "1.10.0").as_deref(), Some("1.1.0"));
-        assert_eq!(pick_rollback_target(&feed, Some("0.9.0"), "1.10.0"), None, "kaynakta yok");
-        assert_eq!(pick_rollback_target(&feed, Some("1.10.0"), "1.10.0"), None, "eski değil");
-        assert_eq!(pick_rollback_target(&feed, None, "1.10.0").as_deref(), Some("1.2.0"));
+        let feed: Vec<String> = ["1.0.0", "1.1.0", "1.2.0", "1.10.0"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        assert_eq!(
+            pick_rollback_target(&feed, Some("1.1.0"), "1.10.0").as_deref(),
+            Some("1.1.0")
+        );
+        assert_eq!(
+            pick_rollback_target(&feed, Some("0.9.0"), "1.10.0"),
+            None,
+            "kaynakta yok"
+        );
+        assert_eq!(
+            pick_rollback_target(&feed, Some("1.10.0"), "1.10.0"),
+            None,
+            "eski değil"
+        );
+        assert_eq!(
+            pick_rollback_target(&feed, None, "1.10.0").as_deref(),
+            Some("1.2.0")
+        );
         assert_eq!(pick_rollback_target(&feed, None, "1.0.0"), None);
         assert_eq!(pick_rollback_target(&[], None, "1.0.0"), None);
         assert_eq!(pick_rollback_target(&feed, None, "bozuk"), None);
@@ -467,7 +552,11 @@ mod tests {
         fs::write(&path, "[1,2,3]").unwrap();
         assert_eq!(load_from(&path), State::default(), "yanlış biçim");
         fs::write(&path, r#"{"last_good":"1.0.0","bilinmeyen":7}"#).unwrap();
-        assert_eq!(load_from(&path), st(Some("1.0.0"), None, None), "eksik ve fazla alan");
+        assert_eq!(
+            load_from(&path),
+            st(Some("1.0.0"), None, None),
+            "eksik ve fazla alan"
+        );
         fs::write(&path, r#"{"trial_starts":"çok"}"#).unwrap();
         assert_eq!(load_from(&path), State::default(), "yanlış türde alan");
         let _ = fs::remove_dir_all(&dir);
@@ -488,14 +577,38 @@ mod tests {
 
     #[test]
     fn package_names_match_their_own_version_only() {
-        assert!(package_matches_version("Openify-1.2.3-win-full.nupkg", "1.2.3"));
-        assert!(package_matches_version("openify-1.2.3-win-full.nupkg", "1.2.3"));
-        assert!(package_matches_version("Openify-1.2.3-full.nupkg", "1.2.3"), "kanalsız eski biçim");
-        assert!(package_matches_version("Openify-1.2.3-beta.1-win-full.nupkg", "1.2.3-beta.1"));
-        assert!(!package_matches_version("Openify-1.2.30-win-full.nupkg", "1.2.3"));
-        assert!(!package_matches_version("Openify-1.2.3-beta.1-win-full.nupkg", "1.2.3"));
-        assert!(!package_matches_version("Openify-1.2.3-win-delta.nupkg", "1.2.3"));
-        assert!(!package_matches_version("Openify-1.2.3-win-full.nupkg.partial", "1.2.3"));
+        assert!(package_matches_version(
+            "Openify-1.2.3-win-full.nupkg",
+            "1.2.3"
+        ));
+        assert!(package_matches_version(
+            "openify-1.2.3-win-full.nupkg",
+            "1.2.3"
+        ));
+        assert!(
+            package_matches_version("Openify-1.2.3-full.nupkg", "1.2.3"),
+            "kanalsız eski biçim"
+        );
+        assert!(package_matches_version(
+            "Openify-1.2.3-beta.1-win-full.nupkg",
+            "1.2.3-beta.1"
+        ));
+        assert!(!package_matches_version(
+            "Openify-1.2.30-win-full.nupkg",
+            "1.2.3"
+        ));
+        assert!(!package_matches_version(
+            "Openify-1.2.3-beta.1-win-full.nupkg",
+            "1.2.3"
+        ));
+        assert!(!package_matches_version(
+            "Openify-1.2.3-win-delta.nupkg",
+            "1.2.3"
+        ));
+        assert!(!package_matches_version(
+            "Openify-1.2.3-win-full.nupkg.partial",
+            "1.2.3"
+        ));
         assert!(!package_matches_version("releases.win.json", "1.2.3"));
     }
 
@@ -510,7 +623,10 @@ mod tests {
         // Paket yoksa yedek yok.
         assert!(!backup_package(&packages, &backup, "9.9.9").unwrap());
         assert!(backup_package(&packages, &backup, "1.0.0").unwrap());
-        assert_eq!(fs::read(backup.join("Openify-1.0.0-win-full.nupkg")).unwrap(), b"eski-iyi");
+        assert_eq!(
+            fs::read(backup.join("Openify-1.0.0-win-full.nupkg")).unwrap(),
+            b"eski-iyi"
+        );
         // İkinci yedek zararsız (aynı boyut: yeniden kopyalanmaz).
         assert!(backup_package(&packages, &backup, "1.0.0").unwrap());
 
@@ -518,8 +634,15 @@ mod tests {
         fs::write(packages.join("Openify-1.1.0-win-full.nupkg"), b"yeni").unwrap();
         fs::write(backup.join("artik.partial"), b"x").unwrap();
         assert!(backup_package(&packages, &backup, "1.1.0").unwrap());
-        let names: Vec<_> = fs::read_dir(&backup).unwrap().flatten().map(|e| e.file_name()).collect();
-        assert_eq!(names, vec![std::ffi::OsString::from("Openify-1.1.0-win-full.nupkg")]);
+        let names: Vec<_> = fs::read_dir(&backup)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name())
+            .collect();
+        assert_eq!(
+            names,
+            vec![std::ffi::OsString::from("Openify-1.1.0-win-full.nupkg")]
+        );
 
         // Geri dönüş: yedek geri konur, bozuk sürüm paketi ve delta'lar silinir.
         let saved = backup.join("Openify-1.1.0-win-full.nupkg");
@@ -529,12 +652,24 @@ mod tests {
         fs::write(packages.join(".betaId"), b"id").unwrap();
         let name = stage_backup(&saved, &packages).unwrap();
         assert_eq!(name, "Openify-1.1.0-win-full.nupkg");
-        let mut left: Vec<String> =
-            fs::read_dir(&packages).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).collect();
+        let mut left: Vec<String> = fs::read_dir(&packages)
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
         left.sort();
-        assert_eq!(left, vec![".betaId".to_string(), "Openify-1.1.0-win-full.nupkg".to_string()]);
+        assert_eq!(
+            left,
+            vec![
+                ".betaId".to_string(),
+                "Openify-1.1.0-win-full.nupkg".to_string()
+            ]
+        );
         assert_eq!(fs::read(packages.join(&name)).unwrap(), b"yeni");
-        assert!(saved.exists(), "yedek yerinde kalır (uygulama başarısız olursa yeniden denenir)");
+        assert!(
+            saved.exists(),
+            "yedek yerinde kalır (uygulama başarısız olursa yeniden denenir)"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 }

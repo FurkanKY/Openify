@@ -27,7 +27,8 @@ fn used_args(s: &str) -> Vec<usize> {
                 next += 1;
                 next - 1
             } else {
-                p.parse().unwrap_or_else(|_| panic!("yer tutucu {{{p}}} ne boş ne sayı: {s:?}"))
+                p.parse()
+                    .unwrap_or_else(|_| panic!("yer tutucu {{{p}}} ne boş ne sayı: {s:?}"))
             }
         })
         .collect();
@@ -45,7 +46,11 @@ fn every_key_has_both_languages() {
     for (i, name) in table::NAMES.iter().enumerate() {
         for (lang, s) in [("en", table::EN[i]), ("tr", table::TR[i])] {
             assert!(!s.trim().is_empty(), "{name}: {lang} yazısı boş");
-            assert_eq!(s, s.trim(), "{name}: {lang} yazısının başında / sonunda boşluk var");
+            assert_eq!(
+                s,
+                s.trim(),
+                "{name}: {lang} yazısının başında / sonunda boşluk var"
+            );
         }
     }
 }
@@ -56,10 +61,18 @@ fn placeholders_match_across_languages() {
         let (en, tr) = (table::EN[i], table::TR[i]);
         // Çoğul biçimlerinde her seçenekte aynı yer tutucular olmalı.
         for variant in en.split('|') {
-            assert_eq!(used_args(variant), used_args(tr.split('|').next().unwrap()), "{name}: İngilizce {variant:?} ile Türkçe {tr:?} yer tutucuları farklı");
+            assert_eq!(
+                used_args(variant),
+                used_args(tr.split('|').next().unwrap()),
+                "{name}: İngilizce {variant:?} ile Türkçe {tr:?} yer tutucuları farklı"
+            );
         }
         for variant in tr.split('|') {
-            assert_eq!(used_args(variant), used_args(en.split('|').next().unwrap()), "{name}: Türkçe {variant:?} ile İngilizce {en:?} yer tutucuları farklı");
+            assert_eq!(
+                used_args(variant),
+                used_args(en.split('|').next().unwrap()),
+                "{name}: Türkçe {variant:?} ile İngilizce {en:?} yer tutucuları farklı"
+            );
         }
     }
 }
@@ -72,7 +85,10 @@ fn plural_keys_are_well_formed() {
             assert!(n <= 1, "{name}: {lang} yazısında birden çok '|': {s:?}");
             if n == 1 {
                 let (one, many) = s.split_once('|').unwrap();
-                assert!(one.contains("{}") && many.contains("{}"), "{name}: çoğul seçeneklerde `{{}}` yok: {s:?}");
+                assert!(
+                    one.contains("{}") && many.contains("{}"),
+                    "{name}: çoğul seçeneklerde `{{}}` yok: {s:?}"
+                );
             }
         }
     }
@@ -86,7 +102,10 @@ fn english_text_has_no_turkish_only_letters() {
         if en.contains("Türkçe") {
             continue;
         }
-        assert!(!en.chars().any(|c| "ğĞşŞıİ".contains(c)), "{name}: İngilizce yazıda Türkçe harf: {en:?}");
+        assert!(
+            !en.chars().any(|c| "ğĞşŞıİ".contains(c)),
+            "{name}: İngilizce yazıda Türkçe harf: {en:?}"
+        );
     }
 }
 
@@ -94,11 +113,28 @@ fn english_text_has_no_turkish_only_letters() {
 fn turkish_text_is_not_pasted_into_english() {
     // Çevrilmeden bırakılan (İngilizcesi Türkçeyle aynı) yazılar yalnız özel ad / simge /
     // iki dilde aynı olan kısa yazı olabilir.
-    const SAME_OK: &[&str] = &["Spotify", "English", "Türkçe", "LRCLIB", "Dil / Language", "Normal", "Podcast", "Karaoke", "AutoMix", "Spotify Connect"];
+    const SAME_OK: &[&str] = &[
+        "Spotify",
+        "English",
+        "Türkçe",
+        "LRCLIB",
+        "Dil / Language",
+        "Normal",
+        "Podcast",
+        "Karaoke",
+        "AutoMix",
+        "Spotify Connect",
+    ];
     for (i, name) in table::NAMES.iter().enumerate() {
         let (en, tr) = (table::EN[i], table::TR[i]);
         if en == tr && en.chars().filter(|c| c.is_alphabetic()).count() > 3 {
-            assert!(SAME_OK.contains(&en) || en.chars().all(|c| !c.is_alphabetic() || c.is_ascii_uppercase()), "{name}: İngilizce ile Türkçe aynı ({en:?}), çevrilmemiş olabilir; gerçekten aynıysa SAME_OK'a ekle");
+            assert!(
+                SAME_OK.contains(&en)
+                    || en
+                        .chars()
+                        .all(|c| !c.is_alphabetic() || c.is_ascii_uppercase()),
+                "{name}: İngilizce ile Türkçe aynı ({en:?}), çevrilmemiş olabilir; gerçekten aynıysa SAME_OK'a ekle"
+            );
         }
     }
 }
@@ -165,41 +201,121 @@ fn turkish_casing_handles_dotted_and_dotless_i() {
 
 /// Taramaya girmeyen dosyalar (yol parçası): çeviri tablosu, geliştirme vitrini
 /// (`OPENIFY_GALLERY`, kullanıcıya görünmez), sınama sabitleri.
-const SKIP_FILES: &[&str] = &["i18n.rs", "i18n/", "brand.rs", "ui/gallery.rs", "fixtures", "/edits/live.rs", "engine/output/tests.rs", "engine/tests.rs", "engine/playback/tests.rs", "engine/playback/connect_tests.rs", "engine/connect/tests.rs"];
+const SKIP_FILES: &[&str] = &[
+    "i18n.rs",
+    "i18n/",
+    "brand.rs",
+    "ui/gallery.rs",
+    "fixtures",
+    "/edits/live.rs",
+    "engine/output/tests.rs",
+    "engine/tests.rs",
+    "engine/playback/tests.rs",
+    "engine/playback/connect_tests.rs",
+    "engine/connect/tests.rs",
+];
 
 /// Türkçe kalmasına izin verilen yazılar: (dosya parçası, yazının parçası). Her
 /// girdi, neden Türkçe kaldığını açıklayan bir gerekçe taşır.
 const ALLOW: &[(&str, &str, &str)] = &[
     // Geliştirme / tanı çıktısı, kullanıcıya gösterilmez.
     ("ui/integration.rs", "sistem:", "günlük satırı"),
-    ("ui/integration.rs", "tepsi / ikinci açılış", "Op::Show nedeni: günlük etiketi"),
-    ("ui/integration.rs", "gizli açılış", "Op::Show nedeni: günlük etiketi"),
-    ("ui/popups.rs", "tepsi menüsü", "Op::Show nedeni: günlük etiketi"),
+    (
+        "ui/integration.rs",
+        "tepsi / ikinci açılış",
+        "Op::Show nedeni: günlük etiketi",
+    ),
+    (
+        "ui/integration.rs",
+        "gizli açılış",
+        "Op::Show nedeni: günlük etiketi",
+    ),
+    (
+        "ui/popups.rs",
+        "tepsi menüsü",
+        "Op::Show nedeni: günlük etiketi",
+    ),
     ("ui/mod.rs", "aşama", "açılış ölçüm günlüğü"),
-    ("ui/mod.rs", "olay kanalı kapandı", "EngineStopped nedeni: günlüğe gider, ekranda msg / t! yazısı görünür"),
+    (
+        "ui/mod.rs",
+        "olay kanalı kapandı",
+        "EngineStopped nedeni: günlüğe gider, ekranda msg / t! yazısı görünür",
+    ),
     // Motor tanı iletileri: hata nedeni olarak taşınır, günlüğe gider; kullanıcıya hiç ham gösterilmez
     // (`explain_error` / `explain_edit_failure` bunları sınıflayıp `t!` yazısı verir).
-    ("engine/edits.rs", "", "yazma işlemi hata nedenleri (FailKind'e sınıflanır)"),
+    (
+        "engine/edits.rs",
+        "",
+        "yazma işlemi hata nedenleri (FailKind'e sınıflanır)",
+    ),
     ("engine/related.rs", "", "ağ hata nedenleri (günlük)"),
-    ("engine/output/device.rs", "akış hatası", "signal_device_lost nedeni (günlük); kullanıcı DeviceNotice ile t! yazısı görür"),
-    ("engine/output/writer.rs", "ses aygıtı ayrıldı", "SinkError nedeni (çalar günlüğü)"),
-    ("engine/output/writer.rs", "çıkış ilerlemiyor", "signal_device_lost nedeni (günlük)"),
-    ("engine/output/writer.rs", "ses çıkışı ilerlemiyor", "SinkError nedeni (çalar günlüğü)"),
+    (
+        "engine/output/device.rs",
+        "akış hatası",
+        "signal_device_lost nedeni (günlük); kullanıcı DeviceNotice ile t! yazısı görür",
+    ),
+    (
+        "engine/output/writer.rs",
+        "ses aygıtı ayrıldı",
+        "SinkError nedeni (çalar günlüğü)",
+    ),
+    (
+        "engine/output/writer.rs",
+        "çıkış ilerlemiyor",
+        "signal_device_lost nedeni (günlük)",
+    ),
+    (
+        "engine/output/writer.rs",
+        "ses çıkışı ilerlemiyor",
+        "SinkError nedeni (çalar günlüğü)",
+    ),
     ("engine/wire.rs", "sınama:", "sahte hata nedeni"),
-    ("engine/wire.rs", "network:", "hata önekiyle sınıflanır (`explain_error`)"),
+    (
+        "engine/wire.rs",
+        "network:",
+        "hata önekiyle sınıflanır (`explain_error`)",
+    ),
     ("engine/wire.rs", "önbellek yok", "hata nedeni"),
-    ("engine/mod.rs", "network:", "hata önekiyle sınıflanır (`explain_error`)"),
-    ("engine/session.rs", "network:", "hata önekiyle sınıflanır (`explain_error`); bağlantı kodu `mod.rs`ten taşındı"),
+    (
+        "engine/mod.rs",
+        "network:",
+        "hata önekiyle sınıflanır (`explain_error`)",
+    ),
+    (
+        "engine/session.rs",
+        "network:",
+        "hata önekiyle sınıflanır (`explain_error`); bağlantı kodu `mod.rs`ten taşındı",
+    ),
     // `openify connect-spike` (özellik `connect-spike`): sahibinin gerçek hesapla
     // koşturduğu Türkçe konsol onay listesi, uygulama arayüzü değil.
-    ("connect_spike", "", "geliştirici / sahip denemesi, terminal çıktısı (cli.rs gibi)"),
+    (
+        "connect_spike",
+        "",
+        "geliştirici / sahip denemesi, terminal çıktısı (cli.rs gibi)",
+    ),
     ("engine/mod.rs", "henüz bağlanılmadı", "hata nedeni"),
-    ("engine/mod.rs", "çalınacak şarkı bulunamadı", "hata nedeni (günlük)"),
-    ("engine/explore.rs", "Sana özel", "ana sayfa akış bölümü başlıkları ekranda gösterilmez (ana sayfa kendi başlığını kullanır)"),
+    (
+        "engine/mod.rs",
+        "çalınacak şarkı bulunamadı",
+        "hata nedeni (günlük)",
+    ),
+    (
+        "engine/explore.rs",
+        "Sana özel",
+        "ana sayfa akış bölümü başlıkları ekranda gösterilmez (ana sayfa kendi başlığını kullanır)",
+    ),
     ("engine/explore.rs", "Karışımların", "bkz. yukarısı"),
     // Terminal (`openify <bağlantı>`) ve kayıt defteri tanı iletileri.
-    ("cli.rs", "", "terminalden çalma komutunun hata iletileri (geliştirici aracı)"),
-    ("autostart.rs", "kayıt defteri hatası", "günlüğe giden hata nedeni"),
+    (
+        "cli.rs",
+        "",
+        "terminalden çalma komutunun hata iletileri (geliştirici aracı)",
+    ),
+    (
+        "autostart.rs",
+        "kayıt defteri hatası",
+        "günlüğe giden hata nedeni",
+    ),
     // Bileşen vitrininin durum adları (Look::name).
     ("ui/components.rs", "Üzerine gelme", "vitrin etiketi"),
     ("ui/components.rs", "Klavye odağı", "vitrin etiketi"),
@@ -211,7 +327,11 @@ const ALLOW: &[(&str, &str, &str)] = &[
     ("ui/now_playing.rs", "Sürükle bırak", "sahte söz"),
     ("ui/now_playing.rs", "Duyduğun an", "sahte söz"),
     ("ui/now_playing.rs", "Ve yeniden başa", "sahte söz"),
-    ("ui/now_playing.rs", "Openify deneme", "sahte söz sağlayıcı adı"),
+    (
+        "ui/now_playing.rs",
+        "Openify deneme",
+        "sahte söz sağlayıcı adı",
+    ),
 ];
 
 fn walk(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
@@ -236,8 +356,25 @@ struct Lit {
 /// Çevresindeki çağrının adı bunlardan birini içeriyorsa yazı kullanıcıya gösterilmez
 /// (günlük, hata zinciri, çökme iletisi, öznitelik).
 const IGNORED_CALLS: &[&str] = &[
-    "log::", "println!", "eprintln!", "print!", "eprint!", "panic!", "assert", "debug_assert", ".expect", "anyhow!",
-    "bail!", ".context", ".with_context", "unreachable!", "unimplemented!", "todo!", "#", "env::var", "var_os",
+    "log::",
+    "println!",
+    "eprintln!",
+    "print!",
+    "eprint!",
+    "panic!",
+    "assert",
+    "debug_assert",
+    ".expect",
+    "anyhow!",
+    "bail!",
+    ".context",
+    ".with_context",
+    "unreachable!",
+    "unimplemented!",
+    "todo!",
+    "#",
+    "env::var",
+    "var_os",
 ];
 
 /// Basit Rust sözcükleyicisi: yorumları atar, yazı değişmezlerini (normal, ham)
@@ -286,7 +423,10 @@ fn literals(src: &str) -> Vec<Lit> {
             continue;
         }
         // Ham yazı: r"..." / r#"..."#
-        if c == 'r' && matches!(b.get(i + 1), Some('"') | Some('#')) && !last_code.ends_with(|ch: char| ch.is_alphanumeric() || ch == '_') {
+        if c == 'r'
+            && matches!(b.get(i + 1), Some('"') | Some('#'))
+            && !last_code.ends_with(|ch: char| ch.is_alphanumeric() || ch == '_')
+        {
             let mut j = i + 1;
             let mut hashes = 0;
             while b.get(j) == Some(&'#') {
@@ -311,8 +451,15 @@ fn literals(src: &str) -> Vec<Lit> {
                     text.push(b[j]);
                     j += 1;
                 }
-                let ignored = skipping || stack.iter().any(|s| IGNORED_CALLS.iter().any(|m| s.contains(m)));
-                out.push(Lit { line: start_line, text, ignored });
+                let ignored = skipping
+                    || stack
+                        .iter()
+                        .any(|s| IGNORED_CALLS.iter().any(|m| s.contains(m)));
+                out.push(Lit {
+                    line: start_line,
+                    text,
+                    ignored,
+                });
                 i = j;
                 continue;
             }
@@ -336,8 +483,15 @@ fn literals(src: &str) -> Vec<Lit> {
                 }
             }
             i += 1;
-            let ignored = skipping || stack.iter().any(|s| IGNORED_CALLS.iter().any(|m| s.contains(m)));
-            out.push(Lit { line: start_line, text, ignored });
+            let ignored = skipping
+                || stack
+                    .iter()
+                    .any(|s| IGNORED_CALLS.iter().any(|m| s.contains(m)));
+            out.push(Lit {
+                line: start_line,
+                text,
+                ignored,
+            });
             last_code.push('"');
             continue;
         }
@@ -358,7 +512,16 @@ fn literals(src: &str) -> Vec<Lit> {
         }
         match c {
             '(' | '[' | '{' => {
-                let name: String = last_code.chars().rev().take_while(|ch| ch.is_alphanumeric() || matches!(ch, '_' | ':' | '!' | '.' | '#')).collect::<Vec<_>>().into_iter().rev().collect();
+                let name: String = last_code
+                    .chars()
+                    .rev()
+                    .take_while(|ch| {
+                        ch.is_alphanumeric() || matches!(ch, '_' | ':' | '!' | '.' | '#')
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .rev()
+                    .collect();
                 stack.push(name);
                 last_code.clear();
             }
@@ -369,7 +532,12 @@ fn literals(src: &str) -> Vec<Lit> {
             _ => {
                 last_code.push(c);
                 if last_code.len() > 80 {
-                    let cut_at = last_code.char_indices().rev().nth(40).map(|(k, _)| k).unwrap_or(0);
+                    let cut_at = last_code
+                        .char_indices()
+                        .rev()
+                        .nth(40)
+                        .map(|(k, _)| k)
+                        .unwrap_or(0);
                     last_code.drain(..cut_at);
                 }
             }
@@ -386,8 +554,15 @@ fn scanned_sources() -> Vec<(String, String)> {
     files
         .into_iter()
         .filter_map(|p| {
-            let rel = p.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/");
-            if SKIP_FILES.iter().any(|s| rel.contains(s) || format!("/{rel}").contains(s)) {
+            let rel = p
+                .strip_prefix(&root)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            if SKIP_FILES
+                .iter()
+                .any(|s| rel.contains(s) || format!("/{rel}").contains(s))
+            {
                 return None;
             }
             Some((rel, std::fs::read_to_string(&p).unwrap()))
@@ -407,13 +582,20 @@ fn no_raw_turkish_text_in_sources() {
             if lit.ignored || !has_turkish_letter(&lit.text) {
                 continue;
             }
-            if ALLOW.iter().any(|(f, s, _)| file.contains(f) && lit.text.contains(s)) {
+            if ALLOW
+                .iter()
+                .any(|(f, s, _)| file.contains(f) && lit.text.contains(s))
+            {
                 continue;
             }
             found.push(format!("src/{file}:{}: \"{}\"", lit.line, lit.text));
         }
     }
-    assert!(found.is_empty(), "Kodda ham Türkçe yazı kalmış (src/i18n/table.rs'e taşı ve t!(..) kullan; günlük ise log:: makrosu içinde olmalı):\n{}", found.join("\n"));
+    assert!(
+        found.is_empty(),
+        "Kodda ham Türkçe yazı kalmış (src/i18n/table.rs'e taşı ve t!(..) kullan; günlük ise log:: makrosu içinde olmalı):\n{}",
+        found.join("\n")
+    );
 }
 
 #[test]
@@ -421,7 +603,11 @@ fn moved_turkish_strings_do_not_reappear_as_literals() {
     // Türkçe harfsiz yazılar ("Ana sayfa", "Çal"dan başka "Sistem") için: tablodaki
     // her Türkçe yazı, kaynakta olduğu gibi yazılmış bir değişmez olarak bulunmamalı.
     let mut tr_values: Vec<&str> = (0..table::ALL.len())
-        .filter(|&i| table::TR[i] != table::EN[i] && table::TR[i].chars().count() >= 5 && !table::TR[i].contains('{'))
+        .filter(|&i| {
+            table::TR[i] != table::EN[i]
+                && table::TR[i].chars().count() >= 5
+                && !table::TR[i].contains('{')
+        })
         .map(|i| table::TR[i])
         .collect();
     tr_values.sort_unstable();
@@ -429,7 +615,11 @@ fn moved_turkish_strings_do_not_reappear_as_literals() {
     let mut found = Vec::new();
     for (file, src) in scanned_sources() {
         for lit in literals(&src) {
-            if lit.ignored || ALLOW.iter().any(|(f, s, _)| file.contains(f) && lit.text.contains(s)) {
+            if lit.ignored
+                || ALLOW
+                    .iter()
+                    .any(|(f, s, _)| file.contains(f) && lit.text.contains(s))
+            {
                 continue;
             }
             if tr_values.binary_search(&lit.text.as_str()).is_ok() {
@@ -437,7 +627,11 @@ fn moved_turkish_strings_do_not_reappear_as_literals() {
             }
         }
     }
-    assert!(found.is_empty(), "Çeviri tablosundaki bir yazı kodda ham değişmez olarak duruyor:\n{}", found.join("\n"));
+    assert!(
+        found.is_empty(),
+        "Çeviri tablosundaki bir yazı kodda ham değişmez olarak duruyor:\n{}",
+        found.join("\n")
+    );
 }
 
 #[test]
@@ -453,7 +647,11 @@ fn literal_scanner_understands_log_context_and_comments() {
         }
     "#;
     let lits = literals(src);
-    let visible: Vec<&str> = lits.iter().filter(|l| !l.ignored).map(|l| l.text.as_str()).collect();
+    let visible: Vec<&str> = lits
+        .iter()
+        .filter(|l| !l.ignored)
+        .map(|l| l.text.as_str())
+        .collect();
     assert_eq!(visible, vec!["görünen", "ham şarkı"]);
 }
 
@@ -463,8 +661,14 @@ fn real_keys_pluralize_and_format_per_language() {
         assert_eq!(crate::tp!(Songs, 1), "1 song");
         assert_eq!(crate::tp!(Songs, 2), "2 songs");
         assert_eq!(crate::tp!(Songs, 1234), "1,234 songs");
-        assert_eq!(crate::tp!(FailedAddToList, 1, "“A”"), "Couldn't add 1 song to “A”");
-        assert_eq!(crate::tp!(FailedAddToList, 3, "“A”"), "Couldn't add 3 songs to “A”");
+        assert_eq!(
+            crate::tp!(FailedAddToList, 1, "“A”"),
+            "Couldn't add 1 song to “A”"
+        );
+        assert_eq!(
+            crate::tp!(FailedAddToList, 3, "“A”"),
+            "Couldn't add 3 songs to “A”"
+        );
         assert_eq!(crate::tf!(DurHoursMinutes, 1, 12), "1 hr 12 min");
         assert_eq!(crate::t!(HomeGreetMorning), "Good morning");
         assert_eq!(crate::t!(TrayOpen), "Open Openify");
@@ -472,7 +676,10 @@ fn real_keys_pluralize_and_format_per_language() {
     with_lang(Lang::Tr, || {
         assert_eq!(crate::tp!(Songs, 1), "1 şarkı");
         assert_eq!(crate::tp!(Songs, 1234), "1.234 şarkı");
-        assert_eq!(crate::tp!(FailedAddToList, 3, "“A”"), "3 şarkı “A” listesine eklenemedi");
+        assert_eq!(
+            crate::tp!(FailedAddToList, 3, "“A”"),
+            "3 şarkı “A” listesine eklenemedi"
+        );
         assert_eq!(crate::tf!(DurHoursMinutes, 1, 12), "1 sa 12 dk");
         assert_eq!(crate::t!(TrayOpen), "Openify'ı aç");
     });
@@ -482,6 +689,12 @@ fn real_keys_pluralize_and_format_per_language() {
 fn brand_name_comes_from_one_place() {
     assert_eq!(crate::brand::APP_NAME, "Openify");
     // Çeviri tablosundaki ad bu sabitten gelir: yazılarda ham "Openify" bulunmaz.
-    let raw = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/i18n/table.rs")).unwrap();
-    assert!(!raw.contains("Openify"), "table.rs'te ham ad var: app_name!() / app_name_acc!() kullan");
+    let raw = std::fs::read_to_string(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/i18n/table.rs"),
+    )
+    .unwrap();
+    assert!(
+        !raw.contains("Openify"),
+        "table.rs'te ham ad var: app_name!() / app_name_acc!() kullan"
+    );
 }

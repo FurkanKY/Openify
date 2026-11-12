@@ -19,7 +19,10 @@ pub fn has_device() -> bool {
 }
 
 /// Akış hatası: aygıt gittiyse (ve bu akış hâlâ etkin kuşaksa) çıkışa söyle.
-fn stream_error(ctl: Weak<OutputCtl>, epoch: u64) -> impl FnMut(cpal::StreamError) + Clone + Send + 'static {
+fn stream_error(
+    ctl: Weak<OutputCtl>,
+    epoch: u64,
+) -> impl FnMut(cpal::StreamError) + Clone + Send + 'static {
     move |e| {
         log::error!("Ses çıkışı hatası: {e}");
         if matches!(e, cpal::StreamError::DeviceNotAvailable)
@@ -51,8 +54,14 @@ impl Device {
     /// O anki varsayılan aygıtı açar (açamazsa `start` yeniden dener).
     pub fn open(ctl: Arc<OutputCtl>) -> Self {
         watch::start();
-        let mut device =
-            Self { ctl, stream: None, id: None, pinned: false, pref_seen: PREF_GEN.load(SeqCst), headless: false };
+        let mut device = Self {
+            ctl,
+            stream: None,
+            id: None,
+            pinned: false,
+            pref_seen: PREF_GEN.load(SeqCst),
+            headless: false,
+        };
         if let Err(e) = device.reopen() {
             log::error!("Ses çıkışı açılamadı: {e}");
         }
@@ -61,7 +70,14 @@ impl Device {
 
     #[cfg(test)]
     pub fn headless(ctl: Arc<OutputCtl>) -> Self {
-        Self { ctl, stream: None, id: None, pinned: false, pref_seen: PREF_GEN.load(SeqCst), headless: true }
+        Self {
+            ctl,
+            stream: None,
+            id: None,
+            pinned: false,
+            pref_seen: PREF_GEN.load(SeqCst),
+            headless: true,
+        }
     }
 
     fn is_open(&self) -> bool {
@@ -79,7 +95,8 @@ impl Device {
         if !stale {
             return Ok(());
         }
-        self.reopen().inspect_err(|_| self.ctl.device_notice.store(DEVICE_NONE, SeqCst))
+        self.reopen()
+            .inspect_err(|_| self.ctl.device_notice.store(DEVICE_NONE, SeqCst))
     }
 
     /// Çalarken (her yazmada): varsayılan aygıt değişeli `REROUTE_GRACE`
@@ -111,7 +128,8 @@ impl Device {
             && !watch::is_active(id)
         {
             self.ctl.route_gen.store(gen_now, SeqCst);
-            self.ctl.signal_device_lost("varsayılan aygıt değişti, eskisi artık yok");
+            self.ctl
+                .signal_device_lost("varsayılan aygıt değişti, eskisi artık yok");
             return;
         }
         match self.switch() {
@@ -191,7 +209,10 @@ impl Device {
 /// o da olmazsa aygıtın varsayılanı; örnek biçimi S16. Çalar iş
 /// parçacığında çağrılır (akış o iş parçacığında yaşar). Dönen ikinci
 /// değer aygıtın Windows kimliği.
-fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream, Option<String>, bool), String> {
+fn open_stream(
+    ctl: &Arc<OutputCtl>,
+    epoch: u64,
+) -> Result<(rodio::OutputStream, Option<String>, bool), String> {
     use cpal::traits::{DeviceTrait, HostTrait};
 
     // cpal da varsayılanı (eRender / eConsole) açar; arada değişirse
@@ -200,7 +221,10 @@ fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream,
     let host = cpal::default_host();
     // Kullanıcı ayarlardan bir aygıt seçtiyse o (bulunamazsa sistem varsayılanı).
     let chosen_device = preferred_device().and_then(|want| {
-        let found = host.output_devices().ok()?.find(|d| d.name().is_ok_and(|n| n == want));
+        let found = host
+            .output_devices()
+            .ok()?
+            .find(|d| d.name().is_ok_and(|n| n == want));
         if found.is_none() {
             log::warn!("Seçilen ses aygıtı bulunamadı ({want}); sistem varsayılanı kullanılıyor");
         }
@@ -212,7 +236,9 @@ fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream,
     }
     let device = match chosen_device {
         Some(device) => device,
-        None => host.default_output_device().ok_or("varsayılan ses aygıtı yok")?,
+        None => host
+            .default_output_device()
+            .ok_or("varsayılan ses aygıtı yok")?,
     };
     let name = device.name().unwrap_or_else(|_| "[adsız]".into());
     let default_config = device
@@ -226,7 +252,11 @@ fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream,
             c.try_with_sample_rate(cpal::SampleRate(RATE))
                 .or_else(|| c.try_with_sample_rate(default_config.sample_rate()))
         });
-    let chosen = if preferred.is_some() { "stereo" } else { "aygıt varsayılanı" };
+    let chosen = if preferred.is_some() {
+        "stereo"
+    } else {
+        "aygıt varsayılanı"
+    };
     let config = preferred.unwrap_or(default_config);
 
     let mut stream = match rodio::OutputStreamBuilder::default()
@@ -238,7 +268,10 @@ fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream,
     {
         Ok(stream) => stream,
         Err(e) => {
-            log::warn!("Ses çıkışı S16 / {} Hz açılamadı ({e}), aygıtın biçimine düşülüyor", config.sample_rate().0);
+            log::warn!(
+                "Ses çıkışı S16 / {} Hz açılamadı ({e}), aygıtın biçimine düşülüyor",
+                config.sample_rate().0
+            );
             rodio::OutputStreamBuilder::from_device(device)
                 .map_err(|e| format!("{e}"))?
                 .with_error_callback(stream_error(Arc::downgrade(ctl), epoch))
@@ -258,7 +291,9 @@ fn open_stream(ctl: &Arc<OutputCtl>, epoch: u64) -> Result<(rodio::OutputStream,
         ctl.target_frames() * 1000 / RATE as u64,
         ctl.device_ns / 1_000_000,
     );
-    stream.mixer().add(RingSource::with_gen(Arc::clone(ctl), epoch));
+    stream
+        .mixer()
+        .add(RingSource::with_gen(Arc::clone(ctl), epoch));
     Ok((stream, id, pinned))
 }
 
@@ -307,5 +342,7 @@ pub fn output_device_names() -> Vec<String> {
 /// Sistemin varsayılan çıkış aygıtının adı.
 pub fn default_output_device_name() -> Option<String> {
     use cpal::traits::{DeviceTrait, HostTrait};
-    cpal::default_host().default_output_device().and_then(|d| d.name().ok())
+    cpal::default_host()
+        .default_output_device()
+        .and_then(|d| d.name().ok())
 }

@@ -12,17 +12,20 @@
 // Terminalden çalıştırıldığında çıktılar yine görünür (attach_console).
 // `connect-spike` derlemesi (sahibinin Connect denemesi) bir konsol uygulamasıdır: etkileşimli
 // onay listesi standart girdi / çıktı ister.
-#![cfg_attr(all(not(debug_assertions), not(feature = "connect-spike")), windows_subsystem = "windows")]
+#![cfg_attr(
+    all(not(debug_assertions), not(feature = "connect-spike")),
+    windows_subsystem = "windows"
+)]
 
 mod auth;
 mod autostart;
 mod brand;
-mod crash;
-mod engine;
-mod i18n;
 mod cli;
 #[cfg(feature = "connect-spike")]
 mod connect_spike;
+mod crash;
+mod engine;
+mod i18n;
 mod link;
 #[cfg(feature = "mem-stats")]
 mod mem_stats;
@@ -56,11 +59,13 @@ fn test_watchdog() {
     if secs == 0 {
         return;
     }
-    let _ = std::thread::Builder::new().name("test-watchdog".into()).spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(secs));
-        log::info!("sınama kopyası {secs} sn doldu, kapanıyor (OPENIFY_TEST_EXIT_AFTER)");
-        std::process::exit(0);
-    });
+    let _ = std::thread::Builder::new()
+        .name("test-watchdog".into())
+        .spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(secs));
+            log::info!("sınama kopyası {secs} sn doldu, kapanıyor (OPENIFY_TEST_EXIT_AFTER)");
+            std::process::exit(0);
+        });
 }
 
 /// `OPENIFY_TEST_EXIT_AFTER` değeri; yoksa ya da bozuksa 15 dk.
@@ -90,7 +95,10 @@ fn main() -> Result<()> {
     mem_stats::start();
     let args: Vec<String> = std::env::args().collect();
     // Konsola yalnız terminal komutları bağlanır (bkz. `attach_console`).
-    let gui = matches!(args.get(1).map(String::as_str), None | Some(autostart::TRAY_FLAG));
+    let gui = matches!(
+        args.get(1).map(String::as_str),
+        None | Some(autostart::TRAY_FLAG)
+    );
     if !gui {
         attach_console();
     }
@@ -173,12 +181,17 @@ fn init_logging() {
         if std::fs::metadata(&path).is_ok_and(|m| m.len() > 5 * 1024 * 1024) {
             let _ = std::fs::rename(&path, dir.join("openify.old.log"));
         }
-        std::fs::OpenOptions::new().create(true).append(true).open(path).ok()
+        std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .ok()
     });
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or(
-        "openify=info,librespot=warn,librespot_core::session=info",
-    ))
+    env_logger::Builder::from_env(
+        env_logger::Env::default()
+            .default_filter_or("openify=info,librespot=warn,librespot_core::session=info"),
+    )
     .format_timestamp_millis()
     .target(env_logger::Target::Pipe(Box::new(Tee(file))))
     .init();

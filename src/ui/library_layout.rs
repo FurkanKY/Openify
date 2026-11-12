@@ -14,7 +14,8 @@
 use std::collections::HashSet;
 
 use gpui::{
-    AnyElement, Context, ElementId, FontWeight, ScrollStrategy, Window, canvas, div, point, prelude::*, px, rgb,
+    AnyElement, Context, ElementId, FontWeight, ScrollStrategy, Window, canvas, div, point,
+    prelude::*, px, rgb,
 };
 
 use super::{
@@ -38,7 +39,9 @@ impl Shell {
     /// Klasör ağacı gösteriliyor mu? Süzgeç ve yazı yokken, listeler (ve
     /// albümler) görünümünde; sanatçılar ve aramada düz.
     pub(super) fn tree_mode(&self) -> bool {
-        self.all.query.is_empty() && matches!(self.all.kind, Kind::All | Kind::Lists) && self.has_folders()
+        self.all.query.is_empty()
+            && matches!(self.all.kind, Kind::All | Kind::Lists)
+            && self.has_folders()
     }
 
     /// Klasör liste görünümünde açık mı (kalıcı kimlikle)?
@@ -56,15 +59,27 @@ impl Shell {
         };
         let meta = &library.meta;
         let mut items = self.library_cards();
-        items.retain(|c| kind == Kind::All || c.kind() == kind || (kind == Kind::Lists && c.kind() == Kind::ForYou));
+        items.retain(|c| {
+            kind == Kind::All
+                || c.kind() == kind
+                || (kind == Kind::Lists && c.kind() == Kind::ForYou)
+        });
 
         // Kök listedeki yer: Beğenilenler 0, albümler 1.., listeler ve klasörler
         // `taban + 2 × yer`: klasör, kendinden önceki listeden sonra, sonrakinden önce.
         let base = 1 + library.albums.len();
-        let list_ix: std::collections::HashMap<&str, usize> =
-            library.playlists.iter().enumerate().map(|(i, p)| (p.id.key(), i)).collect();
-        let album_ix: std::collections::HashMap<&str, usize> =
-            library.albums.iter().enumerate().map(|(i, a)| (a.id.key(), i)).collect();
+        let list_ix: std::collections::HashMap<&str, usize> = library
+            .playlists
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (p.id.key(), i))
+            .collect();
+        let album_ix: std::collections::HashMap<&str, usize> = library
+            .albums
+            .iter()
+            .enumerate()
+            .map(|(i, a)| (a.id.key(), i))
+            .collect();
         for card in &mut items {
             let key = card.id.key();
             card.meta.seq = if let Some(i) = list_ix.get(key) {
@@ -76,7 +91,10 @@ impl Shell {
             };
         }
 
-        let ctx = SortCtx { recent: &self.recent, meta };
+        let ctx = SortCtx {
+            recent: &self.recent,
+            meta,
+        };
         let sort = self.all.sort;
         let mut cards: Vec<Card> = items;
         let mut nodes: Vec<Node> = cards
@@ -94,11 +112,22 @@ impl Shell {
         let folder_nodes: Vec<Node> = meta
             .folders
             .iter()
-            .map(|f| Node { id: f.key.clone(), parent: f.parent.clone(), folder: true, key: Key::last(), pin: None, seq: base + 2 * f.at })
+            .map(|f| Node {
+                id: f.key.clone(),
+                parent: f.parent.clone(),
+                folder: true,
+                key: Key::last(),
+                pin: None,
+                seq: base + 2 * f.at,
+            })
             .collect();
         let counts = library_tree::item_counts(&[nodes.clone(), folder_nodes.clone()].concat());
         for (f, mut node) in meta.folders.iter().zip(folder_nodes) {
-            let name = if f.name.trim().is_empty() { t!(KindFolder).to_string() } else { f.name.clone() };
+            let name = if f.name.trim().is_empty() {
+                t!(KindFolder).to_string()
+            } else {
+                f.name.clone()
+            };
             let count = counts.get(&f.key).copied().unwrap_or(0);
             let card = Card {
                 id: CollectionId::Playlist(f.key.clone()),
@@ -107,7 +136,11 @@ impl Shell {
                 image: String::new(),
                 meta: CardMeta {
                     pin: None,
-                    folder: Some(FolderInfo { key: f.key.clone(), open: self.is_folder_open(&f.key), count }),
+                    folder: Some(FolderInfo {
+                        key: f.key.clone(),
+                        open: self.is_folder_open(&f.key),
+                        count,
+                    }),
                     depth: 0,
                     seq: node.seq,
                 },
@@ -120,11 +153,20 @@ impl Shell {
         }
         debug_assert_eq!(nodes.len(), cards.len());
 
-        let open_ids: HashSet<&str> = self.prefs.library_open_folders.iter().map(String::as_str).collect();
+        let open_ids: HashSet<&str> = self
+            .prefs
+            .library_open_folders
+            .iter()
+            .map(String::as_str)
+            .collect();
         let is_open = |key: &str| open_ids.contains(folder_id(key));
         let inline = self.all.list;
         let opts = Options {
-            root: if inline { None } else { self.all.folder.as_deref() },
+            root: if inline {
+                None
+            } else {
+                self.all.folder.as_deref()
+            },
             is_open: inline.then_some(&is_open as &dyn Fn(&str) -> bool),
             lift_pins: true,
             folders_by_children: matches!(sort, Sort::Recent | Sort::Added),
@@ -178,9 +220,16 @@ impl Shell {
 
     /// Izgarada bir üst klasöre (ya da köke) çık.
     pub(super) fn leave_folder(&mut self, cx: &mut Context<Self>) {
-        let Some(current) = self.all.folder.clone() else { return };
+        let Some(current) = self.all.folder.clone() else {
+            return;
+        };
         let parent = match &self.library.library {
-            Loadable::Loaded(l) => l.meta.folders.iter().find(|f| f.key == current).and_then(|f| f.parent.clone()),
+            Loadable::Loaded(l) => l
+                .meta
+                .folders
+                .iter()
+                .find(|f| f.key == current)
+                .and_then(|f| f.parent.clone()),
             _ => None,
         };
         self.go_to_folder(parent, cx);
@@ -205,7 +254,9 @@ impl Shell {
 
     /// Klasör yolu (kökten girilen klasöre), yol çubuğu için: (anahtar, ad).
     fn folder_path(&self) -> Vec<(String, String)> {
-        let (Loadable::Loaded(library), Some(current)) = (&self.library.library, self.all.folder.as_deref()) else {
+        let (Loadable::Loaded(library), Some(current)) =
+            (&self.library.library, self.all.folder.as_deref())
+        else {
             return Vec::new();
         };
         let nodes: Vec<Node> = library
@@ -213,13 +264,33 @@ impl Shell {
             .folders
             .iter()
             .enumerate()
-            .map(|(i, f)| Node { id: f.key.clone(), parent: f.parent.clone(), folder: true, key: Key::last(), pin: None, seq: i })
+            .map(|(i, f)| Node {
+                id: f.key.clone(),
+                parent: f.parent.clone(),
+                folder: true,
+                key: Key::last(),
+                pin: None,
+                seq: i,
+            })
             .collect();
         library_tree::path_to(&nodes, current)
             .into_iter()
             .map(|n| {
-                let name = library.meta.folders.iter().find(|f| f.key == n.id).map(|f| f.name.clone()).unwrap_or_default();
-                (n.id.clone(), if name.trim().is_empty() { t!(KindFolder).to_string() } else { name })
+                let name = library
+                    .meta
+                    .folders
+                    .iter()
+                    .find(|f| f.key == n.id)
+                    .map(|f| f.name.clone())
+                    .unwrap_or_default();
+                (
+                    n.id.clone(),
+                    if name.trim().is_empty() {
+                        t!(KindFolder).to_string()
+                    } else {
+                        name
+                    },
+                )
             })
             .collect()
     }
@@ -227,7 +298,11 @@ impl Shell {
     /// Izgarada içine girilmiş klasörün yol çubuğu: geri düğmesi ve
     /// "Kütüphane › Yol › Spor" (son parça kalın, öncekiler tıklanır).
     /// Liste görünümünde ve kökte yok.
-    pub(super) fn render_folder_crumbs(&self, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
+    pub(super) fn render_folder_crumbs(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         if self.all.list || !self.tree_mode() || self.all.folder.is_none() {
             return None;
         }
@@ -241,7 +316,11 @@ impl Shell {
             .when_some(stop, |el, h| el.track_focus(&h))
             .tooltip(Tooltip::text(t!(FolderUpTip), Some("Esc")))
             .on_click(cx.listener(|this, _, _, cx| this.leave_folder(cx)));
-        let segment = |id: ElementId, label: String, target: Option<String>, last: bool, cx: &mut Context<Self>| {
+        let segment = |id: ElementId,
+                       label: String,
+                       target: Option<String>,
+                       last: bool,
+                       cx: &mut Context<Self>| {
             let el = div()
                 .id(id)
                 .flex_shrink_0()
@@ -251,14 +330,20 @@ impl Shell {
                 .flex()
                 .items_center()
                 .type_role(T_BODY)
-                .font_weight(if last { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
+                .font_weight(if last {
+                    FontWeight::SEMIBOLD
+                } else {
+                    FontWeight::MEDIUM
+                })
                 .text_color(if last { text() } else { muted() });
             if last {
                 el.child(label)
             } else {
                 el.cursor_pointer()
                     .hover(|s| s.bg(veil(VEIL_HOVER)).text_color(text()))
-                    .on_click(cx.listener(move |this, _, _, cx| this.go_to_folder(target.clone(), cx)))
+                    .on_click(
+                        cx.listener(move |this, _, _, cx| this.go_to_folder(target.clone(), cx)),
+                    )
                     .child(label)
             }
         };
@@ -270,16 +355,24 @@ impl Shell {
             .items_center()
             .gap(px(S1))
             .child(up)
-            .child(segment("crumb-root".into(), t!(NavLibrary).to_string(), None, false, cx));
-        let last = path.len() - 1;
-        for (i, (key, name)) in path.into_iter().enumerate() {
-            row = row.child(icon("chevron-right", 14., label())).child(segment(
-                ElementId::Name(format!("crumb-{i}").into()),
-                name,
-                Some(key),
-                i == last,
+            .child(segment(
+                "crumb-root".into(),
+                t!(NavLibrary).to_string(),
+                None,
+                false,
                 cx,
             ));
+        let last = path.len() - 1;
+        for (i, (key, name)) in path.into_iter().enumerate() {
+            row = row
+                .child(icon("chevron-right", 14., label()))
+                .child(segment(
+                    ElementId::Name(format!("crumb-{i}").into()),
+                    name,
+                    Some(key),
+                    i == last,
+                    cx,
+                ));
         }
         Some(row.into_any_element())
     }
@@ -339,7 +432,10 @@ impl Shell {
             label: if pinned { t!(MenuUnpin) } else { t!(MenuPin) }.into(),
             shortcut: None,
             danger: false,
-            act: Some(Act::Pin { key: id.key().to_string(), on: !pinned }),
+            act: Some(Act::Pin {
+                key: id.key().to_string(),
+                on: !pinned,
+            }),
             sub: Vec::new(),
         })
     }
@@ -353,9 +449,20 @@ impl Shell {
                 library.meta.pinned.push(key.clone());
             }
         }
-        self.engine.send(Command::Library(LibraryCommand::Pin { key, pinned: on }));
+        self.engine
+            .send(Command::Library(LibraryCommand::Pin { key, pinned: on }));
         self.recompute_all();
-        self.show_toast(if on { t!(ToastPinned) } else { t!(ToastUnpinned) }.into(), false, false, cx);
+        self.show_toast(
+            if on {
+                t!(ToastPinned)
+            } else {
+                t!(ToastUnpinned)
+            }
+            .into(),
+            false,
+            false,
+            cx,
+        );
         cx.notify();
     }
 
@@ -389,12 +496,15 @@ impl Shell {
     /// Sıralama düğmesinin yerini ölçen görünmez katman (menü bunun altında açılır).
     pub(super) fn sort_anchor_probe(&self) -> AnyElement {
         let anchor = self.all.sort_anchor.clone();
-        canvas(move |bounds, _, _| anchor.set(Some(bounds)), |_, _, _, _| {})
-            .absolute()
-            .top_0()
-            .left_0()
-            .size_full()
-            .into_any_element()
+        canvas(
+            move |bounds, _, _| anchor.set(Some(bounds)),
+            |_, _, _, _| {},
+        )
+        .absolute()
+        .top_0()
+        .left_0()
+        .size_full()
+        .into_any_element()
     }
 
     // ── Klavye ──────────────────────────────────────────────────────────
@@ -416,7 +526,11 @@ impl Shell {
         let list = self.all.list;
         let Some(cur) = self.all.cursor.filter(|c| *c < shown) else {
             // Hiçbiri seçili değilken: aşağı / sağ ilkine, yukarı / sol sonuncuya.
-            self.all.cursor = Some(if matches!(key, "down" | "right") { 0 } else { shown - 1 });
+            self.all.cursor = Some(if matches!(key, "down" | "right") {
+                0
+            } else {
+                shown - 1
+            });
             self.reveal_all_cursor();
             cx.notify();
             return;
@@ -424,8 +538,20 @@ impl Shell {
         let next = match (key, list) {
             ("down", true) => (cur + 1).min(shown - 1),
             ("up", true) => cur.saturating_sub(1),
-            ("down", false) => if cur + cols < shown { cur + cols } else { cur },
-            ("up", false) => if cur >= cols { cur - cols } else { cur },
+            ("down", false) => {
+                if cur + cols < shown {
+                    cur + cols
+                } else {
+                    cur
+                }
+            }
+            ("up", false) => {
+                if cur >= cols {
+                    cur - cols
+                } else {
+                    cur
+                }
+            }
             ("right", false) => (cur + 1).min(shown - 1),
             ("left", false) => cur.saturating_sub(1),
             ("right", true) => {
@@ -450,7 +576,11 @@ impl Shell {
                     // Üst klasörün satırına çık.
                     Some(c) if c.meta.depth > 0 => (0..cur)
                         .rev()
-                        .find(|i| self.shown_card(*i).is_some_and(|p| p.meta.folder.is_some() && p.meta.depth + 1 == c.meta.depth))
+                        .find(|i| {
+                            self.shown_card(*i).is_some_and(|p| {
+                                p.meta.folder.is_some() && p.meta.depth + 1 == c.meta.depth
+                            })
+                        })
                         .unwrap_or(cur),
                     _ => cur,
                 }
@@ -465,7 +595,11 @@ impl Shell {
     /// İmleçteki kart görünmüyorsa kaydır.
     fn reveal_all_cursor(&self) {
         let Some(cur) = self.all.cursor else { return };
-        let row = if self.all.list { cur } else { cur / self.all_columns() };
+        let row = if self.all.list {
+            cur
+        } else {
+            cur / self.all_columns()
+        };
         self.all.scroll.scroll_to_item(row, ScrollStrategy::Center);
     }
 }

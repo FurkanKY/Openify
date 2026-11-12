@@ -31,9 +31,14 @@ fn v1_versioned(_settings: &mut Value) {}
 /// yeniden çalıştırır.
 fn migrate_value(value: &mut Value, steps: &[Migration]) -> (u32, bool) {
     let latest = steps.last().map_or(0, |s| s.0);
-    let from = value.get("version").and_then(Value::as_u64).map_or(0, |v| v.min(u64::from(u32::MAX)) as u32);
+    let from = value
+        .get("version")
+        .and_then(Value::as_u64)
+        .map_or(0, |v| v.min(u64::from(u32::MAX)) as u32);
     if from > latest {
-        log::warn!("Ayar dosyası daha yeni bir sürümden (v{from}, bu uygulama v{latest}): bilinen alanlar okunuyor");
+        log::warn!(
+            "Ayar dosyası daha yeni bir sürümden (v{from}, bu uygulama v{latest}): bilinen alanlar okunuyor"
+        );
     }
     let mut changed = false;
     for (to, step) in steps.iter().filter(|(to, _)| *to > from) {
@@ -198,7 +203,8 @@ pub const LIBRARY_OPEN_FOLDERS_MAX: usize = 200;
 /// verisi "Normal"e (−14 LUFS) göre ölçülü gelir; düzey, çaların ön kazancı
 /// (`normalisation_pregain_db`) olarak Normal'e göre farkıyla uygulanır:
 /// Sessiz −9 dB, Normal 0, Yüksek +3 dB.
-pub const NORMALISE_LEVELS: [(&str, f64); 3] = [("quiet", -23.0), ("normal", -14.0), ("loud", -11.0)];
+pub const NORMALISE_LEVELS: [(&str, f64); 3] =
+    [("quiet", -23.0), ("normal", -14.0), ("loud", -11.0)];
 /// Eşitlemenin ölçü aldığı gürlük (Spotify "Normal"i).
 pub const NORMALISE_REFERENCE_LUFS: f64 = -14.0;
 
@@ -268,7 +274,12 @@ impl Default for Settings {
 /// Connect aygıtının varsayılan adı: "Openify (<bilgisayar adı>)"; bilgisayar
 /// adı bilinmiyorsa yalnız uygulama adı.
 fn default_device_name() -> String {
-    device_name_for(std::env::var("COMPUTERNAME").or_else(|_| std::env::var("HOSTNAME")).ok().as_deref())
+    device_name_for(
+        std::env::var("COMPUTERNAME")
+            .or_else(|_| std::env::var("HOSTNAME"))
+            .ok()
+            .as_deref(),
+    )
 }
 
 fn device_name_for(computer: Option<&str>) -> String {
@@ -307,11 +318,13 @@ impl Settings {
     /// kullanıcıyı kaybettiren sessiz bir sıfırlama olmasın diye günlüğe yazılır;
     /// ayarlar yüzünden uygulama açılmamazlık da etmez.
     pub fn load() -> Self {
-        path().map(|p| Self::load_ensuring_id(&p)).unwrap_or_else(|| {
-            let mut settings = Self::default();
-            settings.ensure_device_id();
-            settings
-        })
+        path()
+            .map(|p| Self::load_ensuring_id(&p))
+            .unwrap_or_else(|| {
+                let mut settings = Self::default();
+                settings.ensure_device_id();
+                settings
+            })
     }
 
     /// `load_from` + aygıt kimliği yoksa üretip hemen yazar: kimlik "bir kez
@@ -322,7 +335,9 @@ impl Settings {
         if settings.ensure_device_id() {
             match settings.save_to(path) {
                 Ok(()) => log::info!("Spotify aygıt kimliği üretildi ve kaydedildi"),
-                Err(e) => log::warn!("Aygıt kimliği yazılamadı (bir sonraki açılışta yeniden denenir): {e:#}"),
+                Err(e) => log::warn!(
+                    "Aygıt kimliği yazılamadı (bir sonraki açılışta yeniden denenir): {e:#}"
+                ),
             }
         }
         settings
@@ -359,8 +374,13 @@ impl Settings {
                 if migrated {
                     // Göç edilmiş hâl hemen yazılır (yedek yukarıda eski metni tuttu).
                     match settings.save_to(path) {
-                        Ok(()) => log::info!("Ayar dosyası v{SETTINGS_VERSION} biçimine geçirildi ({})", path.display()),
-                        Err(e) => log::warn!("Göç edilen ayarlar yazılamadı (bir sonraki kayıtta yazılır): {e:#}"),
+                        Ok(()) => log::info!(
+                            "Ayar dosyası v{SETTINGS_VERSION} biçimine geçirildi ({})",
+                            path.display()
+                        ),
+                        Err(e) => log::warn!(
+                            "Göç edilen ayarlar yazılamadı (bir sonraki kayıtta yazılır): {e:#}"
+                        ),
                     }
                 }
                 settings
@@ -389,7 +409,10 @@ impl Settings {
         let text = fs::read_to_string(&backup).ok()?;
         let (settings, _) = Self::parse(&text).ok()?;
         match fs::write(path, &text) {
-            Ok(()) => log::warn!("Ayarlar son sağlam yedekten geri yüklendi ({})", backup.display()),
+            Ok(()) => log::warn!(
+                "Ayarlar son sağlam yedekten geri yüklendi ({})",
+                backup.display()
+            ),
             Err(e) => log::warn!("Yedekten okundu ama asıl ayar dosyasına yazılamadı: {e}"),
         }
         Some(settings.sanitized())
@@ -438,10 +461,12 @@ impl Settings {
         };
         // Elle düzenlenmiş dosyada boş ya da tekrarlanan anahtarlar olabilir.
         let mut seen = std::collections::HashSet::new();
-        self.recent.retain(|k| !k.is_empty() && seen.insert(k.clone()));
+        self.recent
+            .retain(|k| !k.is_empty() && seen.insert(k.clone()));
         self.recent.truncate(RECENT_MAX);
         let mut seen = std::collections::HashSet::new();
-        self.recent_searches.retain(|q| !q.trim().is_empty() && seen.insert(q.clone()));
+        self.recent_searches
+            .retain(|q| !q.trim().is_empty() && seen.insert(q.clone()));
         self.recent_searches.truncate(RECENT_SEARCHES_MAX);
         if !matches!(self.library_view.as_str(), "grid" | "list") {
             self.library_view = Self::default().library_view;
@@ -450,7 +475,8 @@ impl Settings {
             self.library_sort = Self::default().library_sort;
         }
         let mut seen = std::collections::HashSet::new();
-        self.library_open_folders.retain(|k| k.starts_with("spotify:start-group:") && seen.insert(k.clone()));
+        self.library_open_folders
+            .retain(|k| k.starts_with("spotify:start-group:") && seen.insert(k.clone()));
         self.library_open_folders.truncate(LIBRARY_OPEN_FOLDERS_MAX);
         if !QUALITIES.iter().any(|(key, _)| *key == self.quality) {
             self.quality = Self::default().quality;
@@ -462,10 +488,17 @@ impl Settings {
             self.language = Self::default().language;
         }
         // Boş aygıt adı "varsayılan" demektir.
-        if self.output_device.as_ref().is_some_and(|d| d.trim().is_empty()) {
+        if self
+            .output_device
+            .as_ref()
+            .is_some_and(|d| d.trim().is_empty())
+        {
             self.output_device = None;
         }
-        if !NORMALISE_LEVELS.iter().any(|(key, _)| *key == self.normalise_level) {
+        if !NORMALISE_LEVELS
+            .iter()
+            .any(|(key, _)| *key == self.normalise_level)
+        {
             self.normalise_level = Self::default().normalise_level;
         }
         // Kara liste: boş adlar, aynı ad (büyük / küçük harf farkı yok) iki kez
@@ -477,7 +510,11 @@ impl Settings {
         });
         self.blocked_artists.truncate(crate::engine::BLOCKED_MAX);
         // Karaoke miktarı: 0..1 (elle düzenlenmiş dosya; sonlu olmayan varsayılana).
-        self.karaoke_amount = if self.karaoke_amount.is_finite() { self.karaoke_amount.clamp(0.0, 1.0) } else { 1.0 };
+        self.karaoke_amount = if self.karaoke_amount.is_finite() {
+            self.karaoke_amount.clamp(0.0, 1.0)
+        } else {
+            1.0
+        };
         // Ekolayzer: tam 10 bant, sınırlar içinde (elle düzenlenmiş dosya).
         let eq = self.eq_setting();
         self.eq_gains = eq.gains_db.to_vec();
@@ -507,12 +544,20 @@ impl Settings {
         for (slot, v) in gains.iter_mut().zip(&self.eq_gains) {
             *slot = *v;
         }
-        crate::engine::equalizer::EqSetting { enabled: self.eq_enabled, gains_db: gains, preamp_db: self.eq_preamp }.sanitized()
+        crate::engine::equalizer::EqSetting {
+            enabled: self.eq_enabled,
+            gains_db: gains,
+            preamp_db: self.eq_preamp,
+        }
+        .sanitized()
     }
 
     /// Seçili ses kalitesinin kbps karşılığı.
     pub fn kbps(&self) -> u16 {
-        QUALITIES.iter().find(|(key, _)| *key == self.quality).map_or(320, |(_, kbps)| *kbps)
+        QUALITIES
+            .iter()
+            .find(|(key, _)| *key == self.quality)
+            .map_or(320, |(_, kbps)| *kbps)
     }
 
     /// Açılışta çalınacak düzey.
@@ -531,13 +576,19 @@ impl Settings {
 
     /// Karıştırma ve sıra kuralları (motora gider, bkz. `engine::rules`).
     pub fn queue_rules(&self) -> crate::engine::Rules {
-        crate::engine::Rules::new(self.dedupe_versions, self.skip_explicit, self.blocked_artists.iter().map(|a| a.name.as_str()))
+        crate::engine::Rules::new(
+            self.dedupe_versions,
+            self.skip_explicit,
+            self.blocked_artists.iter().map(|a| a.name.as_str()),
+        )
     }
 
     /// Bu sanatçı kara listede mi (ad, büyük / küçük harf farkı yok)?
     pub fn is_blocked(&self, name: &str) -> bool {
         let folded = crate::engine::fold_name(name);
-        self.blocked_artists.iter().any(|a| crate::engine::fold_name(&a.name) == folded)
+        self.blocked_artists
+            .iter()
+            .any(|a| crate::engine::fold_name(&a.name) == folded)
     }
 
     /// Kara listeye ekler / çıkarır. Değişti mi?
@@ -547,10 +598,16 @@ impl Settings {
             return false;
         }
         let folded = crate::engine::fold_name(name);
-        let at = self.blocked_artists.iter().position(|a| crate::engine::fold_name(&a.name) == folded);
+        let at = self
+            .blocked_artists
+            .iter()
+            .position(|a| crate::engine::fold_name(&a.name) == folded);
         match (at, blocked) {
             (None, true) if self.blocked_artists.len() < crate::engine::BLOCKED_MAX => {
-                self.blocked_artists.push(BlockedArtist { name: name.to_string(), uri: uri.to_string() });
+                self.blocked_artists.push(BlockedArtist {
+                    name: name.to_string(),
+                    uri: uri.to_string(),
+                });
                 true
             }
             (Some(i), false) => {
@@ -642,13 +699,24 @@ mod tests {
     #[test]
     fn library_view_and_sort_default_and_are_validated() {
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
-        assert_eq!((old.library_view.as_str(), old.library_sort.as_str()), ("grid", "recent"));
-        let bad: Settings = serde_json::from_str(r#"{"library_view": "x", "library_sort": "y"}"#).unwrap();
+        assert_eq!(
+            (old.library_view.as_str(), old.library_sort.as_str()),
+            ("grid", "recent")
+        );
+        let bad: Settings =
+            serde_json::from_str(r#"{"library_view": "x", "library_sort": "y"}"#).unwrap();
         let bad = bad.sanitized();
-        assert_eq!((bad.library_view.as_str(), bad.library_sort.as_str()), ("grid", "recent"));
-        let ok: Settings = serde_json::from_str(r#"{"library_view": "list", "library_sort": "name"}"#).unwrap();
+        assert_eq!(
+            (bad.library_view.as_str(), bad.library_sort.as_str()),
+            ("grid", "recent")
+        );
+        let ok: Settings =
+            serde_json::from_str(r#"{"library_view": "list", "library_sort": "name"}"#).unwrap();
         let ok = ok.sanitized();
-        assert_eq!((ok.library_view.as_str(), ok.library_sort.as_str()), ("list", "name"));
+        assert_eq!(
+            (ok.library_view.as_str(), ok.library_sort.as_str()),
+            ("list", "name")
+        );
         // Dört sıralamanın hepsi kalıcı; eski dosyada klasör durumu yok.
         for sort in LIBRARY_SORTS {
             let json = format!(r#"{{"library_sort": "{sort}"}}"#);
@@ -662,19 +730,29 @@ mod tests {
     fn open_folders_are_kept_deduplicated_and_validated() {
         let json = r#"{"library_open_folders": ["spotify:start-group:a", "x", "spotify:start-group:a", "spotify:start-group:b"]}"#;
         let s: Settings = serde_json::from_str(json).unwrap();
-        assert_eq!(s.sanitized().library_open_folders, ["spotify:start-group:a", "spotify:start-group:b"]);
+        assert_eq!(
+            s.sanitized().library_open_folders,
+            ["spotify:start-group:a", "spotify:start-group:b"]
+        );
         let many = Settings {
-            library_open_folders: (0..LIBRARY_OPEN_FOLDERS_MAX + 20).map(|i| format!("spotify:start-group:{i}")).collect(),
+            library_open_folders: (0..LIBRARY_OPEN_FOLDERS_MAX + 20)
+                .map(|i| format!("spotify:start-group:{i}"))
+                .collect(),
             ..Settings::default()
         };
-        assert_eq!(many.sanitized().library_open_folders.len(), LIBRARY_OPEN_FOLDERS_MAX);
+        assert_eq!(
+            many.sanitized().library_open_folders.len(),
+            LIBRARY_OPEN_FOLDERS_MAX
+        );
     }
 
     #[test]
     fn recent_searches_default_empty_and_are_cleaned() {
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
         assert!(old.recent_searches.is_empty());
-        let s: Settings = serde_json::from_str(r#"{"recent_searches": ["tarkan", " ", "tarkan", "sezen"]}"#).unwrap();
+        let s: Settings =
+            serde_json::from_str(r#"{"recent_searches": ["tarkan", " ", "tarkan", "sezen"]}"#)
+                .unwrap();
         assert_eq!(s.sanitized().recent_searches, ["tarkan", "sezen"]);
     }
 
@@ -700,7 +778,10 @@ mod tests {
                       "library_view": "list", "library_sort": "name", "recent_searches": ["a"]}"#;
         let s: Settings = serde_json::from_str(old).unwrap();
         let s = s.sanitized();
-        assert_eq!((s.volume, s.now_panel, s.library_view.as_str()), (0.4, false, "list"));
+        assert_eq!(
+            (s.volume, s.now_panel, s.library_view.as_str()),
+            (0.4, false, "list")
+        );
         assert_eq!(s.quality, "very_high");
         assert_eq!(s.kbps(), 320, "eskiden de 320 kbps çalıyordu");
         assert!(s.normalise, "eskiden eşitleme açıktı");
@@ -727,17 +808,31 @@ mod tests {
 
     #[test]
     fn unknown_choices_fall_back_to_defaults() {
-        let s: Settings =
-            serde_json::from_str(r#"{"quality": "ultra", "reduce_motion": "belki", "output_device": "  "}"#).unwrap();
+        let s: Settings = serde_json::from_str(
+            r#"{"quality": "ultra", "reduce_motion": "belki", "output_device": "  "}"#,
+        )
+        .unwrap();
         let s = s.sanitized();
-        assert_eq!((s.quality.as_str(), s.reduce_motion.as_str()), ("very_high", "system"));
+        assert_eq!(
+            (s.quality.as_str(), s.reduce_motion.as_str()),
+            ("very_high", "system")
+        );
         assert_eq!(s.output_device, None);
     }
 
     #[test]
     fn quality_maps_to_librespot_bitrates() {
-        let kbps = |q: &str| Settings { quality: q.into(), ..Settings::default() }.kbps();
-        assert_eq!((kbps("normal"), kbps("high"), kbps("very_high")), (96, 160, 320));
+        let kbps = |q: &str| {
+            Settings {
+                quality: q.into(),
+                ..Settings::default()
+            }
+            .kbps()
+        };
+        assert_eq!(
+            (kbps("normal"), kbps("high"), kbps("very_high")),
+            (96, 160, 320)
+        );
     }
 
     // ── Karıştırma ve sıra kuralları, eşitleme düzeyi ──
@@ -749,15 +844,24 @@ mod tests {
         assert!(!old.skip_explicit);
         assert!(old.blocked_artists.is_empty());
         assert_eq!(old.normalise_level, "normal");
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alanlar göç gerektirmez");
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alanlar göç gerektirmez"
+        );
 
-        let mut s = Settings { skip_explicit: true, dedupe_versions: false, normalise_level: "loud".into(), ..Settings::default() };
+        let mut s = Settings {
+            skip_explicit: true,
+            dedupe_versions: false,
+            normalise_level: "loud".into(),
+            ..Settings::default()
+        };
         s.set_blocked("Drake", "spotify:artist:3TVXtAsR1Inumwj472S9r4", true);
         let json = serde_json::to_string(&s).unwrap();
         let back: Settings = serde_json::from_str(&json).unwrap();
         assert_eq!(back.sanitized(), s);
         // Adres alanı olmayan eski bir kayıt da okunur.
-        let bare: Settings = serde_json::from_str(r#"{"blocked_artists": [{"name": "Drake"}]}"#).unwrap();
+        let bare: Settings =
+            serde_json::from_str(r#"{"blocked_artists": [{"name": "Drake"}]}"#).unwrap();
         assert_eq!(bare.blocked_artists[0].uri, "");
     }
 
@@ -766,8 +870,14 @@ mod tests {
         assert!(!Settings::default().friend_activity);
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5, "now_panel": false}"#).unwrap();
         assert!(!old.friend_activity, "eski dosyada alan yok: kapalı");
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alan göç gerektirmez, sürüm artmaz");
-        let on = Settings { friend_activity: true, ..Settings::default() };
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alan göç gerektirmez, sürüm artmaz"
+        );
+        let on = Settings {
+            friend_activity: true,
+            ..Settings::default()
+        };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         assert!(back.sanitized().friend_activity);
     }
@@ -777,8 +887,15 @@ mod tests {
         let d = Settings::default();
         assert!(!d.karaoke_enabled && d.karaoke_amount == 1.0);
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
-        assert!(!old.karaoke_enabled && old.karaoke_amount == 1.0, "eski dosyada alan yok: kapalı");
-        let on = Settings { karaoke_enabled: true, karaoke_amount: 0.4, ..Settings::default() };
+        assert!(
+            !old.karaoke_enabled && old.karaoke_amount == 1.0,
+            "eski dosyada alan yok: kapalı"
+        );
+        let on = Settings {
+            karaoke_enabled: true,
+            karaoke_amount: 0.4,
+            ..Settings::default()
+        };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         let back = back.sanitized();
         assert!(back.karaoke_enabled && back.karaoke_amount == 0.4);
@@ -793,8 +910,14 @@ mod tests {
         assert!(!Settings::default().lyrics_translation);
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
         assert!(!old.lyrics_translation, "eski dosyada alan yok: kapalı");
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alan göç gerektirmez, sürüm artmaz");
-        let on = Settings { lyrics_translation: true, ..Settings::default() };
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alan göç gerektirmez, sürüm artmaz"
+        );
+        let on = Settings {
+            lyrics_translation: true,
+            ..Settings::default()
+        };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         assert!(back.sanitized().lyrics_translation);
     }
@@ -804,8 +927,14 @@ mod tests {
         assert_eq!(Settings::default().crossfade_ms, 0);
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
         assert_eq!(old.crossfade_ms, 0, "eski dosyada alan yok: kapalı");
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alan göç gerektirmez, sürüm artmaz");
-        let on = Settings { crossfade_ms: 5_000, ..Settings::default() };
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alan göç gerektirmez, sürüm artmaz"
+        );
+        let on = Settings {
+            crossfade_ms: 5_000,
+            ..Settings::default()
+        };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         assert_eq!(back.sanitized().crossfade_ms, 5_000);
         let wild: Settings = serde_json::from_str(r#"{"crossfade_ms": 90000}"#).unwrap();
@@ -813,10 +942,18 @@ mod tests {
         assert_eq!(CROSSFADE_MAX_MS, 12_000);
         // AutoMix: varsayılan kapalı, eski dosyada alan yok = kapalı, açıkken sabit süre korunur.
         assert!(!Settings::default().automix && !old.automix);
-        let auto = Settings { automix: true, crossfade_ms: 8_000, ..Settings::default() };
+        let auto = Settings {
+            automix: true,
+            crossfade_ms: 8_000,
+            ..Settings::default()
+        };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&auto).unwrap()).unwrap();
         assert!(back.automix && back.sanitized().crossfade_ms == 8_000);
-        assert!(CROSSFADE_CHOICES_MS.iter().all(|ms| *ms <= CROSSFADE_MAX_MS));
+        assert!(
+            CROSSFADE_CHOICES_MS
+                .iter()
+                .all(|ms| *ms <= CROSSFADE_MAX_MS)
+        );
     }
 
     // ── Spotify Connect alanları ──
@@ -830,7 +967,10 @@ mod tests {
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
         assert!(old.connect_enabled && old.device_id.is_empty());
         assert_eq!(old.device_name, d.device_name);
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alanlar göç gerektirmez, sürüm artmaz");
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alanlar göç gerektirmez, sürüm artmaz"
+        );
     }
 
     #[test]
@@ -848,8 +988,16 @@ mod tests {
         let padded: Settings = serde_json::from_str(r#"{"device_name": "  Salon  "}"#).unwrap();
         assert_eq!(padded.sanitized().device_name, "Salon");
         let long = "ş".repeat(DEVICE_NAME_MAX + 30);
-        let capped = Settings { device_name: long, ..Settings::default() }.sanitized();
-        assert_eq!(capped.device_name.chars().count(), DEVICE_NAME_MAX, "karakter sayısıyla kesilir, bayt değil");
+        let capped = Settings {
+            device_name: long,
+            ..Settings::default()
+        }
+        .sanitized();
+        assert_eq!(
+            capped.device_name.chars().count(),
+            DEVICE_NAME_MAX,
+            "karakter sayısıyla kesilir, bayt değil"
+        );
     }
 
     #[test]
@@ -864,13 +1012,28 @@ mod tests {
     fn device_id_validation_rejects_odd_values() {
         assert!(valid_device_id("0123456789abcdef"));
         assert!(valid_device_id("3f9c1b0e-44aa-4c52-9d6e-0a1b2c3d4e5f"));
-        for bad in ["", "kısa", "0123456789abcde", "has space 0123456789", "ünlü-0123456789abcdef", &"a".repeat(65)] {
+        for bad in [
+            "",
+            "kısa",
+            "0123456789abcde",
+            "has space 0123456789",
+            "ünlü-0123456789abcdef",
+            &"a".repeat(65),
+        ] {
             assert!(!valid_device_id(bad), "{bad:?}");
         }
         let s: Settings = serde_json::from_str(r#"{"device_id": "bozuk id!"}"#).unwrap();
-        assert_eq!(s.sanitized().device_id, "", "geçersiz kimlik atılır (load yenisini üretir)");
+        assert_eq!(
+            s.sanitized().device_id,
+            "",
+            "geçersiz kimlik atılır (load yenisini üretir)"
+        );
         let ok: Settings = serde_json::from_str(r#"{"device_id": " 0123456789abcdef "}"#).unwrap();
-        assert_eq!(ok.sanitized().device_id, "0123456789abcdef", "kenar boşluğu kırpılır, geçerli kimlik korunur");
+        assert_eq!(
+            ok.sanitized().device_id,
+            "0123456789abcdef",
+            "kenar boşluğu kırpılır, geçerli kimlik korunur"
+        );
     }
 
     /// Kimlik İLK açılışta bir kez üretilir ve dosyada kalır; sonraki açılışlar,
@@ -885,13 +1048,24 @@ mod tests {
         let on_disk: Settings = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
         assert_eq!(on_disk.device_id, first.device_id);
         for _ in 0..3 {
-            assert_eq!(Settings::load_ensuring_id(&path).device_id, first.device_id, "her açılışta aynı");
+            assert_eq!(
+                Settings::load_ensuring_id(&path).device_id,
+                first.device_id,
+                "her açılışta aynı"
+            );
         }
         // Kullanıcı bir ayarı değiştirip kaydedince (arayüz `..prefs.clone()` ile yazar) kimlik gitmez.
-        let changed = Settings { quality: "high".into(), connect_enabled: true, ..first.clone() };
+        let changed = Settings {
+            quality: "high".into(),
+            connect_enabled: true,
+            ..first.clone()
+        };
         changed.save_to(&path).unwrap();
         let again = Settings::load_ensuring_id(&path);
-        assert_eq!((again.device_id.as_str(), again.connect_enabled), (first.device_id.as_str(), true));
+        assert_eq!(
+            (again.device_id.as_str(), again.connect_enabled),
+            (first.device_id.as_str(), true)
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -906,10 +1080,17 @@ mod tests {
         let fixed = Settings::load_ensuring_id(&path);
         assert!(valid_device_id(&fixed.device_id));
         assert_eq!(fixed.volume, 0.3, "öteki ayarlar korunur");
-        assert_eq!(Settings::load_ensuring_id(&path).device_id, fixed.device_id, "yenisi kalıcı");
+        assert_eq!(
+            Settings::load_ensuring_id(&path).device_id,
+            fixed.device_id,
+            "yenisi kalıcı"
+        );
 
         fs::write(&path, r#"{"device_id": "my-own-device-0001"}"#).unwrap();
-        assert_eq!(Settings::load_ensuring_id(&path).device_id, "my-own-device-0001");
+        assert_eq!(
+            Settings::load_ensuring_id(&path).device_id,
+            "my-own-device-0001"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -938,14 +1119,23 @@ mod tests {
         let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
         assert!(!old.eq_enabled, "eski dosyada alan yok: kapalı");
         assert_eq!(old.eq_gains.len(), 10);
-        assert_eq!(old.version, SETTINGS_VERSION, "yeni alan göç gerektirmez, sürüm artmaz");
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alan göç gerektirmez, sürüm artmaz"
+        );
         assert!(!old.eq_setting().enabled);
 
         // Dosya turu: açık, kazançlar, ön kazanç ve profil kaydı kalıcı.
         let dir = temp_dir("equalizer");
         let path = dir.join("settings.json");
         let gains = vec![6.0, 5.5, 4.5, 2.5, 0.5, 0.0, 0.0, 0.0, -1.5, 3.0];
-        let profile = EqProfile { id: "a::b".into(), name: "Acme Alpha".into(), author: "Lab".into(), details: "x".into(), deviation_db: 0.8 };
+        let profile = EqProfile {
+            id: "a::b".into(),
+            name: "Acme Alpha".into(),
+            author: "Lab".into(),
+            details: "x".into(),
+            deviation_db: 0.8,
+        };
         let s = Settings {
             eq_enabled: true,
             eq_gains: gains.clone(),
@@ -960,7 +1150,12 @@ mod tests {
         assert_eq!(back.eq_preamp, -1.5);
         assert_eq!(back.eq_profile, Some(profile));
         let set = back.eq_setting();
-        assert!(set.enabled && set.gains_db[0] == 6.0 && set.gains_db[8] == -1.5 && set.preamp_db == -1.5);
+        assert!(
+            set.enabled
+                && set.gains_db[0] == 6.0
+                && set.gains_db[8] == -1.5
+                && set.preamp_db == -1.5
+        );
         let _ = fs::remove_dir_all(&dir);
 
         // Elle düzenlenmiş dosya: kısa liste sıfırla tamamlanır, uzun kesilir,
@@ -974,7 +1169,8 @@ mod tests {
         assert_eq!(&bad.eq_gains[..4], &[12.0, -12.0, 3.0, 0.0]);
         assert_eq!(bad.eq_preamp, 12.0);
         assert!(bad.eq_profile.is_none());
-        let long: Settings = serde_json::from_str(r#"{"eq_gains": [1,1,1,1,1,1,1,1,1,1,1,1,1]}"#).unwrap();
+        let long: Settings =
+            serde_json::from_str(r#"{"eq_gains": [1,1,1,1,1,1,1,1,1,1,1,1,1]}"#).unwrap();
         assert_eq!(long.sanitized().eq_gains.len(), 10);
     }
 
@@ -984,8 +1180,13 @@ mod tests {
         let s = serde_json::from_str::<Settings>(json).unwrap().sanitized();
         let names: Vec<&str> = s.blocked_artists.iter().map(|a| a.name.as_str()).collect();
         assert_eq!(names, ["Drake", "Future"]);
-        let many = (0..crate::engine::BLOCKED_MAX + 50).map(|i| format!(r#"{{"name": "A{i}"}}"#)).collect::<Vec<_>>().join(",");
-        let s = serde_json::from_str::<Settings>(&format!(r#"{{"blocked_artists": [{many}]}}"#)).unwrap().sanitized();
+        let many = (0..crate::engine::BLOCKED_MAX + 50)
+            .map(|i| format!(r#"{{"name": "A{i}"}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let s = serde_json::from_str::<Settings>(&format!(r#"{{"blocked_artists": [{many}]}}"#))
+            .unwrap()
+            .sanitized();
         assert_eq!(s.blocked_artists.len(), crate::engine::BLOCKED_MAX);
     }
 
@@ -1006,16 +1207,30 @@ mod tests {
 
     #[test]
     fn queue_rules_follow_the_settings() {
-        let s = Settings { dedupe_versions: true, skip_explicit: true, ..Settings::default() };
+        let s = Settings {
+            dedupe_versions: true,
+            skip_explicit: true,
+            ..Settings::default()
+        };
         let r = s.queue_rules();
         assert!(r.dedupe_versions && r.skip_explicit && !r.is_empty());
-        let off = Settings { dedupe_versions: false, skip_explicit: false, ..Settings::default() };
+        let off = Settings {
+            dedupe_versions: false,
+            skip_explicit: false,
+            ..Settings::default()
+        };
         assert!(off.queue_rules().is_empty());
     }
 
     #[test]
     fn normalise_levels_map_to_pregain_relative_to_normal() {
-        let pregain = |l: &str| Settings { normalise_level: l.into(), ..Settings::default() }.normalise_pregain_db();
+        let pregain = |l: &str| {
+            Settings {
+                normalise_level: l.into(),
+                ..Settings::default()
+            }
+            .normalise_pregain_db()
+        };
         assert_eq!(pregain("normal"), 0.0);
         assert_eq!(pregain("quiet"), -9.0, "-23 LUFS, Normal'e göre");
         assert_eq!(pregain("loud"), 3.0, "-11 LUFS, Normal'e göre");
@@ -1033,23 +1248,36 @@ mod tests {
         let dir = temp_dir("round-trip");
         let path = dir.join("settings.json");
         assert_eq!(Settings::load_from(&path), Settings::default(), "dosya yok");
-        let s = Settings { quality: "high".into(), now_panel: false, ..Settings::default() };
+        let s = Settings {
+            quality: "high".into(),
+            now_panel: false,
+            ..Settings::default()
+        };
         s.save_to(&path).unwrap();
         // Yedek yok (ilk kayıt, öncesi yoktu) ve henüz okunmadı.
         assert!(!backup_path(&path).exists());
         fs::write(&path, "{ bozuk").unwrap();
-        assert_eq!(Settings::load_from(&path), Settings::default(), "bozuk dosya, yedek yok");
+        assert_eq!(
+            Settings::load_from(&path),
+            Settings::default(),
+            "bozuk dosya, yedek yok"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
     fn temp_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-ayar-test-{name}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-ayar-test-{name}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         dir
     }
 
     fn good(volume: f32) -> Settings {
-        Settings { volume, quality: "high".into(), ..Settings::default() }
+        Settings {
+            volume,
+            quality: "high".into(),
+            ..Settings::default()
+        }
     }
 
     #[test]
@@ -1058,7 +1286,8 @@ mod tests {
         let path = dir.join("settings.json");
         good(0.3).save_to(&path).unwrap();
         assert_eq!(Settings::load_from(&path), good(0.3));
-        let bak: Settings = serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
+        let bak: Settings =
+            serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
         assert_eq!(bak, good(0.3));
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1069,7 +1298,8 @@ mod tests {
         let path = dir.join("settings.json");
         good(0.3).save_to(&path).unwrap();
         good(0.6).save_to(&path).unwrap();
-        let bak: Settings = serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
+        let bak: Settings =
+            serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
         assert_eq!(bak.volume, 0.3, "yedek bir önceki sağlam hâl");
         assert_eq!(Settings::load_from(&path).volume, 0.6);
         let _ = fs::remove_dir_all(&dir);
@@ -1087,7 +1317,10 @@ mod tests {
         // Asıl dosya da onarıldı: bir sonraki açılış sorunsuz.
         assert_eq!(Settings::load_from(&path), good(0.4));
         // Bozuk dosya silinmeden yanına alındı.
-        assert_eq!(fs::read_to_string(path.with_extension("json.corrupt")).unwrap(), "{\"volume\": 0.9, \"quality\"");
+        assert_eq!(
+            fs::read_to_string(path.with_extension("json.corrupt")).unwrap(),
+            "{\"volume\": 0.9, \"quality\""
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1099,7 +1332,8 @@ mod tests {
         Settings::load_from(&path); // yedek: 0.4
         fs::write(&path, "kırık").unwrap();
         good(0.7).save_to(&path).unwrap(); // bozuk dosya yedeği ezmemeli
-        let bak: Settings = serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
+        let bak: Settings =
+            serde_json::from_str(&fs::read_to_string(backup_path(&path)).unwrap()).unwrap();
         assert_eq!(bak.volume, 0.4);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1144,7 +1378,8 @@ mod tests {
     #[test]
     fn hand_edited_recent_list_is_cleaned() {
         let s: Settings =
-            serde_json::from_str(r#"{"recent": ["liked", "", "liked", "spotify:album:a"]}"#).unwrap();
+            serde_json::from_str(r#"{"recent": ["liked", "", "liked", "spotify:album:a"]}"#)
+                .unwrap();
         assert_eq!(s.sanitized().recent, ["liked", "spotify:album:a"]);
     }
 
@@ -1154,10 +1389,16 @@ mod tests {
     fn files_without_a_version_are_migrated_and_stamped() {
         let (s, migrated) = Settings::parse(r#"{"volume": 0.4, "quality": "high"}"#).unwrap();
         assert!(migrated, "sürümsüz dosya 0 sayılır, yeniden yazılmalı");
-        assert_eq!((s.version, s.volume, s.quality.as_str()), (SETTINGS_VERSION, 0.4, "high"));
+        assert_eq!(
+            (s.version, s.volume, s.quality.as_str()),
+            (SETTINGS_VERSION, 0.4, "high")
+        );
         // Güncel dosya göç gerektirmez.
         let json = serde_json::to_string(&Settings::default()).unwrap();
-        assert!(json.contains(&format!("\"version\":{SETTINGS_VERSION}")), "{json}");
+        assert!(
+            json.contains(&format!("\"version\":{SETTINGS_VERSION}")),
+            "{json}"
+        );
         let (back, migrated) = Settings::parse(&json).unwrap();
         assert!(!migrated);
         assert_eq!(back, Settings::default());
@@ -1165,7 +1406,12 @@ mod tests {
 
     #[test]
     fn every_version_from_zero_loads_to_the_same_settings() {
-        let want = Settings { volume: 0.35, quality: "high".into(), recent: vec!["liked".into()], ..Settings::default() };
+        let want = Settings {
+            volume: 0.35,
+            quality: "high".into(),
+            recent: vec!["liked".into()],
+            ..Settings::default()
+        };
         for v in 0..=SETTINGS_VERSION {
             let mut value = serde_json::to_value(&want).unwrap();
             if v == 0 {
@@ -1195,7 +1441,10 @@ mod tests {
         // v0: eski alan adı, ikisi de uygulanır, sırayla.
         let mut v: Value = serde_json::from_str(r#"{"ses": 0.8}"#).unwrap();
         assert_eq!(migrate_value(&mut v, &steps), (0, true));
-        assert_eq!((v["volume"].as_f64(), v["version"].as_u64()), (Some(0.4), Some(3)));
+        assert_eq!(
+            (v["volume"].as_f64(), v["version"].as_u64()),
+            (Some(0.4), Some(3))
+        );
         // v2: yalnız üçüncü adım.
         let mut v: Value = serde_json::from_str(r#"{"version": 2, "volume": 0.8}"#).unwrap();
         assert_eq!(migrate_value(&mut v, &steps), (2, true));
@@ -1207,7 +1456,10 @@ mod tests {
         // Daha yeni: adım çalışmaz, sürüm bu kodunkine çekilir.
         let mut v: Value = serde_json::from_str(r#"{"version": 9, "volume": 0.8}"#).unwrap();
         assert_eq!(migrate_value(&mut v, &steps), (9, false));
-        assert_eq!((v["volume"].as_f64(), v["version"].as_u64()), (Some(0.8), Some(3)));
+        assert_eq!(
+            (v["volume"].as_f64(), v["version"].as_u64()),
+            (Some(0.8), Some(3))
+        );
         // Sürüm alanı bozuksa (sayı değil) 0 sayılır.
         let mut v: Value = serde_json::from_str(r#"{"version": "x", "ses": 1.0}"#).unwrap();
         assert_eq!(migrate_value(&mut v, &steps).0, 0);
@@ -1221,7 +1473,10 @@ mod tests {
         let old = r#"{ "volume": 0.35, "quality": "high" }"#;
         fs::write(&path, old).unwrap();
         let s = Settings::load_from(&path);
-        assert_eq!((s.version, s.volume, s.quality.as_str()), (SETTINGS_VERSION, 0.35, "high"));
+        assert_eq!(
+            (s.version, s.volume, s.quality.as_str()),
+            (SETTINGS_VERSION, 0.35, "high")
+        );
         // Dosya artık sürümlü, değerler aynı.
         let text = fs::read_to_string(&path).unwrap();
         assert!(text.contains("\"version\""), "{text}");

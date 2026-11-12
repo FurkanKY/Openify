@@ -79,7 +79,11 @@ pub struct Product {
 impl Product {
     /// "Sennheiser HD 650".
     pub fn title(&self) -> String {
-        if self.name.to_lowercase().starts_with(&self.vendor.to_lowercase()) {
+        if self
+            .name
+            .to_lowercase()
+            .starts_with(&self.vendor.to_lowercase())
+        {
             self.name.clone()
         } else {
             format!("{} {}", self.vendor, self.name)
@@ -156,7 +160,10 @@ impl RawBand {
             freq: self.frequency,
             gain_db: self.gain_db,
             q: self.q.filter(|q| q.is_finite() && *q > 0.0).unwrap_or(0.7),
-            slope: self.slope.filter(|s| s.is_finite() && *s > 0.0).unwrap_or(12.0),
+            slope: self
+                .slope
+                .filter(|s| s.is_finite() && *s > 0.0)
+                .unwrap_or(12.0),
         })
     }
 }
@@ -185,7 +192,9 @@ impl Catalog {
             if raw.is_empty() {
                 continue;
             }
-            let Ok(line) = serde_json::from_str::<Line>(raw) else { continue };
+            let Ok(line) = serde_json::from_str::<Line>(raw) else {
+                continue;
+            };
             let d = line.data;
             match line.kind.as_str() {
                 "vendor" if !d.name.is_empty() => {
@@ -194,14 +203,27 @@ impl Catalog {
                 "product" if !d.name.is_empty() => {
                     products.insert(line.id, (d.vendor_id, d.name));
                 }
-                "eq" if (d.eq_type.is_empty() || d.eq_type == "parametric_eq") && !d.product_id.is_empty() => {
-                    let bands: Vec<PeqBand> = d.parameters.bands.into_iter().filter_map(RawBand::into_band).collect();
+                "eq" if (d.eq_type.is_empty() || d.eq_type == "parametric_eq")
+                    && !d.product_id.is_empty() =>
+                {
+                    let bands: Vec<PeqBand> = d
+                        .parameters
+                        .bands
+                        .into_iter()
+                        .filter_map(RawBand::into_band)
+                        .collect();
                     if bands.is_empty() {
                         continue;
                     }
                     eqs.push((
                         d.product_id,
-                        Profile { id: line.id, author: d.author, details: d.details, link: d.link, bands },
+                        Profile {
+                            id: line.id,
+                            author: d.author,
+                            details: d.details,
+                            link: d.link,
+                            bands,
+                        },
                     ));
                 }
                 _ => {}
@@ -215,17 +237,26 @@ impl Catalog {
             .into_iter()
             .filter_map(|(product_id, mut profiles)| {
                 let (vendor_id, name) = products.get(&product_id)?;
-                let vendor = vendors.get(vendor_id).cloned().unwrap_or_else(|| vendor_id.clone());
+                let vendor = vendors
+                    .get(vendor_id)
+                    .cloned()
+                    .unwrap_or_else(|| vendor_id.clone());
                 // Aynı yaratıcı + aynı ayrıntı (ör. aynı ölçümün 5 ve 10 bantlı sürümü):
                 // ekranda ayırt edilemezler; bantı en çok olan kalır (kendi 10 bandımıza
                 // en iyi uydurulur).
                 profiles.sort_by(|a, b| {
-                    (author_rank(&a.author), &a.author, &a.details, std::cmp::Reverse(a.bands.len())).cmp(&(
-                        author_rank(&b.author),
-                        &b.author,
-                        &b.details,
-                        std::cmp::Reverse(b.bands.len()),
-                    ))
+                    (
+                        author_rank(&a.author),
+                        &a.author,
+                        &a.details,
+                        std::cmp::Reverse(a.bands.len()),
+                    )
+                        .cmp(&(
+                            author_rank(&b.author),
+                            &b.author,
+                            &b.details,
+                            std::cmp::Reverse(b.bands.len()),
+                        ))
                 });
                 profiles.dedup_by(|b, a| a.author == b.author && a.details == b.details);
                 let title = format!("{vendor} {name}");
@@ -258,7 +289,11 @@ impl Catalog {
     pub fn approx_bytes(&self) -> usize {
         use std::mem::size_of;
         let profile = |q: &Profile| {
-            q.id.capacity() + q.author.capacity() + q.details.capacity() + q.link.capacity() + q.bands.capacity() * size_of::<PeqBand>()
+            q.id.capacity()
+                + q.author.capacity()
+                + q.details.capacity()
+                + q.link.capacity()
+                + q.bands.capacity() * size_of::<PeqBand>()
         };
         self.products.capacity() * size_of::<Product>()
             + self
@@ -289,14 +324,19 @@ impl Catalog {
         let joined = folded.replace(' ', "");
         let mut scored: Vec<(i32, usize)> = Vec::new();
         for (i, p) in self.products.iter().enumerate() {
-            let all = tokens.iter().all(|t| p.key.contains(t) || p.key_compact.contains(t));
+            let all = tokens
+                .iter()
+                .all(|t| p.key.contains(t) || p.key_compact.contains(t));
             if !all && !p.key_compact.contains(&joined) {
                 continue;
             }
             // Düşük puan önce: kısa adlılar, sorgu sözcüğüyle BAŞLAYAN sözcükler
             // ("hd 6" için "HD 600", "HD 560S"ten önce) ve ilk sözcüğü öne gelenler.
             let mut score = p.key.len() as i32;
-            let word_starts = tokens.iter().filter(|t| p.key.split(' ').any(|w| w.starts_with(**t))).count() as i32;
+            let word_starts = tokens
+                .iter()
+                .filter(|t| p.key.split(' ').any(|w| w.starts_with(**t)))
+                .count() as i32;
             score -= 60 * word_starts;
             if p.name_key.starts_with(tokens[0]) || p.key.starts_with(tokens[0]) {
                 score -= 100;
@@ -322,7 +362,9 @@ impl Catalog {
     /// Kimliğine göre profil (testler).
     #[cfg(test)]
     pub fn find(&self, id: &str) -> Option<(&Product, &Profile)> {
-        self.products.iter().find_map(|p| p.profiles.iter().find(|q| q.id == id).map(|q| (p, q)))
+        self.products
+            .iter()
+            .find_map(|p| p.profiles.iter().find(|q| q.id == id).map(|q| (p, q)))
     }
 }
 
@@ -363,7 +405,8 @@ fn write_cache(dir: &Path, text: &str, etag: Option<&str>) {
 }
 
 fn read_etag(dir: &Path) -> Option<String> {
-    let meta: serde_json::Value = serde_json::from_str(&fs::read_to_string(dir.join(META_NAME)).ok()?).ok()?;
+    let meta: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(dir.join(META_NAME)).ok()?).ok()?;
     meta.get("etag")?.as_str().map(str::to_owned)
 }
 
@@ -397,7 +440,9 @@ impl Source {
                 }
             };
         }
-        if std::env::var_os("OPENIFY_TEST_OFFLINE").is_some() || (test && std::env::var_os("OPENIFY_TEST_ONLINE").is_none()) {
+        if std::env::var_os("OPENIFY_TEST_OFFLINE").is_some()
+            || (test && std::env::var_os("OPENIFY_TEST_ONLINE").is_none())
+        {
             return Source::Offline;
         }
         Source::Network
@@ -405,7 +450,10 @@ impl Source {
 }
 
 /// Koşulu GET: `Ok(None)` = değişmedi (304), `Ok(Some((metin, etag)))` = yeni.
-async fn download(client: &reqwest::Client, etag: Option<&str>) -> Result<Option<(String, Option<String>)>, FetchError> {
+async fn download(
+    client: &reqwest::Client,
+    etag: Option<&str>,
+) -> Result<Option<(String, Option<String>)>, FetchError> {
     let mut request = client.get(URL);
     if let Some(etag) = etag {
         request = request.header(reqwest::header::IF_NONE_MATCH, etag);
@@ -440,9 +488,15 @@ async fn download(client: &reqwest::Client, etag: Option<&str>) -> Result<Option
     Ok(Some((text, new_etag)))
 }
 
-fn network_fetch(have_cache: bool, dir: &Path) -> Result<Option<(String, Option<String>)>, FetchError> {
+fn network_fetch(
+    have_cache: bool,
+    dir: &Path,
+) -> Result<Option<(String, Option<String>)>, FetchError> {
     // Kısa ömürlü tek iş parçacıklı çalışma ortamı (çağıran bir iş parçacığı).
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().map_err(|_| FetchError::Network)?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|_| FetchError::Network)?;
     runtime.block_on(async {
         let client = reqwest::Client::builder()
             .user_agent("Openify")
@@ -460,7 +514,11 @@ fn network_fetch(have_cache: bool, dir: &Path) -> Result<Option<(String, Option<
 /// (yeni veri gelirse yine `on_ready`). Önbellek yoksa indirme başarısızlığı
 /// `Err`; önbellek varsa güncelleme hatası sessizdir (günlük). Bloklar:
 /// çağıran bir iş parçacığıdır.
-pub fn load_blocking(dir: &Path, source: Source, mut on_ready: impl FnMut(Catalog)) -> Result<(), FetchError> {
+pub fn load_blocking(
+    dir: &Path,
+    source: Source,
+    mut on_ready: impl FnMut(Catalog),
+) -> Result<(), FetchError> {
     let cached = read_cached(dir);
     let have_cache = cached.is_some();
     if let Some(catalog) = cached {
@@ -481,7 +539,11 @@ pub fn load_blocking(dir: &Path, source: Source, mut on_ready: impl FnMut(Catalo
             }
             Err(e) => {
                 log::warn!("OPRA dosyası anlaşılmadı: {e}");
-                if have_cache { Ok(()) } else { Err(FetchError::Format) }
+                if have_cache {
+                    Ok(())
+                } else {
+                    Err(FetchError::Format)
+                }
             }
         },
         Err(e) if have_cache => {
@@ -543,7 +605,11 @@ this line is not json
         // Bilinmeyen tür ve eksi frekanslı bant atlanır, band_pass kalır.
         let zed = c.products.iter().find(|p| p.name == "Zed Pro MK2").unwrap();
         assert_eq!(zed.vendor, "Zed");
-        assert_eq!(zed.title(), "Zed Pro MK2", "ad üretici adıyla başlıyorsa tekrarlanmaz");
+        assert_eq!(
+            zed.title(),
+            "Zed Pro MK2",
+            "ad üretici adıyla başlıyorsa tekrarlanmaz"
+        );
         assert_eq!(zed.profiles[0].bands.len(), 1);
         assert_eq!(zed.profiles[0].bands[0].kind, PeqKind::BandPass);
     }
@@ -559,14 +625,25 @@ this line is not json
     fn search_matches_brand_and_model_loosely() {
         let c = catalog();
         let titles = |q: &str| -> Vec<String> {
-            c.search(q, 20).iter().map(|h| c.products[h.product].title()).collect::<Vec<_>>()
+            c.search(q, 20)
+                .iter()
+                .map(|h| c.products[h.product].title())
+                .collect::<Vec<_>>()
         };
         assert!(titles("").is_empty());
         assert!(titles("   ").is_empty());
         assert_eq!(titles("acme").len(), 3, "üç profil satırı");
         assert_eq!(titles("alpha 650")[0], "Acme Audio Alpha 650");
-        assert_eq!(titles("alpha650")[0], "Acme Audio Alpha 650", "boşluksuz yazım");
-        assert_eq!(titles("ALPHA")[0], "Acme Audio Alpha 650", "büyük / küçük harf");
+        assert_eq!(
+            titles("alpha650")[0],
+            "Acme Audio Alpha 650",
+            "boşluksuz yazım"
+        );
+        assert_eq!(
+            titles("ALPHA")[0],
+            "Acme Audio Alpha 650",
+            "büyük / küçük harf"
+        );
         assert_eq!(titles("zed mk2"), ["Zed Pro MK2"]);
         assert_eq!(titles("acme audio zed").len(), 0);
         assert!(titles("nonexistent").is_empty());
@@ -574,7 +651,10 @@ this line is not json
         assert_eq!(c.search("acme", 2).len(), 2);
         // Ürünün profilleri bitişik ve sıralı.
         let hits = c.search("alpha", 10);
-        assert_eq!(hits.iter().map(|h| h.profile).collect::<Vec<_>>(), [0, 1, 2]);
+        assert_eq!(
+            hits.iter().map(|h| h.profile).collect::<Vec<_>>(),
+            [0, 1, 2]
+        );
     }
 
     /// Aynı yaratıcı + ayrıntıyla ayırt edilemeyen profillerden bandı çok olan
@@ -588,7 +668,11 @@ this line is not json
                 r#"{{"type":"eq","id":"{id}","data":{{"author":"Rtings/AutoEQ","details":"Same label","type":"parametric_eq","parameters":{{"gain_db":0,"bands":[{list}]}},"product_id":"{product}"}}}}"#
             )
         };
-        let product = |id: &str, name: &str| format!(r#"{{"type":"product","id":"{id}","data":{{"name":"{name}","vendor_id":"v"}}}}"#);
+        let product = |id: &str, name: &str| {
+            format!(
+                r#"{{"type":"product","id":"{id}","data":{{"name":"{name}","vendor_id":"v"}}}}"#
+            )
+        };
         let text = [
             r#"{"type":"vendor","id":"v","data":{"name":"Vee"}}"#.to_string(),
             product("v::a", "HD 560S"),
@@ -603,7 +687,10 @@ this line is not json
         assert_eq!(c.find("a10").map(|(_, q)| q.bands.len()), Some(10));
         assert!(c.find("a5").is_none());
         let first = c.search("hd 6", 5);
-        assert_eq!(c.products[first[0].product].name, "HD 600", "6 ile başlayan sözcük önce");
+        assert_eq!(
+            c.products[first[0].product].name, "HD 600",
+            "6 ile başlayan sözcük önce"
+        );
         assert_eq!(first.len(), 2);
     }
 
@@ -611,12 +698,16 @@ this line is not json
     fn find_by_id() {
         let c = catalog();
         let (p, q) = c.find("acme:alpha::lab_one").unwrap();
-        assert_eq!((p.name.as_str(), q.author.as_str()), ("Alpha 650", "Lab One"));
+        assert_eq!(
+            (p.name.as_str(), q.author.as_str()),
+            ("Alpha 650", "Lab One")
+        );
         assert!(c.find("nope").is_none());
     }
 
     fn temp_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-opra-test-{tag}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-opra-test-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         dir
     }
@@ -629,7 +720,10 @@ this line is not json
         write_cache(&dir, FIXTURE, Some("W/\"abc\""));
         assert_eq!(read_cached(&dir).unwrap().profile_count(), 4);
         assert_eq!(read_etag(&dir).as_deref(), Some("W/\"abc\""));
-        assert!(!dir.join(format!("{FILE_NAME}.tmp")).exists(), "geçici dosya kalmadı");
+        assert!(
+            !dir.join(format!("{FILE_NAME}.tmp")).exists(),
+            "geçici dosya kalmadı"
+        );
         // Bozuk önbellek yok sayılır.
         fs::write(dir.join(FILE_NAME), "garbage").unwrap();
         assert!(read_cached(&dir).is_none());
@@ -644,33 +738,60 @@ this line is not json
         let dir = temp_dir("flow");
         // Önbellek yok, ağ yok: hata, sessiz değil.
         let mut calls = 0;
-        assert_eq!(load_blocking(&dir, Source::Broken, |_| calls += 1), Err(FetchError::Network));
-        assert_eq!(load_blocking(&dir, Source::Offline, |_| calls += 1), Err(FetchError::Network));
+        assert_eq!(
+            load_blocking(&dir, Source::Broken, |_| calls += 1),
+            Err(FetchError::Network)
+        );
+        assert_eq!(
+            load_blocking(&dir, Source::Offline, |_| calls += 1),
+            Err(FetchError::Network)
+        );
         assert_eq!(calls, 0);
         // İlk "indirme": katalog bir kez gelir, dosya yazılır.
         let mut sizes = Vec::new();
-        assert_eq!(load_blocking(&dir, Source::Local(FIXTURE.to_string()), |c| sizes.push(c.products.len())), Ok(()));
+        assert_eq!(
+            load_blocking(&dir, Source::Local(FIXTURE.to_string()), |c| sizes
+                .push(c.products.len())),
+            Ok(())
+        );
         assert_eq!(sizes, [2]);
         assert!(dir.join(FILE_NAME).exists() && dir.join(META_NAME).exists());
         assert_eq!(read_etag(&dir).as_deref(), Some("test"));
         // Ağ yok: önbellek hemen verilir, hata yok.
         let mut sizes = Vec::new();
-        assert_eq!(load_blocking(&dir, Source::Broken, |c| sizes.push(c.products.len())), Ok(()));
+        assert_eq!(
+            load_blocking(&dir, Source::Broken, |c| sizes.push(c.products.len())),
+            Ok(())
+        );
         assert_eq!(sizes, [2]);
         // Önbellek + yeni veri: önce önbellek, sonra yenisi.
         let extra = r#"{"type":"eq","id":"zed:mk2::new","data":{"author":"N","type":"parametric_eq","parameters":{"gain_db":0,"bands":[{"type":"peak_dip","frequency":1000,"gain_db":1,"q":1}]},"product_id":"zed::mk2"}}"#;
         let newer = format!("{FIXTURE}\n{extra}\n");
         let mut counts = Vec::new();
-        assert_eq!(load_blocking(&dir, Source::Local(newer), |c| counts.push(c.profile_count())), Ok(()));
+        assert_eq!(
+            load_blocking(&dir, Source::Local(newer), |c| counts
+                .push(c.profile_count())),
+            Ok(())
+        );
         assert_eq!(counts, [4, 5]);
         // Bozuk "indirme" önbelleği bozmaz.
         let mut counts = Vec::new();
-        assert_eq!(load_blocking(&dir, Source::Local("garbage".into()), |c| counts.push(c.profile_count())), Ok(()));
+        assert_eq!(
+            load_blocking(&dir, Source::Local("garbage".into()), |c| counts
+                .push(c.profile_count())),
+            Ok(())
+        );
         assert_eq!(counts, [5]);
         let _ = fs::remove_dir_all(&dir);
         // Önbelleksiz bozuk dosya: biçim hatası, önbelleğe yazılmaz.
-        assert_eq!(load_blocking(&dir, Source::Local("garbage".into()), |_| {}), Err(FetchError::Format));
-        assert!(!dir.join(FILE_NAME).exists(), "bozuk veri önbelleğe yazılmadı");
+        assert_eq!(
+            load_blocking(&dir, Source::Local("garbage".into()), |_| {}),
+            Err(FetchError::Format)
+        );
+        assert!(
+            !dir.join(FILE_NAME).exists(),
+            "bozuk veri önbelleğe yazılmadı"
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -680,15 +801,25 @@ this line is not json
     #[test]
     #[ignore = "gerçek OPRA dosyası ister (OPENIFY_TEST_OPRA_FILE); yalnız ölçüm"]
     fn opra_real_fit_error() {
-        let path = std::env::var("OPENIFY_TEST_OPRA_FILE").expect("OPENIFY_TEST_OPRA_FILE verilmeli");
+        let path =
+            std::env::var("OPENIFY_TEST_OPRA_FILE").expect("OPENIFY_TEST_OPRA_FILE verilmeli");
         let text = fs::read_to_string(path).unwrap();
         let t0 = std::time::Instant::now();
         let c = Catalog::parse(&text).unwrap();
-        println!("çözümleme: {} ürün, {} profil, {:?}, yaklaşık {:.1} MB bellekte", c.products.len(), c.profile_count(), t0.elapsed(), c.approx_bytes() as f64 / 1048576.0);
+        println!(
+            "çözümleme: {} ürün, {} profil, {:?}, yaklaşık {:.1} MB bellekte",
+            c.products.len(),
+            c.profile_count(),
+            t0.elapsed(),
+            c.approx_bytes() as f64 / 1048576.0
+        );
         let mut rms: Vec<f32> = Vec::new();
         let mut max: Vec<f32> = Vec::new();
         let mut ratio: Vec<f32> = Vec::new();
-        let step: usize = std::env::var("OPENIFY_FIT_STEP").ok().and_then(|v| v.parse().ok()).unwrap_or(1);
+        let step: usize = std::env::var("OPENIFY_FIT_STEP")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1);
         let t1 = std::time::Instant::now();
         let mut n = 0usize;
         for p in &c.products {

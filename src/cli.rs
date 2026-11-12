@@ -30,7 +30,13 @@ pub async fn play(input: &str) -> Result<()> {
         normalisation: true,
         ..PlayerConfig::default()
     };
-    let (player, out) = engine::new_player(player_config, session.clone(), engine::AudioLevels::new(), 1.0, 0);
+    let (player, out) = engine::new_player(
+        player_config,
+        session.clone(),
+        engine::AudioLevels::new(),
+        1.0,
+        0,
+    );
 
     // Şarkı adını göster (başarısız olursa çalmaya engel değil).
     match Track::get(&session, &track).await {

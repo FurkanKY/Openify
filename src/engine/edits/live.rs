@@ -106,12 +106,18 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
 
     // Şarkıları çöz: yazmadan önce geçerli olduklarını gör.
     let cands: Vec<String> = CANDIDATES.iter().map(|u| u.to_string()).collect();
-    let rows = resolve_tracks(s, &cands).await.expect("şarkı bilgisi alınamadı");
+    let rows = resolve_tracks(s, &cands)
+        .await
+        .expect("şarkı bilgisi alınamadı");
     let names: HashMap<String, String> = rows
         .iter()
         .map(|r| (r.uri.clone(), format!("{} - {}", r.name, r.artists)))
         .collect();
-    let valid: Vec<String> = cands.iter().filter(|u| names.contains_key(*u)).cloned().collect();
+    let valid: Vec<String> = cands
+        .iter()
+        .filter(|u| names.contains_key(*u))
+        .cloned()
+        .collect();
     println!("Geçerli sınama şarkıları: {}/{}", valid.len(), cands.len());
     assert!(valid.len() >= 5, "yeterli geçerli şarkı yok: {valid:?}");
     let (a, b, c, d) = (
@@ -154,7 +160,11 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
     };
     println!("    yeni liste: {pl}");
     let st = read_list(s, &pl).await;
-    println!("    okundu: ad={:?} öğeler=[{}]", st.name, short(&st.uris, &names));
+    println!(
+        "    okundu: ad={:?} öğeler=[{}]",
+        st.name,
+        short(&st.uris, &names)
+    );
     assert_eq!(st.name, TEST_NAME);
     assert_eq!(st.uris, vec![a.clone(), b.clone(), c.clone()]);
     let root_now = raw_rootlist_uris(s).await.unwrap();
@@ -162,7 +172,11 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
         "    kök liste: {} -> {} öğe, yeni liste {}",
         root_before.len(),
         root_now.len(),
-        if root_now.first() == Some(&pl) { "başta" } else { "başta DEĞİL" }
+        if root_now.first() == Some(&pl) {
+            "başta"
+        } else {
+            "başta DEĞİL"
+        }
     );
     assert_eq!(root_now.len(), root_before.len() + 1);
     assert!(root_now.contains(&pl));
@@ -252,9 +266,11 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
     let copies = |v: &[String]| v.iter().filter(|u| **u == x).count();
     assert_eq!(copies(&st.uris), 2);
     println!("    kopya eklendi: [{}]", short(&st.uris, &names));
-    post_playlist_changes(s, &pl, |st| Some(changes_remove(&st.revision, &[x.clone()])))
-        .await
-        .expect("anahtarla çıkarma isteği");
+    post_playlist_changes(s, &pl, |st| {
+        Some(changes_remove(&st.revision, &[x.clone()]))
+    })
+    .await
+    .expect("anahtarla çıkarma isteği");
     pause().await;
     let st = read_list(s, &pl).await;
     println!(
@@ -344,28 +360,55 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
     println!("    önce:     [{}]", short(&order, &names));
     println!("    beklenen: [{}]", short(&expected, &names));
     println!("    okunan:   [{}]", short(&st.uris, &names));
-    assert_eq!(st.uris, expected, "sırasız çıkarma tam bir (ilk) satır silmeli");
+    assert_eq!(
+        st.uris, expected,
+        "sırasız çıkarma tam bir (ilk) satır silmeli"
+    );
 
     // 6. Beğen / vazgeç.
-    run(s, left, "6a Save", EditOp::Save { uri: like_track.clone() }).await;
+    run(
+        s,
+        left,
+        "6a Save",
+        EditOp::Save {
+            uri: like_track.clone(),
+        },
+    )
+    .await;
     *left.liked.lock().unwrap() = Some(like_track.clone());
     let mut seen = false;
     for attempt in 1..=3 {
         let now = raw_collection_uris(s).await.unwrap();
         seen = now.contains(&like_track);
-        println!("    beğeni okuması {attempt}: şarkı {} ({} öğe)", if seen { "VAR" } else { "yok" }, now.len());
+        println!(
+            "    beğeni okuması {attempt}: şarkı {} ({} öğe)",
+            if seen { "VAR" } else { "yok" },
+            now.len()
+        );
         if seen {
             break;
         }
         pause().await;
     }
     assert!(seen, "beğenilen şarkı koleksiyonda görünmüyor");
-    run(s, left, "6b Unsave", EditOp::Unsave { uri: like_track.clone() }).await;
+    run(
+        s,
+        left,
+        "6b Unsave",
+        EditOp::Unsave {
+            uri: like_track.clone(),
+        },
+    )
+    .await;
     let mut gone = false;
     for attempt in 1..=3 {
         let now = raw_collection_uris(s).await.unwrap();
         gone = !now.contains(&like_track);
-        println!("    beğeni okuması {attempt}: şarkı {} ({} öğe)", if gone { "YOK" } else { "hâlâ var" }, now.len());
+        println!(
+            "    beğeni okuması {attempt}: şarkı {} ({} öğe)",
+            if gone { "YOK" } else { "hâlâ var" },
+            now.len()
+        );
         if gone {
             break;
         }
@@ -375,14 +418,38 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
     *left.liked.lock().unwrap() = None;
 
     // 7. Sil, geri getir, tekrar sil (geri getirme bilgi amaçlı).
-    run(s, left, "7a DeletePlaylist", EditOp::DeletePlaylist { playlist: pl.clone() }).await;
+    run(
+        s,
+        left,
+        "7a DeletePlaylist",
+        EditOp::DeletePlaylist {
+            playlist: pl.clone(),
+        },
+    )
+    .await;
     let root = raw_rootlist_uris(s).await.unwrap();
-    println!("    kök liste: {} öğe, silinen liste {}", root.len(), if root.contains(&pl) { "HÂLÂ VAR" } else { "yok" });
-    assert_eq!(root, root_before, "silmeden sonra kök liste sınama öncesine eşit olmalı");
+    println!(
+        "    kök liste: {} öğe, silinen liste {}",
+        root.len(),
+        if root.contains(&pl) {
+            "HÂLÂ VAR"
+        } else {
+            "yok"
+        }
+    );
+    assert_eq!(
+        root, root_before,
+        "silmeden sonra kök liste sınama öncesine eşit olmalı"
+    );
 
     let restore = tokio::time::timeout(
         Duration::from_secs(45),
-        apply_now(s, &EditOp::RestorePlaylist { playlist: pl.clone() }),
+        apply_now(
+            s,
+            &EditOp::RestorePlaylist {
+                playlist: pl.clone(),
+            },
+        ),
     )
     .await;
     match restore {
@@ -393,17 +460,36 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
             println!(
                 "    geri getirme sonrası kök liste: {} öğe, liste {}",
                 root.len(),
-                if root.contains(&pl) { "geri geldi" } else { "GERİ GELMEDİ" }
+                if root.contains(&pl) {
+                    "geri geldi"
+                } else {
+                    "GERİ GELMEDİ"
+                }
             );
             let st = read_list(s, &pl).await;
-            println!("    geri gelen liste: ad={:?}, {} öğe", st.name, st.uris.len());
-            run(s, left, "7c DeletePlaylist (ikinci)", EditOp::DeletePlaylist { playlist: pl.clone() }).await;
+            println!(
+                "    geri gelen liste: ad={:?}, {} öğe",
+                st.name,
+                st.uris.len()
+            );
+            run(
+                s,
+                left,
+                "7c DeletePlaylist (ikinci)",
+                EditOp::DeletePlaylist {
+                    playlist: pl.clone(),
+                },
+            )
+            .await;
         }
         Ok(Err(e)) => println!("[7b RestorePlaylist] HATA (bilgi): {e:?}"),
         Err(_) => println!("[7b RestorePlaylist] zaman aşımı (bilgi)"),
     }
     let root = raw_rootlist_uris(s).await.unwrap();
-    assert_eq!(root, root_before, "son silmeden sonra kök liste sınama öncesine eşit olmalı");
+    assert_eq!(
+        root, root_before,
+        "son silmeden sonra kök liste sınama öncesine eşit olmalı"
+    );
     *left.playlist.lock().unwrap() = None;
 }
 
@@ -423,11 +509,21 @@ async fn cleanup(s: &Session, left: &Left) {
     let playlist = left.playlist.lock().unwrap().take();
     if let Some(pl) = playlist {
         // Yalnız hâlâ kütüphanedeyse ve bu sınamanın oluşturduğu liste ise.
-        let in_root = raw_rootlist_uris(s).await.map(|r| r.contains(&pl)).unwrap_or(true);
+        let in_root = raw_rootlist_uris(s)
+            .await
+            .map(|r| r.contains(&pl))
+            .unwrap_or(true);
         if in_root {
             println!("TEMİZLİK: deneme listesi kütüphaneden çıkarılıyor ({pl})");
             for attempt in 1..=3 {
-                match apply_now(s, &EditOp::DeletePlaylist { playlist: pl.clone() }).await {
+                match apply_now(
+                    s,
+                    &EditOp::DeletePlaylist {
+                        playlist: pl.clone(),
+                    },
+                )
+                .await
+                {
                     Ok(_) => break,
                     Err(e) => println!("    temizlik liste denemesi {attempt} başarısız: {e:?}"),
                 }
@@ -452,12 +548,17 @@ async fn live_write_roundtrip() {
         "ÖNCE: kök liste {} öğe, koleksiyon {} öğe (şarkı: {})",
         root_before.len(),
         liked_before.len(),
-        liked_before.iter().filter(|u| u.starts_with("spotify:track:")).count()
+        liked_before
+            .iter()
+            .filter(|u| u.starts_with("spotify:track:"))
+            .count()
     );
     pause().await;
 
     let left = Left::default();
-    let result = AssertUnwindSafe(scenario(&s, &liked_before, &left)).catch_unwind().await;
+    let result = AssertUnwindSafe(scenario(&s, &liked_before, &left))
+        .catch_unwind()
+        .await;
     cleanup(&s, &left).await;
     pause().await;
 
@@ -471,15 +572,24 @@ async fn live_write_roundtrip() {
         root_after.len(),
         liked_after.len()
     );
-    println!("KÖK LİSTE (sıra dahil) özdeş: {}", root_after == root_before);
+    println!(
+        "KÖK LİSTE (sıra dahil) özdeş: {}",
+        root_after == root_before
+    );
     println!(
         "BEĞENİLER: sayı {} = {}, küme özdeş: {}",
         liked_before.len(),
         liked_after.len(),
         sorted_after == sorted_before
     );
-    let diff_added: Vec<&String> = sorted_after.iter().filter(|u| !sorted_before.contains(u)).collect();
-    let diff_removed: Vec<&String> = sorted_before.iter().filter(|u| !sorted_after.contains(u)).collect();
+    let diff_added: Vec<&String> = sorted_after
+        .iter()
+        .filter(|u| !sorted_before.contains(u))
+        .collect();
+    let diff_removed: Vec<&String> = sorted_before
+        .iter()
+        .filter(|u| !sorted_after.contains(u))
+        .collect();
     println!("    eklenen: {diff_added:?}, eksilen: {diff_removed:?}");
 
     if let Err(panic) = result {
@@ -498,26 +608,44 @@ async fn live_diag_create() {
     let root_before = raw_rootlist_uris(&s).await.expect("kök liste");
     pause().await;
     // Salt okuma: okuyucu çalışıyor mu? İlk liste.
-    if let Some(first) = root_before.iter().find(|u| u.starts_with("spotify:playlist:")) {
-        let st = playlist_state(&s, first).await.expect("ilk liste okunamadı");
-        println!("OKUYUCU SINAMASI (salt okuma) {first}: ad={:?} öğe={}", st.name, st.uris.len());
+    if let Some(first) = root_before
+        .iter()
+        .find(|u| u.starts_with("spotify:playlist:"))
+    {
+        let st = playlist_state(&s, first)
+            .await
+            .expect("ilk liste okunamadı");
+        println!(
+            "OKUYUCU SINAMASI (salt okuma) {first}: ad={:?} öğe={}",
+            st.name,
+            st.uris.len()
+        );
     }
     pause().await;
 
     let left = Left::default();
     let result = AssertUnwindSafe(async {
         let uris: Vec<String> = CANDIDATES.iter().take(3).map(|u| u.to_string()).collect();
-        let pl = create_playlist(&s, TEST_NAME, &uris).await.expect("oluşturma");
+        let pl = create_playlist(&s, TEST_NAME, &uris)
+            .await
+            .expect("oluşturma");
         println!("oluşturuldu: {pl}");
         pause().await;
-        post_rootlist_changes(&s, |rev| rootlist_add(rev, &pl)).await.expect("kök listeye ekleme");
+        post_rootlist_changes(&s, |rev| rootlist_add(rev, &pl))
+            .await
+            .expect("kök listeye ekleme");
         *left.playlist.lock().unwrap() = Some(pl.clone());
         pause().await;
         for i in 0..2 {
             let id = playlist_id(&pl).unwrap();
             let bytes = s
                 .spclient()
-                .request(&http::Method::GET, &format!("/playlist/v2/playlist/{id}"), None, None)
+                .request(
+                    &http::Method::GET,
+                    &format!("/playlist/v2/playlist/{id}"),
+                    None,
+                    None,
+                )
                 .await
                 .expect("okuma");
             let list = SelectedListContent::parse_from_bytes(&bytes).unwrap();
@@ -574,8 +702,13 @@ async fn live_follow() {
         "spotify:artist:3WrFJ7ztbogyGnTHbHJFl2", // The Beatles
     ];
     let s = connect().await;
-    let before = raw_artist_uris(&s).await.expect("takip edilenler okunamadı");
-    println!("ÖNCE: {} takip edilen sanatçı (okuma tarafı çalışıyor)", before.len());
+    let before = raw_artist_uris(&s)
+        .await
+        .expect("takip edilenler okunamadı");
+    println!(
+        "ÖNCE: {} takip edilen sanatçı (okuma tarafı çalışıyor)",
+        before.len()
+    );
     pause().await;
     let Some(pick) = CANDIDATES.iter().find(|u| !before.iter().any(|b| b == *u)) else {
         println!("Bütün adaylar zaten takipte: yazma sınanmadı (salt okuma geçti).");
@@ -606,7 +739,10 @@ async fn live_follow() {
     if let Err(p) = result {
         resume_unwind(p);
     }
-    assert_eq!(sorted_after, sorted_before, "takip edilen sanatçılar değişmiş");
+    assert_eq!(
+        sorted_after, sorted_before,
+        "takip edilen sanatçılar değişmiş"
+    );
 }
 
 async fn run_follow(s: &Session, label: &str, op: EditOp) {

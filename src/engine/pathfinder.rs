@@ -81,10 +81,15 @@ impl Operation {
             return graphql_stale(value);
         };
         if let Some(errors) = value.get("errors").and_then(Value::as_array) {
-            let message = errors.first().and_then(|e| e["message"].as_str()).unwrap_or("unknown error");
+            let message = errors
+                .first()
+                .and_then(|e| e["message"].as_str())
+                .unwrap_or("unknown error");
             return Some(message.to_string());
         }
-        value["data"][root].is_null().then(|| format!("response has no {root}"))
+        value["data"][root]
+            .is_null()
+            .then(|| format!("response has no {root}"))
     }
 }
 
@@ -162,7 +167,11 @@ pub enum StaleCause {
 #[derive(Debug, thiserror::Error)]
 pub enum PathfinderError {
     #[error("persisted query hash rejected: {operation} ({detail})")]
-    StaleHash { operation: &'static str, detail: String, cause: StaleCause },
+    StaleHash {
+        operation: &'static str,
+        detail: String,
+        cause: StaleCause,
+    },
     /// Web player paketleri indirildi ama sorgu yok (Spotify kaldırmış / adını değiştirmiş).
     #[error("operation {operation} is not in the web player bundle")]
     OperationGone { operation: &'static str },
@@ -171,7 +180,10 @@ pub enum PathfinderError {
     Discovery(anyhow::Error),
     /// 429. `circuit_open`: bu 429 ile devre açıldı (oturum boyunca kapalı).
     #[error("rate limited (429, retry-after {retry_after:?})")]
-    RateLimited { retry_after: Option<Duration>, circuit_open: bool },
+    RateLimited {
+        retry_after: Option<Duration>,
+        circuit_open: bool,
+    },
     /// Önceki 429'un bekleme süresi dolmadı (istek gönderilmedi).
     #[error("rate limited: waiting after 429 ({remaining:?} left)")]
     Blocked { remaining: Duration },
@@ -243,12 +255,20 @@ pub trait Transport: Send + Sync {
     /// client-token başlıkları, gövde yok, yeniden deneme yok. Varsayılan:
     /// desteklenmiyor (yalnız `post` isteyen sahteler derlensin diye).
     fn get<'a>(&'a self, _url: &'a str) -> BoxFuture<'a, Result<Response, TransportError>> {
-        Box::pin(async { Err(TransportError::Network("GET is not supported by this transport".into())) })
+        Box::pin(async {
+            Err(TransportError::Network(
+                "GET is not supported by this transport".into(),
+            ))
+        })
     }
     /// 401 sonrası token'ı yenile.
     fn refresh_token<'a>(&'a self) -> BoxFuture<'a, Result<(), TransportError>>;
     /// Web player paketlerinden işlemin güncel hash'ini bul.
-    fn discover<'a>(&'a self, chunk: &'a str, operation: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>>;
+    fn discover<'a>(
+        &'a self,
+        chunk: &'a str,
+        operation: &'a str,
+    ) -> BoxFuture<'a, Result<String, DiscoverError>>;
 }
 
 /// Bulunan hash'lerin kalıcı yeri.
@@ -298,7 +318,10 @@ impl<'a> LiveTransport<'a> {
     }
 
     /// İsteği oturumun HTTP istemcisiyle gönderir; gövde yalnız başarıda okunur.
-    async fn exchange(&self, http_request: http::Request<Bytes>) -> Result<Response, TransportError> {
+    async fn exchange(
+        &self,
+        http_request: http::Request<Bytes>,
+    ) -> Result<Response, TransportError> {
         let response = self
             .session
             .http_client()
@@ -316,7 +339,11 @@ impl<'a> LiveTransport<'a> {
         } else {
             Bytes::new()
         };
-        Ok(Response { status: status.as_u16(), retry_after, body })
+        Ok(Response {
+            status: status.as_u16(),
+            retry_after,
+            body,
+        })
     }
 }
 
@@ -365,7 +392,11 @@ impl Transport for LiveTransport<'_> {
         })
     }
 
-    fn discover<'a>(&'a self, chunk: &'a str, operation: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+    fn discover<'a>(
+        &'a self,
+        chunk: &'a str,
+        operation: &'a str,
+    ) -> BoxFuture<'a, Result<String, DiscoverError>> {
         Box::pin(discover_operation_hash(chunk, operation))
     }
 }
@@ -420,7 +451,13 @@ const STRIKES_TO_OPEN: u32 = 2;
 
 impl Gate {
     pub const fn new(interval: Duration) -> Self {
-        Self { interval, next: None, blocked_until: None, strikes: 0, open: false }
+        Self {
+            interval,
+            next: None,
+            blocked_until: None,
+            strikes: 0,
+            open: false,
+        }
     }
 
     /// Arka plan isteği için yer ayırır.
@@ -465,7 +502,9 @@ impl Gate {
     /// 429 geldi: Retry-After kadar istek yok. Devre açıldıysa `true`.
     pub fn on_rate_limited(&mut self, now: Instant, retry_after: Option<Duration>) -> bool {
         self.strikes += 1;
-        let wait = retry_after.unwrap_or(DEFAULT_RETRY_AFTER).min(MAX_RETRY_AFTER);
+        let wait = retry_after
+            .unwrap_or(DEFAULT_RETRY_AFTER)
+            .min(MAX_RETRY_AFTER);
         self.blocked_until = Some(now + wait);
         if self.strikes >= STRIKES_TO_OPEN {
             self.open = true;
@@ -497,7 +536,11 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { interval: Duration::from_secs(2), server_retries: 2, backoff_base: Duration::from_millis(500) }
+        Self {
+            interval: Duration::from_secs(2),
+            server_retries: 2,
+            backoff_base: Duration::from_millis(500),
+        }
     }
 }
 
@@ -523,7 +566,11 @@ pub fn shared() -> &'static Pathfinder {
 pub fn presence() -> &'static Pathfinder {
     static PRESENCE: OnceLock<Pathfinder> = OnceLock::new();
     PRESENCE.get_or_init(|| {
-        Pathfinder::new(Config { interval: Duration::from_secs(5), server_retries: 1, backoff_base: Duration::from_secs(1) })
+        Pathfinder::new(Config {
+            interval: Duration::from_secs(5),
+            server_retries: 1,
+            backoff_base: Duration::from_secs(1),
+        })
     })
 }
 
@@ -533,7 +580,11 @@ pub fn presence() -> &'static Pathfinder {
 pub fn credits() -> &'static Pathfinder {
     static CREDITS: OnceLock<Pathfinder> = OnceLock::new();
     CREDITS.get_or_init(|| {
-        Pathfinder::new(Config { interval: Duration::from_secs(2), server_retries: 1, backoff_base: Duration::from_secs(1) })
+        Pathfinder::new(Config {
+            interval: Duration::from_secs(2),
+            server_retries: 1,
+            backoff_base: Duration::from_secs(1),
+        })
     })
 }
 
@@ -543,7 +594,11 @@ pub fn credits() -> &'static Pathfinder {
 pub fn radio() -> &'static Pathfinder {
     static RADIO: OnceLock<Pathfinder> = OnceLock::new();
     RADIO.get_or_init(|| {
-        Pathfinder::new(Config { interval: Duration::from_secs(5), server_retries: 1, backoff_base: Duration::from_secs(1) })
+        Pathfinder::new(Config {
+            interval: Duration::from_secs(5),
+            server_retries: 1,
+            backoff_base: Duration::from_secs(1),
+        })
     })
 }
 
@@ -556,7 +611,9 @@ pub async fn query(
     priority: Priority,
 ) -> Result<Value, PathfinderError> {
     let store = db.map(|d| d as &dyn HashStore);
-    shared().call(&LiveTransport::new(session), store, op, variables, priority).await
+    shared()
+        .call(&LiveTransport::new(session), store, op, variables, priority)
+        .await
 }
 
 fn request_for(op: &Operation, hash: &str, variables: &Value) -> Request {
@@ -565,7 +622,10 @@ fn request_for(op: &Operation, hash: &str, variables: &Value) -> Request {
         "variables": variables,
         "extensions": { "persistedQuery": { "version": 1, "sha256Hash": hash } },
     });
-    Request { body: body.to_string(), accept_language: language_header(op, crate::i18n::lang()) }
+    Request {
+        body: body.to_string(),
+        accept_language: language_header(op, crate::i18n::lang()),
+    }
 }
 
 /// İşlem dile bağlıysa `accept-language` değeri: arayüz dilinin kodu (`en`, `tr`;
@@ -590,7 +650,9 @@ impl Pathfinder {
         if let Some(h) = lock(&self.hashes).get(op.name) {
             return Some(h.clone());
         }
-        let found = store.and_then(|s| s.load(op.meta_key)).or_else(|| op.seed.map(String::from))?;
+        let found = store
+            .and_then(|s| s.load(op.meta_key))
+            .or_else(|| op.seed.map(String::from))?;
         Some(lock(&self.hashes).entry(op.name).or_insert(found).clone())
     }
 
@@ -667,9 +729,17 @@ impl Pathfinder {
                     return Ok(value);
                 }
                 429 => {
-                    let circuit_open = lock(&self.gate).on_rate_limited(Instant::now(), response.retry_after);
-                    log::warn!("{}: Spotify 429 (Retry-After {:?}); yeniden denenmiyor", op.name, response.retry_after);
-                    return Err(PathfinderError::RateLimited { retry_after: response.retry_after, circuit_open });
+                    let circuit_open =
+                        lock(&self.gate).on_rate_limited(Instant::now(), response.retry_after);
+                    log::warn!(
+                        "{}: Spotify 429 (Retry-After {:?}); yeniden denenmiyor",
+                        op.name,
+                        response.retry_after
+                    );
+                    return Err(PathfinderError::RateLimited {
+                        retry_after: response.retry_after,
+                        circuit_open,
+                    });
                 }
                 // Eski hash'le Spotify genelde 400 / 404 döndürüyor.
                 status @ (400 | 404) => {
@@ -687,7 +757,10 @@ impl Pathfinder {
                 status @ 500..=599 if server_attempts < self.config.server_retries => {
                     let wait = self.config.backoff_base * 2u32.saturating_pow(server_attempts);
                     server_attempts += 1;
-                    log::debug!("{}: HTTP {status}, {wait:?} sonra yeniden deneniyor ({server_attempts})", op.name);
+                    log::debug!(
+                        "{}: HTTP {status}, {wait:?} sonra yeniden deneniyor ({server_attempts})",
+                        op.name
+                    );
                     tokio::time::sleep(wait).await;
                 }
                 status => return Err(PathfinderError::Http { status }),
@@ -718,9 +791,16 @@ impl Pathfinder {
                     return Ok(value);
                 }
                 429 => {
-                    let circuit_open = lock(&self.gate).on_rate_limited(Instant::now(), response.retry_after);
-                    log::warn!("{name}: Spotify 429 (Retry-After {:?}); yeniden denenmiyor", response.retry_after);
-                    return Err(PathfinderError::RateLimited { retry_after: response.retry_after, circuit_open });
+                    let circuit_open =
+                        lock(&self.gate).on_rate_limited(Instant::now(), response.retry_after);
+                    log::warn!(
+                        "{name}: Spotify 429 (Retry-After {:?}); yeniden denenmiyor",
+                        response.retry_after
+                    );
+                    return Err(PathfinderError::RateLimited {
+                        retry_after: response.retry_after,
+                        circuit_open,
+                    });
                 }
                 401 if !refreshed => {
                     refreshed = true;
@@ -730,7 +810,9 @@ impl Pathfinder {
                 status @ 500..=599 if server_attempts < self.config.server_retries => {
                     let wait = self.config.backoff_base * 2u32.saturating_pow(server_attempts);
                     server_attempts += 1;
-                    log::debug!("{name}: HTTP {status}, {wait:?} sonra yeniden deneniyor ({server_attempts})");
+                    log::debug!(
+                        "{name}: HTTP {status}, {wait:?} sonra yeniden deneniyor ({server_attempts})"
+                    );
                     tokio::time::sleep(wait).await;
                 }
                 status => return Err(PathfinderError::Http { status }),
@@ -769,7 +851,11 @@ impl Pathfinder {
                     return Ok(value);
                 }
                 Err(PathfinderError::StaleHash { detail, .. }) => {
-                    let stale = |cause: StaleCause| PathfinderError::StaleHash { operation: op.name, detail: detail.clone(), cause };
+                    let stale = |cause: StaleCause| PathfinderError::StaleHash {
+                        operation: op.name,
+                        detail: detail.clone(),
+                        cause,
+                    };
                     if rediscovered_here {
                         return Err(stale(StaleCause::Rejected));
                     }
@@ -787,7 +873,10 @@ impl Pathfinder {
                         return Err(stale(StaleCause::AlreadyRediscovered));
                     }
                     rediscovered_here = true;
-                    log::info!("{}: hash eskimiş ({detail}), web player'dan yenisi aranıyor", op.name);
+                    log::info!(
+                        "{}: hash eskimiş ({detail}), web player'dan yenisi aranıyor",
+                        op.name
+                    );
                     match self.discover(transport, op).await {
                         Ok(new) if new != hash => {
                             self.adopt(op, &new, store);
@@ -808,11 +897,18 @@ impl Pathfinder {
         }
     }
 
-    async fn discover(&self, transport: &dyn Transport, op: &Operation) -> Result<String, PathfinderError> {
-        transport.discover(op.chunk, op.name).await.map_err(|e| match e {
-            DiscoverError::Missing(_) => PathfinderError::OperationGone { operation: op.name },
-            DiscoverError::Fetch(e) => PathfinderError::Discovery(e),
-        })
+    async fn discover(
+        &self,
+        transport: &dyn Transport,
+        op: &Operation,
+    ) -> Result<String, PathfinderError> {
+        transport
+            .discover(op.chunk, op.name)
+            .await
+            .map_err(|e| match e {
+                DiscoverError::Missing(_) => PathfinderError::OperationGone { operation: op.name },
+                DiscoverError::Fetch(e) => PathfinderError::Discovery(e),
+            })
     }
 }
 
@@ -822,7 +918,9 @@ impl From<Admit> for PathfinderError {
             Admit::Open => Self::CircuitOpen,
             Admit::Blocked(remaining) => Self::Blocked { remaining },
             // `Go` reddedilmiş olamaz; yine de güvenli tarafta.
-            Admit::Go(_) => Self::Blocked { remaining: Duration::ZERO },
+            Admit::Go(_) => Self::Blocked {
+                remaining: Duration::ZERO,
+            },
         }
     }
 }
@@ -836,8 +934,14 @@ impl From<Admit> for PathfinderError {
 /// Paketler librespot'un HTTP istemcisiyle indirilmiyor: o, `User-Agent`
 /// başlığını kendi değeriyle eziyor ve Spotify tanımadığı istemciye web
 /// player yerine "desteklenmeyen tarayıcı" sayfası gönderiyor.
-pub async fn discover_operation_hash(chunk: &str, operation: &str) -> Result<String, DiscoverError> {
-    let client = reqwest::Client::builder().user_agent(BROWSER_UA).build().map_err(anyhow::Error::from)?;
+pub async fn discover_operation_hash(
+    chunk: &str,
+    operation: &str,
+) -> Result<String, DiscoverError> {
+    let client = reqwest::Client::builder()
+        .user_agent(BROWSER_UA)
+        .build()
+        .map_err(anyhow::Error::from)?;
     let html = fetch_text(&client, WEB_PLAYER_URL).await?;
     let main_url = find_main_bundle(&html).context("web-player bundle not found")?;
     let main_js = fetch_text(&client, &main_url).await?;
@@ -864,7 +968,9 @@ pub async fn discover_operation_hash(chunk: &str, operation: &str) -> Result<Str
     if fetched {
         Err(DiscoverError::Missing(operation.to_string()))
     } else {
-        Err(DiscoverError::Fetch(anyhow::anyhow!("chunk {chunk} could not be downloaded")))
+        Err(DiscoverError::Fetch(anyhow::anyhow!(
+            "chunk {chunk} could not be downloaded"
+        )))
     }
 }
 
@@ -915,7 +1021,10 @@ fn find_chunk_versions(js: &str, id: &str) -> Vec<String> {
             continue;
         }
         let value: String = rest.chars().take_while(|c| *c != '"').collect();
-        if value.len() == 8 && value.chars().all(|c| c.is_ascii_hexdigit()) && !versions.contains(&value) {
+        if value.len() == 8
+            && value.chars().all(|c| c.is_ascii_hexdigit())
+            && !versions.contains(&value)
+        {
             versions.push(value);
         }
     }
@@ -934,7 +1043,10 @@ fn find_query_hash(js: &str, operation: &str) -> Option<String> {
 mod tests {
     use std::{
         collections::VecDeque,
-        sync::{Arc, atomic::{AtomicUsize, Ordering}},
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
     };
 
     use super::*;
@@ -955,7 +1067,10 @@ mod tests {
         assert_eq!(find_chunk_versions(js, &id), ["a0a5ee13", "a89e24fe"]);
 
         let hash = "eef7cc54888d91bdd6802623477873caa3948ae173a0c34fd86827b267e94c03";
-        let chunk = format!(r#"new x("searchAlbums","query","{}",null),new x("searchDesktop","query","{hash}",null)"#, "0".repeat(64));
+        let chunk = format!(
+            r#"new x("searchAlbums","query","{}",null),new x("searchDesktop","query","{hash}",null)"#,
+            "0".repeat(64)
+        );
         assert_eq!(find_query_hash(&chunk, "searchDesktop").unwrap(), hash);
         assert!(find_query_hash(&chunk, "searchNope").is_none());
     }
@@ -970,9 +1085,19 @@ mod tests {
         assert!(ARTIST_RELATED.stale_reason(&other).is_none());
         assert!(ARTIST_RELATED.stale_reason(&ok).is_none());
         // Arama katı: her GraphQL hatası ve eksik `searchV2` eskime sayılır.
-        assert_eq!(SEARCH_DESKTOP.stale_reason(&not_found).as_deref(), Some("PersistedQueryNotFound"));
-        assert_eq!(SEARCH_DESKTOP.stale_reason(&other).as_deref(), Some("Something broke"));
-        assert!(SEARCH_DESKTOP.stale_reason(&json!({ "data": {} })).is_some());
+        assert_eq!(
+            SEARCH_DESKTOP.stale_reason(&not_found).as_deref(),
+            Some("PersistedQueryNotFound")
+        );
+        assert_eq!(
+            SEARCH_DESKTOP.stale_reason(&other).as_deref(),
+            Some("Something broke")
+        );
+        assert!(
+            SEARCH_DESKTOP
+                .stale_reason(&json!({ "data": {} }))
+                .is_some()
+        );
         assert!(SEARCH_DESKTOP.stale_reason(&ok).is_none());
     }
 
@@ -982,7 +1107,10 @@ mod tests {
         assert_eq!(retry_after(&headers), None);
         headers.insert(http::header::RETRY_AFTER, "17".parse().unwrap());
         assert_eq!(retry_after(&headers), Some(Duration::from_secs(17)));
-        headers.insert(http::header::RETRY_AFTER, "Wed, 21 Oct 2015 07:28:00 GMT".parse().unwrap());
+        headers.insert(
+            http::header::RETRY_AFTER,
+            "Wed, 21 Oct 2015 07:28:00 GMT".parse().unwrap(),
+        );
         assert_eq!(retry_after(&headers), None);
     }
 
@@ -997,9 +1125,15 @@ mod tests {
         assert_eq!(g.admit(t0), Admit::Go(Duration::ZERO));
         // Hemen ardından gelen ikinci ve üçüncü istek sıraya girer.
         assert_eq!(g.admit(t0), Admit::Go(INTERVAL));
-        assert_eq!(g.admit(t0 + Duration::from_millis(500)), Admit::Go(Duration::from_millis(3500)));
+        assert_eq!(
+            g.admit(t0 + Duration::from_millis(500)),
+            Admit::Go(Duration::from_millis(3500))
+        );
         // Uzun aradan sonra beklemeden.
-        assert_eq!(g.admit(t0 + Duration::from_secs(60)), Admit::Go(Duration::ZERO));
+        assert_eq!(
+            g.admit(t0 + Duration::from_secs(60)),
+            Admit::Go(Duration::ZERO)
+        );
     }
 
     #[test]
@@ -1009,14 +1143,23 @@ mod tests {
         assert_eq!(g.admit(t0), Admit::Go(Duration::ZERO));
         assert!(!g.on_rate_limited(t0, Some(Duration::from_secs(30))));
         // Retry-After boyunca istek yok.
-        assert_eq!(g.admit(t0 + Duration::from_secs(10)), Admit::Blocked(Duration::from_secs(20)));
+        assert_eq!(
+            g.admit(t0 + Duration::from_secs(10)),
+            Admit::Blocked(Duration::from_secs(20))
+        );
         assert!(g.refused(t0 + Duration::from_secs(29)).is_some());
         // Süre dolunca geçer; başarı sayacı sıfırlar.
-        assert!(matches!(g.admit(t0 + Duration::from_secs(30)), Admit::Go(_)));
+        assert!(matches!(
+            g.admit(t0 + Duration::from_secs(30)),
+            Admit::Go(_)
+        ));
         g.on_success();
         assert!(!g.on_rate_limited(t0 + Duration::from_secs(31), None));
         // Başlık yoksa varsayılan bekleme.
-        assert_eq!(g.admit(t0 + Duration::from_secs(31)), Admit::Blocked(DEFAULT_RETRY_AFTER));
+        assert_eq!(
+            g.admit(t0 + Duration::from_secs(31)),
+            Admit::Blocked(DEFAULT_RETRY_AFTER)
+        );
         // Üst üste ikinci 429: devre açılır, oturum boyunca kapalı.
         assert!(g.on_rate_limited(t0 + Duration::from_secs(200), Some(Duration::from_secs(1))));
         assert!(g.is_open());
@@ -1033,16 +1176,28 @@ mod tests {
         let mut g = Gate::new(INTERVAL);
         assert_eq!(g.admit(t0), Admit::Go(Duration::ZERO));
         // Arama sıraya girmez ama sıradaki arka plan isteğini bir aralık öteler.
-        assert_eq!(g.admit_as(t0, Priority::Interactive), Admit::Go(Duration::ZERO));
+        assert_eq!(
+            g.admit_as(t0, Priority::Interactive),
+            Admit::Go(Duration::ZERO)
+        );
         assert_eq!(g.admit(t0), Admit::Go(2 * INTERVAL));
         // 429 beklemesine arama da uyar.
         g.on_rate_limited(t0, Some(Duration::from_secs(30)));
-        assert_eq!(g.admit_as(t0 + Duration::from_secs(10), Priority::Interactive), Admit::Blocked(Duration::from_secs(20)));
+        assert_eq!(
+            g.admit_as(t0 + Duration::from_secs(10), Priority::Interactive),
+            Admit::Blocked(Duration::from_secs(20))
+        );
         // Devre açılınca arka plan kapanır, arama bekleme bitince yine denenir.
         assert!(g.on_rate_limited(t0 + Duration::from_secs(40), Some(Duration::from_secs(5))));
         assert_eq!(g.admit(t0 + Duration::from_secs(100)), Admit::Open);
-        assert!(matches!(g.admit_as(t0 + Duration::from_secs(100), Priority::Interactive), Admit::Go(_)));
-        assert!(matches!(g.admit_as(t0 + Duration::from_secs(41), Priority::Interactive), Admit::Blocked(_)));
+        assert!(matches!(
+            g.admit_as(t0 + Duration::from_secs(100), Priority::Interactive),
+            Admit::Go(_)
+        ));
+        assert!(matches!(
+            g.admit_as(t0 + Duration::from_secs(41), Priority::Interactive),
+            Admit::Blocked(_)
+        ));
     }
 
     // ── Sahte ağ ───────────────────────────────────────────────────────
@@ -1052,15 +1207,27 @@ mod tests {
     const NEWER: &str = "3333333333333333333333333333333333333333333333333333333333333333";
 
     fn ok_body() -> Response {
-        Response { status: 200, retry_after: None, body: Bytes::from(r#"{"data":{"searchV2":{"ok":true},"artistUnion":{}}}"#) }
+        Response {
+            status: 200,
+            retry_after: None,
+            body: Bytes::from(r#"{"data":{"searchV2":{"ok":true},"artistUnion":{}}}"#),
+        }
     }
 
     fn status(status: u16) -> Response {
-        Response { status, retry_after: None, body: Bytes::new() }
+        Response {
+            status,
+            retry_after: None,
+            body: Bytes::new(),
+        }
     }
 
     fn too_many(retry_after: Duration) -> Response {
-        Response { status: 429, retry_after: Some(retry_after), body: Bytes::new() }
+        Response {
+            status: 429,
+            retry_after: Some(retry_after),
+            body: Bytes::new(),
+        }
     }
 
     #[derive(Default)]
@@ -1091,7 +1258,12 @@ mod tests {
             self
         }
         fn hashes(&self) -> Vec<String> {
-            self.posts.lock().unwrap().iter().map(|p| p.1.clone()).collect()
+            self.posts
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|p| p.1.clone())
+                .collect()
         }
         fn post_count(&self) -> usize {
             self.posts.lock().unwrap().len()
@@ -1099,16 +1271,29 @@ mod tests {
     }
 
     impl Transport for Fake {
-        fn post<'a>(&'a self, request: &'a Request) -> BoxFuture<'a, Result<Response, TransportError>> {
+        fn post<'a>(
+            &'a self,
+            request: &'a Request,
+        ) -> BoxFuture<'a, Result<Response, TransportError>> {
             Box::pin(async move {
                 let value: Value = serde_json::from_str(&request.body).unwrap();
-                let hash = value["extensions"]["persistedQuery"]["sha256Hash"].as_str().unwrap().to_string();
+                let hash = value["extensions"]["persistedQuery"]["sha256Hash"]
+                    .as_str()
+                    .unwrap()
+                    .to_string();
                 let operation = value["operationName"].as_str().unwrap().to_string();
-                self.posts.lock().unwrap().push((operation, hash, Instant::now()));
+                self.posts
+                    .lock()
+                    .unwrap()
+                    .push((operation, hash, Instant::now()));
                 if let Some(hook) = self.on_first_post.lock().unwrap().take() {
                     hook();
                 }
-                self.responses.lock().unwrap().pop_front().unwrap_or_else(|| Ok(ok_body()))
+                self.responses
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .unwrap_or_else(|| Ok(ok_body()))
             })
         }
 
@@ -1119,13 +1304,25 @@ mod tests {
             })
         }
 
-        fn discover<'a>(&'a self, _chunk: &'a str, _operation: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+        fn discover<'a>(
+            &'a self,
+            _chunk: &'a str,
+            _operation: &'a str,
+        ) -> BoxFuture<'a, Result<String, DiscoverError>> {
             Box::pin(async move {
                 self.discover_calls.fetch_add(1, Ordering::SeqCst);
-                match self.discoveries.lock().unwrap().pop_front().expect("beklenmeyen keşif") {
+                match self
+                    .discoveries
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .expect("beklenmeyen keşif")
+                {
                     Ok(h) => Ok(h),
                     Err(DiscoverFailure::Missing) => Err(DiscoverError::Missing("op".into())),
-                    Err(DiscoverFailure::Fetch) => Err(DiscoverError::Fetch(anyhow::anyhow!("offline"))),
+                    Err(DiscoverFailure::Fetch) => {
+                        Err(DiscoverError::Fetch(anyhow::anyhow!("offline")))
+                    }
                 }
             })
         }
@@ -1150,12 +1347,19 @@ mod tests {
             self.get(key)
         }
         fn save(&self, key: &str, hash: &str) {
-            self.0.lock().unwrap().insert(key.to_string(), hash.to_string());
+            self.0
+                .lock()
+                .unwrap()
+                .insert(key.to_string(), hash.to_string());
         }
     }
 
     fn fast() -> Config {
-        Config { interval: Duration::ZERO, server_retries: 2, backoff_base: Duration::from_millis(1) }
+        Config {
+            interval: Duration::ZERO,
+            server_retries: 2,
+            backoff_base: Duration::from_millis(1),
+        }
     }
 
     const BG: Priority = Priority::Background;
@@ -1170,13 +1374,28 @@ mod tests {
         let fake = Fake::default()
             .respond(vec![Ok(status(400))])
             .discover_with(vec![Ok(NEW.into())]);
-        let v = pf.call(&fake, Some(&store), &ARTIST_RELATED, json!({ "uri": "x" }), BG).await.unwrap();
+        let v = pf
+            .call(
+                &fake,
+                Some(&store),
+                &ARTIST_RELATED,
+                json!({ "uri": "x" }),
+                BG,
+            )
+            .await
+            .unwrap();
         assert_eq!(v["data"]["searchV2"]["ok"], true);
         assert_eq!(fake.hashes(), [OLD, NEW]);
         assert_eq!(fake.discover_calls.load(Ordering::SeqCst), 1);
-        assert_eq!(store.get("hash:queryArtistRelated").as_deref(), Some(NEW), "bulunan hash kalıcı");
+        assert_eq!(
+            store.get("hash:queryArtistRelated").as_deref(),
+            Some(NEW),
+            "bulunan hash kalıcı"
+        );
         // Sonraki çağrı yeni hash'le doğrudan gider.
-        pf.call(&fake, Some(&store), &ARTIST_RELATED, json!({}), BG).await.unwrap();
+        pf.call(&fake, Some(&store), &ARTIST_RELATED, json!({}), BG)
+            .await
+            .unwrap();
         assert_eq!(fake.hashes(), [OLD, NEW, NEW]);
         assert_eq!(fake.discover_calls.load(Ordering::SeqCst), 1);
     }
@@ -1186,7 +1405,11 @@ mod tests {
         let pf = Pathfinder::new(fast());
         let body = Bytes::from(r#"{"errors":[{"message":"PersistedQueryNotFound"}]}"#);
         let fake = Fake::default()
-            .respond(vec![Ok(Response { status: 200, retry_after: None, body })])
+            .respond(vec![Ok(Response {
+                status: 200,
+                retry_after: None,
+                body,
+            })])
             .discover_with(vec![Ok(NEW.into())]);
         pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap();
         assert_eq!(fake.hashes(), [HOME.seed.unwrap(), NEW]);
@@ -1197,13 +1420,23 @@ mod tests {
         let pf = Pathfinder::new(fast());
         let store = MemStore::default();
         let fake = Fake::default().discover_with(vec![Ok(NEW.into())]);
-        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({ "searchTerm": "a" }), UI).await.unwrap();
+        pf.call(
+            &fake,
+            Some(&store),
+            &SEARCH_DESKTOP,
+            json!({ "searchTerm": "a" }),
+            UI,
+        )
+        .await
+        .unwrap();
         assert_eq!(fake.hashes(), [NEW]);
         assert_eq!(store.get("search_hash").as_deref(), Some(NEW));
         // İlk keşif yeniden arama hakkını harcamadı: sonra eskirse aranır.
         *fake.responses.lock().unwrap() = VecDeque::from([Ok(status(404))]);
         fake.discoveries.lock().unwrap().push_back(Ok(NEWER.into()));
-        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI).await.unwrap();
+        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI)
+            .await
+            .unwrap();
         assert_eq!(fake.hashes(), [NEW, NEW, NEWER]);
     }
 
@@ -1212,10 +1445,14 @@ mod tests {
         let pf = Pathfinder::new(fast());
         let store = MemStore::with("hash:home", OLD);
         let fake = Fake::default();
-        pf.call(&fake, Some(&store), &HOME, json!({}), BG).await.unwrap();
+        pf.call(&fake, Some(&store), &HOME, json!({}), BG)
+            .await
+            .unwrap();
         // Kayıt başka bir şeye çevrilse de bellekteki geçerli.
         store.save("hash:home", NEWER);
-        pf.call(&fake, Some(&store), &HOME, json!({}), BG).await.unwrap();
+        pf.call(&fake, Some(&store), &HOME, json!({}), BG)
+            .await
+            .unwrap();
         assert_eq!(fake.hashes(), [OLD, OLD]);
     }
 
@@ -1226,16 +1463,44 @@ mod tests {
         let fake = Fake::default()
             .respond(vec![Ok(status(400)), Ok(status(400))])
             .discover_with(vec![Ok(NEW.into())]);
-        let e = pf.call(&fake, None, &BROWSE_ALL, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::StaleHash { cause: StaleCause::Rejected, .. }), "{e:?}");
+        let e = pf
+            .call(&fake, None, &BROWSE_ALL, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                PathfinderError::StaleHash {
+                    cause: StaleCause::Rejected,
+                    ..
+                }
+            ),
+            "{e:?}"
+        );
         // Aynı oturumda ikinci kez aranmaz.
         *fake.responses.lock().unwrap() = VecDeque::from([Ok(status(400))]);
-        let e = pf.call(&fake, None, &BROWSE_ALL, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::StaleHash { cause: StaleCause::AlreadyRediscovered, .. }), "{e:?}");
+        let e = pf
+            .call(&fake, None, &BROWSE_ALL, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                PathfinderError::StaleHash {
+                    cause: StaleCause::AlreadyRediscovered,
+                    ..
+                }
+            ),
+            "{e:?}"
+        );
         assert_eq!(fake.discover_calls.load(Ordering::SeqCst), 1);
         // Başka işlemin hakkı ayrı.
-        let fake2 = Fake::default().respond(vec![Ok(status(404))]).discover_with(vec![Ok(NEW.into())]);
-        pf.call(&fake2, None, &BROWSE_PAGE, json!({}), BG).await.unwrap();
+        let fake2 = Fake::default()
+            .respond(vec![Ok(status(404))])
+            .discover_with(vec![Ok(NEW.into())]);
+        pf.call(&fake2, None, &BROWSE_PAGE, json!({}), BG)
+            .await
+            .unwrap();
         assert_eq!(fake2.discover_calls.load(Ordering::SeqCst), 1);
     }
 
@@ -1243,22 +1508,47 @@ mod tests {
     async fn discovery_outcomes_map_to_typed_errors() {
         // Aynı hash: güncel hash reddediliyor.
         let pf = Pathfinder::new(fast());
-        let fake = Fake::default().respond(vec![Ok(status(400))]).discover_with(vec![Ok(HOME.seed.unwrap().into())]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::StaleHash { cause: StaleCause::Unchanged, .. }), "{e:?}");
+        let fake = Fake::default()
+            .respond(vec![Ok(status(400))])
+            .discover_with(vec![Ok(HOME.seed.unwrap().into())]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                PathfinderError::StaleHash {
+                    cause: StaleCause::Unchanged,
+                    ..
+                }
+            ),
+            "{e:?}"
+        );
 
         // Sorgu web player'da yok.
         let pf = Pathfinder::new(fast());
-        let fake = Fake::default().respond(vec![Ok(status(400))]).discover_with(vec![Err(DiscoverFailure::Missing)]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::OperationGone { operation: "home" }), "{e:?}");
+        let fake = Fake::default()
+            .respond(vec![Ok(status(400))])
+            .discover_with(vec![Err(DiscoverFailure::Missing)]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(e, PathfinderError::OperationGone { operation: "home" }),
+            "{e:?}"
+        );
 
         // İndirme olmadı: hak geri verilir, sonra yeniden aranabilir.
         let pf = Pathfinder::new(fast());
         let fake = Fake::default()
             .respond(vec![Ok(status(400)), Ok(status(400))])
             .discover_with(vec![Err(DiscoverFailure::Fetch), Ok(NEW.into())]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Discovery(_)), "{e:?}");
         pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap();
         assert_eq!(fake.discover_calls.load(Ordering::SeqCst), 2);
@@ -1293,7 +1583,10 @@ mod tests {
 
     #[tokio::test]
     async fn server_errors_back_off_exponentially_then_succeed() {
-        let cfg = Config { backoff_base: Duration::from_millis(40), ..fast() };
+        let cfg = Config {
+            backoff_base: Duration::from_millis(40),
+            ..fast()
+        };
         let pf = Pathfinder::new(cfg);
         let fake = Fake::default().respond(vec![Ok(status(503)), Ok(status(502))]);
         pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap();
@@ -1302,20 +1595,38 @@ mod tests {
         let gap1 = posts[1].2 - posts[0].2;
         let gap2 = posts[2].2 - posts[1].2;
         assert!(gap1 >= Duration::from_millis(38), "{gap1:?}");
-        assert!(gap2 >= Duration::from_millis(78), "ikiye katlanır: {gap2:?}");
+        assert!(
+            gap2 >= Duration::from_millis(78),
+            "ikiye katlanır: {gap2:?}"
+        );
     }
 
     #[tokio::test]
     async fn server_errors_give_up_after_the_retries() {
         let pf = Pathfinder::new(fast());
-        let fake = Fake::default().respond(vec![Ok(status(500)), Ok(status(500)), Ok(status(503)), Ok(status(500))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let fake = Fake::default().respond(vec![
+            Ok(status(500)),
+            Ok(status(500)),
+            Ok(status(503)),
+            Ok(status(500)),
+        ]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Http { status: 503 }), "{e:?}");
         assert_eq!(fake.post_count(), 3, "ilk + 2 yeniden deneme");
-        assert_eq!(fake.discover_calls.load(Ordering::SeqCst), 0, "5xx hash'i suçlamaz");
+        assert_eq!(
+            fake.discover_calls.load(Ordering::SeqCst),
+            0,
+            "5xx hash'i suçlamaz"
+        );
         // Beklenmeyen kod yinelenmez.
         let fake = Fake::default().respond(vec![Ok(status(418))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Http { status: 418 }));
         assert_eq!(fake.post_count(), 1);
     }
@@ -1329,12 +1640,21 @@ mod tests {
         assert_eq!(fake.post_count(), 2);
         // İkinci 401: reddedildi.
         let fake = Fake::default().respond(vec![Ok(status(401)), Ok(status(401))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::Denied { status: 401 }), "{e:?}");
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(e, PathfinderError::Denied { status: 401 }),
+            "{e:?}"
+        );
         assert_eq!(fake.refresh_calls.load(Ordering::SeqCst), 1);
         // 403 yinelenmez.
         let fake = Fake::default().respond(vec![Ok(status(403))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Denied { status: 403 }));
         assert_eq!(fake.post_count(), 1);
     }
@@ -1342,15 +1662,34 @@ mod tests {
     #[tokio::test]
     async fn transport_and_json_failures_are_typed_and_not_retried() {
         let pf = Pathfinder::new(fast());
-        let fake = Fake::default().respond(vec![Err(TransportError::Network("connection reset".into()))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(&e, PathfinderError::Transport(m) if m.contains("reset")), "{e:?}");
+        let fake = Fake::default().respond(vec![Err(TransportError::Network(
+            "connection reset".into(),
+        ))]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(&e, PathfinderError::Transport(m) if m.contains("reset")),
+            "{e:?}"
+        );
         assert_eq!(fake.post_count(), 1);
-        let fake = Fake::default().respond(vec![Err(TransportError::Token("no credentials".into()))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let fake =
+            Fake::default().respond(vec![Err(TransportError::Token("no credentials".into()))]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Token(_)), "{e:?}");
-        let fake = Fake::default().respond(vec![Ok(Response { status: 200, retry_after: None, body: Bytes::from("<html>") })]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let fake = Fake::default().respond(vec![Ok(Response {
+            status: 200,
+            retry_after: None,
+            body: Bytes::from("<html>"),
+        })]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::InvalidResponse(_)), "{e:?}");
     }
 
@@ -1360,52 +1699,106 @@ mod tests {
     async fn a_429_blocks_every_operation_including_search() {
         let pf = Pathfinder::new(fast());
         let fake = Fake::default().respond(vec![Ok(too_many(Duration::from_secs(30)))]);
-        let e = pf.call(&fake, None, &ARTIST_RELATED, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &ARTIST_RELATED, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(
             matches!(e, PathfinderError::RateLimited { retry_after: Some(d), circuit_open: false } if d == Duration::from_secs(30)),
             "{e:?}"
         );
         assert_eq!(fake.post_count(), 1, "429 yinelenmez");
         // Başka bir arka plan işlemi de, arama da Retry-After boyunca gönderilmez.
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::Blocked { .. }), "{e:?}");
         let store = MemStore::with("search_hash", OLD);
-        let e = pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::Blocked { remaining } if remaining > Duration::from_secs(20)), "{e:?}");
+        let e = pf
+            .call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(e, PathfinderError::Blocked { remaining } if remaining > Duration::from_secs(20)),
+            "{e:?}"
+        );
         assert_eq!(fake.post_count(), 1, "kapı aramayı da tuttu");
         // Hata metni arayüzün sınıflandırması için "429" / "rate" içerir.
-        assert!(PathfinderError::Blocked { remaining: Duration::ZERO }.to_string().contains("rate"));
+        assert!(
+            PathfinderError::Blocked {
+                remaining: Duration::ZERO
+            }
+            .to_string()
+            .contains("rate")
+        );
         assert!(e.to_string().to_lowercase().contains("rate"));
     }
 
     #[tokio::test]
     async fn two_429s_open_the_circuit_but_search_keeps_trying() {
         let pf = Pathfinder::new(fast());
-        let fake = Fake::default().respond(vec![Ok(too_many(Duration::ZERO)), Ok(too_many(Duration::ZERO))]);
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::RateLimited { circuit_open: false, .. }));
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::RateLimited { circuit_open: true, .. }), "{e:?}");
+        let fake = Fake::default().respond(vec![
+            Ok(too_many(Duration::ZERO)),
+            Ok(too_many(Duration::ZERO)),
+        ]);
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            e,
+            PathfinderError::RateLimited {
+                circuit_open: false,
+                ..
+            }
+        ));
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                PathfinderError::RateLimited {
+                    circuit_open: true,
+                    ..
+                }
+            ),
+            "{e:?}"
+        );
         // Arka plan: devre açık, istek yok.
-        let e = pf.call(&fake, None, &BROWSE_ALL, json!({}), BG).await.unwrap_err();
+        let e = pf
+            .call(&fake, None, &BROWSE_ALL, json!({}), BG)
+            .await
+            .unwrap_err();
         assert!(matches!(e, PathfinderError::CircuitOpen), "{e:?}");
         assert_eq!(fake.post_count(), 2);
         // Arama (başka yedeği yok) bekleme bitince yine denenir.
         let store = MemStore::with("search_hash", OLD);
-        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI).await.unwrap();
+        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI)
+            .await
+            .unwrap();
         assert_eq!(fake.post_count(), 3);
     }
 
     #[tokio::test]
     async fn search_shares_the_gate_with_background_requests() {
-        let cfg = Config { interval: Duration::from_millis(120), ..fast() };
+        let cfg = Config {
+            interval: Duration::from_millis(120),
+            ..fast()
+        };
         let pf = Pathfinder::new(cfg);
         let store = MemStore::with("search_hash", OLD);
         let fake = Fake::default();
         // Arama beklemeden gider...
-        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI).await.unwrap();
+        pf.call(&fake, Some(&store), &SEARCH_DESKTOP, json!({}), UI)
+            .await
+            .unwrap();
         // ...ama hemen ardından gelen arka plan isteği onun payını bekler.
-        pf.call(&fake, None, &ARTIST_RELATED, json!({}), BG).await.unwrap();
+        pf.call(&fake, None, &ARTIST_RELATED, json!({}), BG)
+            .await
+            .unwrap();
         // Arka plan istekleri kendi aralarında da sıralı.
         pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap();
         let posts = fake.posts.lock().unwrap();
@@ -1414,19 +1807,32 @@ mod tests {
         // Kapı yuvaları ilk istekten sayılır: yük altında bir isteğin kaydı
         // geç düşse de yuva zamanı kaymaz, ardışık fark kısa görünebilir.
         let search_to_home = posts[2].2 - posts[0].2;
-        assert!(search_to_related >= Duration::from_millis(110), "arama kapının sırasını itti: {search_to_related:?}");
-        assert!(search_to_home >= Duration::from_millis(230), "{search_to_home:?}");
+        assert!(
+            search_to_related >= Duration::from_millis(110),
+            "arama kapının sırasını itti: {search_to_related:?}"
+        );
+        assert!(
+            search_to_home >= Duration::from_millis(230),
+            "{search_to_home:?}"
+        );
     }
 
     #[tokio::test]
     async fn concurrent_background_requests_are_spaced() {
-        let cfg = Config { interval: Duration::from_millis(80), ..fast() };
+        let cfg = Config {
+            interval: Duration::from_millis(80),
+            ..fast()
+        };
         let pf = Arc::new(Pathfinder::new(cfg));
         let fake = Arc::new(Fake::default());
         let mut tasks = Vec::new();
         for _ in 0..3 {
             let (pf, fake) = (pf.clone(), fake.clone());
-            tasks.push(tokio::spawn(async move { pf.call(&*fake, None, &HOME, json!({}), BG).await.map(|_| ()) }));
+            tasks.push(tokio::spawn(async move {
+                pf.call(&*fake, None, &HOME, json!({}), BG)
+                    .await
+                    .map(|_| ())
+            }));
         }
         for t in tasks {
             t.await.unwrap().unwrap();
@@ -1434,8 +1840,16 @@ mod tests {
         let mut times: Vec<Instant> = fake.posts.lock().unwrap().iter().map(|p| p.2).collect();
         times.sort();
         assert_eq!(times.len(), 3);
-        assert!(times[1] - times[0] >= Duration::from_millis(70), "{:?}", times[1] - times[0]);
-        assert!(times[2] - times[0] >= Duration::from_millis(150), "{:?}", times[2] - times[0]);
+        assert!(
+            times[1] - times[0] >= Duration::from_millis(70),
+            "{:?}",
+            times[1] - times[0]
+        );
+        assert!(
+            times[2] - times[0] >= Duration::from_millis(150),
+            "{:?}",
+            times[2] - times[0]
+        );
     }
 
     #[tokio::test]
@@ -1448,8 +1862,20 @@ mod tests {
         ]);
         assert!(pf.call(&fake, None, &HOME, json!({}), BG).await.is_err());
         pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap();
-        let e = pf.call(&fake, None, &HOME, json!({}), BG).await.unwrap_err();
-        assert!(matches!(e, PathfinderError::RateLimited { circuit_open: false, .. }), "ardışık değil: {e:?}");
+        let e = pf
+            .call(&fake, None, &HOME, json!({}), BG)
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(
+                e,
+                PathfinderError::RateLimited {
+                    circuit_open: false,
+                    ..
+                }
+            ),
+            "ardışık değil: {e:?}"
+        );
     }
 
     #[tokio::test]
@@ -1458,29 +1884,58 @@ mod tests {
         let seen = Arc::new(Mutex::new(Vec::<(String, Option<&'static str>)>::new()));
         struct Spy(Arc<Mutex<Vec<(String, Option<&'static str>)>>>);
         impl Transport for Spy {
-            fn post<'a>(&'a self, r: &'a Request) -> BoxFuture<'a, Result<Response, TransportError>> {
+            fn post<'a>(
+                &'a self,
+                r: &'a Request,
+            ) -> BoxFuture<'a, Result<Response, TransportError>> {
                 Box::pin(async move {
-                    self.0.lock().unwrap().push((r.body.clone(), r.accept_language));
+                    self.0
+                        .lock()
+                        .unwrap()
+                        .push((r.body.clone(), r.accept_language));
                     Ok(ok_body())
                 })
             }
             fn refresh_token<'a>(&'a self) -> BoxFuture<'a, Result<(), TransportError>> {
                 Box::pin(async { Ok(()) })
             }
-            fn discover<'a>(&'a self, _: &'a str, _: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+            fn discover<'a>(
+                &'a self,
+                _: &'a str,
+                _: &'a str,
+            ) -> BoxFuture<'a, Result<String, DiscoverError>> {
                 Box::pin(async { Err(DiscoverError::Missing("x".into())) })
             }
         }
         let spy = Spy(seen.clone());
-        pf.call(&spy, None, &ARTIST_RELATED, json!({ "uri": "spotify:artist:a" }), BG).await.unwrap();
+        pf.call(
+            &spy,
+            None,
+            &ARTIST_RELATED,
+            json!({ "uri": "spotify:artist:a" }),
+            BG,
+        )
+        .await
+        .unwrap();
         let store = MemStore::with("search_hash", OLD);
-        pf.call(&spy, Some(&store), &SEARCH_DESKTOP, json!({ "searchTerm": "q" }), UI).await.unwrap();
+        pf.call(
+            &spy,
+            Some(&store),
+            &SEARCH_DESKTOP,
+            json!({ "searchTerm": "q" }),
+            UI,
+        )
+        .await
+        .unwrap();
         let seen = seen.lock().unwrap();
         let body: Value = serde_json::from_str(&seen[0].0).unwrap();
         assert_eq!(body["operationName"], "queryArtistRelated");
         assert_eq!(body["variables"]["uri"], "spotify:artist:a");
         assert_eq!(body["extensions"]["persistedQuery"]["version"], 1);
-        assert_eq!(body["extensions"]["persistedQuery"]["sha256Hash"], ARTIST_RELATED.seed.unwrap());
+        assert_eq!(
+            body["extensions"]["persistedQuery"]["sha256Hash"],
+            ARTIST_RELATED.seed.unwrap()
+        );
         // Birim testlerde arayüz dili varsayılan Türkçedir (`i18n::lang`).
         assert_eq!(seen[0].1, Some("tr"));
         assert_eq!(seen[1].1, None, "arama accept-language göndermez");
@@ -1500,9 +1955,17 @@ mod tests {
         }
         assert_eq!(language_header(&SEARCH_DESKTOP, Lang::En), None);
         // İstek kurulurken etkin dil okunur: dil değişince sonraki istek değişir.
-        let en = with_lang(Lang::En, || request_for(&HOME, "h", &json!({})).accept_language);
-        let tr = with_lang(Lang::Tr, || request_for(&HOME, "h", &json!({})).accept_language);
+        let en = with_lang(Lang::En, || {
+            request_for(&HOME, "h", &json!({})).accept_language
+        });
+        let tr = with_lang(Lang::Tr, || {
+            request_for(&HOME, "h", &json!({})).accept_language
+        });
         assert_eq!((en, tr), (Some("en"), Some("tr")));
-        assert_eq!(with_lang(Lang::En, || request_for(&SEARCH_DESKTOP, "h", &json!({})).accept_language), None);
+        assert_eq!(
+            with_lang(Lang::En, || request_for(&SEARCH_DESKTOP, "h", &json!({}))
+                .accept_language),
+            None
+        );
     }
 }

@@ -14,9 +14,10 @@
 use std::{cell::RefCell, panic::Location, rc::Rc, time::Duration, time::Instant};
 
 use gpui::{
-    App, Bounds, Corners, DispatchPhase, Element, ElementId, GlobalElementId, Hitbox, HitboxBehavior, Hsla,
-    InspectorElementId, IntoElement, LayoutId, MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels,
-    Refineable, Style, StyleRefinement, Styled, Window, fill, px,
+    App, Bounds, Corners, DispatchPhase, Element, ElementId, GlobalElementId, Hitbox,
+    HitboxBehavior, Hsla, InspectorElementId, IntoElement, LayoutId, MouseButton, MouseDownEvent,
+    MouseMoveEvent, MouseUpEvent, Pixels, Refineable, Style, StyleRefinement, Styled, Window, fill,
+    px,
 };
 
 use super::theme::{animations_enabled, ease_out, motion_fast};
@@ -37,8 +38,18 @@ pub struct HoverFill {
     radius: f32,
 }
 
-pub fn hover_fill(hover: impl Into<Hsla>, pressed: impl Into<Hsla>, rest_alpha: f32, radius: f32) -> HoverFill {
-    HoverFill { hover: hover.into(), pressed: pressed.into(), rest_alpha, radius }
+pub fn hover_fill(
+    hover: impl Into<Hsla>,
+    pressed: impl Into<Hsla>,
+    rest_alpha: f32,
+    radius: f32,
+) -> HoverFill {
+    HoverFill {
+        hover: hover.into(),
+        pressed: pressed.into(),
+        rest_alpha,
+        radius,
+    }
 }
 
 #[derive(Default)]
@@ -60,13 +71,20 @@ fn overlay(target: Hsla, rest_alpha: f32, amount: f32) -> Hsla {
     } else {
         target.a
     };
-    Hsla { a: a * amount, ..target }
+    Hsla {
+        a: a * amount,
+        ..target
+    }
 }
 
 /// `level`'ı `target`'a doğru `dt` kadar ilerletir (doğrusal, süre `motion_fast`).
 fn step(level: f32, target: f32, dt: Duration) -> f32 {
     let delta = dt.as_secs_f32() / motion_fast().as_secs_f32();
-    if level < target { (level + delta).min(target) } else { (level - delta).max(target) }
+    if level < target {
+        (level + delta).min(target)
+    } else {
+        (level - delta).max(target)
+    }
 }
 
 impl Element for HoverFill {
@@ -89,7 +107,13 @@ impl Element for HoverFill {
         cx: &mut App,
     ) -> (LayoutId, ()) {
         let mut style = Style::default();
-        style.refine(&StyleRefinement::default().absolute().top_0().left_0().size_full());
+        style.refine(
+            &StyleRefinement::default()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+        );
         (window.request_layout(style, [], cx), ())
     }
 
@@ -116,11 +140,14 @@ impl Element for HoverFill {
         _cx: &mut App,
     ) {
         // Ölçüm kancası: OPENIFY_PROF_HIDE="tween" katmanı hiç çizmez (A/B).
-        let Some(id) = id.filter(|_| !super::frames::hidden("tween")) else { return };
-        let state: Rc<RefCell<Level>> = window.with_element_state(id, |s: Option<Rc<RefCell<Level>>>, _| {
-            let s = s.unwrap_or_default();
-            (s.clone(), s)
-        });
+        let Some(id) = id.filter(|_| !super::frames::hidden("tween")) else {
+            return;
+        };
+        let state: Rc<RefCell<Level>> =
+            window.with_element_state(id, |s: Option<Rc<RefCell<Level>>>, _| {
+                let s = s.unwrap_or_default();
+                (s.clone(), s)
+            });
         let hovered = hitbox.is_hovered(window);
         let target = if hovered { 1. } else { 0. };
         let view = window.current_view();
@@ -136,7 +163,9 @@ impl Element for HoverFill {
                 s.at = None;
             } else if s.level != target {
                 // Saat durmuşsa (ilk kare) bir ekran karesi sayılır.
-                let dt = s.at.map(|t| now.duration_since(t)).unwrap_or(Duration::from_millis(8));
+                let dt =
+                    s.at.map(|t| now.duration_since(t))
+                        .unwrap_or(Duration::from_millis(8));
                 s.level = step(s.level, target, dt);
                 s.at = Some(now);
             } else {
@@ -148,7 +177,11 @@ impl Element for HoverFill {
             window.request_animation_frame();
         }
 
-        let color = if pressed { overlay(self.pressed, self.rest_alpha, 1.) } else { overlay(self.hover, self.rest_alpha, ease_out(level)) };
+        let color = if pressed {
+            overlay(self.pressed, self.rest_alpha, 1.)
+        } else {
+            overlay(self.hover, self.rest_alpha, ease_out(level))
+        };
         if color.a > 0.002 {
             let max = bounds.size.width.min(bounds.size.height) / 2.;
             let radius = px(self.radius).min(max);
@@ -170,7 +203,10 @@ impl Element for HoverFill {
         if hovered {
             let (hb, st) = (hitbox.clone(), state.clone());
             window.on_mouse_event(move |e: &MouseDownEvent, phase, window, cx| {
-                if phase == DispatchPhase::Capture && e.button == MouseButton::Left && hb.is_hovered(window) {
+                if phase == DispatchPhase::Capture
+                    && e.button == MouseButton::Left
+                    && hb.is_hovered(window)
+                {
                     st.borrow_mut().pressed = true;
                     cx.notify(view);
                 }
@@ -179,7 +215,10 @@ impl Element for HoverFill {
         if hovered || state.borrow().pressed {
             let st = state;
             window.on_mouse_event(move |e: &MouseUpEvent, phase, _, cx| {
-                if phase == DispatchPhase::Capture && e.button == MouseButton::Left && st.borrow().pressed {
+                if phase == DispatchPhase::Capture
+                    && e.button == MouseButton::Left
+                    && st.borrow().pressed
+                {
                     st.borrow_mut().pressed = false;
                     cx.notify(view);
                 }

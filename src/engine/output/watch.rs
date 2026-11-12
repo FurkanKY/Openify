@@ -20,10 +20,14 @@ mod imp {
         Win32::{
             Foundation::PROPERTYKEY,
             Media::Audio::{
-                DEVICE_STATE, DEVICE_STATE_ACTIVE, EDataFlow, ERole, IMMDeviceEnumerator, IMMNotificationClient,
-                IMMNotificationClient_Impl, MMDeviceEnumerator, eConsole, eRender,
+                DEVICE_STATE, DEVICE_STATE_ACTIVE, EDataFlow, ERole, IMMDeviceEnumerator,
+                IMMNotificationClient, IMMNotificationClient_Impl, MMDeviceEnumerator, eConsole,
+                eRender,
             },
-            System::Com::{CLSCTX_ALL, COINIT_APARTMENTTHREADED, COINIT_MULTITHREADED, CoCreateInstance, CoInitializeEx, CoTaskMemFree},
+            System::Com::{
+                CLSCTX_ALL, COINIT_APARTMENTTHREADED, COINIT_MULTITHREADED, CoCreateInstance,
+                CoInitializeEx, CoTaskMemFree,
+            },
         },
         core::{PCWSTR, Result, implement},
     };
@@ -62,7 +66,8 @@ mod imp {
         // SAFETY: bu iş parçacığına ait COM ilklemesi; kayıt ömür boyu sürer.
         unsafe {
             CoInitializeEx(None, COINIT_MULTITHREADED).ok()?;
-            let enumerator: IMMDeviceEnumerator = CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
+            let enumerator: IMMDeviceEnumerator =
+                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)?;
             let client: IMMNotificationClient = Client.into();
             enumerator.RegisterEndpointNotificationCallback(&client)?;
             // Bildirimler COM'un iş parçacıklarından gelir; burası yalnız
@@ -113,7 +118,11 @@ mod imp {
         let e = enumerator()?;
         // SAFETY: dönen dize COM belleğinde; kopyalanıp bırakılır.
         unsafe {
-            let id = e.GetDefaultAudioEndpoint(eRender, eConsole).ok()?.GetId().ok()?;
+            let id = e
+                .GetDefaultAudioEndpoint(eRender, eConsole)
+                .ok()?
+                .GetId()
+                .ok()?;
             let s = id.to_string().ok();
             CoTaskMemFree(Some(id.0 as *const _));
             s

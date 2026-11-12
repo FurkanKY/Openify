@@ -18,8 +18,8 @@
 use std::{cell::Cell, rc::Rc, sync::Arc};
 
 use gpui::{
-    AnyElement, Bounds, ClickEvent, Context, ElementId, FontWeight, KeyDownEvent, MouseButton, MouseDownEvent, Pixels, Point,
-    SharedString, Window, canvas, div, prelude::*, px, rgb,
+    AnyElement, Bounds, ClickEvent, Context, ElementId, FontWeight, KeyDownEvent, MouseButton,
+    MouseDownEvent, Pixels, Point, SharedString, Window, canvas, div, prelude::*, px, rgb,
 };
 
 use super::{
@@ -54,7 +54,9 @@ const PAGE_STEP_DB: f32 = 3.0;
 /// Sürgü dizisinde ön kazancın sırası (bantlardan sonra).
 const PRE: usize = BANDS;
 /// Bant etiketleri (Hz; "k" = bin).
-const LABELS: [&str; BANDS] = ["32", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
+const LABELS: [&str; BANDS] = [
+    "32", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k",
+];
 
 /// Profil verisinin durumu.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -126,7 +128,11 @@ pub fn format_db(v: f32) -> String {
     }
     let sign = if v > 0.0 { '+' } else { '−' };
     let a = v.abs();
-    let body = if (a - a.round()).abs() < 0.001 { format!("{a:.0}") } else { format!("{a:.1}") };
+    let body = if (a - a.round()).abs() < 0.001 {
+        format!("{a:.0}")
+    } else {
+        format!("{a:.1}")
+    };
     crate::i18n::localize_decimal(&format!("{sign}{body}"))
 }
 
@@ -143,7 +149,11 @@ impl Shell {
     /// Motora güncel ekolayzer ayarını yollar (beklemez; motor tutar ve çıkışa verir).
     pub(super) fn eq_send(&self) {
         let s = self.prefs.eq_setting();
-        self.engine.send(Command::SetEq { enabled: s.enabled, gains_db: s.gains_db, preamp_db: s.preamp_db });
+        self.engine.send(Command::SetEq {
+            enabled: s.enabled,
+            gains_db: s.gains_db,
+            preamp_db: s.preamp_db,
+        });
     }
 
     /// Ayarlar'dan çıkıldı (bkz. `pages::navigate`).
@@ -157,7 +167,9 @@ impl Shell {
         if !crate::crash::is_test_run() {
             return;
         }
-        let Ok(spec) = std::env::var("OPENIFY_TEST_EQ") else { return };
+        let Ok(spec) = std::env::var("OPENIFY_TEST_EQ") else {
+            return;
+        };
         for part in spec.split(';') {
             match part.split_once('=') {
                 Some(("search", q)) => {
@@ -177,7 +189,11 @@ impl Shell {
         let v = equalizer::snap_db(v);
         let p = &mut self.prefs;
         p.eq_gains.resize(BANDS, 0.0);
-        let old = if i < BANDS { p.eq_gains[i] } else { p.eq_preamp };
+        let old = if i < BANDS {
+            p.eq_gains[i]
+        } else {
+            p.eq_preamp
+        };
         if (old - v).abs() < 0.001 {
             return false;
         }
@@ -195,7 +211,9 @@ impl Shell {
 
     /// Sürükleme: fare konumuna göre değer.
     pub(super) fn eq_drag_to(&mut self, i: usize, position: Point<Pixels>, cx: &mut Context<Self>) {
-        let Some(b) = self.sui.eq.bounds.get(i).and_then(|c| c.get()) else { return };
+        let Some(b) = self.sui.eq.bounds.get(i).and_then(|c| c.get()) else {
+            return;
+        };
         let v = value_at(b, position.y);
         self.eq_set(i, v, cx);
     }
@@ -206,11 +224,18 @@ impl Shell {
     }
 
     /// Klavye ve yazı: odaktaki sürgü ya da arama kutusu. `true`: tuş işlendi.
-    pub(super) fn eq_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn eq_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if !matches!(self.pages.history.current(), Route::Settings) {
             return false;
         }
-        let Some((focus, _)) = self.nav.extra_focused(window) else { return false };
+        let Some((focus, _)) = self.nav.extra_focused(window) else {
+            return false;
+        };
         let ks = &event.keystroke;
         if ks.modifiers.alt || ks.modifiers.platform {
             return false;
@@ -225,12 +250,20 @@ impl Shell {
         }
         let slot = if focus == "eq:pre" {
             PRE
-        } else if let Some(i) = focus.strip_prefix("eq:band:").and_then(|n| n.parse::<usize>().ok()).filter(|i| *i < BANDS) {
+        } else if let Some(i) = focus
+            .strip_prefix("eq:band:")
+            .and_then(|n| n.parse::<usize>().ok())
+            .filter(|i| *i < BANDS)
+        {
             i
         } else {
             return false;
         };
-        let now = if slot < BANDS { self.prefs.eq_gains.get(slot).copied().unwrap_or(0.0) } else { self.prefs.eq_preamp };
+        let now = if slot < BANDS {
+            self.prefs.eq_gains.get(slot).copied().unwrap_or(0.0)
+        } else {
+            self.prefs.eq_preamp
+        };
         let target = match key {
             "up" => now + STEP_DB,
             "down" => now - STEP_DB,
@@ -287,7 +320,10 @@ impl Shell {
                     }
                     self.sui.eq.query.clear();
                 }
-                "down" => self.sui.eq.cursor = (self.sui.eq.cursor + 1).min(self.sui.eq.hits.len().saturating_sub(1)),
+                "down" => {
+                    self.sui.eq.cursor =
+                        (self.sui.eq.cursor + 1).min(self.sui.eq.hits.len().saturating_sub(1))
+                }
                 "up" => self.sui.eq.cursor = self.sui.eq.cursor.saturating_sub(1),
                 "enter" => {
                     if let Some(hit) = self.sui.eq.hits.get(self.sui.eq.cursor).copied() {
@@ -295,7 +331,11 @@ impl Shell {
                     }
                 }
                 "tab" => return false,
-                _ => match ks.key_char.as_deref().filter(|c| !c.is_empty() && !c.chars().any(char::is_control)) {
+                _ => match ks
+                    .key_char
+                    .as_deref()
+                    .filter(|c| !c.is_empty() && !c.chars().any(char::is_control))
+                {
                     Some(ch) => self.sui.eq.query.push_str(ch),
                     None => return false,
                 },
@@ -364,7 +404,9 @@ impl Shell {
                     }
                 }
             }
-            Msg::Failed(e) if e == epoch && self.sui.eq.catalog.is_none() => self.sui.eq.load = Load::Failed,
+            Msg::Failed(e) if e == epoch && self.sui.eq.catalog.is_none() => {
+                self.sui.eq.load = Load::Failed
+            }
             _ => {}
         }
         cx.notify();
@@ -372,9 +414,15 @@ impl Shell {
 
     /// Bir profili seç: 10 banda uydurulur, ekolayzer açılır, ayar yazılır.
     fn eq_pick(&mut self, hit: Hit, cx: &mut Context<Self>) {
-        let Some(catalog) = self.sui.eq.catalog.clone() else { return };
-        let Some(product) = catalog.products.get(hit.product) else { return };
-        let Some(profile) = product.profiles.get(hit.profile) else { return };
+        let Some(catalog) = self.sui.eq.catalog.clone() else {
+            return;
+        };
+        let Some(product) = catalog.products.get(hit.product) else {
+            return;
+        };
+        let Some(profile) = product.profiles.get(hit.profile) else {
+            return;
+        };
         let fit = equalizer::fit(&profile.bands);
         self.prefs.eq_gains = fit.gains_db.to_vec();
         self.prefs.eq_enabled = true;
@@ -412,9 +460,20 @@ impl Shell {
 
 impl Shell {
     /// Bir dikey sürgü sütunu: değer yazısı, sürgü, etiket. `slot`: 0..10 bant, 10 ön kazanç.
-    fn eq_slider(&self, slot: usize, value: f32, label: &'static str, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn eq_slider(
+        &self,
+        slot: usize,
+        value: f32,
+        label: &'static str,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
-        let key = if slot == PRE { "eq:pre".to_string() } else { format!("eq:band:{slot}") };
+        let key = if slot == PRE {
+            "eq:pre".to_string()
+        } else {
+            format!("eq:band:{slot}")
+        };
         let (stop, look) = self.stop_look(key, super::tab::PAGE, true, window, cx);
         let focused = look == Look::Focus;
         let on = self.prefs.eq_enabled;
@@ -424,8 +483,16 @@ impl Shell {
         let travel = TRACK_H - THUMB;
         let center = THUMB / 2. + travel / 2.;
         let thumb_y = THUMB / 2. + travel * (1. - (value + RANGE_DB) / (2. * RANGE_DB));
-        let (fill_top, fill_h) = if value >= 0. { (thumb_y, center - thumb_y) } else { (center, thumb_y - center) };
-        let fill_color = if on { rgb(accent) } else { rgb(mix(TEXT, BG, 0.62)) };
+        let (fill_top, fill_h) = if value >= 0. {
+            (thumb_y, center - thumb_y)
+        } else {
+            (center, thumb_y - center)
+        };
+        let fill_color = if on {
+            rgb(accent)
+        } else {
+            rgb(mix(TEXT, BG, 0.62))
+        };
         let value_color = if focused {
             rgb(accent)
         } else if value == 0. {
@@ -441,7 +508,9 @@ impl Shell {
             .h(px(TRACK_H))
             .flex_none()
             .cursor_pointer()
-            .when_some(stop.clone(), |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+            .when_some(stop.clone(), |el, h| {
+                el.child(self.focus_probe(&h)).track_focus(&h)
+            })
             .on_mouse_down(
                 MouseButton::Left,
                 cx.listener(move |this, ev: &MouseDownEvent, window, cx| {
@@ -458,7 +527,13 @@ impl Shell {
                     this.eq_drag_to(slot, ev.position, cx);
                 }),
             )
-            .child(canvas(move |b, _, _| bounds.set(Some(b)), |_, _, _, _| {}).absolute().top_0().left_0().size_full())
+            .child(
+                canvas(move |b, _, _| bounds.set(Some(b)), |_, _, _, _| {})
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full(),
+            )
             // Oluk.
             .child(
                 div()
@@ -472,7 +547,13 @@ impl Shell {
             )
             // Sıfır çizgisi.
             .child(
-                div().absolute().left(px((HIT_W - 12.) / 2.)).top(px(center)).w(px(12.)).h(px(1.)).bg(veil(LINE_HOVER)),
+                div()
+                    .absolute()
+                    .left(px((HIT_W - 12.) / 2.))
+                    .top(px(center))
+                    .w(px(12.))
+                    .h(px(1.))
+                    .bg(veil(LINE_HOVER)),
             )
             // Sıfırdan değere dolgu.
             .child(
@@ -515,7 +596,13 @@ impl Shell {
                     .child(format_db(value)),
             )
             .child(track)
-            .child(div().type_role(T_LABEL).tabular().text_color(muted()).child(label))
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .tabular()
+                    .text_color(muted())
+                    .child(label),
+            )
             .into_any_element()
     }
 
@@ -526,15 +613,36 @@ impl Shell {
             g.resize(BANDS, 0.0);
             g
         };
-        let mut row = div().flex().items_start().gap(px(S1)).opacity(if self.prefs.eq_enabled { 1. } else { 0.62 });
+        let mut row = div()
+            .flex()
+            .items_start()
+            .gap(px(S1))
+            .opacity(if self.prefs.eq_enabled { 1. } else { 0.62 });
+        row = row.child(div().w(px(S8)).flex_none().flex().child(self.eq_slider(
+            PRE,
+            self.prefs.eq_preamp,
+            t!(EqPreamp),
+            window,
+            cx,
+        )));
         row = row.child(
-            div().w(px(S8)).flex_none().flex().child(self.eq_slider(PRE, self.prefs.eq_preamp, t!(EqPreamp), window, cx)),
+            div()
+                .w(px(1.))
+                .h(px(TRACK_H))
+                .mt(px(S5))
+                .flex_none()
+                .bg(veil(LINE))
+                .mx(px(S1)),
         );
-        row = row.child(div().w(px(1.)).h(px(TRACK_H)).mt(px(S5)).flex_none().bg(veil(LINE)).mx(px(S1)));
         for (i, gain) in gains.iter().enumerate() {
             row = row.child(self.eq_slider(i, *gain, LABELS[i], window, cx));
         }
-        div().py(px(S3)).border_t_1().border_color(veil(LINE)).child(row).into_any_element()
+        div()
+            .py(px(S3))
+            .border_t_1()
+            .border_color(veil(LINE))
+            .child(row)
+            .into_any_element()
     }
 
     /// Arama kutusu: Tab durağı, yazı `eq_key`'te.
@@ -557,17 +665,23 @@ impl Shell {
             .gap(px(S2))
             .bg(shade(SHADE_INPUT))
             .border_1()
-            .border_color(if focused { rgb(accent) } else { veil(LINE_INPUT) })
+            .border_color(if focused {
+                rgb(accent)
+            } else {
+                veil(LINE_INPUT)
+            })
             .type_role(T_SECONDARY)
             .text_color(text())
             .when_some(stop, |el, h| {
                 let click = h.clone();
-                el.child(self.focus_probe(&h)).track_focus(&h).on_click(cx.listener(move |this, _, window, cx| {
-                    window.focus(&click);
-                    this.keyboard_focus = true;
-                    this.eq_ensure_catalog(cx);
-                    cx.notify();
-                }))
+                el.child(self.focus_probe(&h))
+                    .track_focus(&h)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        window.focus(&click);
+                        this.keyboard_focus = true;
+                        this.eq_ensure_catalog(cx);
+                        cx.notify();
+                    }))
             })
             .child(icon("search", 14., muted()))
             .child(
@@ -575,11 +689,14 @@ impl Shell {
                     .flex_1()
                     .min_w_0()
                     .flex()
-                    .when(empty, |el| el.text_color(label_color()).child(t!(EqSearchPlaceholder)))
+                    .when(empty, |el| {
+                        el.text_color(label_color()).child(t!(EqSearchPlaceholder))
+                    })
                     .when(!empty, |el| {
-                        el.child(line_with_tip("eq-search-text", query).flex().min_w_0()).child(div().when(focused, |el| {
-                            el.ml(px(S0)).w(px(S0)).h(px(S4)).bg(rgb(accent))
-                        }))
+                        el.child(line_with_tip("eq-search-text", query).flex().min_w_0())
+                            .child(div().when(focused, |el| {
+                                el.ml(px(S0)).w(px(S0)).h(px(S4)).bg(rgb(accent))
+                            }))
                     }),
             )
             .into_any_element()
@@ -590,7 +707,12 @@ impl Shell {
         let eq = &self.sui.eq;
         let accent = self.accent().text;
         let note = |text: SharedString| {
-            div().pt(px(S2)).type_role(T_SECONDARY).text_color(label_color()).child(text).into_any_element()
+            div()
+                .pt(px(S2))
+                .type_role(T_SECONDARY)
+                .text_color(label_color())
+                .child(text)
+                .into_any_element()
         };
         if eq.load == Load::Failed {
             let (stop, look) = self.stop_look("eq:retry", super::tab::PAGE, true, window, cx);
@@ -609,7 +731,12 @@ impl Shell {
                     .items_center()
                     .gap(px(S3))
                     .flex_wrap()
-                    .child(div().type_role(T_SECONDARY).text_color(label_color()).child(t!(EqSearchFailed)))
+                    .child(
+                        div()
+                            .type_role(T_SECONDARY)
+                            .text_color(label_color())
+                            .child(t!(EqSearchFailed)),
+                    )
                     .child(retry)
                     .into_any_element(),
             );
@@ -623,7 +750,10 @@ impl Shell {
         if eq.hits.is_empty() {
             return Some(note(tf!(EqSearchNone, eq.query.trim()).into()));
         }
-        let search_focused = self.nav.extra_focused(window).is_some_and(|(k, _)| k == "eq:search");
+        let search_focused = self
+            .nav
+            .extra_focused(window)
+            .is_some_and(|(k, _)| k == "eq:search");
         let mut list = div()
             .mt(px(S2))
             .p(px(S1))
@@ -634,9 +764,18 @@ impl Shell {
             .flex()
             .flex_col();
         for (i, hit) in eq.hits.iter().enumerate() {
-            let Some(product) = catalog.products.get(hit.product) else { continue };
-            let Some(profile) = product.profiles.get(hit.profile) else { continue };
-            let sub = [profile.author.as_str(), profile.details.as_str()].iter().filter(|s| !s.is_empty()).cloned().collect::<Vec<_>>().join(" · ");
+            let Some(product) = catalog.products.get(hit.product) else {
+                continue;
+            };
+            let Some(profile) = product.profiles.get(hit.profile) else {
+                continue;
+            };
+            let sub = [profile.author.as_str(), profile.details.as_str()]
+                .iter()
+                .filter(|s| !s.is_empty())
+                .cloned()
+                .collect::<Vec<_>>()
+                .join(" · ");
             let hit = *hit;
             let selected = search_focused && i == eq.cursor;
             list = list.child(
@@ -652,7 +791,12 @@ impl Shell {
                     .justify_center()
                     .cursor_pointer()
                     .when(selected, |el| el.bg(veil(VEIL_HOVER)))
-                    .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+                    .child(super::tween::hover_fill(
+                        veil(VEIL_HOVER),
+                        veil(VEIL_PRESSED),
+                        0.,
+                        R_MD,
+                    ))
                     .on_click(cx.listener(move |this, _, _, cx| this.eq_pick(hit, cx)))
                     .child(
                         div()
@@ -660,7 +804,11 @@ impl Shell {
                             .type_role(T_BODY)
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(text())
-                            .child(line_with_tip(("eq-hit-title", i), product.title()).flex().min_w_0()),
+                            .child(
+                                line_with_tip(("eq-hit-title", i), product.title())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
                     .child(
                         div()
@@ -679,15 +827,27 @@ impl Shell {
     }
 
     /// Seçili profil: ad, atıf satırı (CC BY-SA), yaklaştırma sapması, kaldır.
-    fn eq_selected(&self, profile: &EqProfile, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn eq_selected(
+        &self,
+        profile: &EqProfile,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
         let (stop, look) = self.stop_look("eq:profile-clear", super::tab::PAGE, true, window, cx);
-        let remove = ghost_button("eq-profile-clear", "x", t!(EqProfileRemove), false, look, accent)
-            .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-            .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
-                this.leave_button(ev, window);
-                this.eq_clear_profile(cx)
-            }));
+        let remove = ghost_button(
+            "eq-profile-clear",
+            "x",
+            t!(EqProfileRemove),
+            false,
+            look,
+            accent,
+        )
+        .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+        .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
+            this.leave_button(ev, window);
+            this.eq_clear_profile(cx)
+        }));
         let credit = div()
             .flex()
             .flex_wrap()
@@ -711,13 +871,24 @@ impl Shell {
                     })),
             );
         let details = (!profile.details.is_empty()).then(|| {
-            div().flex().type_role(T_SECONDARY).text_color(label_color()).child(line_with_tip("eq-profile-details", profile.details.clone()).flex().min_w_0())
+            div()
+                .flex()
+                .type_role(T_SECONDARY)
+                .text_color(label_color())
+                .child(
+                    line_with_tip("eq-profile-details", profile.details.clone())
+                        .flex()
+                        .min_w_0(),
+                )
         });
         let deviation = (profile.deviation_db > 0.0).then(|| {
-            div().type_role(T_SECONDARY).text_color(label_color()).child(tf!(
-                EqProfileFit,
-                crate::i18n::localize_decimal(&format!("{:.1}", profile.deviation_db))
-            ))
+            div()
+                .type_role(T_SECONDARY)
+                .text_color(label_color())
+                .child(tf!(
+                    EqProfileFit,
+                    crate::i18n::localize_decimal(&format!("{:.1}", profile.deviation_db))
+                ))
         });
         div()
             .mt(px(S3))
@@ -742,7 +913,11 @@ impl Shell {
                             .type_role(T_BODY)
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_color(text())
-                            .child(line_with_tip("eq-profile-name", profile.name.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip("eq-profile-name", profile.name.clone())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
                     .child(credit)
                     .children(details)
@@ -756,7 +931,13 @@ impl Shell {
     pub(super) fn eq_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
         let p = &self.prefs;
-        let on = self.switch_control("eq-enabled", p.eq_enabled, |p, v| p.eq_enabled = v, window, cx);
+        let on = self.switch_control(
+            "eq-enabled",
+            p.eq_enabled,
+            |p, v| p.eq_enabled = v,
+            window,
+            cx,
+        );
 
         // Hazır ayarlar + Sıfırla.
         let current = if p.eq_profile.is_some() {
@@ -784,9 +965,12 @@ impl Shell {
             window,
             cx,
         );
-        let (reset_stop, reset_look) = self.stop_look("eq:reset", super::tab::PAGE, true, window, cx);
+        let (reset_stop, reset_look) =
+            self.stop_look("eq:reset", super::tab::PAGE, true, window, cx);
         let reset = secondary_button("eq-reset", "refresh-cw", t!(EqReset), reset_look, accent)
-            .when_some(reset_stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+            .when_some(reset_stop, |el, h| {
+                el.child(self.focus_probe(&h)).track_focus(&h)
+            })
             .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
                 this.leave_button(ev, window);
                 this.eq_reset(cx)
@@ -805,15 +989,24 @@ impl Shell {
             .into_any_element();
 
         // Kulaklık profili: açıklama + arama; altında sonuçlar ve seçili profil.
-        let mut profile_block = div().py(px(S3)).border_t_1().border_color(veil(LINE)).flex().flex_col().child(
-            div()
-                .flex()
-                .items_center()
-                .gap(px(S5))
-                .flex_wrap()
-                .child(row_text(t!(EqHeadphoneTitle), t!(EqHeadphoneDesc), None).min_w(px(S8 * 3.)))
-                .child(self.eq_search_field(window, cx)),
-        );
+        let mut profile_block = div()
+            .py(px(S3))
+            .border_t_1()
+            .border_color(veil(LINE))
+            .flex()
+            .flex_col()
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(S5))
+                    .flex_wrap()
+                    .child(
+                        row_text(t!(EqHeadphoneTitle), t!(EqHeadphoneDesc), None)
+                            .min_w(px(S8 * 3.)),
+                    )
+                    .child(self.eq_search_field(window, cx)),
+            );
         if let Some(results) = self.eq_results(window, cx) {
             profile_block = profile_block.child(results);
         }
@@ -821,7 +1014,11 @@ impl Shell {
             profile_block = profile_block.child(self.eq_selected(profile, window, cx));
         }
         profile_block = profile_block.child(
-            div().pt(px(S3)).type_role(T_LABEL).text_color(label_color()).child(t!(EqOpraBlurb)),
+            div()
+                .pt(px(S3))
+                .type_role(T_LABEL)
+                .text_color(label_color())
+                .child(t!(EqOpraBlurb)),
         );
 
         self.settings_section(
@@ -864,7 +1061,10 @@ mod tests {
     #[test]
     fn slider_position_maps_to_a_snapped_value() {
         use gpui::{point, size};
-        let b = Bounds { origin: point(px(0.), px(100.)), size: size(px(HIT_W), px(TRACK_H)) };
+        let b = Bounds {
+            origin: point(px(0.), px(100.)),
+            size: size(px(HIT_W), px(TRACK_H)),
+        };
         let at = |y: f32| value_at(b, px(y));
         assert_eq!(at(100. + THUMB / 2.), RANGE_DB);
         assert_eq!(at(100. + TRACK_H - THUMB / 2.), -RANGE_DB);
@@ -873,7 +1073,10 @@ mod tests {
         assert_eq!(at(1000.), -RANGE_DB, "altın dışı");
         for y in 100..250 {
             let v = at(y as f32);
-            assert!(((v / STEP_DB).round() * STEP_DB - v).abs() < 1e-6, "{y}: {v}");
+            assert!(
+                ((v / STEP_DB).round() * STEP_DB - v).abs() < 1e-6,
+                "{y}: {v}"
+            );
         }
     }
 

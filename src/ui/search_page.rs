@@ -9,7 +9,9 @@
 //! Podcast, bölüm ve profil için uygulamada sayfa yok: kart tıklanınca
 //! Spotify'ın web sayfası (`open.spotify.com`) açılır ("Spotify'da aç").
 
-use gpui::{AnyElement, Context, Div, ElementId, FontWeight, SharedString, Window, div, prelude::*, px};
+use gpui::{
+    AnyElement, Context, Div, ElementId, FontWeight, SharedString, Window, div, prelude::*, px,
+};
 
 use super::{
     Shell,
@@ -127,7 +129,10 @@ impl SearchKind {
             (Section::Episodes, r.episodes.len()),
             (Section::Profiles, r.profiles.len()),
         ];
-        lens.into_iter().filter(|(s, _)| self.show(*s) != Show::Hidden).map(|(_, n)| n).sum()
+        lens.into_iter()
+            .filter(|(s, _)| self.show(*s) != Show::Hidden)
+            .map(|(_, n)| n)
+            .sum()
     }
 
     /// Bölümlerin başlığı görünsün mü (birden çok bölüm varken)?
@@ -154,7 +159,11 @@ pub fn podcast_cards(hits: &[SearchHit]) -> Vec<ExtCard> {
         .map(|h| ExtCard {
             uri: h.uri.clone(),
             title: h.name.clone(),
-            subtitle: if h.subtitle.is_empty() { t!(SearchKindPodcast).into() } else { h.subtitle.clone() },
+            subtitle: if h.subtitle.is_empty() {
+                t!(SearchKindPodcast).into()
+            } else {
+                h.subtitle.clone()
+            },
             image: h.image.clone(),
             round: false,
             icon: "mic-vocal",
@@ -168,7 +177,11 @@ pub fn episode_cards(hits: &[SearchHit]) -> Vec<ExtCard> {
         .map(|h| ExtCard {
             uri: h.uri.clone(),
             title: h.name.clone(),
-            subtitle: if h.subtitle.is_empty() { t!(SearchKindEpisode).into() } else { h.subtitle.clone() },
+            subtitle: if h.subtitle.is_empty() {
+                t!(SearchKindEpisode).into()
+            } else {
+                h.subtitle.clone()
+            },
             image: h.image.clone(),
             round: false,
             icon: "mic-vocal",
@@ -203,7 +216,10 @@ pub fn web_url(uri: &str) -> Option<String> {
     if parts.next().is_some() || id.is_empty() {
         return None;
     }
-    if !matches!(kind, "show" | "episode" | "user" | "artist" | "album" | "playlist" | "track") {
+    if !matches!(
+        kind,
+        "show" | "episode" | "user" | "artist" | "album" | "playlist" | "track"
+    ) {
         return None;
     }
     let mut url = format!("https://open.spotify.com/{kind}/");
@@ -219,16 +235,39 @@ pub fn web_url(uri: &str) -> Option<String> {
 
 impl Shell {
     /// Çip sırası: sayfa başlığının altında, sola hizalı, dar pencerede alta sarar.
-    pub(super) fn search_chips(&self, kind: SearchKind, window: &Window, cx: &mut Context<Self>) -> Div {
+    pub(super) fn search_chips(
+        &self,
+        kind: SearchKind,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Div {
         let accent = self.accent().text;
-        let mut row = div().px(px(self.margin())).pb(px(S5)).flex().flex_wrap().items_center().gap(px(S2));
+        let mut row = div()
+            .px(px(self.margin()))
+            .pb(px(S5))
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .gap(px(S2));
         for k in SearchKind::ALL {
             // ← / → aynı grupta gezer (`seg:` anahtarı).
-            let (stop, look) = self.stop_look(format!("seg:search:{}", k.id()), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("seg:search:{}", k.id()),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             row = row.child(
-                chip(ElementId::Name(format!("search-kind-{}", k.id()).into()), k.label(), kind == k, look, accent)
-                    .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                    .on_click(cx.listener(move |this, _, _, cx| this.set_search_kind(k, cx))),
+                chip(
+                    ElementId::Name(format!("search-kind-{}", k.id()).into()),
+                    k.label(),
+                    kind == k,
+                    look,
+                    accent,
+                )
+                .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| this.set_search_kind(k, cx))),
             );
         }
         row
@@ -281,7 +320,12 @@ impl Shell {
 
     fn grid_of(&self, cards: Vec<AnyElement>) -> Div {
         let (cols, _) = self.grid();
-        let mut grid = div().px(px(self.margin())).pb(px(S6)).flex().flex_col().gap(px(S5));
+        let mut grid = div()
+            .px(px(self.margin()))
+            .pb(px(S6))
+            .flex()
+            .flex_col()
+            .gap(px(S5));
         let mut line = div().flex().gap(px(CARD_GAP));
         let mut n = 0;
         for card in cards {
@@ -313,12 +357,21 @@ impl Shell {
         }
         let (cols, width) = self.grid();
         let expanded = show == Show::Full || self.pages.expanded.contains(&key);
-        let shown = if expanded { cards.len() } else { cards.len().min(cols) };
-        let built: Vec<AnyElement> = cards[..shown].iter().map(|c| self.ext_card(c, width, cx)).collect();
+        let shown = if expanded {
+            cards.len()
+        } else {
+            cards.len().min(cols)
+        };
+        let built: Vec<AnyElement> = cards[..shown]
+            .iter()
+            .map(|c| self.ext_card(c, width, cx))
+            .collect();
         let toggle = show == Show::Few && cards.len() > cols;
         Some(
             div()
-                .when_some(title, |el, t| el.child(self.section_title(&key, t, toggle, cx)))
+                .when_some(title, |el, t| {
+                    el.child(self.section_title(&key, t, toggle, cx))
+                })
                 .child(self.grid_of(built))
                 .into_any_element(),
         )
@@ -343,9 +396,21 @@ impl Shell {
                 div()
                     .relative()
                     .size(px(width))
-                    .child(cover_image(&self.images, &card.image, &card.title, width, radius, card.icon))
+                    .child(cover_image(
+                        &self.images,
+                        &card.image,
+                        &card.title,
+                        width,
+                        radius,
+                        card.icon,
+                    ))
                     // Kapağın üstünde ton katmanı, 140 ms geçişle (`tween`).
-                    .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., radius)),
+                    .child(super::tween::hover_fill(
+                        veil(VEIL_HOVER),
+                        veil(VEIL_PRESSED),
+                        0.,
+                        radius,
+                    )),
             )
             .child(
                 div()
@@ -358,14 +423,28 @@ impl Shell {
                             .type_role(T_BODY)
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(text())
-                            .child(line_with_tip(ElementId::Name(format!("ct-{id}").into()), card.title.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip(
+                                    ElementId::Name(format!("ct-{id}").into()),
+                                    card.title.clone(),
+                                )
+                                .flex()
+                                .min_w_0(),
+                            ),
                     )
                     .child(
                         div()
                             .flex()
                             .type_role(T_SECONDARY)
                             .text_color(muted())
-                            .child(line_with_tip(ElementId::Name(format!("cs-{id}").into()), SharedString::from(card.subtitle.clone())).flex().min_w_0()),
+                            .child(
+                                line_with_tip(
+                                    ElementId::Name(format!("cs-{id}").into()),
+                                    SharedString::from(card.subtitle.clone()),
+                                )
+                                .flex()
+                                .min_w_0(),
+                            ),
                     ),
             )
             .into_any_element()
@@ -389,7 +468,8 @@ mod tests {
     use crate::i18n::{Lang, with_lang};
 
     fn fixture() -> SearchResults {
-        crate::engine::search_from_json(include_str!("../engine/fixtures/search_desktop.json")).unwrap()
+        crate::engine::search_from_json(include_str!("../engine/fixtures/search_desktop.json"))
+            .unwrap()
     }
 
     #[test]
@@ -403,7 +483,14 @@ mod tests {
 
     #[test]
     fn all_shows_a_row_of_each_kind_but_not_episodes() {
-        for section in [Section::Songs, Section::Artists, Section::Albums, Section::Playlists, Section::Podcasts, Section::Profiles] {
+        for section in [
+            Section::Songs,
+            Section::Artists,
+            Section::Albums,
+            Section::Playlists,
+            Section::Podcasts,
+            Section::Profiles,
+        ] {
             assert_eq!(SearchKind::All.show(section), Show::Few, "{section:?}");
         }
         assert_eq!(SearchKind::All.show(Section::Episodes), Show::Hidden);
@@ -412,7 +499,9 @@ mod tests {
     #[test]
     fn each_chip_opens_only_its_own_kind_in_full() {
         use Section::*;
-        let sections = [Songs, Artists, Albums, Playlists, Podcasts, Episodes, Profiles];
+        let sections = [
+            Songs, Artists, Albums, Playlists, Podcasts, Episodes, Profiles,
+        ];
         let want = [
             (SearchKind::Songs, vec![Songs]),
             (SearchKind::Artists, vec![Artists]),
@@ -423,7 +512,11 @@ mod tests {
         ];
         for (kind, full) in want {
             for s in sections {
-                let expected = if full.contains(&s) { Show::Full } else { Show::Hidden };
+                let expected = if full.contains(&s) {
+                    Show::Full
+                } else {
+                    Show::Hidden
+                };
                 assert_eq!(kind.show(s), expected, "{kind:?} / {s:?}");
             }
         }
@@ -458,7 +551,10 @@ mod tests {
             assert_eq!(shows[0].subtitle, "Sakin Yayınlar");
             assert_eq!(shows[1].subtitle, "Podcast", "yayıncı yoksa tür adı");
             let people = profile_cards(&r.profiles);
-            assert!(people.iter().all(|c| c.round && c.subtitle == "Profile"), "profiller yuvarlak");
+            assert!(
+                people.iter().all(|c| c.round && c.subtitle == "Profile"),
+                "profiller yuvarlak"
+            );
             let eps = episode_cards(&r.episodes);
             assert_eq!(eps[0].subtitle, "Yavaş Sabah · 2024");
         });
@@ -469,12 +565,27 @@ mod tests {
 
     #[test]
     fn web_urls_are_built_from_spotify_uris() {
-        assert_eq!(web_url("spotify:show:4rOoJ6Egrf8K2IrywzwOMk").as_deref(), Some("https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk"));
-        assert_eq!(web_url("spotify:episode:abc").as_deref(), Some("https://open.spotify.com/episode/abc"));
-        assert_eq!(web_url("spotify:user:selin.k").as_deref(), Some("https://open.spotify.com/user/selin.k"));
+        assert_eq!(
+            web_url("spotify:show:4rOoJ6Egrf8K2IrywzwOMk").as_deref(),
+            Some("https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk")
+        );
+        assert_eq!(
+            web_url("spotify:episode:abc").as_deref(),
+            Some("https://open.spotify.com/episode/abc")
+        );
+        assert_eq!(
+            web_url("spotify:user:selin.k").as_deref(),
+            Some("https://open.spotify.com/user/selin.k")
+        );
         // Kimlikteki özel karakterler yüzde-kodlanır, komut satırına sızmaz.
-        assert_eq!(web_url("spotify:user:a b&c").as_deref(), Some("https://open.spotify.com/user/a%20b%26c"));
-        assert_eq!(web_url("spotify:user:ş").as_deref(), Some("https://open.spotify.com/user/%C5%9F"));
+        assert_eq!(
+            web_url("spotify:user:a b&c").as_deref(),
+            Some("https://open.spotify.com/user/a%20b%26c")
+        );
+        assert_eq!(
+            web_url("spotify:user:ş").as_deref(),
+            Some("https://open.spotify.com/user/%C5%9F")
+        );
         // Bilinmeyen tür, uzun adres, boş kimlik, başka şema, yerel dosya.
         assert_eq!(web_url("spotify:genre:rock"), None);
         assert_eq!(web_url("spotify:user:x:playlist:y"), None);

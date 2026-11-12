@@ -15,11 +15,13 @@
 use std::time::Instant;
 
 use gpui::{
-    AnyElement, App, AppContext, Context, Entity, Subscription, WeakEntity, Window, div,
-    prelude::*,
+    AnyElement, App, AppContext, Context, Entity, Subscription, WeakEntity, Window, div, prelude::*,
 };
 
-use super::{Shell, gallery, library::{eq_levels, equalizer_bars}};
+use super::{
+    Shell, gallery,
+    library::{eq_levels, equalizer_bars},
+};
 
 /// `Shell`'in görünümleri; hepsi kökün doğrudan çocuğu (iç içe önbellekli
 /// görünüm olmasın: kirlenen dış görünüm içtekileri de yeniden çizdirir).
@@ -38,10 +40,23 @@ pub struct Views {
 
 impl Views {
     pub fn new(shell: &Entity<Shell>, window: &mut Window, cx: &mut App) -> Self {
-        let shelf = cx.new(|cx| ShelfView { shell: shell.downgrade(), _follow: follow(shell, cx) });
-        let list = cx.new(|cx| ListView { shell: shell.downgrade(), _follow: follow(shell, cx), home_tick: None });
-        let pill = cx.new(|cx| PillView { shell: shell.downgrade(), _follow: follow(shell, cx) });
-        let search = cx.new(|cx| SearchView { shell: shell.downgrade(), _follow: follow(shell, cx) });
+        let shelf = cx.new(|cx| ShelfView {
+            shell: shell.downgrade(),
+            _follow: follow(shell, cx),
+        });
+        let list = cx.new(|cx| ListView {
+            shell: shell.downgrade(),
+            _follow: follow(shell, cx),
+            home_tick: None,
+        });
+        let pill = cx.new(|cx| PillView {
+            shell: shell.downgrade(),
+            _follow: follow(shell, cx),
+        });
+        let search = cx.new(|cx| SearchView {
+            shell: shell.downgrade(),
+            _follow: follow(shell, cx),
+        });
         let equalizer = cx.new(|cx| EqualizerLayer {
             shell: shell.downgrade(),
             // Liste kendi kendine de yenilenir (kaydırma, üzerine gelme):
@@ -54,8 +69,20 @@ impl Views {
         });
         let side = super::now_playing::SideView::new(shell, cx);
         let full = super::now_playing::FullView::new(shell, cx);
-        let nav = cx.new(|cx| NavView { shell: shell.downgrade(), _follow: follow(shell, cx) });
-        Self { shelf, list, pill, search, equalizer, side, full, nav }
+        let nav = cx.new(|cx| NavView {
+            shell: shell.downgrade(),
+            _follow: follow(shell, cx),
+        });
+        Self {
+            shelf,
+            list,
+            pill,
+            search,
+            equalizer,
+            side,
+            full,
+            nav,
+        }
     }
 }
 
@@ -69,7 +96,9 @@ pub struct NavView {
 
 impl Render for NavView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        render_part(&self.shell, window, cx, |shell, window, cx| shell.render_nav_buttons(window, cx))
+        render_part(&self.shell, window, cx, |shell, window, cx| {
+            shell.render_nav_buttons(window, cx)
+        })
     }
 }
 
@@ -99,7 +128,14 @@ fn render_part<V: 'static>(
             }
             element
         })
-        .map(|element| div().size_full().flex().flex_col().child(element).into_any_element())
+        .map(|element| {
+            div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .child(element)
+                .into_any_element()
+        })
         .unwrap_or_else(|_| div().into_any_element())
 }
 
@@ -111,7 +147,9 @@ pub struct ShelfView {
 
 impl Render for ShelfView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        render_part(&self.shell, window, cx, |shell, window, cx| shell.render_shelf(window, cx))
+        render_part(&self.shell, window, cx, |shell, window, cx| {
+            shell.render_shelf(window, cx)
+        })
     }
 }
 
@@ -129,12 +167,17 @@ impl Render for ListView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Ana sayfadaki kahraman kartın ilerleme çubuğu: yalnız ana sayfa
         // görünürken ve çalarken, saniyede bir (yalnız bu görünüm yenilenir).
-        let ticks = self.shell.upgrade().is_some_and(|shell| shell.read(cx).home_hero_ticks());
+        let ticks = self
+            .shell
+            .upgrade()
+            .is_some_and(|shell| shell.read(cx).home_hero_ticks());
         if !ticks {
             self.home_tick = None;
         } else if self.home_tick.is_none() {
             self.home_tick = Some(cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(std::time::Duration::from_secs(1)).await;
+                cx.background_executor()
+                    .timer(std::time::Duration::from_secs(1))
+                    .await;
                 let _ = this.update(cx, |view, cx| {
                     view.home_tick = None;
                     cx.notify();
@@ -200,7 +243,9 @@ pub struct SearchView {
 
 impl Render for SearchView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        render_part(&self.shell, window, cx, |shell, window, cx| shell.render_search(window, cx))
+        render_part(&self.shell, window, cx, |shell, window, cx| {
+            shell.render_search(window, cx)
+        })
     }
 }
 
@@ -209,7 +254,11 @@ impl Render for SearchView {
 /// `OPENIFY_EQ_FPS=N` hızı zorlar, 0 ekranın hızı. (Kanca bir kez okunur.)
 fn eq_fps(window: &Window) -> u32 {
     static FORCED: std::sync::OnceLock<Option<u32>> = std::sync::OnceLock::new();
-    let forced = *FORCED.get_or_init(|| std::env::var("OPENIFY_EQ_FPS").ok().and_then(|v| v.parse().ok()));
+    let forced = *FORCED.get_or_init(|| {
+        std::env::var("OPENIFY_EQ_FPS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+    });
     forced.unwrap_or(if window.is_window_active() { 30 } else { 20 })
 }
 
@@ -296,29 +345,31 @@ impl Render for EqualizerLayer {
             }
         }
         // Katman pencerenin sol üst köşesinde: ölçülen yerler doğrudan konum.
-        div().size_full().child(
-            // Liste alanının dışına taşmasın: yarısı sütun başlıklarının
-            // altında kalan satırın ekolayzeri de kırpılır.
-            div()
-                .absolute()
-                .left(clip.origin.x)
-                .top(clip.origin.y)
-                .w(clip.size.width)
-                .h(clip.size.height)
-                .overflow_hidden()
-                .child(
-                    div()
-                        .absolute()
-                        .left(cell.origin.x - clip.origin.x)
-                        .top(cell.origin.y - clip.origin.y)
-                        .w(cell.size.width)
-                        .h(cell.size.height)
-                        .flex()
-                        .items_center()
-                        .justify_center()
-                        .child(equalizer_bars(color, eq_levels_now(shell, moving))),
-                ),
-        )
-        .into_any_element()
+        div()
+            .size_full()
+            .child(
+                // Liste alanının dışına taşmasın: yarısı sütun başlıklarının
+                // altında kalan satırın ekolayzeri de kırpılır.
+                div()
+                    .absolute()
+                    .left(clip.origin.x)
+                    .top(clip.origin.y)
+                    .w(clip.size.width)
+                    .h(clip.size.height)
+                    .overflow_hidden()
+                    .child(
+                        div()
+                            .absolute()
+                            .left(cell.origin.x - clip.origin.x)
+                            .top(cell.origin.y - clip.origin.y)
+                            .w(cell.size.width)
+                            .h(cell.size.height)
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(equalizer_bars(color, eq_levels_now(shell, moving))),
+                    ),
+            )
+            .into_any_element()
     }
 }

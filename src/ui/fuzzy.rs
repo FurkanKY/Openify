@@ -117,8 +117,12 @@ mod tests {
         let items = [
             fold("Bring Me To Life Evanescence Fallen"),
             fold("Lithium Evanescence The Open Door"),
-            fold("Delius: 2 Pieces for Small Orchestra: No. 1, On Hearing the First Cuckoo in Spring Frederick Delius, London Philharmonic Orchestra, Vernon Handley The Lark Ascending Collection"),
-            fold("Kinderszenen, Op. 15: VII. Träumerei Robert Schumann, Marc-André Hamelin Schumann: Scenes from Childhood; Waldszenen – Janáček: On the Overgrown Path"),
+            fold(
+                "Delius: 2 Pieces for Small Orchestra: No. 1, On Hearing the First Cuckoo in Spring Frederick Delius, London Philharmonic Orchestra, Vernon Handley The Lark Ascending Collection",
+            ),
+            fold(
+                "Kinderszenen, Op. 15: VII. Träumerei Robert Schumann, Marc-André Hamelin Schumann: Scenes from Childhood; Waldszenen – Janáček: On the Overgrown Path",
+            ),
         ];
         let mut f = Fuzzy::new("evanescence").unwrap();
         assert_eq!(f.top(items.iter().map(String::as_str), 8), [0, 1]);

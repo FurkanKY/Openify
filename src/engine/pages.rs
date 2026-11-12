@@ -212,7 +212,11 @@ struct MemEntry {
 /// Sayfa önbelleği şeması (`migrate.rs`): bütün veri yeniden indirilebilir, bu
 /// yüzden bir göç gerekirse tabloyu silmek de meşrudur; şimdilik tek adım var.
 ///   1  temel şema (sürümsüz eski dosyalar da bu adımda devralınır)
-const MIGRATIONS: [Step; 1] = [Step { to: 1, name: "baseline", up: baseline }];
+const MIGRATIONS: [Step; 1] = [Step {
+    to: 1,
+    name: "baseline",
+    up: baseline,
+}];
 
 fn baseline(tx: &Transaction, _from: i64) -> rusqlite::Result<()> {
     tx.execute_batch(
@@ -244,19 +248,23 @@ impl PageCache {
     }
 
     pub fn open(path: &Path) -> Result<Self> {
-        let writer = Self::init_writer(Connection::open(path).context("Sayfa önbelleği açılamadı")?)?;
+        let writer =
+            Self::init_writer(Connection::open(path).context("Sayfa önbelleği açılamadı")?)?;
         Ok(Self::with(Conns::file(path, writer)))
     }
 
     #[cfg(test)]
     pub fn open_in_memory() -> Result<Self> {
-        Ok(Self::with(Conns::memory(Self::init_writer(Connection::open_in_memory()?)?)))
+        Ok(Self::with(Conns::memory(Self::init_writer(
+            Connection::open_in_memory()?,
+        )?)))
     }
 
     fn init_writer(mut conn: Connection) -> Result<Connection> {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "NORMAL")?;
-        migrate::migrate(&mut conn, &MIGRATIONS).context("Sayfa önbelleği şeması yükseltilemedi")?;
+        migrate::migrate(&mut conn, &MIGRATIONS)
+            .context("Sayfa önbelleği şeması yükseltilemedi")?;
         // Biçimi eski satırlar bir daha okunmaz (satırın kendi `format`ı var:
         // şema sürümünden bağımsız, sayfa türü değişince `PAGE_FORMAT` artar).
         conn.execute("DELETE FROM pages WHERE format != ?1", [PAGE_FORMAT])?;
@@ -264,7 +272,10 @@ impl PageCache {
     }
 
     fn with(conns: Conns) -> Self {
-        Self { conns, memory: Mutex::new(HashMap::new()) }
+        Self {
+            conns,
+            memory: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Yazıcı bağlantı.
@@ -356,7 +367,9 @@ impl PageCache {
         let changed = {
             let conn = self.w();
             let previous: Option<String> = conn
-                .query_row("SELECT payload FROM pages WHERE key = ?1", [key], |r| r.get(0))
+                .query_row("SELECT payload FROM pages WHERE key = ?1", [key], |r| {
+                    r.get(0)
+                })
                 .optional()?;
             conn.execute(
                 "INSERT OR REPLACE INTO pages (key, format, fetched_ms, payload)
@@ -373,7 +386,9 @@ impl PageCache {
     /// diskteki satırlar; önbellekte ne var diye ağsız bakmak için).
     pub(super) fn keys_with_prefix(&self, prefix: &str) -> Vec<String> {
         let conn = self.r();
-        let Ok(mut stmt) = conn.prepare("SELECT key FROM pages WHERE substr(key, 1, length(?1)) = ?1") else {
+        let Ok(mut stmt) =
+            conn.prepare("SELECT key FROM pages WHERE substr(key, 1, length(?1)) = ?1")
+        else {
             return Vec::new();
         };
         stmt.query_map([prefix], |r| r.get::<_, String>(0))
@@ -384,7 +399,8 @@ impl PageCache {
     #[allow(dead_code)] // elle tazeleme için; henüz arayüzde yok
     pub fn invalidate(&self, key: &str) -> Result<()> {
         self.mem().remove(key);
-        self.w().execute("DELETE FROM pages WHERE key = ?1", [key])?;
+        self.w()
+            .execute("DELETE FROM pages WHERE key = ?1", [key])?;
         Ok(())
     }
 
@@ -495,12 +511,13 @@ pub async fn load_artist(
         return Err(anyhow!("Sanatçı adresi değil: {uri}"));
     }
     let one = [uri.to_string()];
-    let mut found = with_retry(|| {
-        fetch_extended::<ArtistMessage>(session, ExtensionKind::ARTIST_V4, &one)
-    })
-    .await
-    .context("Sanatçı alınamadı")?;
-    let (_, message) = found.pop().ok_or_else(|| anyhow!("Sanatçı bulunamadı: {uri}"))?;
+    let mut found =
+        with_retry(|| fetch_extended::<ArtistMessage>(session, ExtensionKind::ARTIST_V4, &one))
+            .await
+            .context("Sanatçı alınamadı")?;
+    let (_, message) = found
+        .pop()
+        .ok_or_else(|| anyhow!("Sanatçı bulunamadı: {uri}"))?;
     let artist = Artist::parse(&message, &spotify_uri)?;
 
     let plan = ArtistPlan::new(&artist, &session.country());
@@ -519,15 +536,24 @@ pub async fn load_artist(
         Vec::new()
     });
 
-    let page = Arc::new(assemble_artist(&artist, &plan, top_tracks, &releases, related));
+    let page = Arc::new(assemble_artist(
+        &artist, &plan, top_tracks, &releases, related,
+    ));
     let complete = complete && (plan.release_uris.is_empty() || !releases.is_empty());
     let changed = if complete {
         cache.put(&artist_key(uri), &page, now_ms())?
     } else {
         true
     };
-    log::debug!("sanatçı sayfası {uri}: {} ms", started.elapsed().as_millis());
-    Ok(Loaded { page, changed, complete })
+    log::debug!(
+        "sanatçı sayfası {uri}: {} ms",
+        started.elapsed().as_millis()
+    );
+    Ok(Loaded {
+        page,
+        changed,
+        complete,
+    })
 }
 
 /// Hangi adreslerin isteneceği (Spotify'ın sanatçı mesajından).
@@ -562,8 +588,16 @@ impl ArtistPlan {
             it.filter_map(|u| u.to_uri().ok()).collect()
         };
         let groups = [
-            (collect(&mut artist.albums_current()), ReleaseGroup::Albums, MAX_ALBUMS),
-            (collect(&mut artist.singles_current()), ReleaseGroup::Singles, MAX_SINGLES),
+            (
+                collect(&mut artist.albums_current()),
+                ReleaseGroup::Albums,
+                MAX_ALBUMS,
+            ),
+            (
+                collect(&mut artist.singles_current()),
+                ReleaseGroup::Singles,
+                MAX_SINGLES,
+            ),
             (
                 collect(&mut artist.compilations_current()),
                 ReleaseGroup::Compilations,
@@ -732,14 +766,16 @@ fn album_year(album: &Album) -> u16 {
     album.date.year().clamp(0, u16::MAX as i32) as u16
 }
 
-pub(super) async fn fetch_artist_cards(session: &Session, uris: &[String]) -> Result<Vec<ArtistCard>> {
+pub(super) async fn fetch_artist_cards(
+    session: &Session,
+    uris: &[String],
+) -> Result<Vec<ArtistCard>> {
     if uris.is_empty() {
         return Ok(Vec::new());
     }
-    let found = with_retry(|| {
-        fetch_extended::<ArtistMessage>(session, ExtensionKind::ARTIST_V4, uris)
-    })
-    .await?;
+    let found =
+        with_retry(|| fetch_extended::<ArtistMessage>(session, ExtensionKind::ARTIST_V4, uris))
+            .await?;
     let mut by_uri: HashMap<String, ArtistCard> = HashMap::new();
     for (uri, message) in found {
         let Ok(spotify_uri) = SpotifyUri::from_uri(&uri) else {
@@ -774,12 +810,13 @@ pub async fn load_album(
         return Err(anyhow!("Albüm adresi değil: {uri}"));
     }
     let one = [uri.to_string()];
-    let mut found = with_retry(|| {
-        fetch_extended::<AlbumMessage>(session, ExtensionKind::ALBUM_V4, &one)
-    })
-    .await
-    .context("Albüm alınamadı")?;
-    let (_, message) = found.pop().ok_or_else(|| anyhow!("Albüm bulunamadı: {uri}"))?;
+    let mut found =
+        with_retry(|| fetch_extended::<AlbumMessage>(session, ExtensionKind::ALBUM_V4, &one))
+            .await
+            .context("Albüm alınamadı")?;
+    let (_, message) = found
+        .pop()
+        .ok_or_else(|| anyhow!("Albüm bulunamadı: {uri}"))?;
     let album = Album::parse(&message, &spotify_uri)?;
 
     let track_uris: Vec<String> = album.tracks().filter_map(|u| u.to_uri().ok()).collect();
@@ -793,7 +830,11 @@ pub async fn load_album(
         true
     };
     log::debug!("albüm sayfası {uri}: {} ms", started.elapsed().as_millis());
-    Ok(Loaded { page, changed, complete })
+    Ok(Loaded {
+        page,
+        changed,
+        complete,
+    })
 }
 
 fn assemble_album(uri: &str, album: &Album, tracks: Vec<TrackRow>) -> AlbumPage {
@@ -893,7 +934,8 @@ impl PageCache {
     /// Önbellekteki bağlar (bulunanlar).
     pub fn links(&self, uris: &[String]) -> Vec<TrackLinks> {
         let conn = self.r();
-        let Ok(mut stmt) = conn.prepare_cached("SELECT payload FROM track_links WHERE uri = ?1") else {
+        let Ok(mut stmt) = conn.prepare_cached("SELECT payload FROM track_links WHERE uri = ?1")
+        else {
             return Vec::new();
         };
         uris.iter()
@@ -920,16 +962,31 @@ impl PageCache {
 }
 
 /// Şarkıların bağlarını Spotify'dan toplu istekle alır ve önbelleğe yazar.
-pub async fn load_links(session: &Session, cache: &PageCache, uris: &[String]) -> Result<Vec<TrackLinks>> {
+pub async fn load_links(
+    session: &Session,
+    cache: &PageCache,
+    uris: &[String],
+) -> Result<Vec<TrackLinks>> {
     use librespot::{metadata::Track, protocol::metadata::Track as TrackMessage};
     let mut out = Vec::new();
     for batch in uris.chunks(BATCH) {
-        let found = with_retry(|| fetch_extended::<TrackMessage>(session, ExtensionKind::TRACK_V4, batch)).await?;
+        let found =
+            with_retry(|| fetch_extended::<TrackMessage>(session, ExtensionKind::TRACK_V4, batch))
+                .await?;
         for (uri, message) in found {
-            let Ok(parsed) = SpotifyUri::from_uri(&uri) else { continue };
-            let Ok(track) = Track::parse(&message, &parsed) else { continue };
+            let Ok(parsed) = SpotifyUri::from_uri(&uri) else {
+                continue;
+            };
+            let Ok(track) = Track::parse(&message, &parsed) else {
+                continue;
+            };
             out.push(TrackLinks {
-                album: track.album.id.to_uri().ok().map(|a| (a, track.album.name.clone())),
+                album: track
+                    .album
+                    .id
+                    .to_uri()
+                    .ok()
+                    .map(|a| (a, track.album.name.clone())),
                 artists: track
                     .artists
                     .iter()
@@ -1001,11 +1058,15 @@ mod tests {
             image: "https://i.scdn.co/image/bb".into(),
             popularity: 70,
             bio: "Biyografi ".repeat(40),
-            top_tracks: (0..10).map(|i| row(&format!("spotify:track:{i}"), 200_000)).collect(),
+            top_tracks: (0..10)
+                .map(|i| row(&format!("spotify:track:{i}"), 200_000))
+                .collect(),
             albums: (0..tracks)
                 .map(|i| card(&format!("a{i}"), 2000 + (i % 24) as u16, ReleaseKind::Album))
                 .collect(),
-            singles: (0..tracks).map(|i| card(&format!("s{i}"), 2010, ReleaseKind::Single)).collect(),
+            singles: (0..tracks)
+                .map(|i| card(&format!("s{i}"), 2010, ReleaseKind::Single))
+                .collect(),
             compilations: vec![],
             appears_on: vec![],
             related: (0..20)
@@ -1022,12 +1083,24 @@ mod tests {
     fn page_cache_roundtrip_and_change_detection() {
         let cache = PageCache::open_in_memory().unwrap();
         let page = Arc::new(sample_page(20));
-        assert!(cache.put(&artist_key("spotify:artist:a"), &page, 1_000).unwrap());
+        assert!(
+            cache
+                .put(&artist_key("spotify:artist:a"), &page, 1_000)
+                .unwrap()
+        );
         // Aynı içerik tekrar yazılınca "değişmedi".
-        assert!(!cache.put(&artist_key("spotify:artist:a"), &page, 2_000).unwrap());
+        assert!(
+            !cache
+                .put(&artist_key("spotify:artist:a"), &page, 2_000)
+                .unwrap()
+        );
         let mut other = sample_page(20);
         other.name = "Yeni ad".into();
-        assert!(cache.put(&artist_key("spotify:artist:a"), &Arc::new(other), 3_000).unwrap());
+        assert!(
+            cache
+                .put(&artist_key("spotify:artist:a"), &Arc::new(other), 3_000)
+                .unwrap()
+        );
     }
 
     #[test]
@@ -1054,9 +1127,20 @@ mod tests {
             total_ms: 0,
         });
         cache.put(&akey, &album, 0).unwrap();
-        assert!(!cache.get::<AlbumPage>(Kind::Album, &akey, ARTIST_FRESH_MS * 2).unwrap().unwrap().stale);
+        assert!(
+            !cache
+                .get::<AlbumPage>(Kind::Album, &akey, ARTIST_FRESH_MS * 2)
+                .unwrap()
+                .unwrap()
+                .stale
+        );
         assert_eq!(cache.prune_at(HARD_EXPIRE_MS).unwrap(), 2);
-        assert!(cache.get::<AlbumPage>(Kind::Album, &akey, 0).unwrap().is_none());
+        assert!(
+            cache
+                .get::<AlbumPage>(Kind::Album, &akey, 0)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -1070,7 +1154,10 @@ mod tests {
             cache.put(&key, &Arc::new(sample_page(5)), 10).unwrap();
         }
         let cache = PageCache::open(&path).unwrap();
-        let hit = cache.get::<ArtistPage>(Kind::Artist, &key, 20).unwrap().unwrap();
+        let hit = cache
+            .get::<ArtistPage>(Kind::Artist, &key, 20)
+            .unwrap()
+            .unwrap();
         assert_eq!(hit.page.albums.len(), 5);
         assert_eq!(hit.age_ms, 10);
         // Eski biçim satırı açılışta silinir.
@@ -1080,7 +1167,12 @@ mod tests {
             .unwrap();
         drop(cache);
         let cache = PageCache::open(&path).unwrap();
-        assert!(cache.get::<ArtistPage>(Kind::Artist, &key, 20).unwrap().is_none());
+        assert!(
+            cache
+                .get::<ArtistPage>(Kind::Artist, &key, 20)
+                .unwrap()
+                .is_none()
+        );
         drop(cache);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1091,13 +1183,20 @@ mod tests {
         for i in 0..(MEMORY_CAP + 5) {
             let mut p = sample_page(1);
             p.uri = format!("spotify:artist:{i}");
-            cache.put(&artist_key(&p.uri), &Arc::new(p.clone()), i as i64).unwrap();
+            cache
+                .put(&artist_key(&p.uri), &Arc::new(p.clone()), i as i64)
+                .unwrap();
         }
         assert_eq!(cache.mem().len(), MEMORY_CAP);
         // En eski bellekten düştü ama diskten gelir.
         let first = artist_key("spotify:artist:0");
         assert!(!cache.mem().contains_key(&first));
-        assert!(cache.get::<ArtistPage>(Kind::Artist, &first, 100).unwrap().is_some());
+        assert!(
+            cache
+                .get::<ArtistPage>(Kind::Artist, &first, 100)
+                .unwrap()
+                .is_some()
+        );
     }
 
     /// Çıta: önbellekteki sayfa bir karede (16 ms'nin çok altında).
@@ -1109,13 +1208,19 @@ mod tests {
         cache.put(&key, &Arc::new(sample_page(50)), 0).unwrap();
         // Bellek isabeti.
         let t = std::time::Instant::now();
-        let hit = cache.get::<ArtistPage>(Kind::Artist, &key, 1).unwrap().unwrap();
+        let hit = cache
+            .get::<ArtistPage>(Kind::Artist, &key, 1)
+            .unwrap()
+            .unwrap();
         let mem_us = t.elapsed().as_micros();
         assert_eq!(hit.page.albums.len(), 50);
         // Disk isabeti (bellek boşken): JSON çözümlemesi dahil.
         cache.mem().clear();
         let t = std::time::Instant::now();
-        let hit = cache.get::<ArtistPage>(Kind::Artist, &key, 1).unwrap().unwrap();
+        let hit = cache
+            .get::<ArtistPage>(Kind::Artist, &key, 1)
+            .unwrap()
+            .unwrap();
         let disk_us = t.elapsed().as_micros();
         assert_eq!(hit.page.singles.len(), 50);
         eprintln!("sayfa önbelleği: bellek {mem_us} µs, disk {disk_us} µs");
@@ -1133,7 +1238,12 @@ mod tests {
                 [PAGE_FORMAT],
             )
             .unwrap();
-        assert!(cache.get::<ArtistPage>(Kind::Artist, "artist:x", 1).unwrap().is_none());
+        assert!(
+            cache
+                .get::<ArtistPage>(Kind::Artist, "artist:x", 1)
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -1158,12 +1268,18 @@ mod tests {
     #[test]
     fn release_kind_mapping_and_sorting() {
         assert_eq!(ReleaseKind::from_album_type(AlbumType::EP), ReleaseKind::Ep);
-        assert_eq!(ReleaseKind::from_album_type(AlbumType::SINGLE), ReleaseKind::Single);
+        assert_eq!(
+            ReleaseKind::from_album_type(AlbumType::SINGLE),
+            ReleaseKind::Single
+        );
         assert_eq!(
             ReleaseKind::from_album_type(AlbumType::COMPILATION),
             ReleaseKind::Compilation
         );
-        assert_eq!(ReleaseKind::from_album_type(AlbumType::ALBUM), ReleaseKind::Album);
+        assert_eq!(
+            ReleaseKind::from_album_type(AlbumType::ALBUM),
+            ReleaseKind::Album
+        );
         let mut list = vec![
             card("eski", 2001, ReleaseKind::Album),
             card("yeni", 2020, ReleaseKind::Album),
@@ -1184,9 +1300,17 @@ mod tests {
         };
         Library {
             liked_count: 42,
-            albums: vec![item(CollectionId::Album("spotify:album:1".into()), "Albüm 1", "Sanatçı")],
+            albums: vec![item(
+                CollectionId::Album("spotify:album:1".into()),
+                "Albüm 1",
+                "Sanatçı",
+            )],
             playlists: vec![
-                item(CollectionId::Playlist("spotify:playlist:mine".into()), "Benim", "12 şarkı"),
+                item(
+                    CollectionId::Playlist("spotify:playlist:mine".into()),
+                    "Benim",
+                    "12 şarkı",
+                ),
                 item(
                     CollectionId::Playlist("spotify:playlist:mix".into()),
                     "Daily Mix 1",
@@ -1247,13 +1371,23 @@ mod tests {
     #[test]
     fn artist_message_assembles_into_page() {
         use librespot::protocol::metadata::AlbumGroup;
-        let album_uri = |n: u8| {
-            AlbumMsg { gid: Some(gid(n)), ..Default::default() }
+        let album_uri = |n: u8| AlbumMsg {
+            gid: Some(gid(n)),
+            ..Default::default()
         };
         let mut msg = artist_message(1, "Deneme Sanatçı");
-        msg.album_group.push(AlbumGroup { album: vec![album_uri(10)], ..Default::default() });
-        msg.single_group.push(AlbumGroup { album: vec![album_uri(11)], ..Default::default() });
-        msg.appears_on_group.push(AlbumGroup { album: vec![album_uri(12)], ..Default::default() });
+        msg.album_group.push(AlbumGroup {
+            album: vec![album_uri(10)],
+            ..Default::default()
+        });
+        msg.single_group.push(AlbumGroup {
+            album: vec![album_uri(11)],
+            ..Default::default()
+        });
+        msg.appears_on_group.push(AlbumGroup {
+            album: vec![album_uri(12)],
+            ..Default::default()
+        });
         msg.related.push(artist_message(2, "Benzer"));
         msg.biography.push(Biography {
             text: Some("<b>Kalın</b> yazı &amp; bilgi".into()),
@@ -1292,7 +1426,13 @@ mod tests {
                 },
             );
         }
-        let page = assemble_artist(&artist, &plan, vec![row("spotify:track:1", 1000)], &releases, vec![]);
+        let page = assemble_artist(
+            &artist,
+            &plan,
+            vec![row("spotify:track:1", 1000)],
+            &releases,
+            vec![],
+        );
         assert_eq!(page.name, "Deneme Sanatçı");
         assert_eq!(page.popularity, 55);
         assert_eq!(page.bio, "Kalın yazı & bilgi");
@@ -1309,8 +1449,13 @@ mod tests {
             gid: Some(gid(20)),
             name: Some("Albüm Adı".into()),
             label: Some("Plak Şirketi".into()),
-            date: Some(Date { year: Some(2018), month: Some(5), day: Some(4), ..Default::default() })
-                .into(),
+            date: Some(Date {
+                year: Some(2018),
+                month: Some(5),
+                day: Some(4),
+                ..Default::default()
+            })
+            .into(),
             ..Default::default()
         };
         let album = Album::parse(
@@ -1321,7 +1466,10 @@ mod tests {
         let apage = assemble_album(
             "spotify:album:0000000000000000000002",
             &album,
-            vec![row("spotify:track:1", 60_000), row("spotify:track:2", 120_000)],
+            vec![
+                row("spotify:track:1", 60_000),
+                row("spotify:track:2", 120_000),
+            ],
         );
         assert_eq!(apage.year, 2018);
         assert_eq!(apage.name, "Albüm Adı");
@@ -1335,12 +1483,24 @@ mod tests {
         use librespot::protocol::metadata::AlbumGroup;
         let mut msg = artist_message(1, "X");
         // Aynı albüm hem albüm hem tekli grubunda: bir kez istenir.
-        let a = |n: u8| AlbumMsg { gid: Some(gid(n)), ..Default::default() };
-        msg.album_group.push(AlbumGroup { album: vec![a(1)], ..Default::default() });
-        msg.single_group.push(AlbumGroup { album: vec![a(1)], ..Default::default() });
+        let a = |n: u8| AlbumMsg {
+            gid: Some(gid(n)),
+            ..Default::default()
+        };
+        msg.album_group.push(AlbumGroup {
+            album: vec![a(1)],
+            ..Default::default()
+        });
+        msg.single_group.push(AlbumGroup {
+            album: vec![a(1)],
+            ..Default::default()
+        });
         // "Şunlarda da var" 12 ile sınırlı.
         for n in 100..130 {
-            msg.appears_on_group.push(AlbumGroup { album: vec![a(n)], ..Default::default() });
+            msg.appears_on_group.push(AlbumGroup {
+                album: vec![a(n)],
+                ..Default::default()
+            });
         }
         let artist = Artist::parse(
             &msg,
@@ -1360,7 +1520,8 @@ mod tests {
     // ── Şema göçü ───────────────────────────────────────────────────────
 
     fn temp_db_dir(tag: &str) -> std::path::PathBuf {
-        let dir = std::env::temp_dir().join(format!("openify-pages-test-{tag}-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-pages-test-{tag}-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -1403,10 +1564,18 @@ mod tests {
         assert!(PageCache::open(&path).is_ok());
 
         // Daha yeni uygulamanın dosyası açılmaz, dokunulmaz.
-        Connection::open(&path).unwrap().pragma_update(None, "user_version", 7).unwrap();
-        let err = PageCache::open(&path).err().expect("daha yeni sürüm açılmamalı");
+        Connection::open(&path)
+            .unwrap()
+            .pragma_update(None, "user_version", 7)
+            .unwrap();
+        let err = PageCache::open(&path)
+            .err()
+            .expect("daha yeni sürüm açılmamalı");
         assert!(format!("{err:#}").contains("version 7"), "{err:#}");
-        assert_eq!(migrate::user_version(&Connection::open(&path).unwrap()).unwrap(), 7);
+        assert_eq!(
+            migrate::user_version(&Connection::open(&path).unwrap()).unwrap(),
+            7
+        );
         let _ = fs::remove_dir_all(&dir);
     }
 
@@ -1420,15 +1589,22 @@ mod tests {
         cache.mem().clear();
         // Yazıcı açık bir yazma işleminde takılıyken disk okuması beklemez.
         let writer = cache.w();
-        writer.execute_batch("BEGIN IMMEDIATE; INSERT INTO track_links VALUES ('x', '{}');").unwrap();
+        writer
+            .execute_batch("BEGIN IMMEDIATE; INSERT INTO track_links VALUES ('x', '{}');")
+            .unwrap();
         let (tx, rx) = std::sync::mpsc::channel();
         let reader = Arc::clone(&cache);
         let key2 = key.clone();
         std::thread::spawn(move || {
-            let hit = reader.get::<ArtistPage>(Kind::Artist, &key2, 20).unwrap().map(|c| c.page.albums.len());
+            let hit = reader
+                .get::<ArtistPage>(Kind::Artist, &key2, 20)
+                .unwrap()
+                .map(|c| c.page.albums.len());
             let _ = tx.send(hit);
         });
-        let hit = rx.recv_timeout(std::time::Duration::from_secs(5)).expect("okuma yazıcıyı beklememeli");
+        let hit = rx
+            .recv_timeout(std::time::Duration::from_secs(5))
+            .expect("okuma yazıcıyı beklememeli");
         assert_eq!(hit, Some(2));
         writer.execute_batch("COMMIT").unwrap();
         drop(writer);
@@ -1450,15 +1626,28 @@ mod live {
         let cache = PageCache::open_in_memory().unwrap();
 
         let t = std::time::Instant::now();
-        let artist = load_artist(&session, &db, &cache, "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi")
-            .await
-            .expect("sanatçı");
+        let artist = load_artist(
+            &session,
+            &db,
+            &cache,
+            "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi",
+        )
+        .await
+        .expect("sanatçı");
         eprintln!("SANATÇI soğuk: {} ms", t.elapsed().as_millis());
         let p = &artist.page;
         eprintln!(
             "{} | pop {} | bio {} harf | şarkı {} | albüm {} | tekli {} | derleme {} | şunlarda {} | benzer {} | tam {}",
-            p.name, p.popularity, p.bio.len(), p.top_tracks.len(), p.albums.len(), p.singles.len(),
-            p.compilations.len(), p.appears_on.len(), p.related.len(), artist.complete
+            p.name,
+            p.popularity,
+            p.bio.len(),
+            p.top_tracks.len(),
+            p.albums.len(),
+            p.singles.len(),
+            p.compilations.len(),
+            p.appears_on.len(),
+            p.related.len(),
+            artist.complete
         );
         eprintln!("ilk albüm: {:?}", p.albums.first());
         eprintln!("ilk şarkı: {:?}", p.top_tracks.first());
@@ -1467,29 +1656,54 @@ mod live {
 
         // Sıcak oturumda ikinci sanatçı (ilk çağrıdaki belirteç/bağlantı kurulumu hariç).
         let t = std::time::Instant::now();
-        let second = load_artist(&session, &db, &cache, "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb")
-            .await
-            .expect("ikinci sanatçı");
+        let second = load_artist(
+            &session,
+            &db,
+            &cache,
+            "spotify:artist:4Z8W4fKeB5YxbusRsdQVPb",
+        )
+        .await
+        .expect("ikinci sanatçı");
         eprintln!(
             "SANATÇI-2 sıcak: {} ms | {} | albüm {} | tekli {} | benzer {} | şarkı {}",
-            t.elapsed().as_millis(), second.page.name, second.page.albums.len(),
-            second.page.singles.len(), second.page.related.len(), second.page.top_tracks.len()
+            t.elapsed().as_millis(),
+            second.page.name,
+            second.page.albums.len(),
+            second.page.singles.len(),
+            second.page.related.len(),
+            second.page.top_tracks.len()
         );
 
         let t = std::time::Instant::now();
-        let cached = cached_artist(&cache, "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi").unwrap().unwrap();
-        eprintln!("SANATÇI önbellek: {} µs (bayat: {})", t.elapsed().as_micros(), cached.stale);
+        let cached = cached_artist(&cache, "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi")
+            .unwrap()
+            .unwrap();
+        eprintln!(
+            "SANATÇI önbellek: {} µs (bayat: {})",
+            t.elapsed().as_micros(),
+            cached.stale
+        );
 
         let t = std::time::Instant::now();
-        let album = load_album(&session, &db, &cache, "spotify:album:4m2880jivSbbyEGAKfITCa")
-            .await
-            .expect("albüm");
+        let album = load_album(
+            &session,
+            &db,
+            &cache,
+            "spotify:album:4m2880jivSbbyEGAKfITCa",
+        )
+        .await
+        .expect("albüm");
         eprintln!("ALBÜM soğuk: {} ms", t.elapsed().as_millis());
         let a = &album.page;
         eprintln!(
             "{} | {} | {} | {} şarkı | {} | {:?} | tam {}",
-            a.name, a.year, a.label, a.tracks.len(), duration_label(a.total_ms),
-            a.artists.first(), album.complete
+            a.name,
+            a.year,
+            a.label,
+            a.tracks.len(),
+            duration_label(a.total_ms),
+            a.artists.first(),
+            album.complete
         );
     }
 }

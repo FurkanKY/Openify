@@ -56,9 +56,15 @@ impl HiddenList {
     /// Kayıtlardan kurar: aynı (şarkı, bağlam) tekrarı atılır, en yeni önde,
     /// en çok `HIDDEN_MAX`.
     pub fn new(mut entries: Vec<HiddenSong>) -> Self {
-        entries.sort_by(|a, b| b.hidden_at.cmp(&a.hidden_at).then_with(|| a.uri.cmp(&b.uri)));
+        entries.sort_by(|a, b| {
+            b.hidden_at
+                .cmp(&a.hidden_at)
+                .then_with(|| a.uri.cmp(&b.uri))
+        });
         let mut seen = HashSet::new();
-        entries.retain(|e| !e.uri.is_empty() && seen.insert((e.uri.clone(), e.context.clone().unwrap_or_default())));
+        entries.retain(|e| {
+            !e.uri.is_empty() && seen.insert((e.uri.clone(), e.context.clone().unwrap_or_default()))
+        });
         entries.truncate(HIDDEN_MAX);
         let mut everywhere = HashSet::new();
         let mut by_context: HashMap<String, HashSet<String>> = HashMap::new();
@@ -68,11 +74,18 @@ impl HiddenList {
                     everywhere.insert(e.uri.clone());
                 }
                 Some(ctx) => {
-                    by_context.entry(ctx.clone()).or_default().insert(e.uri.clone());
+                    by_context
+                        .entry(ctx.clone())
+                        .or_default()
+                        .insert(e.uri.clone());
                 }
             }
         }
-        Self { entries, everywhere, by_context }
+        Self {
+            entries,
+            everywhere,
+            by_context,
+        }
     }
 
     pub fn entries(&self) -> &[HiddenSong] {
@@ -94,7 +107,9 @@ impl HiddenList {
 
     /// Bu bağlamda (liste / albüm) gizlenmiş mi (genel gizleme sayılmaz)?
     pub fn hidden_in(&self, context: &str, uri: &str) -> bool {
-        self.by_context.get(context).is_some_and(|s| s.contains(uri))
+        self.by_context
+            .get(context)
+            .is_some_and(|s| s.contains(uri))
     }
 
     /// Bu bağlamda çalma sırasından düşer mi (genel ya da bağlama özgü)?
@@ -110,7 +125,12 @@ impl HiddenList {
 
     /// Kayıt eklenmiş yeni dizin (aynı şarkı + bağlam varsa künye / zaman yenilenir).
     pub fn with(&self, song: HiddenSong) -> Self {
-        let mut entries: Vec<HiddenSong> = self.entries.iter().filter(|e| e.key() != song.key()).cloned().collect();
+        let mut entries: Vec<HiddenSong> = self
+            .entries
+            .iter()
+            .filter(|e| e.key() != song.key())
+            .cloned()
+            .collect();
         entries.push(song);
         Self::new(entries)
     }
@@ -118,7 +138,13 @@ impl HiddenList {
     /// Kaydı çıkarılmış yeni dizin.
     pub fn without(&self, uri: &str, context: Option<&str>) -> Self {
         let key = (uri, context.unwrap_or(""));
-        Self::new(self.entries.iter().filter(|e| e.key() != key).cloned().collect())
+        Self::new(
+            self.entries
+                .iter()
+                .filter(|e| e.key() != key)
+                .cloned()
+                .collect(),
+        )
     }
 }
 
@@ -209,7 +235,10 @@ mod tests {
 
     #[test]
     fn global_hides_everywhere_and_context_hides_only_there() {
-        let list = HiddenList::new(vec![song("t:a", None, 1), song("t:b", Some("spotify:playlist:x"), 2)]);
+        let list = HiddenList::new(vec![
+            song("t:a", None, 1),
+            song("t:b", Some("spotify:playlist:x"), 2),
+        ]);
         // Genel: her bağlamda ve bağlamsız.
         assert!(list.hides(None, "t:a"));
         assert!(list.hides(Some("spotify:playlist:x"), "t:a"));
@@ -220,7 +249,10 @@ mod tests {
         assert!(!list.hides(None, "t:b"));
         assert!(!list.hides(Some("spotify:playlist:x"), "t:c"));
         assert!(list.hidden_everywhere("t:a") && !list.hidden_everywhere("t:b"));
-        assert!(list.hidden_in("spotify:playlist:x", "t:b") && !list.hidden_in("spotify:playlist:x", "t:a"));
+        assert!(
+            list.hidden_in("spotify:playlist:x", "t:b")
+                && !list.hidden_in("spotify:playlist:x", "t:a")
+        );
     }
 
     #[test]
@@ -232,7 +264,11 @@ mod tests {
             song("t:a", Some("c"), 1),
             song("", None, 1),
         ]);
-        let order: Vec<(&str, Option<&str>)> = list.entries().iter().map(|e| (e.uri.as_str(), e.context.as_deref())).collect();
+        let order: Vec<(&str, Option<&str>)> = list
+            .entries()
+            .iter()
+            .map(|e| (e.uri.as_str(), e.context.as_deref()))
+            .collect();
         // Aynı (şarkı, bağlam) bir kez; boş adres atılır; en yeni önde.
         assert_eq!(order, [("t:b", None), ("t:a", None), ("t:a", Some("c"))]);
         assert_eq!(list.entries()[1].hidden_at, 7);
@@ -240,7 +276,9 @@ mod tests {
 
     #[test]
     fn with_and_without_edit_one_entry() {
-        let list = HiddenList::default().with(song("t:a", None, 1)).with(song("t:a", Some("c"), 2));
+        let list = HiddenList::default()
+            .with(song("t:a", None, 1))
+            .with(song("t:a", Some("c"), 2));
         assert_eq!(list.len(), 2);
         let list = list.without("t:a", None);
         assert!(!list.hidden_everywhere("t:a") && list.hidden_in("c", "t:a"));
@@ -255,21 +293,37 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         assert!(db.hidden_songs().unwrap().is_empty());
         db.hide_song(&song("t:a", None, 10)).unwrap();
-        db.hide_song(&song("t:a", Some("spotify:album:z"), 20)).unwrap();
+        db.hide_song(&song("t:a", Some("spotify:album:z"), 20))
+            .unwrap();
         db.hide_song(&song("t:b", None, 30)).unwrap();
         let all = db.hidden_songs().unwrap();
-        assert_eq!(all.iter().map(|e| e.uri.as_str()).collect::<Vec<_>>(), ["t:b", "t:a", "t:a"]);
+        assert_eq!(
+            all.iter().map(|e| e.uri.as_str()).collect::<Vec<_>>(),
+            ["t:b", "t:a", "t:a"]
+        );
         assert_eq!(all[1].context.as_deref(), Some("spotify:album:z"));
         // Yeniden gizlemek yineleme açmaz, zamanı yeniler.
-        db.hide_song(&HiddenSong { hidden_at: 99, name: "yeni".into(), ..song("t:a", None, 0) }).unwrap();
+        db.hide_song(&HiddenSong {
+            hidden_at: 99,
+            name: "yeni".into(),
+            ..song("t:a", None, 0)
+        })
+        .unwrap();
         let all = db.hidden_songs().unwrap();
         assert_eq!(all.len(), 3);
-        assert_eq!((all[0].uri.as_str(), all[0].hidden_at, all[0].name.as_str()), ("t:a", 99, "yeni"));
+        assert_eq!(
+            (all[0].uri.as_str(), all[0].hidden_at, all[0].name.as_str()),
+            ("t:a", 99, "yeni")
+        );
         // Göster: yalnız o kayıt gider.
         assert!(db.show_song("t:a", None).unwrap());
         assert!(!db.show_song("t:a", None).unwrap(), "ikinci kez yok");
         let left = HiddenList::new(db.hidden_songs().unwrap());
-        assert!(!left.hidden_everywhere("t:a") && left.hidden_in("spotify:album:z", "t:a") && left.hidden_everywhere("t:b"));
+        assert!(
+            !left.hidden_everywhere("t:a")
+                && left.hidden_in("spotify:album:z", "t:a")
+                && left.hidden_everywhere("t:b")
+        );
     }
 
     #[test]
@@ -288,6 +342,9 @@ mod tests {
             tx.commit().unwrap();
         }
         assert!(db.hide_song(&song("t:yeni", None, 1)).is_err());
-        assert!(db.hide_song(&song("t:5", None, 7)).is_ok(), "var olan kayıt yenilenir");
+        assert!(
+            db.hide_song(&song("t:5", None, 7)).is_ok(),
+            "var olan kayıt yenilenir"
+        );
     }
 }

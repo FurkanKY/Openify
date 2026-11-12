@@ -32,8 +32,8 @@ use std::{
 };
 
 use gpui::{
-    AnyElement, AnyView, Context, FontWeight, ImageFormat, ObjectFit, RenderImage, StyleRefinement, Task, Window,
-    div, img, linear_color_stop, linear_gradient, prelude::*, px, rgb,
+    AnyElement, AnyView, Context, FontWeight, ImageFormat, ObjectFit, RenderImage, StyleRefinement,
+    Task, Window, div, img, linear_color_stop, linear_gradient, prelude::*, px, rgb,
 };
 use image::{ImageEncoder, imageops::FilterType};
 
@@ -48,7 +48,7 @@ use super::{
     theme::*,
 };
 use crate::engine::RepeatMode;
-use crate::{t};
+use crate::t;
 
 /// Denetimler bu kadar dokunulmayınca söner.
 const IDLE: Duration = Duration::from_secs(3);
@@ -183,9 +183,17 @@ impl Shell {
             self.now.full.hide_task = Some(cx.spawn(async move |this, cx| {
                 loop {
                     let wait = this
-                        .update(cx, |shell, _| shell.now.full.idle_deadline.saturating_duration_since(Instant::now()))
+                        .update(cx, |shell, _| {
+                            shell
+                                .now
+                                .full
+                                .idle_deadline
+                                .saturating_duration_since(Instant::now())
+                        })
                         .unwrap_or_default();
-                    cx.background_executor().timer(wait + Duration::from_millis(5)).await;
+                    cx.background_executor()
+                        .timer(wait + Duration::from_millis(5))
+                        .await;
                     let done = this
                         .update(cx, |shell, cx| {
                             let full = &mut shell.now.full;
@@ -219,7 +227,9 @@ impl Shell {
             return None;
         }
         if self.now.fake {
-            return std::env::var("OPENIFY_TEST_HIRES_FILE").ok().filter(|p| !p.is_empty());
+            return std::env::var("OPENIFY_TEST_HIRES_FILE")
+                .ok()
+                .filter(|p| !p.is_empty());
         }
         cover_url.filter(|u| !u.is_empty())
     }
@@ -251,10 +261,22 @@ impl Shell {
             self.release_hires(None, cx);
             return;
         };
-        if self.now.full.hires.as_ref().is_some_and(|h| h.source == source) {
+        if self
+            .now
+            .full
+            .hires
+            .as_ref()
+            .is_some_and(|h| h.source == source)
+        {
             return;
         }
-        if self.now.full.hires_pending.as_ref().is_some_and(|(s, _)| *s == source) {
+        if self
+            .now
+            .full
+            .hires_pending
+            .as_ref()
+            .is_some_and(|(s, _)| *s == source)
+        {
             return;
         }
         self.release_hires(None, cx);
@@ -272,10 +294,16 @@ impl Shell {
                 // Bu arada şarkı (kapak) değiştiyse ya da tam ekran / panel
                 // kapandıysa at (hiç çizilmedi: doku atlasında yok).
                 let cover_url = shell.state.track.as_ref().and_then(|t| t.cover_url.clone());
-                if !shell.hires_wanted() || shell.hires_source(cover_url).as_deref() != Some(wanted.as_str()) {
+                if !shell.hires_wanted()
+                    || shell.hires_source(cover_url).as_deref() != Some(wanted.as_str())
+                {
                     return;
                 }
-                shell.now.full.hires = Some(Hires { source: wanted, image, at: Instant::now() });
+                shell.now.full.hires = Some(Hires {
+                    source: wanted,
+                    image,
+                    at: Instant::now(),
+                });
                 shell.views.full.update(cx, |_, cx| cx.notify());
                 shell.views.side.update(cx, |_, cx| cx.notify());
             });
@@ -291,7 +319,9 @@ impl Shell {
     /// atılsaydı o pencerenin atlası dokuyu tutmaya devam ederdi.
     pub(super) fn release_hires(&mut self, window: Option<&mut Window>, cx: &mut Context<Self>) {
         self.now.full.hires_pending = None;
-        let Some(old) = self.now.full.hires.take() else { return };
+        let Some(old) = self.now.full.hires.take() else {
+            return;
+        };
         match window {
             Some(window) => cx.drop_image(old.image, Some(window)),
             None => cx.defer(move |cx| cx.drop_image(old.image, None)),
@@ -307,8 +337,17 @@ impl Shell {
     pub(super) fn hires_cover(&self) -> Option<(Arc<RenderImage>, f32)> {
         let cover_url = self.state.track.as_ref().and_then(|t| t.cover_url.clone());
         let wanted = self.hires_source(cover_url)?;
-        let h = self.now.full.hires.as_ref().filter(|h| h.source == wanted)?;
-        let t = if animations_enabled() { (h.at.elapsed().as_secs_f32() / cover_fade().as_secs_f32()).min(1.) } else { 1. };
+        let h = self
+            .now
+            .full
+            .hires
+            .as_ref()
+            .filter(|h| h.source == wanted)?;
+        let t = if animations_enabled() {
+            (h.at.elapsed().as_secs_f32() / cover_fade().as_secs_f32()).min(1.)
+        } else {
+            1.
+        };
         Some((h.image.clone(), ease_out(t)))
     }
 
@@ -320,17 +359,31 @@ impl Shell {
     /// Kök için: tam ekranın önbellekli görünümü.
     pub(super) fn fullscreen_layer(&self) -> AnyElement {
         AnyView::from(self.views.full.clone())
-            .cached(StyleRefinement::default().absolute().top_0().left_0().size_full())
+            .cached(
+                StyleRefinement::default()
+                    .absolute()
+                    .top_0()
+                    .left_0()
+                    .size_full(),
+            )
             .into_any_element()
     }
 
     /// Kapak geldi: bulanık arka planı ve hapın ışığını arka planda hazırla
     /// (her şarkıda bir kez).
     pub(super) fn compute_backdrop(&mut self, uri: String, bytes: Vec<u8>, cx: &mut Context<Self>) {
-        if self.now.full.backdrop.as_ref().is_some_and(|(u, _)| *u == uri) {
+        if self
+            .now
+            .full
+            .backdrop
+            .as_ref()
+            .is_some_and(|(u, _)| *u == uri)
+        {
             return;
         }
-        let task = cx.background_spawn(async move { (backdrop_png(&bytes), super::pill_glass::light_image(&bytes)) });
+        let task = cx.background_spawn(async move {
+            (backdrop_png(&bytes), super::pill_glass::light_image(&bytes))
+        });
         cx.spawn(async move |this, cx| {
             let (png, light) = task.await;
             let _ = this.update(cx, |shell, cx| {
@@ -354,7 +407,11 @@ impl Shell {
     }
 
     /// Tam ekran (`FullView`). Hareket sürüyorsa `true`.
-    pub(super) fn render_fullscreen(&mut self, window: &mut Window, cx: &mut Context<Self>) -> (AnyElement, bool) {
+    pub(super) fn render_fullscreen(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (AnyElement, bool) {
         // Kapanırken sönme hareketi (açıkken belirme): saydamlık tek sayı.
         let fade = if self.now.full.open {
             let t = self.now.full.opened_at.elapsed().as_secs_f32() / motion().as_secs_f32();
@@ -375,7 +432,11 @@ impl Shell {
         let (w, h) = (f32::from(viewport.width), f32::from(viewport.height));
         let large = w >= LARGE_FROM;
         self.now.full.large = large;
-        let (cover_max, lyrics_max) = if large { (COVER_MAX_LARGE, LYRICS_MAX_LARGE) } else { (COVER_MAX, LYRICS_MAX) };
+        let (cover_max, lyrics_max) = if large {
+            (COVER_MAX_LARGE, LYRICS_MAX_LARGE)
+        } else {
+            (COVER_MAX, LYRICS_MAX)
+        };
         let accent = self.accent();
         let mut animating = fade.is_some();
 
@@ -403,7 +464,8 @@ impl Shell {
         };
 
         // Sözler kapağın yanında mı?
-        let lyrics_known = !matches!(self.now.lyrics, LyricsStatus::Missing) && self.state.track.is_some();
+        let lyrics_known =
+            !matches!(self.now.lyrics, LyricsStatus::Missing) && self.state.track.is_some();
         let side = self.now.full.show_lyrics && lyrics_known && w >= SIDE_BY_SIDE_MIN;
         let title_h = T_HEADLINE.line + S1 + T_TITLE.line;
         let free_h = h - S7 - CONTROLS_HEIGHT - S5 - title_h;
@@ -478,23 +540,50 @@ impl Shell {
         // Dar pencerede sözler kapağın yerine geçer (sözler düğmesi ikisi
         // arasında gidip gelir).
         let lyrics_only = self.now.full.show_lyrics && lyrics_known && !side;
-        let left = (!lyrics_only)
-            .then(|| div().flex_none().flex().flex_col().gap(px(S5)).when(!side, |el| el.items_center()).child(art).child(titles));
+        let left = (!lyrics_only).then(|| {
+            div()
+                .flex_none()
+                .flex()
+                .flex_col()
+                .gap(px(S5))
+                .when(!side, |el| el.items_center())
+                .child(art)
+                .child(titles)
+        });
 
         // Denetimler: belirme / sönme.
-        let t = (self.now.full.controls_at.elapsed().as_secs_f32() / motion().as_secs_f32()).min(1.);
+        let t =
+            (self.now.full.controls_at.elapsed().as_secs_f32() / motion().as_secs_f32()).min(1.);
         animating |= t < 1.;
-        let shown = if self.now.full.controls { ease_out(t) } else { 1. - ease_out(t) };
+        let shown = if self.now.full.controls {
+            ease_out(t)
+        } else {
+            1. - ease_out(t)
+        };
 
         let lyrics_col = (side || lyrics_only).then(|| {
             let (lyrics, moving) = self.render_lyrics(Place::Full, window, cx);
             animating |= moving;
-            let lyrics_w = if side { (w - 2. * S8 - cover - S8).min(lyrics_max) } else { (w - 2. * S8).min(lyrics_max) };
+            let lyrics_w = if side {
+                (w - 2. * S8 - cover - S8).min(lyrics_max)
+            } else {
+                (w - 2. * S8).min(lyrics_max)
+            };
             // "Karaoke": sözlerin sağ üstünde, denetimlerle birlikte belirir / söner.
             let karaoke = (shown > 0. && self.state.track.is_some()).then(|| {
-                div().absolute().top_0().right_0().opacity(shown).child(self.karaoke_group(Place::Full, window, cx))
+                div()
+                    .absolute()
+                    .top_0()
+                    .right_0()
+                    .opacity(shown)
+                    .child(self.karaoke_group(Place::Full, window, cx))
             });
-            div().w(px(lyrics_w)).h_full().relative().child(lyrics).children(karaoke)
+            div()
+                .w(px(lyrics_w))
+                .h_full()
+                .relative()
+                .child(lyrics)
+                .children(karaoke)
         });
 
         let content = div()
@@ -555,12 +644,14 @@ impl Shell {
             has_track,
             None,
             self.progress_bounds.clone(),
-            Some(Box::new(cx.listener(|this, ev: &gpui::MouseDownEvent, _, cx| {
-                if let Some(f) = fraction(&this.progress_bounds, ev.position) {
-                    this.dragging = Some(Drag::Progress(f));
-                    this.views.full.update(cx, |_, cx| cx.notify());
-                }
-            }))),
+            Some(Box::new(cx.listener(
+                |this, ev: &gpui::MouseDownEvent, _, cx| {
+                    if let Some(f) = fraction(&this.progress_bounds, ev.position) {
+                        this.dragging = Some(Drag::Progress(f));
+                        this.views.full.update(cx, |_, cx| cx.notify());
+                    }
+                },
+            ))),
         );
         let progress_row = div()
             .flex()
@@ -570,7 +661,13 @@ impl Shell {
             .tabular()
             .text_color(muted())
             .when(!has_track, |el| el.opacity(0.))
-            .child(div().w(px(S7)).flex_none().text_right().child(fmt_time(position)))
+            .child(
+                div()
+                    .w(px(S7))
+                    .flex_none()
+                    .text_right()
+                    .child(fmt_time(position)),
+            )
             .child(bar)
             .child(div().w(px(S7)).flex_none().child(fmt_time(duration)));
 
@@ -583,33 +680,79 @@ impl Shell {
             .gap(px(S2))
             .child(
                 toggle_button("full-shuffle", "shuffle", shuffle, Look::Live, accent)
-                    .tooltip(Tooltip::text(if shuffle { t!(ShuffleOff) } else { t!(ShuffleOn) }, Some("Alt S")))
+                    .tooltip(Tooltip::text(
+                        if shuffle {
+                            t!(ShuffleOff)
+                        } else {
+                            t!(ShuffleOn)
+                        },
+                        Some("Alt S"),
+                    ))
                     .on_click(cx.listener(|this, _, _, cx| this.toggle_shuffle(cx))),
             )
             .child(
-                icon_button("full-prev", "skip-back-fill", if has_track { Look::Live } else { Look::Disabled }, accent)
-                    .tooltip(Tooltip::text(t!(PrevTrack), Some("Ctrl ←")))
-                    .when(has_track, |el| el.on_click(cx.listener(|this, _, _, cx| this.previous(cx)))),
+                icon_button(
+                    "full-prev",
+                    "skip-back-fill",
+                    if has_track {
+                        Look::Live
+                    } else {
+                        Look::Disabled
+                    },
+                    accent,
+                )
+                .tooltip(Tooltip::text(t!(PrevTrack), Some("Ctrl ←")))
+                .when(has_track, |el| {
+                    el.on_click(cx.listener(|this, _, _, cx| this.previous(cx)))
+                }),
             )
             .child(
-                play_button("full-play", playing, if has_track { Look::Live } else { Look::Disabled }, accent)
-                    .tooltip(Tooltip::text(if playing { t!(Pause) } else { t!(Play) }, Some(t!(KeySpace))))
-                    .when(has_track, |el| el.on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx)))),
+                play_button(
+                    "full-play",
+                    playing,
+                    if has_track {
+                        Look::Live
+                    } else {
+                        Look::Disabled
+                    },
+                    accent,
+                )
+                .tooltip(Tooltip::text(
+                    if playing { t!(Pause) } else { t!(Play) },
+                    Some(t!(KeySpace)),
+                ))
+                .when(has_track, |el| {
+                    el.on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx)))
+                }),
             )
             .child(
-                icon_button("full-next", "skip-forward-fill", if has_next { Look::Live } else { Look::Disabled }, accent)
-                    .tooltip(Tooltip::text(t!(NextTrack), Some("Ctrl →")))
-                    .when(has_next, |el| el.on_click(cx.listener(|this, _, _, cx| this.next(cx)))),
+                icon_button(
+                    "full-next",
+                    "skip-forward-fill",
+                    if has_next { Look::Live } else { Look::Disabled },
+                    accent,
+                )
+                .tooltip(Tooltip::text(t!(NextTrack), Some("Ctrl →")))
+                .when(has_next, |el| {
+                    el.on_click(cx.listener(|this, _, _, cx| this.next(cx)))
+                }),
             )
             .child(
                 toggle_button(
                     "full-repeat",
-                    if repeat == RepeatMode::One { "repeat-1" } else { "repeat" },
+                    if repeat == RepeatMode::One {
+                        "repeat-1"
+                    } else {
+                        "repeat"
+                    },
                     repeat != RepeatMode::Off,
                     Look::Live,
                     accent,
                 )
-                .tooltip(Tooltip::text(super::pill::repeat_tip(repeat), Some("Alt R")))
+                .tooltip(Tooltip::text(
+                    super::pill::repeat_tip(repeat),
+                    Some("Alt R"),
+                ))
                 .on_click(cx.listener(|this, _, _, cx| this.cycle_repeat(cx))),
             );
         let buttons = div()
@@ -623,7 +766,14 @@ impl Shell {
                     .gap(px(S2))
                     .child(
                         toggle_button("full-lyrics", "mic-vocal", lyrics_on, Look::Live, accent)
-                            .tooltip(Tooltip::text(if lyrics_on { t!(HideLyrics) } else { t!(ShowLyrics) }, None))
+                            .tooltip(Tooltip::text(
+                                if lyrics_on {
+                                    t!(HideLyrics)
+                                } else {
+                                    t!(ShowLyrics)
+                                },
+                                None,
+                            ))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.now.full.show_lyrics = !this.now.full.show_lyrics;
                                 this.after_view_change(cx);
@@ -631,8 +781,9 @@ impl Shell {
                     )
                     // "Çeviri": yalnız sözler açıkken ve Spotify'ın çevirisi varken (bkz. `lyrics_view`).
                     .children(
-                        (lyrics_on && self.lyrics_translation_ix().is_some())
-                            .then(|| self.translation_chip("full-translation", None, Look::Live, cx)),
+                        (lyrics_on && self.lyrics_translation_ix().is_some()).then(|| {
+                            self.translation_chip("full-translation", None, Look::Live, cx)
+                        }),
                     ),
             )
             .child(center)
@@ -640,7 +791,9 @@ impl Shell {
                 div().flex_1().flex().justify_end().child(
                     icon_button("full-exit", "minimize-2", Look::Live, accent)
                         .tooltip(Tooltip::text(t!(ExitFullScreen), Some("Esc")))
-                        .on_click(cx.listener(|this, _, window, cx| this.exit_fullscreen(window, cx))),
+                        .on_click(
+                            cx.listener(|this, _, window, cx| this.exit_fullscreen(window, cx)),
+                        ),
                 ),
             );
 
@@ -660,7 +813,9 @@ impl Shell {
                     .flex()
                     .flex_col()
                     .gap(px(S2))
-                    .on_hover(cx.listener(|this, hovered: &bool, _, _| this.now.full.hovering_controls = *hovered))
+                    .on_hover(cx.listener(|this, hovered: &bool, _, _| {
+                        this.now.full.hovering_controls = *hovered
+                    }))
                     .child(progress_row)
                     .child(buttons),
             )
@@ -681,9 +836,15 @@ const HIRES_MIN_SIDE: u32 = 257;
 /// başına en çok bir GET. `fake`: sahte çalmada `source` yerel bir dosyadır
 /// (ağa çıkılmaz).
 fn fetch_hires(source: &str, fake: bool) -> Option<Arc<RenderImage>> {
-    let bytes = if fake { std::fs::read(source).ok()? } else { download_hires(source)? };
+    let bytes = if fake {
+        std::fs::read(source).ok()?
+    } else {
+        download_hires(source)?
+    };
     // Başlıktan boyut: bozuk dosya ya da zaten küçük bir resim işe yaramaz.
-    let reader = image::ImageReader::new(std::io::Cursor::new(&bytes)).with_guessed_format().ok()?;
+    let reader = image::ImageReader::new(std::io::Cursor::new(&bytes))
+        .with_guessed_format()
+        .ok()?;
     let (w, h) = reader.into_dimensions().ok()?;
     if w.max(h) < HIRES_MIN_SIDE {
         return None;
@@ -701,7 +862,10 @@ fn download_hires(url: &str) -> Option<Vec<u8>> {
     }
     // Kısa ömürlü, tek iş parçacıklı çalışma zamanı: bu bir kerelik GET için
     // sürekli bir iş parçacığı ya da havuz tutulmaz.
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build().ok()?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .ok()?;
     runtime.block_on(async {
         let client = reqwest::Client::builder()
             .user_agent("Openify")
@@ -710,7 +874,10 @@ fn download_hires(url: &str) -> Option<Vec<u8>> {
             .build()
             .ok()?;
         let response = client.get(url).send().await.ok()?.error_for_status().ok()?;
-        if response.content_length().is_some_and(|n| n as usize > HIRES_MAX_BYTES) {
+        if response
+            .content_length()
+            .is_some_and(|n| n as usize > HIRES_MAX_BYTES)
+        {
             return None;
         }
         let bytes = response.bytes().await.ok()?;
@@ -726,7 +893,10 @@ pub(super) fn backdrop_png(bytes: &[u8]) -> Option<Vec<u8>> {
     const SIZE: u32 = 128;
     let source = image::load_from_memory(bytes).ok()?.to_rgb8();
     let small = image::imageops::resize(&source, SMALL, SMALL, FilterType::Triangle);
-    let mut buf: Vec<[f32; 3]> = small.pixels().map(|p| [p[0] as f32, p[1] as f32, p[2] as f32]).collect();
+    let mut buf: Vec<[f32; 3]> = small
+        .pixels()
+        .map(|p| [p[0] as f32, p[1] as f32, p[2] as f32])
+        .collect();
     for _ in 0..3 {
         box_blur(&mut buf, SMALL as usize, 3);
     }
@@ -852,16 +1022,28 @@ mod tests {
     /// üstündeki sessiz yazı (sözler, sanatçı, süre) ≥ 4,5:1.
     #[test]
     fn backdrop_stays_dark_and_text_readable() {
-        for color in [[255, 255, 255], [250, 220, 40], [240, 60, 160], [10, 10, 10]] {
+        for color in [
+            [255, 255, 255],
+            [250, 220, 40],
+            [240, 60, 160],
+            [10, 10, 10],
+        ] {
             let png = backdrop_png(&solid_jpeg(color)).expect("arka plan");
             let img = image::load_from_memory(&png).unwrap().to_rgb8();
             assert_eq!(img.dimensions(), (128, 128));
             for p in img.pixels() {
                 let c = ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32;
                 // Titreşim yarım basamak: tavanın hemen üstü kabul.
-                assert!(luminance(c) <= BACKDROP_MAX_LUMINANCE + 0.002, "{color:?} → {c:06X}");
+                assert!(
+                    luminance(c) <= BACKDROP_MAX_LUMINANCE + 0.002,
+                    "{color:?} → {c:06X}"
+                );
                 let muted_text = mix(c, TEXT, 0.64);
-                assert!(contrast(muted_text, c) >= 4.5, "{color:?}: {:.2}", contrast(muted_text, c));
+                assert!(
+                    contrast(muted_text, c) >= 4.5,
+                    "{color:?}: {:.2}",
+                    contrast(muted_text, c)
+                );
             }
         }
     }
@@ -870,6 +1052,9 @@ mod tests {
     fn upscale_keeps_flat_color() {
         let src = vec![[100., 50., 25.]; 4 * 4];
         let out = upscale(&src, 4, 16);
-        assert!(out.iter().all(|c| (c[0] - 100.).abs() < 1e-3 && (c[2] - 25.).abs() < 1e-3));
+        assert!(
+            out.iter()
+                .all(|c| (c[0] - 100.).abs() < 1e-3 && (c[2] - 25.).abs() < 1e-3)
+        );
     }
 }

@@ -65,7 +65,13 @@ pub enum Tool {
 }
 
 impl Tool {
-    pub const ALL: [Tool; 5] = [Tool::Duplicates, Tool::MergeSplit, Tool::Sort, Tool::Backup, Tool::Stats];
+    pub const ALL: [Tool; 5] = [
+        Tool::Duplicates,
+        Tool::MergeSplit,
+        Tool::Sort,
+        Tool::Backup,
+        Tool::Stats,
+    ];
 
     pub fn key(self) -> &'static str {
         match self {
@@ -78,7 +84,9 @@ impl Tool {
     }
 
     pub fn from_key(key: &str) -> Option<Tool> {
-        Self::ALL.into_iter().find(|t| t.key() == key || (key == "split" && *t == Tool::MergeSplit))
+        Self::ALL
+            .into_iter()
+            .find(|t| t.key() == key || (key == "split" && *t == Tool::MergeSplit))
     }
 
     pub fn label(self) -> &'static str {
@@ -112,7 +120,14 @@ impl BoxId {
     }
 
     pub fn from_key(key: &str) -> Option<BoxId> {
-        [BoxId::DupPick, BoxId::DupRows, BoxId::MergePick, BoxId::SortPick].into_iter().find(|b| b.key() == key)
+        [
+            BoxId::DupPick,
+            BoxId::DupRows,
+            BoxId::MergePick,
+            BoxId::SortPick,
+        ]
+        .into_iter()
+        .find(|b| b.key() == key)
     }
 
     /// Kutuda aynı anda görünen satır.
@@ -148,7 +163,8 @@ impl ListBox {
     }
 
     pub fn move_by(&mut self, delta: isize, len: usize, visible: usize) {
-        self.cursor = (self.cursor as isize + delta).clamp(0, len.saturating_sub(1) as isize) as usize;
+        self.cursor =
+            (self.cursor as isize + delta).clamp(0, len.saturating_sub(1) as isize) as usize;
         self.fit(len, visible);
     }
 
@@ -161,7 +177,12 @@ impl ListBox {
     pub fn scroll(&mut self, lines: isize, len: usize, visible: usize) {
         let max = len.saturating_sub(visible) as isize;
         self.offset = (self.offset as isize + lines).clamp(0, max) as usize;
-        self.cursor = self.cursor.clamp(self.offset, (self.offset + visible).saturating_sub(1).min(len.saturating_sub(1)));
+        self.cursor = self.cursor.clamp(
+            self.offset,
+            (self.offset + visible)
+                .saturating_sub(1)
+                .min(len.saturating_sub(1)),
+        );
     }
 }
 
@@ -285,12 +306,23 @@ impl ToolsUi {
         let script = std::env::var("OPENIFY_TEST_TOOLS")
             .ok()
             .filter(|_| std::env::var_os("OPENIFY_TEST_DISPLAY").is_some())
-            .map(|v| v.split(';').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).rev().collect())
+            .map(|v| {
+                v.split(';')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .rev()
+                    .collect()
+            })
             .unwrap_or_default();
         Self {
             tool: Tool::Duplicates,
             active: None,
-            dup: DupState { list: None, pick: ListBox::default(), rows: ListBox::default(), spared: HashSet::new() },
+            dup: DupState {
+                list: None,
+                pick: ListBox::default(),
+                rows: ListBox::default(),
+                spared: HashSet::new(),
+            },
             merge: MergeState {
                 mode: MergeMode::Merge,
                 pick: ListBox::default(),
@@ -301,15 +333,28 @@ impl ToolsUi {
                 review: false,
                 name: String::new(),
             },
-            sort: SortState { list: None, pick: ListBox::default(), by: SortBy::Name, dir: Dir::Asc },
+            sort: SortState {
+                list: None,
+                pick: ListBox::default(),
+                by: SortBy::Name,
+                dir: Dir::Asc,
+            },
             backup: BackupStatus::Idle,
-            stats: StatsState { range: StatsRange::Weeks4, report: None, more: false },
+            stats: StatsState {
+                range: StatsRange::Weeks4,
+                report: None,
+                more: false,
+            },
             confirm: None,
             dup_view: RefCell::new(None),
             merge_memo: RefCell::new(None),
             split_memo: RefCell::new(None),
             sort_memo: RefCell::new(None),
-            recorder: Recorder { counter: PlayCounter::new(), base: Instant::now(), timer: None },
+            recorder: Recorder {
+                counter: PlayCounter::new(),
+                base: Instant::now(),
+                timer: None,
+            },
             script,
         }
     }
@@ -364,7 +409,11 @@ fn default_merge_name(names: &[String]) -> String {
 pub fn listened_text(ms: u64) -> String {
     let minutes = ms / 60_000;
     let (h, m) = (minutes / 60, minutes % 60);
-    if h == 0 { tf!(ToolsMinutes, m) } else { tf!(ToolsHoursMinutes, h, m) }
+    if h == 0 {
+        tf!(ToolsMinutes, m)
+    } else {
+        tf!(ToolsHoursMinutes, h, m)
+    }
 }
 
 impl Shell {
@@ -395,10 +444,16 @@ impl Shell {
 
     /// Seçim kutusunun satırları.
     pub(super) fn tools_items(&self, source: Source) -> Vec<PickItem> {
-        let Loadable::Loaded(lib) = &self.library.library else { return Vec::new() };
+        let Loadable::Loaded(lib) = &self.library.library else {
+            return Vec::new();
+        };
         let mut out = Vec::new();
         if source == Source::Readable {
-            out.push(PickItem { id: CollectionId::Liked, name: t!(LikedSongs).to_string(), count: Some(lib.liked_count) });
+            out.push(PickItem {
+                id: CollectionId::Liked,
+                name: t!(LikedSongs).to_string(),
+                count: Some(lib.liked_count),
+            });
         }
         for p in &lib.playlists {
             if source == Source::Own && !is_own(p) {
@@ -415,10 +470,15 @@ impl Shell {
 
     /// Listenin şarkıları yüklü değilse iste (önbellekten gelir; yoksa Spotify'dan).
     fn tools_ensure_loaded(&mut self, id: &CollectionId, cx: &mut Context<Self>) {
-        if matches!(self.library.collections.get(id), Some(Loadable::Loaded(_) | Loadable::Loading)) {
+        if matches!(
+            self.library.collections.get(id),
+            Some(Loadable::Loaded(_) | Loadable::Loading)
+        ) {
             return;
         }
-        self.library.collections.insert(id.clone(), Loadable::Loading);
+        self.library
+            .collections
+            .insert(id.clone(), Loadable::Loading);
         self.engine.send(Command::OpenCollection(id.clone()));
         self.request_added_dates(id);
         cx.notify();
@@ -486,10 +546,18 @@ impl Shell {
         let groups = dupes::find(tracks);
         let mut rows = Vec::new();
         for (g, group) in groups.iter().enumerate() {
-            rows.push(DupRow::Header { kind: group.kind, removable: group.removable() });
+            rows.push(DupRow::Header {
+                kind: group.kind,
+                removable: group.removable(),
+            });
             rows.extend((0..group.items.len()).map(|item| DupRow::Item { group: g, item }));
         }
-        let view = Rc::new(DupView { id, key, groups, rows });
+        let view = Rc::new(DupView {
+            id,
+            key,
+            groups,
+            rows,
+        });
         *self.tools.dup_view.borrow_mut() = Some(view.clone());
         Some(view)
     }
@@ -503,8 +571,12 @@ impl Shell {
 
     /// Yinelenen satırın "kaldır" işaretini çevir (kalan satırda işe yaramaz).
     pub(super) fn tools_dup_toggle(&mut self, row: usize, cx: &mut Context<Self>) {
-        let Some(view) = self.tools_dup_view() else { return };
-        let Some(DupRow::Item { group, item }) = view.rows.get(row) else { return };
+        let Some(view) = self.tools_dup_view() else {
+            return;
+        };
+        let Some(DupRow::Item { group, item }) = view.rows.get(row) else {
+            return;
+        };
         let it = &view.groups[*group].items[*item];
         if it.keep {
             return;
@@ -516,9 +588,17 @@ impl Shell {
     }
 
     pub(super) fn tools_dup_toggle_group(&mut self, group: usize, cx: &mut Context<Self>) {
-        let Some(view) = self.tools_dup_view() else { return };
-        let Some(g) = view.groups.get(group) else { return };
-        let all_removed = g.items.iter().filter(|i| !i.keep).all(|i| !self.tools.dup.spared.contains(&i.index));
+        let Some(view) = self.tools_dup_view() else {
+            return;
+        };
+        let Some(g) = view.groups.get(group) else {
+            return;
+        };
+        let all_removed = g
+            .items
+            .iter()
+            .filter(|i| !i.keep)
+            .all(|i| !self.tools.dup.spared.contains(&i.index));
         for i in g.items.iter().filter(|i| !i.keep) {
             if all_removed {
                 self.tools.dup.spared.insert(i.index);
@@ -530,7 +610,9 @@ impl Shell {
     }
 
     fn tools_apply_dupes(&mut self, cx: &mut Context<Self>) {
-        let Some(CollectionId::Playlist(playlist)) = self.tools.dup.list.clone() else { return };
+        let Some(CollectionId::Playlist(playlist)) = self.tools.dup.list.clone() else {
+            return;
+        };
         let rows = self.tools_dup_removals();
         if rows.is_empty() {
             return;
@@ -551,7 +633,9 @@ impl Shell {
 
     pub(super) fn tools_merge_pick(&mut self, index: usize, cx: &mut Context<Self>) {
         let items = self.tools_items(Source::Readable);
-        let Some(item) = items.get(index).cloned() else { return };
+        let Some(item) = items.get(index).cloned() else {
+            return;
+        };
         self.tools.merge.pick.to(index, items.len(), VISIBLE_ROWS);
         self.tools.merge.review = false;
         self.tools.confirm = None;
@@ -619,8 +703,16 @@ impl Shell {
 
     /// Birleştirmenin sonucu (önizleme ve yazma aynı hesap).
     pub(super) fn tools_merge_plan(&self) -> Option<Rc<plan::MergePlan>> {
-        let Sources::Ready(lists) = self.tools_sources(&self.tools.merge.picked) else { return None };
-        let key = hash_of((lists.iter().map(|l| Arc::as_ptr(l) as usize).collect::<Vec<_>>(), self.tools.merge.dedupe));
+        let Sources::Ready(lists) = self.tools_sources(&self.tools.merge.picked) else {
+            return None;
+        };
+        let key = hash_of((
+            lists
+                .iter()
+                .map(|l| Arc::as_ptr(l) as usize)
+                .collect::<Vec<_>>(),
+            self.tools.merge.dedupe,
+        ));
         if let Some((k, plan)) = self.tools.merge_memo.borrow().as_ref()
             && *k == key
         {
@@ -649,14 +741,23 @@ impl Shell {
         }
         let empty = HashMap::new();
         let added = dates.map(|a| a.as_ref()).unwrap_or(&empty);
-        let groups = Rc::new(plan::split(tracks, self.tools.merge.split_by, added, civil::local_offset_minutes()));
+        let groups = Rc::new(plan::split(
+            tracks,
+            self.tools.merge.split_by,
+            added,
+            civil::local_offset_minutes(),
+        ));
         *self.tools.split_memo.borrow_mut() = Some((key, groups.clone()));
         Some(groups)
     }
 
     /// Bölünen listenin adı: ön ad + grup ("Gece sürüşü · Kuzey"); "diğer" grup.
     pub(super) fn tools_split_name(&self, group: &plan::SplitGroup) -> String {
-        let label = if group.other { t!(ToolsSplitOther).to_string() } else { group.label.clone() };
+        let label = if group.other {
+            t!(ToolsSplitOther).to_string()
+        } else {
+            group.label.clone()
+        };
         format!("{} · {}", self.tools.merge.name.trim(), label)
     }
 
@@ -668,7 +769,9 @@ impl Shell {
             Bulk::Split => self
                 .tools_split_groups()
                 .map_or(0, |g| g.iter().map(|g| g.rows.len() + 1).sum()),
-            Bulk::Sort => self.tools_sort_view().map_or(0, |v| if v.count > MAX_SORT_MOVES { 0 } else { v.count }),
+            Bulk::Sort => self
+                .tools_sort_view()
+                .map_or(0, |v| if v.count > MAX_SORT_MOVES { 0 } else { v.count }),
         }
     }
 
@@ -700,7 +803,9 @@ impl Shell {
     }
 
     fn tools_apply_merge(&mut self, cx: &mut Context<Self>) {
-        let Some(plan) = self.tools_merge_plan() else { return };
+        let Some(plan) = self.tools_merge_plan() else {
+            return;
+        };
         let rows = plan.rows.clone();
         let name = self.tools.merge.name.trim().to_string();
         if name.is_empty() || plan.rows.is_empty() {
@@ -709,20 +814,35 @@ impl Shell {
         let temp_id = new_temp_id();
         let n = plan.rows.len();
         let uris: Vec<String> = plan.rows.iter().map(|r| r.uri.clone()).collect();
-        let op = EditOp::CreatePlaylist { temp_id: temp_id.clone(), name: name.clone(), uris, created: None };
-        let undo = vec![(EditOp::DeletePlaylist { playlist: temp_id.clone() }, Vec::new(), None)];
+        let op = EditOp::CreatePlaylist {
+            temp_id: temp_id.clone(),
+            name: name.clone(),
+            uris,
+            created: None,
+        };
+        let undo = vec![(
+            EditOp::DeletePlaylist {
+                playlist: temp_id.clone(),
+            },
+            Vec::new(),
+            None,
+        )];
         let label = match n {
             1 => tf!(ToastCreatedWith1, name),
             n => tf!(ToastCreatedWithN, name, n),
         };
-        self.library.titles.insert(CollectionId::Playlist(temp_id), name);
+        self.library
+            .titles
+            .insert(CollectionId::Playlist(temp_id), name);
         self.commit(vec![(op, rows, None)], Some((label, undo)), cx);
         self.tools.merge.review = false;
         self.tools.merge.picked.clear();
     }
 
     fn tools_apply_split(&mut self, cx: &mut Context<Self>) {
-        let Some(groups) = self.tools_split_groups() else { return };
+        let Some(groups) = self.tools_split_groups() else {
+            return;
+        };
         if groups.is_empty() || self.tools.merge.name.trim().is_empty() {
             return;
         }
@@ -734,13 +854,24 @@ impl Shell {
             let temp_id = new_temp_id();
             let name = self.tools_split_name(g);
             let uris: Vec<String> = g.rows.iter().map(|r| r.uri.clone()).collect();
-            self.library.titles.insert(CollectionId::Playlist(temp_id.clone()), name.clone());
+            self.library
+                .titles
+                .insert(CollectionId::Playlist(temp_id.clone()), name.clone());
             ops.push((
-                EditOp::CreatePlaylist { temp_id: temp_id.clone(), name, uris, created: None },
+                EditOp::CreatePlaylist {
+                    temp_id: temp_id.clone(),
+                    name,
+                    uris,
+                    created: None,
+                },
                 g.rows.clone(),
                 None,
             ));
-            undo.push((EditOp::DeletePlaylist { playlist: temp_id }, Vec::new(), None));
+            undo.push((
+                EditOp::DeletePlaylist { playlist: temp_id },
+                Vec::new(),
+                None,
+            ));
         }
         undo.reverse();
         let label = tp!(ToolsSplitDone, ops.len());
@@ -753,7 +884,9 @@ impl Shell {
 
     pub(super) fn tools_sort_pick(&mut self, index: usize, cx: &mut Context<Self>) {
         let items = self.tools_items(Source::Own);
-        let Some(item) = items.get(index).cloned() else { return };
+        let Some(item) = items.get(index).cloned() else {
+            return;
+        };
         self.tools.sort.pick.to(index, items.len(), VISIBLE_ROWS);
         self.tools.sort.list = Some(item.id.clone());
         self.tools.confirm = None;
@@ -800,15 +933,28 @@ impl Shell {
         let added = dates.map(|a| a.as_ref()).unwrap_or(&empty);
         let order = plan::target_order(&tracks, self.tools.sort.by, self.tools.sort.dir, added);
         let count = plan::count_moves(&order);
-        let moves = if count > 0 && count <= MAX_SORT_MOVES { plan::plan_moves(&order) } else { Vec::new() };
-        let view = Rc::new(SortView { tracks, order, count, moves });
+        let moves = if count > 0 && count <= MAX_SORT_MOVES {
+            plan::plan_moves(&order)
+        } else {
+            Vec::new()
+        };
+        let view = Rc::new(SortView {
+            tracks,
+            order,
+            count,
+            moves,
+        });
         *self.tools.sort_memo.borrow_mut() = Some((key, view.clone()));
         Some(view)
     }
 
     fn tools_apply_sort(&mut self, cx: &mut Context<Self>) {
-        let Some(CollectionId::Playlist(playlist)) = self.tools.sort.list.clone() else { return };
-        let Some(view) = self.tools_sort_view() else { return };
+        let Some(CollectionId::Playlist(playlist)) = self.tools.sort.list.clone() else {
+            return;
+        };
+        let Some(view) = self.tools_sort_view() else {
+            return;
+        };
         let (tracks, moves) = (&view.tracks, &view.moves);
         if moves.is_empty() {
             return;
@@ -841,7 +987,10 @@ impl Shell {
     /// "Yedeği kaydet": Windows kaydet iletişim kutusu (ayrı iş parçacığında);
     /// sınama koşusunda iletişim kutusu AÇILMAZ, geçici klasöre yazılır.
     pub(super) fn tools_backup(&mut self, cx: &mut Context<Self>) {
-        if matches!(self.tools.backup, BackupStatus::Choosing | BackupStatus::Writing) {
+        if matches!(
+            self.tools.backup,
+            BackupStatus::Choosing | BackupStatus::Writing
+        ) {
             return;
         }
         let now = now_ms();
@@ -863,13 +1012,11 @@ impl Shell {
             .ok();
         cx.spawn(async move |this, cx| {
             let chosen = rx.recv().await.ok().flatten();
-            let _ = this.update(cx, |shell, cx| {
-                match chosen {
-                    Some(path) => shell.tools_write_backup(path, cx),
-                    None => {
-                        shell.tools.backup = BackupStatus::Idle;
-                        cx.notify();
-                    }
+            let _ = this.update(cx, |shell, cx| match chosen {
+                Some(path) => shell.tools_write_backup(path, cx),
+                None => {
+                    shell.tools.backup = BackupStatus::Idle;
+                    cx.notify();
                 }
             });
         })
@@ -880,19 +1027,26 @@ impl Shell {
     /// Sınama koşusunda yedek yolu (iletişim kutusu yok): `OPENIFY_TEST_BACKUP_PATH`
     /// ya da geçici klasör. Normal koşuda `None`.
     fn tools_backup_test_path(&self, name: &str) -> Option<std::path::PathBuf> {
-        let testing = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
+        let testing = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+            || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
         if !testing {
             return None;
         }
         if let Some(path) = std::env::var_os("OPENIFY_TEST_BACKUP_PATH") {
             return Some(path.into());
         }
-        Some(std::env::temp_dir().join("openify-sandbox").join("backup").join(name))
+        Some(
+            std::env::temp_dir()
+                .join("openify-sandbox")
+                .join("backup")
+                .join(name),
+        )
     }
 
     fn tools_write_backup(&mut self, path: std::path::PathBuf, cx: &mut Context<Self>) {
         self.tools.backup = BackupStatus::Writing;
-        self.engine.send(Command::Library(LibraryCommand::ExportBackup(path)));
+        self.engine
+            .send(Command::Library(LibraryCommand::ExportBackup(path)));
         cx.notify();
     }
 
@@ -911,14 +1065,19 @@ impl Shell {
         if std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() {
             return;
         }
-        let _ = std::process::Command::new("explorer").arg("/select,").arg(path).spawn();
+        let _ = std::process::Command::new("explorer")
+            .arg("/select,")
+            .arg(path)
+            .spawn();
     }
 
     // ── İstatistik ──────────────────────────────────────────────────────
 
     fn tools_want_stats(&mut self) {
         if self.tools_on() && self.tools.tool == Tool::Stats {
-            self.engine.send(Command::Library(LibraryCommand::PlayStats(self.tools.stats.range)));
+            self.engine.send(Command::Library(LibraryCommand::PlayStats(
+                self.tools.stats.range,
+            )));
         }
     }
 
@@ -971,7 +1130,8 @@ impl Shell {
 
     /// Şarkının albüm adı: bellekteki listelerden (çalma olayı albüm taşımıyor).
     fn tools_album_of(&self, uri: &str) -> String {
-        let find = |rows: &Vec<TrackRow>| rows.iter().find(|r| r.uri == uri).map(|r| r.album.clone());
+        let find =
+            |rows: &Vec<TrackRow>| rows.iter().find(|r| r.uri == uri).map(|r| r.album.clone());
         self.library
             .collections
             .values()
@@ -989,7 +1149,8 @@ impl Shell {
             return;
         }
         for log in logs {
-            self.engine.send(Command::Library(LibraryCommand::RecordPlay(log)));
+            self.engine
+                .send(Command::Library(LibraryCommand::RecordPlay(log)));
         }
     }
 
@@ -998,7 +1159,9 @@ impl Shell {
         let mono = self.tools.recorder.base.elapsed().as_millis() as u64;
         self.tools.recorder.timer = self.tools.recorder.counter.deadline_ms(mono).map(|ms| {
             cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(Duration::from_millis(ms + 50)).await;
+                cx.background_executor()
+                    .timer(Duration::from_millis(ms + 50))
+                    .await;
                 let _ = this.update(cx, |shell, cx| shell.tools_tick(cx));
             })
         });
@@ -1014,7 +1177,12 @@ impl Shell {
     // ── Klavye ──────────────────────────────────────────────────────────
 
     /// Sayfadaki kutular ve ad alanı için tuşlar. İşlendiyse `true`.
-    pub(super) fn tools_key(&mut self, event: &KeyDownEvent, window: &Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn tools_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if !self.tools_on() {
             return false;
         }
@@ -1040,12 +1208,17 @@ impl Shell {
         }
         let boxed = focused.as_deref().and_then(BoxId::from_key);
         // Odak çapadayken (fareyle tıklandıktan sonra) son kullanılan kutu.
-        let target = match (boxed, focused.is_none() && self.nav.focused(window).is_none()) {
+        let target = match (
+            boxed,
+            focused.is_none() && self.nav.focused(window).is_none(),
+        ) {
             (Some(b), _) => Some((b, true)),
             (None, true) => self.tools.active.map(|b| (b, false)),
             _ => None,
         };
-        let Some((box_id, has_focus)) = target else { return false };
+        let Some((box_id, has_focus)) = target else {
+            return false;
+        };
         let len = self.tools_box_len(box_id);
         let visible = box_id.visible();
         let lb = self.tools_box(box_id);
@@ -1078,7 +1251,11 @@ impl Shell {
             "space" => name.push(' '),
             "enter" => {}
             "escape" | "tab" | "up" | "down" => return false,
-            _ => match ks.key_char.as_deref().filter(|c| !c.is_empty() && !c.chars().any(char::is_control)) {
+            _ => match ks
+                .key_char
+                .as_deref()
+                .filter(|c| !c.is_empty() && !c.chars().any(char::is_control))
+            {
                 Some(ch) => name.push_str(ch),
                 None => return false,
             },
@@ -1091,8 +1268,18 @@ impl Shell {
     }
 
     /// Ctrl+V / Ctrl+Backspace ad alanında (genel tuşlardan önce alınır).
-    pub(super) fn tools_name_paste(&mut self, event: &KeyDownEvent, window: &Window, cx: &mut Context<Self>) -> bool {
-        if !self.tools_on() || self.nav.extra_focused(window).is_none_or(|(k, _)| k != "tools-name") {
+    pub(super) fn tools_name_paste(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
+        if !self.tools_on()
+            || self
+                .nav
+                .extra_focused(window)
+                .is_none_or(|(k, _)| k != "tools-name")
+        {
             return false;
         }
         let ks = &event.keystroke;
@@ -1158,7 +1345,10 @@ impl Shell {
                 if let Some(view) = self.tools_dup_view()
                     && let Some(DupRow::Header { .. }) = view.rows.get(index)
                 {
-                    let group = view.rows[..index].iter().filter(|r| matches!(r, DupRow::Header { .. })).count();
+                    let group = view.rows[..index]
+                        .iter()
+                        .filter(|r| matches!(r, DupRow::Header { .. }))
+                        .count();
                     self.tools_dup_toggle_group(group.saturating_sub(1), cx);
                 } else {
                     self.tools_dup_toggle(index, cx);
@@ -1197,7 +1387,11 @@ impl Shell {
     /// Bir sınama adımı: hazırsa uygular ve `true`. Adımlar tıklamayla aynı yolları kullanır.
     fn tools_script_step(&mut self, step: &str, cx: &mut Context<Self>) -> bool {
         let (name, arg) = step.split_once('=').unwrap_or((step, ""));
-        let indices = |arg: &str| -> Vec<usize> { arg.split(',').filter_map(|n| n.trim().parse().ok()).collect() };
+        let indices = |arg: &str| -> Vec<usize> {
+            arg.split(',')
+                .filter_map(|n| n.trim().parse().ok())
+                .collect()
+        };
         match name {
             "tool" => {
                 if let Some(tool) = Tool::from_key(arg) {
@@ -1207,9 +1401,20 @@ impl Shell {
                     }
                 }
             }
-            "mode" => self.tools_set_mode(if arg == "split" { MergeMode::Split } else { MergeMode::Merge }, cx),
+            "mode" => self.tools_set_mode(
+                if arg == "split" {
+                    MergeMode::Split
+                } else {
+                    MergeMode::Merge
+                },
+                cx,
+            ),
             // Kütüphane gelmeden seçim yapılamaz.
-            "pick" | "review" | "confirm" | "cursor" | "apply" if !matches!(self.library.library, Loadable::Loaded(_)) => return false,
+            "pick" | "review" | "confirm" | "cursor" | "apply"
+                if !matches!(self.library.library, Loadable::Loaded(_)) =>
+            {
+                return false;
+            }
             "pick" => {
                 for i in indices(arg) {
                     match self.tools.tool {
@@ -1220,7 +1425,9 @@ impl Shell {
                 }
             }
             "by" => match arg {
-                "artist" if self.tools.tool == Tool::Sort => self.tools_set_sort(SortBy::Artist, cx),
+                "artist" if self.tools.tool == Tool::Sort => {
+                    self.tools_set_sort(SortBy::Artist, cx)
+                }
                 "artist" => self.tools.merge.split_by = SplitBy::Artist,
                 "album" if self.tools.tool == Tool::Sort => self.tools_set_sort(SortBy::Album, cx),
                 "album" => self.tools.merge.split_by = SplitBy::Album,
@@ -1330,10 +1537,16 @@ mod tests {
         lb.to(0, 20, 7);
         assert_eq!((lb.cursor, lb.offset), (0, 0));
         // Kısa liste: kaydırma yok, imleç içeride.
-        let mut short = ListBox { cursor: 5, offset: 2 };
+        let mut short = ListBox {
+            cursor: 5,
+            offset: 2,
+        };
         short.to(9, 3, 7);
         assert_eq!((short.cursor, short.offset), (2, 0));
-        let mut empty = ListBox { cursor: 4, offset: 4 };
+        let mut empty = ListBox {
+            cursor: 4,
+            offset: 4,
+        };
         empty.move_by(1, 0, 7);
         assert_eq!(empty, ListBox::default());
     }
@@ -1364,7 +1577,12 @@ mod tests {
         }
         assert_eq!(Tool::from_key("split"), Some(Tool::MergeSplit));
         assert_eq!(Tool::from_key("nope"), None);
-        for b in [BoxId::DupPick, BoxId::DupRows, BoxId::MergePick, BoxId::SortPick] {
+        for b in [
+            BoxId::DupPick,
+            BoxId::DupRows,
+            BoxId::MergePick,
+            BoxId::SortPick,
+        ] {
             assert_eq!(BoxId::from_key(b.key()), Some(b));
         }
         assert_eq!(BoxId::from_key("seg:x:y"), None);
@@ -1378,8 +1596,14 @@ mod tests {
         assert_eq!(default_merge_name(&n(&["A", "B", "C", "D"])), "A + B + 2");
         assert_eq!(default_merge_name(&[]), "");
         assert_eq!(with_lang(Lang::En, || listened_text(45 * 60_000)), "45 min");
-        assert_eq!(with_lang(Lang::En, || listened_text(754 * 60_000)), "12 h 34 min");
-        assert_eq!(with_lang(Lang::Tr, || listened_text(754 * 60_000)), "12 sa 34 dk");
+        assert_eq!(
+            with_lang(Lang::En, || listened_text(754 * 60_000)),
+            "12 h 34 min"
+        );
+        assert_eq!(
+            with_lang(Lang::Tr, || listened_text(754 * 60_000)),
+            "12 sa 34 dk"
+        );
         assert_eq!(with_lang(Lang::Tr, || listened_text(0)), "0 dk");
     }
 

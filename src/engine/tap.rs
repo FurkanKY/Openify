@@ -125,13 +125,16 @@ impl Sink for LevelSink {
         // (7 Kasım: Bluetooth kulaklık gidince "Devam" ölü aygıta yazıyordu).
         if let Err(e) = self.device.ensure_for_start() {
             log::error!("Ses çıkışı açılamadı: {e}");
-            return Err(SinkError::ConnectionRefused(format!("ses çıkışı açılamadı: {e}")));
+            return Err(SinkError::ConnectionRefused(format!(
+                "ses çıkışı açılamadı: {e}"
+            )));
         }
         self.sync();
         // Duraklatmada kesilen, kuyrukta bekleyen sesin çubukları yeni
         // anlarıyla geri gelsin.
         let read = self.out.read_frame();
-        self.tap.resume(self.out.ctl().pull_ns(read, self.out.now_ns()), read);
+        self.tap
+            .resume(self.out.ctl().pull_ns(read, self.out.now_ns()), read);
         self.out.start();
         Ok(())
     }
@@ -172,7 +175,8 @@ impl Sink for LevelSink {
             // Susturma `start` olmadan kalktıysa (örn. yükleme sürerken
             // duraklat + çal) kesme burada kapanır, çubuklar sürer.
             let read = self.out.read_frame();
-            self.tap.resume(self.out.ctl().pull_ns(read, self.out.now_ns()), read);
+            self.tap
+                .resume(self.out.ctl().pull_ns(read, self.out.now_ns()), read);
         }
         // AutoMix çözümlemesi (kapalıyken hiçbir şey): yeni şarkıysa öncekini kapat
         // (canlı sonucu yazar geçişi kurarken kullanır), paketi besle.
@@ -197,7 +201,8 @@ impl Sink for LevelSink {
         let now = self.out.now_ns();
         let pull = self.out.ctl().pull_ns(first, now);
         if skip < frames as usize {
-            self.tap.analyze(&samples[skip * NUM_CHANNELS as usize..], now, pull, first);
+            self.tap
+                .analyze(&samples[skip * NUM_CHANNELS as usize..], now, pull, first);
         }
         if self.out.push(samples)? {
             self.flushed();
@@ -218,7 +223,9 @@ impl Sink for LevelSink {
 fn boost_thread() {
     #[cfg(windows)]
     {
-        use windows::Win32::System::Threading::{GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_HIGHEST};
+        use windows::Win32::System::Threading::{
+            GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_HIGHEST,
+        };
         // SAFETY: geçerli iş parçacığının sözde tutamacı; yan etkisi yalnız öncelik.
         if let Err(e) = unsafe { SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST) } {
             log::debug!("Çalar iş parçacığının önceliği yükseltilemedi: {e}");
@@ -258,7 +265,8 @@ mod tests {
     fn write_all(sink: &mut LevelSink, samples: &[f64]) {
         let mut conv = Converter::new(None);
         for c in samples.chunks(2048) {
-            sink.write(AudioPacket::Samples(c.to_vec()), &mut conv).unwrap();
+            sink.write(AudioPacket::Samples(c.to_vec()), &mut conv)
+                .unwrap();
         }
     }
 
@@ -304,7 +312,8 @@ mod tests {
             sink.start().unwrap();
             let mut conv = Converter::new(None);
             for c in input.chunks(2048) {
-                sink.write(AudioPacket::Samples(c.to_vec()), &mut conv).unwrap();
+                sink.write(AudioPacket::Samples(c.to_vec()), &mut conv)
+                    .unwrap();
                 pull(&mut src, 1024);
             }
             ctl.levels().last_entry().expect("girdi yok").1[0]
@@ -323,7 +332,10 @@ mod tests {
         pull(&mut src, 1000);
         let t = std::time::Instant::now();
         sink.stop().unwrap();
-        assert!(t.elapsed() < std::time::Duration::from_millis(5), "stop bekledi");
+        assert!(
+            t.elapsed() < std::time::Duration::from_millis(5),
+            "stop bekledi"
+        );
         pull(&mut src, 1000);
         let queued = ctl.queued_frames();
         assert!(queued > 2000, "kuyruk atıldı: {queued}");
@@ -362,7 +374,10 @@ mod tests {
         write_all(&mut sink, &input);
         let (t, v) = ctl.levels().last_entry().unwrap();
         let seen = ctl.levels().at_ns(t).expect("çubuklar dondu");
-        assert!((seen[0] - v[0]).abs() < 0.01 && v[0] > 0.5, "{seen:?} / {v:?}");
+        assert!(
+            (seen[0] - v[0]).abs() < 0.01 && v[0] > 0.5,
+            "{seen:?} / {v:?}"
+        );
     }
 
     /// Şarkı sonu payıyla kuyruk ~4 sn: duyulan anın çubuk girdileri, 4 sn
@@ -377,7 +392,10 @@ mod tests {
         assert!(ctl.queued_frames() >= 169_000);
         // İlk pencerelerin duyulacağı an (çekilme + D + pencere ortası).
         let t = ctl.pull_ns(2048, now) + levels::device_delay_ns() + 12_000_000;
-        let v = ctl.levels().at_ns(t).expect("duyulacak anın girdisi ezildi");
+        let v = ctl
+            .levels()
+            .at_ns(t)
+            .expect("duyulacak anın girdisi ezildi");
         assert!(v[0] > 0.5, "{v:?}");
     }
 
@@ -393,7 +411,10 @@ mod tests {
         ctl.signal_device_lost("sınama");
         let mut conv = Converter::new(None);
         let t = std::time::Instant::now();
-        assert!(sink.write(AudioPacket::Samples(tone(440.0, 0.4, 1024)), &mut conv).is_err());
+        assert!(
+            sink.write(AudioPacket::Samples(tone(440.0, 0.4, 1024)), &mut conv)
+                .is_err()
+        );
         assert!(t.elapsed() < std::time::Duration::from_millis(50));
         assert_eq!(ctl.take_device_notice(), Some(output::DeviceNotice::Lost));
         let queued = ctl.queued_frames();

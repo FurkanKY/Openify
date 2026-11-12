@@ -27,10 +27,10 @@ use super::{
     theme::*,
 };
 use crate::engine::{
-    CardKind, CategoryList, Command, ExploreCard, ExploreData, ExploreKey, Feed, LibraryCommand, LibraryItem,
-    CollectionId,
+    CardKind, CategoryList, CollectionId, Command, ExploreCard, ExploreData, ExploreKey, Feed,
+    LibraryCommand, LibraryItem,
 };
-use crate::{t};
+use crate::t;
 
 /// Tür karosunun en dar eni ve yüksekliği.
 const TILE_MIN: f32 = 184.;
@@ -63,15 +63,24 @@ pub(super) fn card_spec(section: &str, c: &ExploreCard) -> CardSpec {
             key,
             title: c.name.clone(),
             subtitle: c.subtitle.clone(),
-            art: Art::Image { url: c.image.clone(), icon: "list-music" },
+            art: Art::Image {
+                url: c.image.clone(),
+                icon: "list-music",
+            },
             round: false,
-            target: CardTarget::Collection { id: CollectionId::Playlist(c.uri.clone()), title: c.name.clone() },
+            target: CardTarget::Collection {
+                id: CollectionId::Playlist(c.uri.clone()),
+                title: c.name.clone(),
+            },
         },
         CardKind::Album => CardSpec {
             key,
             title: c.name.clone(),
             subtitle: c.subtitle.clone(),
-            art: Art::Image { url: c.image.clone(), icon: "disc-3" },
+            art: Art::Image {
+                url: c.image.clone(),
+                icon: "disc-3",
+            },
             round: false,
             target: CardTarget::Album {
                 uri: c.uri.clone(),
@@ -88,7 +97,9 @@ pub(super) fn card_spec(section: &str, c: &ExploreCard) -> CardSpec {
 
 /// `#rrggbb` → 0xRRGGBB.
 fn parse_color(hex: &str) -> Option<u32> {
-    u32::from_str_radix(hex.strip_prefix('#')?, 16).ok().filter(|_| hex.len() == 7)
+    u32::from_str_radix(hex.strip_prefix('#')?, 16)
+        .ok()
+        .filter(|_| hex.len() == 7)
 }
 
 /// Tür karosunun zemini (rengi koyulmuş; renk yoksa sessiz ton).
@@ -133,11 +144,32 @@ impl Shell {
         let mut row = div().flex_none().h_full().flex().items_center().gap(px(S1));
         for (tab, icon_name, name, keys, stop) in [
             (Tab::Home, "house", t!(NavHome), "Ctrl 1", super::tab::HOME),
-            (Tab::Explore, "compass", t!(NavExplore), "Ctrl 2", super::tab::EXPLORE),
-            (Tab::Library, "library", t!(NavLibrary), "Ctrl 3", super::tab::LIBRARY),
+            (
+                Tab::Explore,
+                "compass",
+                t!(NavExplore),
+                "Ctrl 2",
+                super::tab::EXPLORE,
+            ),
+            (
+                Tab::Library,
+                "library",
+                t!(NavLibrary),
+                "Ctrl 3",
+                super::tab::LIBRARY,
+            ),
         ] {
             let (handle, look) = self.stop_look(format!("tab-{name}"), stop, true, window, cx);
-            row = row.child(self.tab_button(tab, icon_name, name, keys, labels, active == Some(tab), (handle, look), cx));
+            row = row.child(self.tab_button(
+                tab,
+                icon_name,
+                name,
+                keys,
+                labels,
+                active == Some(tab),
+                (handle, look),
+                cx,
+            ));
         }
         row.into_any_element()
     }
@@ -173,10 +205,18 @@ impl Shell {
             .cursor_pointer()
             // Klavye odağı: hep duran 2 px'lik kenar, odakta vurgu renginde.
             .border_2()
-            .border_color(if look == Look::Focus { rgb(self.accent().text).into() } else { gpui::transparent_black() })
+            .border_color(if look == Look::Focus {
+                rgb(self.accent().text).into()
+            } else {
+                gpui::transparent_black()
+            })
             .when_some(handle, |el, h| el.track_focus(&h))
             .type_role(T_SECONDARY)
-            .font_weight(if on { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
+            .font_weight(if on {
+                FontWeight::SEMIBOLD
+            } else {
+                FontWeight::MEDIUM
+            })
             .text_color(color)
             .when(on, |el| el.bg(veil(VEIL_SELECTED)))
             .when(!on, |el| el.hover(|s| s.text_color(text())))
@@ -200,7 +240,8 @@ impl Shell {
             if !self.pages.explore.has(key) {
                 self.pages.explore.failed.remove(key);
             }
-            self.engine.send(Command::Library(LibraryCommand::OpenExplore(key.clone())));
+            self.engine
+                .send(Command::Library(LibraryCommand::OpenExplore(key.clone())));
         }
     }
 
@@ -227,13 +268,19 @@ impl Shell {
 
     /// Sekmeye girilirken: Keşfet'in istediği her şey.
     pub(super) fn enter_explore(&mut self, cx: &mut Context<Self>) {
-        self.ask_explore(&[ExploreKey::NewReleases, ExploreKey::Charts, ExploreKey::Categories]);
+        self.ask_explore(&[
+            ExploreKey::NewReleases,
+            ExploreKey::Charts,
+            ExploreKey::Categories,
+        ]);
         self.refresh_suggestions(cx);
     }
 
     /// Kütüphanedeki albümlerin sanatçıları: önerilerden çıkar.
     fn known_artists(&self) -> HashSet<String> {
-        let Loadable::Loaded(library) = &self.library.library else { return HashSet::new() };
+        let Loadable::Loaded(library) = &self.library.library else {
+            return HashSet::new();
+        };
         library
             .albums
             .iter()
@@ -264,19 +311,31 @@ impl Shell {
 
     /// Bölüm başlığı (kart bölümlerinin başlığıyla aynı, "Tümünü göster"siz).
     fn section_heading(&self, title: &str) -> Div {
-        div().px(px(self.margin())).pb(px(S3)).h(px(S7)).flex().items_end().child(
-            div()
-                .font_family(font())
-                .type_role(T_TITLE)
-                .font_weight(FontWeight::EXTRA_BOLD)
-                .text_color(text())
-                .child(title.to_string()),
-        )
+        div()
+            .px(px(self.margin()))
+            .pb(px(S3))
+            .h(px(S7))
+            .flex()
+            .items_end()
+            .child(
+                div()
+                    .font_family(font())
+                    .type_role(T_TITLE)
+                    .font_weight(FontWeight::EXTRA_BOLD)
+                    .text_color(text())
+                    .child(title.to_string()),
+            )
     }
 
     /// Yükleniyor: bölüm başlığı ve bir sıra iskelet kart (yerleşim zıplamaz).
     pub(super) fn skeleton_section(&self, title: &str) -> AnyElement {
-        let bar = |w: f32, h: f32| div().w(px(w)).h(px(h)).rounded(px(R_XS)).bg(veil(VEIL_HOVER));
+        let bar = |w: f32, h: f32| {
+            div()
+                .w(px(w))
+                .h(px(h))
+                .rounded(px(R_XS))
+                .bg(veil(VEIL_HOVER))
+        };
         let (cols, width) = self.grid();
         let mut cards = div().px(px(self.margin())).flex().gap(px(CARD_GAP));
         for _ in 0..cols {
@@ -291,10 +350,18 @@ impl Shell {
                     .child(bar(width * 0.4, T_LABEL.size)),
             );
         }
-        div().pb(px(S6)).child(self.section_heading(title)).child(cards).into_any_element()
+        div()
+            .pb(px(S6))
+            .child(self.section_heading(title))
+            .child(cards)
+            .into_any_element()
     }
 
-    fn cards_of<'a>(&self, section: &str, cards: impl IntoIterator<Item = &'a ExploreCard>) -> Vec<CardSpec> {
+    fn cards_of<'a>(
+        &self,
+        section: &str,
+        cards: impl IntoIterator<Item = &'a ExploreCard>,
+    ) -> Vec<CardSpec> {
         cards.into_iter().map(|c| card_spec(section, c)).collect()
     }
 
@@ -312,7 +379,11 @@ impl Shell {
     /// benzer sanatçılardan öneriler.
     pub(super) fn explore_body(&self, window: &Window, cx: &mut Context<Self>) -> Div {
         let ex = &self.pages.explore;
-        let keys = [ExploreKey::NewReleases, ExploreKey::Charts, ExploreKey::Categories];
+        let keys = [
+            ExploreKey::NewReleases,
+            ExploreKey::Charts,
+            ExploreKey::Categories,
+        ];
         let new = ex.feeds.get(&ExploreKey::NewReleases);
         let charts = ex.feeds.get(&ExploreKey::Charts);
         let cats = ex.categories.as_ref();
@@ -334,24 +405,42 @@ impl Shell {
         let skeleton = self.load_may_arrive() && self.page_skeleton_due("explore", window);
         let loading = |k: &ExploreKey| !ex.failed.contains_key(k) && skeleton;
         let meta = div().child(t!(ExploreMeta)).into_any_element();
-        let mut body = div().flex().flex_col().child(self.page_header(None, t!(NavExplore), meta, Vec::new()));
+        let mut body =
+            div()
+                .flex()
+                .flex_col()
+                .child(self.page_header(None, t!(NavExplore), meta, Vec::new()));
 
         match new {
             Some(feed) => {
                 let cards = self.cards_of("new", feed.new_releases());
-                body = body.children(self.card_section("explore#new".into(), t!(ExploreNew), cards, cx));
+                body = body.children(self.card_section(
+                    "explore#new".into(),
+                    t!(ExploreNew),
+                    cards,
+                    cx,
+                ));
             }
-            None if loading(&ExploreKey::NewReleases) => body = body.child(self.skeleton_section(t!(ExploreNew))),
+            None if loading(&ExploreKey::NewReleases) => {
+                body = body.child(self.skeleton_section(t!(ExploreNew)))
+            }
             None => {}
         }
         match charts {
             Some(feed) => {
                 if let Some(section) = feed.featured() {
                     let cards = self.cards_of("chart", &section.cards);
-                    body = body.children(self.card_section("explore#charts".into(), t!(ExploreCharts), cards, cx));
+                    body = body.children(self.card_section(
+                        "explore#charts".into(),
+                        t!(ExploreCharts),
+                        cards,
+                        cx,
+                    ));
                 }
             }
-            None if loading(&ExploreKey::Charts) => body = body.child(self.skeleton_section(t!(ExploreCharts))),
+            None if loading(&ExploreKey::Charts) => {
+                body = body.child(self.skeleton_section(t!(ExploreCharts)))
+            }
             None => {}
         }
         match cats {
@@ -367,7 +456,12 @@ impl Shell {
             None => {}
         }
         let people: Vec<CardSpec> = ex.suggestions.iter().map(artist_card).collect();
-        let body = body.children(self.card_section("explore#similar".into(), t!(ExploreSimilar), people, cx));
+        let body = body.children(self.card_section(
+            "explore#similar".into(),
+            t!(ExploreSimilar),
+            people,
+            cx,
+        ));
         // Gelen veri iskelet ya da durumdan sonraysa belirerek gelir.
         if skeleton {
             self.mark_shown();
@@ -379,7 +473,11 @@ impl Shell {
     /// durum (bkz. `welcome`); yok demek veri geliyor ya da başka bir hata var.
     pub(super) fn explore_gate(&self) -> Option<super::welcome::Gate> {
         let ex = &self.pages.explore;
-        let keys = [ExploreKey::NewReleases, ExploreKey::Charts, ExploreKey::Categories];
+        let keys = [
+            ExploreKey::NewReleases,
+            ExploreKey::Charts,
+            ExploreKey::Categories,
+        ];
         if keys.iter().any(|k| ex.has(k)) {
             return None;
         }
@@ -392,11 +490,18 @@ impl Shell {
     pub(super) fn reask_explore(&mut self) {
         let want: Vec<ExploreKey> = match self.pages.history.current() {
             Route::Home => vec![ExploreKey::Home],
-            Route::Explore => vec![ExploreKey::NewReleases, ExploreKey::Charts, ExploreKey::Categories],
+            Route::Explore => vec![
+                ExploreKey::NewReleases,
+                ExploreKey::Charts,
+                ExploreKey::Categories,
+            ],
             Route::Category(uri) => vec![ExploreKey::Category(uri.clone())],
             _ => return,
         };
-        let missing: Vec<ExploreKey> = want.into_iter().filter(|k| !self.pages.explore.has(k)).collect();
+        let missing: Vec<ExploreKey> = want
+            .into_iter()
+            .filter(|k| !self.pages.explore.has(k))
+            .collect();
         if !missing.is_empty() {
             self.ask_explore(&missing);
         }
@@ -410,21 +515,39 @@ impl Shell {
 
     fn tiles_skeleton(&self) -> AnyElement {
         let (cols, width) = self.tile_grid();
-        let mut grid = div().px(px(self.margin())).flex().flex_col().gap(px(CARD_GAP));
+        let mut grid = div()
+            .px(px(self.margin()))
+            .flex()
+            .flex_col()
+            .gap(px(CARD_GAP));
         for _ in 0..2 {
             let mut line = div().flex().gap(px(CARD_GAP));
             for _ in 0..cols {
-                line = line.child(div().w(px(width)).h(px(TILE_HEIGHT)).rounded(px(R_LG)).bg(veil(VEIL_HOVER)));
+                line = line.child(
+                    div()
+                        .w(px(width))
+                        .h(px(TILE_HEIGHT))
+                        .rounded(px(R_LG))
+                        .bg(veil(VEIL_HOVER)),
+                );
             }
             grid = grid.child(line);
         }
-        div().pb(px(S6)).child(self.section_heading(t!(ExploreGenres))).child(grid).into_any_element()
+        div()
+            .pb(px(S6))
+            .child(self.section_heading(t!(ExploreGenres)))
+            .child(grid)
+            .into_any_element()
     }
 
     /// Tür ve ruh hâli karoları: her biri kendi renginde, adı büyük yazılı.
     fn category_tiles(&self, list: &CategoryList, cx: &mut Context<Self>) -> AnyElement {
         let (cols, width) = self.tile_grid();
-        let mut grid = div().px(px(self.margin())).flex().flex_col().gap(px(CARD_GAP));
+        let mut grid = div()
+            .px(px(self.margin()))
+            .flex()
+            .flex_col()
+            .gap(px(CARD_GAP));
         for row in list.items.chunks(cols) {
             let mut line = div().flex().gap(px(CARD_GAP));
             for cat in row {
@@ -442,8 +565,15 @@ impl Shell {
                         .bg(rgb(color))
                         .cursor_pointer()
                         .tooltip(Tooltip::text(cat.name.clone(), None))
-                        .on_click(cx.listener(move |this, _, _, cx| this.navigate(Route::Category(uri.clone()), cx)))
-                        .child(super::tween::hover_fill(veil(VEIL_SELECTED), veil(VEIL_PRESSED), 0., R_LG))
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            this.navigate(Route::Category(uri.clone()), cx)
+                        }))
+                        .child(super::tween::hover_fill(
+                            veil(VEIL_SELECTED),
+                            veil(VEIL_PRESSED),
+                            0.,
+                            R_LG,
+                        ))
                         .child(
                             div()
                                 .absolute()
@@ -457,9 +587,12 @@ impl Shell {
                                 .font_weight(FontWeight::EXTRA_BOLD)
                                 .text_color(text())
                                 .child(
-                                    line_with_tip(ElementId::Name(format!("catn-{}", cat.uri).into()), cat.name.clone())
-                                        .flex()
-                                        .min_w_0(),
+                                    line_with_tip(
+                                        ElementId::Name(format!("catn-{}", cat.uri).into()),
+                                        cat.name.clone(),
+                                    )
+                                    .flex()
+                                    .min_w_0(),
                                 ),
                         ),
                 );
@@ -480,12 +613,25 @@ impl Shell {
                 None => self.page_skeleton_plain(true),
             };
         };
-        let title = if feed.title.is_empty() { self.category_name(uri) } else { feed.title.clone() };
+        let title = if feed.title.is_empty() {
+            self.category_name(uri)
+        } else {
+            feed.title.clone()
+        };
         let meta = div().child(t!(ExploreGenres)).into_any_element();
-        let mut body = div().flex().flex_col().child(self.page_header(None, &title, meta, Vec::new()));
+        let mut body =
+            div()
+                .flex()
+                .flex_col()
+                .child(self.page_header(None, &title, meta, Vec::new()));
         for (i, section) in feed.sections.iter().enumerate() {
             let cards = self.cards_of(&format!("cat{i}"), &section.cards);
-            body = body.children(self.card_section(format!("cat:{uri}#{i}"), &section.title, cards, cx));
+            body = body.children(self.card_section(
+                format!("cat:{uri}#{i}"),
+                &section.title,
+                cards,
+                cx,
+            ));
         }
         body
     }
@@ -503,10 +649,24 @@ impl Shell {
 
     /// Tür sayfası açıkken pencere ışımasının rengi (yoksa kapak ışıması).
     pub(super) fn category_glow_color(&self) -> Option<u32> {
-        let Route::Category(uri) = self.pages.history.current() else { return None };
-        let feed = self.pages.explore.feeds.get(&ExploreKey::Category(uri.clone()))?;
+        let Route::Category(uri) = self.pages.history.current() else {
+            return None;
+        };
+        let feed = self
+            .pages
+            .explore
+            .feeds
+            .get(&ExploreKey::Category(uri.clone()))?;
         let hex = if feed.color.is_empty() {
-            self.pages.explore.categories.as_ref()?.items.iter().find(|c| &c.uri == uri)?.color.clone()
+            self.pages
+                .explore
+                .categories
+                .as_ref()?
+                .items
+                .iter()
+                .find(|c| &c.uri == uri)?
+                .color
+                .clone()
         } else {
             feed.color.clone()
         };
@@ -536,9 +696,10 @@ mod tests {
     /// Spotify'ın tür karolarında gördüğümüz bütün renkler (7 Kasım 2026,
     /// `browseAll`): beyaz yazı karoda ≥ 4,5:1 olmalı.
     const TILE_COLORS: &[&str] = &[
-        "#dc148c", "#006450", "#283ea3", "#777777", "#1e3264", "#e61e32", "#8c1932", "#b02897", "#8d67ab", "#477d95",
-        "#503750", "#af2896", "#e1118c", "#2d46b9", "#e91429", "#d84000", "#ba5d07", "#b06239", "#5179a1", "#148a08",
-        "#a56752", "#0d73ec", "#7d4b32", "#608108", "#e13300", "#e8115b", "#27856a", "#537aa1", "#0d72ed",
+        "#dc148c", "#006450", "#283ea3", "#777777", "#1e3264", "#e61e32", "#8c1932", "#b02897",
+        "#8d67ab", "#477d95", "#503750", "#af2896", "#e1118c", "#2d46b9", "#e91429", "#d84000",
+        "#ba5d07", "#b06239", "#5179a1", "#148a08", "#a56752", "#0d73ec", "#7d4b32", "#608108",
+        "#e13300", "#e8115b", "#27856a", "#537aa1", "#0d72ed",
     ];
 
     fn contrast(a: u32, b: u32) -> f32 {
@@ -564,7 +725,11 @@ mod tests {
             let glow = category_glow(hex).unwrap();
             assert!(luminance(glow) <= 3. * GLOW_MAX_LUMINANCE + 1e-3, "{hex}");
             // Başlığın ve listelerin yazısı ışımanın üstünde okunur.
-            assert!(contrast(TEXT, glow) >= 7., "{hex}: {:.2}", contrast(TEXT, glow));
+            assert!(
+                contrast(TEXT, glow) >= 7.,
+                "{hex}: {:.2}",
+                contrast(TEXT, glow)
+            );
         }
         assert!(category_glow("").is_none());
     }

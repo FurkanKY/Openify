@@ -29,7 +29,11 @@ impl Engine {
         let Some(db) = &self.db else { return };
         let written = match &log {
             PlayLog::Count(rec) => db.record_play(rec),
-            PlayLog::Extend { uri, played_at, add_ms } => db.extend_play(uri, *played_at, *add_ms),
+            PlayLog::Extend {
+                uri,
+                played_at,
+                add_ms,
+            } => db.extend_play(uri, *played_at, *add_ms),
         };
         if let Err(e) = written {
             log::warn!("Çalma geçmişi yazılamadı: {e:#}");
@@ -43,7 +47,8 @@ impl Engine {
         self.bg.spawn_blocking(move || {
             match stats::report(&db, range, now_ms(), civil::local_offset_minutes()) {
                 Ok(report) => {
-                    let _ = events.try_send(Event::Library(LibraryEvent::PlayStats(Arc::new(report))));
+                    let _ =
+                        events.try_send(Event::Library(LibraryEvent::PlayStats(Arc::new(report))));
                 }
                 Err(e) => log::warn!("İstatistik okunamadı: {e:#}"),
             }
@@ -93,14 +98,29 @@ mod tests {
     }
 
     fn rig() -> Rig {
-        let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(1).enable_all().build().unwrap();
+        let rt = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .enable_all()
+            .build()
+            .unwrap();
         let (events_tx, events) = async_channel::unbounded();
         let (playback_tx, _playback) = async_channel::unbounded();
         let (internal_tx, _internal) = mpsc::unbounded_channel();
         let db = Arc::new(Db::open_in_memory().unwrap());
-        let engine =
-            Engine::new(rt.handle().clone(), Some(db.clone()), events_tx, playback_tx, internal_tx, AudioLevels::new());
-        Rig { engine, events, db, _rt: rt }
+        let engine = Engine::new(
+            rt.handle().clone(),
+            Some(db.clone()),
+            events_tx,
+            playback_tx,
+            internal_tx,
+            AudioLevels::new(),
+        );
+        Rig {
+            engine,
+            events,
+            db,
+            _rt: rt,
+        }
     }
 
     fn record(n: u32, at: i64) -> PlayRecord {
@@ -128,21 +148,29 @@ mod tests {
 
     #[test]
     fn counted_plays_are_written_extended_and_reported() {
-        let _guard = stats::FLAG_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = stats::FLAG_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let mut rig = rig();
         let at = now_ms() - 1000;
-        rig.engine.on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(1, at))));
-        rig.engine.on_library_command(LibraryCommand::RecordPlay(PlayLog::Extend {
-            uri: record(1, at).uri,
-            played_at: at,
-            add_ms: 9_000,
-        }));
+        rig.engine
+            .on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(1, at))));
+        rig.engine
+            .on_library_command(LibraryCommand::RecordPlay(PlayLog::Extend {
+                uri: record(1, at).uri,
+                played_at: at,
+                add_ms: 9_000,
+            }));
         let rows = rig.db.plays_since(0).unwrap();
         assert_eq!((rows.len(), rows[0].listened_ms), (1, 40_000));
-        rig.engine.on_library_command(LibraryCommand::PlayStats(StatsRange::Weeks4));
+        rig.engine
+            .on_library_command(LibraryCommand::PlayStats(StatsRange::Weeks4));
         match next_event(&rig) {
             Some(LibraryEvent::PlayStats(report)) => {
-                assert_eq!((report.range, report.plays, report.listened_ms), (StatsRange::Weeks4, 1, 40_000));
+                assert_eq!(
+                    (report.range, report.plays, report.listened_ms),
+                    (StatsRange::Weeks4, 1, 40_000)
+                );
                 assert_eq!(report.tracks[0].name, "Şarkı 1");
             }
             other => panic!("istatistik olayı beklendi: {other:?}"),
@@ -151,24 +179,37 @@ mod tests {
 
     #[test]
     fn nothing_is_written_in_a_private_session() {
-        let _guard = stats::FLAG_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = stats::FLAG_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let mut rig = rig();
         stats::set_private_session(true);
-        rig.engine.on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(1, 5))));
+        rig.engine
+            .on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(1, 5))));
         stats::set_private_session(false);
-        assert!(rig.db.plays_since(0).unwrap().is_empty(), "gizli oturumda geçmiş yazılmaz");
-        rig.engine.on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(2, 6))));
-        assert_eq!(rig.db.plays_since(0).unwrap().len(), 1, "oturum bitince yeniden yazılır");
+        assert!(
+            rig.db.plays_since(0).unwrap().is_empty(),
+            "gizli oturumda geçmiş yazılmaz"
+        );
+        rig.engine
+            .on_library_command(LibraryCommand::RecordPlay(PlayLog::Count(record(2, 6))));
+        assert_eq!(
+            rig.db.plays_since(0).unwrap().len(),
+            1,
+            "oturum bitince yeniden yazılır"
+        );
     }
 
     #[test]
     fn backup_command_writes_the_file_and_reports_a_summary_or_failure() {
         let mut rig = rig();
-        let dir = std::env::temp_dir().join(format!("openify-handlers-backup-{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openify-handlers-backup-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         // Önbellekte kütüphane yok: başarısız, dosya yok.
         let path = dir.join("yedek.json");
-        rig.engine.on_library_command(LibraryCommand::ExportBackup(path.clone()));
+        rig.engine
+            .on_library_command(LibraryCommand::ExportBackup(path.clone()));
         assert!(matches!(next_event(&rig), Some(LibraryEvent::BackupFailed)));
         assert!(!path.exists());
         // Kütüphane önbelleğe girince yazılır.
@@ -193,11 +234,18 @@ mod tests {
         };
         rig.db.save_tracks(std::slice::from_ref(&row)).unwrap();
         rig.db
-            .save_collection_entries(&CollectionId::Playlist("spotify:playlist:1".into()), Some(b"1"), &[Entry::untimed(row.uri)])
+            .save_collection_entries(
+                &CollectionId::Playlist("spotify:playlist:1".into()),
+                Some(b"1"),
+                &[Entry::untimed(row.uri)],
+            )
             .unwrap();
-        rig.engine.on_library_command(LibraryCommand::ExportBackup(path.clone()));
+        rig.engine
+            .on_library_command(LibraryCommand::ExportBackup(path.clone()));
         match next_event(&rig) {
-            Some(LibraryEvent::BackupDone(s)) => assert_eq!((s.lists, s.tracks, s.path.clone()), (1, 1, path.clone())),
+            Some(LibraryEvent::BackupDone(s)) => {
+                assert_eq!((s.lists, s.tracks, s.path.clone()), (1, 1, path.clone()))
+            }
             other => panic!("yedek özeti beklendi: {other:?}"),
         }
         assert!(path.is_file());

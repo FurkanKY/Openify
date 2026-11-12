@@ -33,7 +33,7 @@ use gpui::{
 
 use super::{Shell, fullscreen::FullState, shortcuts::Shortcut};
 use crate::engine::{
-    self, AudioLevels, Command, CollectionId, Lyrics, LyricLine, PlaybackEvent, QueueEntry,
+    self, AudioLevels, CollectionId, Command, LyricLine, Lyrics, PlaybackEvent, QueueEntry,
     QueueSource, QueueView, RepeatMode, SyncKind,
 };
 
@@ -59,15 +59,23 @@ pub(super) fn connect_fixture() -> Option<engine::ConnectStatus> {
     static FIXTURE: OnceLock<Option<engine::ConnectStatus>> = OnceLock::new();
     FIXTURE
         .get_or_init(|| {
-            let mode = std::env::var("OPENIFY_TEST_CONNECT").ok().filter(|_| crate::crash::is_test_run())?;
+            let mode = std::env::var("OPENIFY_TEST_CONNECT")
+                .ok()
+                .filter(|_| crate::crash::is_test_run())?;
             let device_name = "Openify (TEST-PC)".to_string();
             Some(match mode.as_str() {
                 "remote" => engine::ConnectStatus {
                     driver: engine::ConnectDriver::Remote,
                     device_name,
-                    remote: Some(engine::RemoteNow { device_name: "Pixel 8".to_string() }),
+                    remote: Some(engine::RemoteNow {
+                        device_name: "Pixel 8".to_string(),
+                    }),
                 },
-                "spirc" => engine::ConnectStatus { driver: engine::ConnectDriver::Spirc, device_name, remote: None },
+                "spirc" => engine::ConnectStatus {
+                    driver: engine::ConnectDriver::Spirc,
+                    device_name,
+                    remote: None,
+                },
                 _ => return None,
             })
         })
@@ -129,7 +137,8 @@ impl LyricScroll {
     }
 
     pub(super) fn reset(&mut self) {
-        self.handle.set_offset(gpui::point(gpui::px(0.), gpui::px(0.)));
+        self.handle
+            .set_offset(gpui::point(gpui::px(0.), gpui::px(0.)));
         self.line = None;
         self.anim = None;
         self.user_until = None;
@@ -193,7 +202,8 @@ pub(super) struct NowState {
 
 impl NowState {
     pub(super) fn new(levels: AudioLevels, cx: &mut Context<Shell>) -> Self {
-        let stop = |cx: &mut Context<Shell>, index| cx.focus_handle().tab_stop(true).tab_index(index);
+        let stop =
+            |cx: &mut Context<Shell>, index| cx.focus_handle().tab_stop(true).tab_index(index);
         // Kapanırken kaldığı yer diske yazılsın (hangi yoldan çıkılırsa
         // çıkılsın: pencere, tepsi, palet). En çok 1,5 sn bekler.
         let quit = cx.on_app_quit(|shell: &mut Shell, _| {
@@ -259,7 +269,8 @@ impl NowState {
     /// Sözler bir yerde görünüyor mu (sözler sekmesi, "Şimdi çalıyor"daki
     /// kesit ya da tam ekran): istenir, satır değişince çizilir.
     pub(super) fn lyrics_shown(&self) -> bool {
-        matches!(self.panel, Some(Panel::Lyrics | Panel::Now)) || (self.full.open && self.full.show_lyrics)
+        matches!(self.panel, Some(Panel::Lyrics | Panel::Now))
+            || (self.full.open && self.full.show_lyrics)
     }
 }
 
@@ -329,19 +340,38 @@ impl Shell {
                 // Geliştirme kancası `OPENIFY_TEST_NO_RESUME=1`: kaldığı yer
                 // gösterilmez (hiçbir şey yüklü değilken "Son çalınanlar"
                 // hâlini sınamak için; motorun kaydına dokunulmaz).
-                if self.now.fake || self.state.track.is_some() || std::env::var_os("OPENIFY_TEST_NO_RESUME").is_some() {
+                if self.now.fake
+                    || self.state.track.is_some()
+                    || std::env::var_os("OPENIFY_TEST_NO_RESUME").is_some()
+                {
                     return;
                 }
-                log::info!("kaldığı yer: {} @ {} ms", restored.track.uri, restored.position_ms);
+                log::info!(
+                    "kaldığı yer: {} @ {} ms",
+                    restored.track.uri,
+                    restored.position_ms
+                );
                 let restored = *restored;
                 let uri = restored.track.uri.clone();
                 // Motor notlarına göre: şarkı değişti + sıra + duraklatıldı +
                 // kapak. Çal'a basınca motor kaldığı konumdan yükler.
                 self.on_engine_event(engine::Event::TrackChanged(restored.track), cx);
                 self.on_engine_event(engine::Event::QueueChanged(restored.queue), cx);
-                self.on_engine_event(engine::Event::Paused { position_ms: restored.position_ms }, cx);
+                self.on_engine_event(
+                    engine::Event::Paused {
+                        position_ms: restored.position_ms,
+                    },
+                    cx,
+                );
                 if let Some((bytes, accent)) = restored.cover {
-                    self.on_engine_event(engine::Event::Cover { track_uri: uri, bytes, accent }, cx);
+                    self.on_engine_event(
+                        engine::Event::Cover {
+                            track_uri: uri,
+                            bytes,
+                            accent,
+                        },
+                        cx,
+                    );
                 }
                 self.set_queue(restored.view);
                 cx.notify();
@@ -382,7 +412,11 @@ impl Shell {
                 let uri = info.uri.clone();
                 // Sahte çalmada sıra arayüzde: çalan değişince kaydır.
                 if self.now.fake && self.now.queue_known {
-                    self.now.queue.current = Some(QueueEntry { uri: uri.clone(), track: None, source: QueueSource::Context });
+                    self.now.queue.current = Some(QueueEntry {
+                        uri: uri.clone(),
+                        track: None,
+                        source: QueueSource::Context,
+                    });
                 }
                 if self.now.lyrics_shown() {
                     self.request_lyrics(&uri);
@@ -392,7 +426,9 @@ impl Shell {
                 // hemen bırakılır).
                 self.request_hires(info.cover_url.clone(), cx);
             }
-            engine::Event::Cover { track_uri, bytes, .. } => {
+            engine::Event::Cover {
+                track_uri, bytes, ..
+            } => {
                 self.compute_backdrop(track_uri.clone(), bytes.clone(), cx);
             }
             engine::Event::Lyrics { uri, lyrics } => {
@@ -454,11 +490,16 @@ impl Shell {
         if self.now.fake || !self.now.lyrics_shown() {
             return;
         }
-        let Some(next) = self.now.queue.upcoming.first().map(|e| e.uri.clone()) else { return };
+        let Some(next) = self.now.queue.upcoming.first().map(|e| e.uri.clone()) else {
+            return;
+        };
         if self.now.prefetched.as_deref() == Some(next.as_str()) {
             return;
         }
-        if !matches!(self.now.lyrics, LyricsStatus::Ready(_) | LyricsStatus::Missing) {
+        if !matches!(
+            self.now.lyrics,
+            LyricsStatus::Ready(_) | LyricsStatus::Missing
+        ) {
             return;
         }
         self.now.prefetched = Some(next.clone());
@@ -476,11 +517,17 @@ impl Shell {
         }
         match self.now.levels.audible_track_ms() {
             Some(heard) => {
-                let guarded = self.now.clock_guard.is_some_and(|t| t.elapsed() < CLOCK_GUARD);
+                let guarded = self
+                    .now
+                    .clock_guard
+                    .is_some_and(|t| t.elapsed() < CLOCK_GUARD);
                 if guarded && (heard - ui).abs() > CLOCK_AGREE_MS {
                     (ui, ClockSource::Ui)
                 } else {
-                    (heard.min(self.state.duration_ms() as i64), ClockSource::Audible)
+                    (
+                        heard.min(self.state.duration_ms() as i64),
+                        ClockSource::Audible,
+                    )
                 }
             }
             None => (ui, ClockSource::Ui),
@@ -494,13 +541,19 @@ impl Shell {
         if !self.now.lyrics_shown() || !self.state.is_playing() || self.window_hidden() {
             return;
         }
-        let LyricsStatus::Ready(lyrics) = &self.now.lyrics else { return };
+        let LyricsStatus::Ready(lyrics) = &self.now.lyrics else {
+            return;
+        };
         if lyrics.sync != SyncKind::Line {
             return;
         }
         let (clock, _) = self.lyric_clock(Instant::now());
         let at = clock + LYRIC_LEAD_MS;
-        let next = lyrics.lines.iter().map(|l| l.start_ms as i64).find(|&s| s > at);
+        let next = lyrics
+            .lines
+            .iter()
+            .map(|l| l.start_ms as i64)
+            .find(|&s| s > at);
         let Some(next) = next else { return };
         let wait = Duration::from_millis((next - at).clamp(1, 60_000) as u64);
         self.now.lyric_timer = Some(cx.spawn(async move |this, cx| {
@@ -630,11 +683,27 @@ impl Shell {
         if !self.now.fake || self.now.queue_known {
             return;
         }
-        let Some(tracks) = self.library.tracks(&CollectionId::Liked).cloned() else { return };
-        let entry = |t: &engine::TrackRow, source| QueueEntry { uri: t.uri.clone(), track: Some(t.clone()), source };
-        let mut upcoming: Vec<QueueEntry> = tracks.iter().skip(1).take(50).map(|t| entry(t, QueueSource::Context)).collect();
+        let Some(tracks) = self.library.tracks(&CollectionId::Liked).cloned() else {
+            return;
+        };
+        let entry = |t: &engine::TrackRow, source| QueueEntry {
+            uri: t.uri.clone(),
+            track: Some(t.clone()),
+            source,
+        };
+        let mut upcoming: Vec<QueueEntry> = tracks
+            .iter()
+            .skip(1)
+            .take(50)
+            .map(|t| entry(t, QueueSource::Context))
+            .collect();
         // İki "sıraya eklenen" şarkı: kullanıcı sırası bölümü de görünsün.
-        let user: Vec<QueueEntry> = tracks.iter().rev().take(2).map(|t| entry(t, QueueSource::User)).collect();
+        let user: Vec<QueueEntry> = tracks
+            .iter()
+            .rev()
+            .take(2)
+            .map(|t| entry(t, QueueSource::User))
+            .collect();
         let user_len = user.len();
         upcoming.splice(0..0, user);
         self.now.queue = QueueView {
@@ -653,7 +722,12 @@ impl Shell {
     // ── Klavye ──────────────────────────────────────────────────────────
 
     /// Şimdi çalıyor kısayolları. İşlendiyse `true`.
-    pub(super) fn now_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn now_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let ks = &event.keystroke;
         let m = &ks.modifiers;
         let key = ks.key.as_str();
@@ -672,7 +746,9 @@ impl Shell {
             // Yerleşik panel (geniş pencere) Esc ile kapanmaz: içeriğin
             // üstünde yüzmüyor, Esc başka işler (palet, menü, bul) içindir.
             // (Paneldeki satırın sağ tık menüsü açıksa Esc önce onu kapatır.)
-            (_, "escape") if self.now.panel.is_some() && !self.now.docked() && !self.manage.modal() => {
+            (_, "escape")
+                if self.now.panel.is_some() && !self.now.docked() && !self.manage.modal() =>
+            {
                 self.close_panel(cx);
                 window.focus(&self.focus);
                 return true;
@@ -702,7 +778,9 @@ impl Shell {
         // Odaktaki yeni düğmeyi gpui kendisi tıklar (Enter / Boşluk): genel
         // kısayol aynı tuşta ikinci kez çalışmasın.
         let s = &self.now.stops;
-        let on_stop = [&s.shuffle, &s.repeat, &s.queue, &s.lyrics].iter().any(|h| h.is_focused(window));
+        let on_stop = [&s.shuffle, &s.repeat, &s.queue, &s.lyrics]
+            .iter()
+            .any(|h| h.is_focused(window));
         if on_stop && (key == "enter" || key == "space") {
             return true;
         }
@@ -723,7 +801,11 @@ impl Shell {
         match key {
             "up" | "down" if alt => {
                 let Some(from) = cursor else { return true };
-                let to = if key == "up" { from.checked_sub(1) } else { (from + 1 < len).then_some(from + 1) };
+                let to = if key == "up" {
+                    from.checked_sub(1)
+                } else {
+                    (from + 1 < len).then_some(from + 1)
+                };
                 if let Some(to) = to {
                     self.move_queue_item(from, to, cx);
                     self.now.cursor = Some(to);
@@ -794,7 +876,10 @@ impl Shell {
         if let Some(e) = self.now.queue.upcoming.get(i)
             && let Some(t) = &e.track
         {
-            self.state.pending = Some(super::player::PendingTrack { name: t.name.clone(), image: t.image.clone() });
+            self.state.pending = Some(super::player::PendingTrack {
+                name: t.name.clone(),
+                image: t.image.clone(),
+            });
         }
         self.engine.send(Command::PlayQueueItem(i));
         cx.notify();
@@ -825,7 +910,12 @@ fn fake_lyrics(duration_ms: u32) -> Lyrics {
     let mut t = 4_000u32;
     let mut i = 0usize;
     while t + 3_000 < duration_ms {
-        lines.push(LyricLine { start_ms: t, end_ms: None, text: WORDS[i % WORDS.len()].to_string(), alts: Vec::new() });
+        lines.push(LyricLine {
+            start_ms: t,
+            end_ms: None,
+            text: WORDS[i % WORDS.len()].to_string(),
+            alts: Vec::new(),
+        });
         t += 2_500 + ((i * 7919) % 5) as u32 * 500;
         i += 1;
     }
@@ -877,7 +967,12 @@ fn render_paced<V: Paced>(
     });
     match result {
         Ok((element, animating)) => {
-            let element = div().size_full().flex().flex_col().child(element).into_any_element();
+            let element = div()
+                .size_full()
+                .flex()
+                .flex_col()
+                .child(element)
+                .into_any_element();
             if animating && !waiting {
                 pace(window, cx.entity().downgrade(), Instant::now());
                 return (element, true);
@@ -913,8 +1008,13 @@ impl Paced for SideView {
 
 impl Render for SideView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (element, waiting) =
-            render_paced(&self.shell, self.waiting, window, cx, |shell, window, cx| shell.render_side_panel(window, cx));
+        let (element, waiting) = render_paced(
+            &self.shell,
+            self.waiting,
+            window,
+            cx,
+            |shell, window, cx| shell.render_side_panel(window, cx),
+        );
         self.waiting = waiting;
         element
     }
@@ -945,8 +1045,13 @@ impl Paced for FullView {
 
 impl Render for FullView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let (element, waiting) =
-            render_paced(&self.shell, self.waiting, window, cx, |shell, window, cx| shell.render_fullscreen(window, cx));
+        let (element, waiting) = render_paced(
+            &self.shell,
+            self.waiting,
+            window,
+            cx,
+            |shell, window, cx| shell.render_fullscreen(window, cx),
+        );
         self.waiting = waiting;
         element
     }
@@ -966,7 +1071,10 @@ pub(super) mod trace {
         FILE.get_or_init(|| {
             let path = std::env::var_os("OPENIFY_LYRICS_TRACE")?;
             let mut f = BufWriter::new(File::create(path).ok()?);
-            let _ = writeln!(f, "t_ms,view,line,start_ms,clock_ms,late_ms,source,since_seek_ms");
+            let _ = writeln!(
+                f,
+                "t_ms,view,line,start_ms,clock_ms,late_ms,source,since_seek_ms"
+            );
             Some(Mutex::new(f))
         })
         .as_ref()
@@ -987,7 +1095,14 @@ pub(super) mod trace {
 
     /// Bir olayın boyanması (`view`: olayın adı; son sütun olaydan boyamaya ms).
     pub fn event(view: &'static str, since_ms: f32) {
-        write(Row { view, line: 0, start_ms: 0, clock_ms: 0, source: ClockSource::Ui, since_seek_ms: Some(since_ms) });
+        write(Row {
+            view,
+            line: 0,
+            start_ms: 0,
+            clock_ms: 0,
+            source: ClockSource::Ui,
+            since_seek_ms: Some(since_ms),
+        });
     }
 
     pub fn write(row: Row) {
@@ -1004,7 +1119,9 @@ pub(super) mod trace {
                 row.clock_ms,
                 row.clock_ms - row.start_ms as i64,
                 row.source,
-                row.since_seek_ms.map(|v| format!("{v:.1}")).unwrap_or_default()
+                row.since_seek_ms
+                    .map(|v| format!("{v:.1}"))
+                    .unwrap_or_default()
             );
             let _ = f.flush();
         }
@@ -1057,7 +1174,8 @@ impl Shell {
 /// açık gelir (ekran sınaması ve kare ölçümü için).
 pub(super) fn test_view() -> Option<&'static str> {
     static VIEW: OnceLock<Option<String>> = OnceLock::new();
-    VIEW.get_or_init(|| std::env::var("OPENIFY_TEST_VIEW").ok()).as_deref()
+    VIEW.get_or_init(|| std::env::var("OPENIFY_TEST_VIEW").ok())
+        .as_deref()
 }
 
 impl Shell {
@@ -1067,12 +1185,23 @@ impl Shell {
     pub(super) fn apply_test_view(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(view) = test_view() else { return };
         if self.now.fake
-            && let Some(t) = self.library.tracks(&CollectionId::Liked).and_then(|t| t.get(super::fake_row())).cloned()
+            && let Some(t) = self
+                .library
+                .tracks(&CollectionId::Liked)
+                .and_then(|t| t.get(super::fake_row()))
+                .cloned()
             && self.state.track.as_ref().is_some_and(|c| c.uri == t.uri)
             && let Some(bytes) = engine::cover_path(&t.image).and_then(|p| std::fs::read(p).ok())
         {
             let accent = engine::palette::accent_from_image(&bytes);
-            self.on_engine_event(engine::Event::Cover { track_uri: t.uri.clone(), bytes, accent }, cx);
+            self.on_engine_event(
+                engine::Event::Cover {
+                    track_uri: t.uri.clone(),
+                    bytes,
+                    accent,
+                },
+                cx,
+            );
         }
         // Sayfalar: "home", "explore", "library", "recent", "settings", "category:<sayfa kimliği>", "search:<sorgu>", "artist:<uri>", "album:<uri>"
         // (arama sayfası paletten Ctrl+Enter ister, sınamada iletiyle
@@ -1095,9 +1224,14 @@ impl Shell {
             // Bağlantı kurulduktan sonra (açılışta sayfa isteği bağlantıdan
             // önce gidip "ulaşılamadı" dönüyordu); `OPENIFY_TEST_VIEW_AFTER`
             // saniye, varsayılan 3. 0 hemen açar (hata hâlini görmek için).
-            let after = std::env::var("OPENIFY_TEST_VIEW_AFTER").ok().and_then(|v| v.parse().ok()).unwrap_or(3);
+            let after = std::env::var("OPENIFY_TEST_VIEW_AFTER")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(3);
             cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(std::time::Duration::from_secs(after)).await;
+                cx.background_executor()
+                    .timer(std::time::Duration::from_secs(after))
+                    .await;
                 let _ = this.update(cx, |shell, cx| shell.navigate(route, cx));
             })
             .detach();

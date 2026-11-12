@@ -125,11 +125,13 @@ mod writer;
 mod xfade;
 
 pub use automix::{EdgeView, FALLBACK_MS as AUTOMIX_FALLBACK_MS};
-pub use beat::{Analysis, BeatTap, Edge, ENV_SECS};
+pub use beat::{Analysis, BeatTap, ENV_SECS, Edge};
 #[cfg(test)]
 pub use beat::{HAS_HEAD, HAS_TAIL};
-pub use device::{default_output_device_name, has_device, output_device_names, set_preferred_device};
 pub(in crate::engine) use device::Device;
+pub use device::{
+    default_output_device_name, has_device, output_device_names, set_preferred_device,
+};
 pub(in crate::engine) use writer::Writer;
 pub use xfade::{Curve, MAX_OVERLAP_MS, Transition, TransitionSpec};
 
@@ -191,9 +193,11 @@ pub(in crate::engine) const MARK_CLIENT_ID: &str = "openify-mark";
 /// Bir olay çıkış kapısının işareti mi? İşaretin sıra numarası.
 pub(in crate::engine) fn mark_of(event: &PlayerEvent) -> Option<u64> {
     match event {
-        PlayerEvent::SessionClientChanged { client_id, client_name, .. } if client_id == MARK_CLIENT_ID => {
-            client_name.parse().ok()
-        }
+        PlayerEvent::SessionClientChanged {
+            client_id,
+            client_name,
+            ..
+        } if client_id == MARK_CLIENT_ID => client_name.parse().ok(),
         _ => None,
     }
 }
@@ -434,13 +438,17 @@ impl OutputCtl {
             .filter(|v| (MIN_TARGET_MS..=MAX_TARGET_MS).contains(v))
             .unwrap_or(DEFAULT_TARGET_MS);
         // Geliştirme kancası: OPENIFY_SINK_TRACE=<csv> (bkz. `trace_loop`).
-        let trace_file = std::env::var_os("OPENIFY_SINK_TRACE").and_then(|p| match File::create(&p) {
-            Ok(f) => Some(f),
-            Err(e) => {
-                log::warn!("OPENIFY_SINK_TRACE açılamadı ({}): {e}", p.to_string_lossy());
-                None
-            }
-        });
+        let trace_file =
+            std::env::var_os("OPENIFY_SINK_TRACE").and_then(|p| match File::create(&p) {
+                Ok(f) => Some(f),
+                Err(e) => {
+                    log::warn!(
+                        "OPENIFY_SINK_TRACE açılamadı ({}): {e}",
+                        p.to_string_lossy()
+                    );
+                    None
+                }
+            });
         let (trace_tx, trace_rx) = match trace_file {
             Some(f) => {
                 let (tx, rx) = mpsc::channel();
@@ -523,7 +531,11 @@ impl OutputCtl {
 
     /// Testler için: sanal saatli, `crossfade_ms`'e göre boyutlanmış halkalı.
     #[cfg(test)]
-    pub(super) fn with_clock_for(levels: AudioLevels, clock: Arc<AtomicU64>, crossfade_ms: u32) -> Arc<Self> {
+    pub(super) fn with_clock_for(
+        levels: AudioLevels,
+        clock: Arc<AtomicU64>,
+        crossfade_ms: u32,
+    ) -> Arc<Self> {
         Self::build(levels, 1.0, ring_frames(crossfade_ms), Some(clock))
     }
 
@@ -597,7 +609,11 @@ impl OutputCtl {
 
     /// Ses düzeyi (0..1, doğrusal çarpan; ses kartına ~10 ms'lik rampayla).
     pub fn set_gain(&self, gain: f32) {
-        let gain = if gain.is_finite() { gain.clamp(0.0, 1.0) } else { 0.0 };
+        let gain = if gain.is_finite() {
+            gain.clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
         if self.gain.swap(gain.to_bits(), SeqCst) != gain.to_bits() {
             self.trace("volume");
         }
@@ -759,7 +775,9 @@ impl OutputCtl {
     /// değil: süren bir boşluksuz geçiş varsa sınırı oraya çeker (`flush`
     /// aynı anda iptal ettiyse dokunmaz).
     pub(super) fn move_handover_boundary(&self, frame: u64) {
-        let _ = self.ho_boundary.try_update(SeqCst, SeqCst, |b| (b != i64::MIN).then_some(frame as i64));
+        let _ = self
+            .ho_boundary
+            .try_update(SeqCst, SeqCst, |b| (b != i64::MIN).then_some(frame as i64));
     }
 
     pub fn handover_state(&self) -> Handover {
@@ -784,7 +802,9 @@ impl OutputCtl {
                     self.pull_ns(boundary as u64, now)
                 };
                 let at = pulled_at + self.device_ns;
-                Handover::Pending { eta: Duration::from_nanos(at.saturating_sub(now)) }
+                Handover::Pending {
+                    eta: Duration::from_nanos(at.saturating_sub(now)),
+                }
             }
         }
     }
@@ -801,7 +821,12 @@ impl OutputCtl {
         }
         let next = self.read.load(SeqCst).max(self.discard_to.load(SeqCst));
         let frame = if paused {
-            (next + if self.fading_out() { FADE_FRAMES as u64 } else { 0 }) as f64
+            (next
+                + if self.fading_out() {
+                    FADE_FRAMES as u64
+                } else {
+                    0
+                }) as f64
         } else {
             self.heard_frame().unwrap_or(next as f64)
         };
@@ -825,7 +850,8 @@ impl OutputCtl {
 
     /// `arm_transition` + AutoMix için gelen şarkının (önbellekteki) baş ucu.
     pub fn arm_automix(&self, spec: TransitionSpec, incoming: Option<EdgeView>) {
-        self.armed_in.store(incoming.map_or(0, |v| v.pack()), SeqCst);
+        self.armed_in
+            .store(incoming.map_or(0, |v| v.pack()), SeqCst);
         self.armed.store(spec.pack(), SeqCst);
         // Yazar hedefin altında uyuyorsa yeni derinliği hemen görsün.
         self.wake_writer();
@@ -865,7 +891,10 @@ impl OutputCtl {
 
     /// Hazır çözümlemeleri alır (motor iş parçacığı).
     pub fn take_analyses(&self) -> Vec<(String, Analysis)> {
-        self.analyses.lock().map(|mut q| std::mem::take(&mut *q)).unwrap_or_default()
+        self.analyses
+            .lock()
+            .map(|mut q| std::mem::take(&mut *q))
+            .unwrap_or_default()
     }
 
     /// Şu an verilmiş istek (yazar ve testler).
@@ -958,7 +987,8 @@ impl OutputCtl {
 
     /// Varsayılan aygıt değişeli `REROUTE_GRACE` geçti, açık akış eskisinde.
     fn reroute_due(&self) -> bool {
-        watch::default_gen() != self.route_gen.load(SeqCst) && watch::since_default_change() >= REROUTE_GRACE
+        watch::default_gen() != self.route_gen.load(SeqCst)
+            && watch::since_default_change() >= REROUTE_GRACE
     }
 
     // ── iç ────────────────────────────────────────────────────────────
@@ -979,7 +1009,11 @@ impl OutputCtl {
     /// `tail_frames`.
     fn target_frames(&self) -> u64 {
         let base = self.target.load(Relaxed);
-        if self.tail.load(Relaxed) { base.max(self.tail_frames()) } else { base }
+        if self.tail.load(Relaxed) {
+            base.max(self.tail_frames())
+        } else {
+            base
+        }
     }
 
     /// Şarkı sonu payının derinliği (kare): `TAIL_MS` + sıradaki geçişin
@@ -1059,8 +1093,15 @@ impl OutputCtl {
 /// `target_ms` xrun'la büyüyen taban hedeftir; şarkı sonu payı ayrı satırlarla
 /// (`tail_on` / `tail_off`). `arg_ms` yalnız ek değerli satırlarda dolu
 /// (`producer_gap`: çözücünün iki paket arası süresi; `reroute`: geçiş süresi).
-fn trace_loop(ctl: Weak<OutputCtl>, rx: mpsc::Receiver<(u64, &'static str, f64)>, mut w: BufWriter<File>) {
-    let _ = writeln!(w, "t_unix_ms,event,queued_ms,xruns,gain,target_ms,underrun_ms,arg_ms");
+fn trace_loop(
+    ctl: Weak<OutputCtl>,
+    rx: mpsc::Receiver<(u64, &'static str, f64)>,
+    mut w: BufWriter<File>,
+) {
+    let _ = writeln!(
+        w,
+        "t_unix_ms,event,queued_ms,xruns,gain,target_ms,underrun_ms,arg_ms"
+    );
     let mut seen = [0u64; 4];
     let mut next_tick = Instant::now() + TRACE_TICK;
     let mut ticks = 0u32;
@@ -1069,7 +1110,11 @@ fn trace_loop(ctl: Weak<OutputCtl>, rx: mpsc::Receiver<(u64, &'static str, f64)>
         let Some(ctl) = ctl.upgrade() else { break };
         let row = |w: &mut BufWriter<File>, t: u64, name: &str, arg: f64| {
             let ms = |frames: u64| frames as f64 * 1000.0 / RATE as f64;
-            let arg = if arg.is_finite() { format!("{arg:.1}") } else { String::new() };
+            let arg = if arg.is_finite() {
+                format!("{arg:.1}")
+            } else {
+                String::new()
+            };
             let _ = writeln!(
                 w,
                 "{:.2},{name},{:.1},{},{:.4},{:.0},{:.1},{arg}",
@@ -1111,9 +1156,9 @@ fn trace_loop(ctl: Weak<OutputCtl>, rx: mpsc::Receiver<(u64, &'static str, f64)>
 }
 
 #[cfg(test)]
-mod tests;
-#[cfg(test)]
 mod beat_tests;
+#[cfg(test)]
+mod tests;
 #[cfg(test)]
 mod xfade_tests;
 #[cfg(test)]

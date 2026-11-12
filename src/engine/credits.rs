@@ -106,7 +106,11 @@ impl Credits {
     /// Tıklanabilir (adresi olan) kişi sayısı.
     #[cfg(test)]
     pub fn linkable(&self) -> usize {
-        self.roles.iter().flat_map(|r| &r.people).filter(|p| p.uri.is_some()).count()
+        self.roles
+            .iter()
+            .flat_map(|r| &r.people)
+            .filter(|p| p.uri.is_some())
+            .count()
     }
 }
 
@@ -126,12 +130,16 @@ pub enum CreditsFailure {
 impl From<&PathfinderError> for CreditsFailure {
     fn from(e: &PathfinderError) -> Self {
         match e {
-            PathfinderError::RateLimited { .. } | PathfinderError::Blocked { .. } | PathfinderError::CircuitOpen => {
-                Self::RateLimited
-            }
+            PathfinderError::RateLimited { .. }
+            | PathfinderError::Blocked { .. }
+            | PathfinderError::CircuitOpen => Self::RateLimited,
             PathfinderError::Denied { .. } => Self::Denied,
-            PathfinderError::Http { status: 404 | 410 } | PathfinderError::InvalidResponse(_) => Self::Unavailable,
-            PathfinderError::Token(_) | PathfinderError::Transport(_) | PathfinderError::Http { .. } => Self::Offline,
+            PathfinderError::Http { status: 404 | 410 } | PathfinderError::InvalidResponse(_) => {
+                Self::Unavailable
+            }
+            PathfinderError::Token(_)
+            | PathfinderError::Transport(_)
+            | PathfinderError::Http { .. } => Self::Offline,
             // Hash'li işlemlere özgü hatalar bu uçta gelmez.
             _ => Self::Unavailable,
         }
@@ -144,7 +152,8 @@ impl From<&PathfinderError> for CreditsFailure {
 /// adres (bölüm, yerel dosya) için `None`.
 pub fn track_id(uri: &str) -> Option<&str> {
     let id = uri.strip_prefix("spotify:track:")?;
-    (!id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric())).then_some(id)
+    (!id.is_empty() && id.len() <= 64 && id.bytes().all(|b| b.is_ascii_alphanumeric()))
+        .then_some(id)
 }
 
 /// Şarkının künye adresi.
@@ -162,7 +171,9 @@ pub fn parse(value: &Value) -> Credits {
 
     let mut roles: Vec<Role> = Vec::new();
     for key in ["roleCredits", "credits", "roles", "extendedCredits"] {
-        let Some(list) = value.get(key).and_then(Value::as_array) else { continue };
+        let Some(list) = value.get(key).and_then(Value::as_array) else {
+            continue;
+        };
         for item in list {
             if let Some(role) = parse_role(item) {
                 merge(&mut roles, role);
@@ -183,7 +194,11 @@ pub fn parse(value: &Value) -> Credits {
         Some(Value::Array(list)) => {
             for v in list {
                 // Dizi düz yazı ya da `{ "name": … }` olabilir.
-                let s = text(Some(if v.is_object() { v.get("name").unwrap_or(v) } else { v }));
+                let s = text(Some(if v.is_object() {
+                    v.get("name").unwrap_or(v)
+                } else {
+                    v
+                }));
                 if !s.is_empty() && !sources.contains(&s) {
                     sources.push(s);
                 }
@@ -199,12 +214,20 @@ pub fn parse(value: &Value) -> Credits {
     }
     sources.truncate(MAX_SOURCES);
 
-    Credits { title, roles, sources }
+    Credits {
+        title,
+        roles,
+        sources,
+    }
 }
 
 fn parse_role(v: &Value) -> Option<Role> {
-    let title = ["roleTitle", "title", "role", "name"].iter().find_map(|k| Some(text(v.get(k))).filter(|t| !t.is_empty()))?;
-    let list = ["artists", "people", "credits", "names"].iter().find_map(|k| v.get(k).and_then(Value::as_array))?;
+    let title = ["roleTitle", "title", "role", "name"]
+        .iter()
+        .find_map(|k| Some(text(v.get(k))).filter(|t| !t.is_empty()))?;
+    let list = ["artists", "people", "credits", "names"]
+        .iter()
+        .find_map(|k| v.get(k).and_then(Value::as_array))?;
     let mut people: Vec<Person> = Vec::new();
     for p in list {
         if let Some(person) = parse_person(p)
@@ -214,14 +237,21 @@ fn parse_role(v: &Value) -> Option<Role> {
         }
     }
     people.truncate(MAX_PEOPLE);
-    (!people.is_empty()).then(|| Role { kind: kind_of(&title), title, people })
+    (!people.is_empty()).then(|| Role {
+        kind: kind_of(&title),
+        title,
+        people,
+    })
 }
 
 fn parse_person(v: &Value) -> Option<Person> {
     // Düz yazı ("Ad Soyad") ya da nesne.
     let (name, uri) = match v {
         Value::String(_) => (text(Some(v)), None),
-        Value::Object(_) => (text(v.get("name")), artist_uri(v.get("uri").or_else(|| v.get("artistUri")))),
+        Value::Object(_) => (
+            text(v.get("name")),
+            artist_uri(v.get("uri").or_else(|| v.get("artistUri"))),
+        ),
         _ => return None,
     };
     (!name.is_empty()).then_some(Person { name, uri })
@@ -234,11 +264,17 @@ pub fn kind_of(title: &str) -> RoleKind {
     // "Writer" (writ…) ve "Producer" (produc…) "performer"dan önce: "Written
     // By" ve "Produced By" kendi başına; "Performed By" / "Main Artist" /
     // "Vocals" seslendiren.
-    if ["writ", "compos", "lyric", "songwrit", "author", "arrang"].iter().any(|k| t.contains(k)) {
+    if ["writ", "compos", "lyric", "songwrit", "author", "arrang"]
+        .iter()
+        .any(|k| t.contains(k))
+    {
         RoleKind::Writer
     } else if t.contains("produc") {
         RoleKind::Producer
-    } else if ["perform", "main artist", "featured", "vocal", "singer"].iter().any(|k| t.contains(k)) {
+    } else if ["perform", "main artist", "featured", "vocal", "singer"]
+        .iter()
+        .any(|k| t.contains(k))
+    {
         RoleKind::Performer
     } else {
         RoleKind::Other
@@ -248,7 +284,8 @@ pub fn kind_of(title: &str) -> RoleKind {
 /// Aynı türdeki rolleri birleştirir (Spotify "Writer" ve "Composer"ı ayrı
 /// verebilir: ikisi de "Yazan"); `Other` roller başlığıyla eşleşirse birleşir.
 fn merge(roles: &mut Vec<Role>, role: Role) {
-    let same = |r: &Role| r.kind == role.kind && (role.kind != RoleKind::Other || r.title == role.title);
+    let same =
+        |r: &Role| r.kind == role.kind && (role.kind != RoleKind::Other || r.title == role.title);
     match roles.iter_mut().find(|r| same(r)) {
         Some(existing) => {
             for p in role.people {
@@ -266,13 +303,19 @@ fn merge(roles: &mut Vec<Role>, role: Role) {
 fn artist_uri(v: Option<&Value>) -> Option<String> {
     const PREFIX: &str = "spotify:artist:";
     let s = v?.as_str()?.trim();
-    (s.starts_with(PREFIX) && s.len() > PREFIX.len() && !s.chars().any(char::is_control)).then(|| s.to_string())
+    (s.starts_with(PREFIX) && s.len() > PREFIX.len() && !s.chars().any(char::is_control))
+        .then(|| s.to_string())
 }
 
 /// Görünecek yazı: denetim karakterleri atılmış, kırpılmış, en çok `TEXT_MAX` harf.
 fn text(v: Option<&Value>) -> String {
     let s = v.and_then(Value::as_str).unwrap_or_default();
-    s.chars().filter(|c| !c.is_control()).take(TEXT_MAX).collect::<String>().trim().to_string()
+    s.chars()
+        .filter(|c| !c.is_control())
+        .take(TEXT_MAX)
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 // ── Alma ────────────────────────────────────────────────────────────────
@@ -283,7 +326,11 @@ fn cache() -> &'static Mutex<HashMap<String, Arc<Credits>>> {
 }
 
 fn cached(uri: &str) -> Option<Arc<Credits>> {
-    cache().lock().unwrap_or_else(|e| e.into_inner()).get(uri).cloned()
+    cache()
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .get(uri)
+        .cloned()
 }
 
 fn remember(uri: &str, credits: &Arc<Credits>) {
@@ -297,13 +344,27 @@ fn remember(uri: &str, credits: &Arc<Credits>) {
 /// Künyeyi alır (kapı, token yenileme, yeniden deneme ortak istemciden).
 /// Şarkı adresi künyesi olmayan türdeyse (bölüm, yerel dosya) boş künye döner.
 /// 404: "bu şarkının künyesi yok", boş künye (hata değil).
-pub async fn load_with(pf: &Pathfinder, transport: &dyn Transport, uri: &str) -> Result<Arc<Credits>, CreditsFailure> {
-    let Some(id) = track_id(uri) else { return Ok(Arc::new(Credits::default())) };
+pub async fn load_with(
+    pf: &Pathfinder,
+    transport: &dyn Transport,
+    uri: &str,
+) -> Result<Arc<Credits>, CreditsFailure> {
+    let Some(id) = track_id(uri) else {
+        return Ok(Arc::new(Credits::default()));
+    };
     if let Some(hit) = cached(uri) {
         return Ok(hit);
     }
     // Kullanıcı bekliyor (düğmeye bastı): sıraya girmez, 429 beklemesine uyar.
-    match pf.get_json(transport, "track-credits", &credits_url(id), Priority::Interactive).await {
+    match pf
+        .get_json(
+            transport,
+            "track-credits",
+            &credits_url(id),
+            Priority::Interactive,
+        )
+        .await
+    {
         Ok(value) => {
             let credits = Arc::new(parse(&value));
             if !credits.is_empty() {
@@ -356,13 +417,27 @@ mod tests {
         // Yanıtta sıra Yapımcı, Seslendiren, Yazan, Mix, Besteci: çıktıda
         // Seslendiren, Yazan (Besteci birleşti), Yapımcı, sonra Mix.
         let kinds: Vec<RoleKind> = c.roles.iter().map(|r| r.kind).collect();
-        assert_eq!(kinds, [RoleKind::Performer, RoleKind::Writer, RoleKind::Producer, RoleKind::Other]);
+        assert_eq!(
+            kinds,
+            [
+                RoleKind::Performer,
+                RoleKind::Writer,
+                RoleKind::Producer,
+                RoleKind::Other
+            ]
+        );
 
         let performer = &c.roles[0];
         assert_eq!(performer.title, "Performed By");
         assert_eq!(names(performer), ["Dalga Boyu", "Kuzey Isigi"]);
-        assert_eq!(performer.people[0].uri.as_deref(), Some("spotify:artist:r01"));
-        assert_eq!(performer.people[1].uri.as_deref(), Some("spotify:artist:r02"));
+        assert_eq!(
+            performer.people[0].uri.as_deref(),
+            Some("spotify:artist:r01")
+        );
+        assert_eq!(
+            performer.people[1].uri.as_deref(),
+            Some("spotify:artist:r02")
+        );
 
         // Yazan: iki rol birleşti, aynı ad (Deniz Aksu) tek; adresi olmayan kişi tıklanmaz.
         let writer = &c.roles[1];
@@ -386,14 +461,24 @@ mod tests {
         assert_eq!(c.roles.len(), 2);
         assert_eq!(c.roles[0].kind, RoleKind::Performer);
         assert_eq!(names(&c.roles[0]), ["Yalniz Ad", "Duz Yazi"]);
-        assert_eq!(c.roles[0].people[0].uri, None, "bozuk adres tıklanmaz ama ad görünür");
+        assert_eq!(
+            c.roles[0].people[0].uri, None,
+            "bozuk adres tıklanmaz ama ad görünür"
+        );
         assert_eq!(c.roles[1].kind, RoleKind::Producer);
         assert_eq!(c.sources, ["Tek Kaynak"]);
     }
 
     #[test]
     fn empty_and_unrelated_bodies_make_an_empty_credits() {
-        for body in ["{}", "[]", r#"{"roleCredits":[]}"#, r#"{"roleCredits":[{"roleTitle":"X","artists":[]}]}"#, "null", "3"] {
+        for body in [
+            "{}",
+            "[]",
+            r#"{"roleCredits":[]}"#,
+            r#"{"roleCredits":[{"roleTitle":"X","artists":[]}]}"#,
+            "null",
+            "3",
+        ] {
             let c = parse(&serde_json::from_str(body).unwrap());
             assert!(c.is_empty(), "{body}");
         }
@@ -423,25 +508,37 @@ mod tests {
 
     #[test]
     fn limits_hold_for_huge_responses() {
-        let people: Vec<Value> = (0..40).map(|i| serde_json::json!({ "name": format!("Kisi {i}") })).collect();
-        let roles: Vec<Value> =
-            (0..30).map(|i| serde_json::json!({ "roleTitle": format!("Rol {i}"), "artists": people })).collect();
+        let people: Vec<Value> = (0..40)
+            .map(|i| serde_json::json!({ "name": format!("Kisi {i}") }))
+            .collect();
+        let roles: Vec<Value> = (0..30)
+            .map(|i| serde_json::json!({ "roleTitle": format!("Rol {i}"), "artists": people }))
+            .collect();
         let sources: Vec<String> = (0..10).map(|i| format!("Kaynak {i}")).collect();
         let c = parse(&serde_json::json!({ "roleCredits": roles, "sourceNames": sources }));
         assert_eq!(c.roles.len(), MAX_ROLES);
         assert!(c.roles.iter().all(|r| r.people.len() == MAX_PEOPLE));
         assert_eq!(c.sources.len(), MAX_SOURCES);
         let long = "a".repeat(1000);
-        let c = parse(&serde_json::json!({ "roleCredits": [{ "roleTitle": "Performed By", "artists": [{ "name": long }] }] }));
+        let c = parse(
+            &serde_json::json!({ "roleCredits": [{ "roleTitle": "Performed By", "artists": [{ "name": long }] }] }),
+        );
         assert_eq!(c.roles[0].people[0].name.chars().count(), TEXT_MAX);
     }
 
     #[test]
     fn track_id_accepts_only_track_uris() {
-        assert_eq!(track_id("spotify:track:4uLU6hMCjMI75M1A2tKUQC"), Some("4uLU6hMCjMI75M1A2tKUQC"));
+        assert_eq!(
+            track_id("spotify:track:4uLU6hMCjMI75M1A2tKUQC"),
+            Some("4uLU6hMCjMI75M1A2tKUQC")
+        );
         assert_eq!(track_id("spotify:episode:abc"), None);
         assert_eq!(track_id("spotify:track:"), None);
-        assert_eq!(track_id("spotify:track:a/b"), None, "yol ayracı içeren kimlik adrese karışmaz");
+        assert_eq!(
+            track_id("spotify:track:a/b"),
+            None,
+            "yol ayracı içeren kimlik adrese karışmaz"
+        );
         assert_eq!(track_id("local:::x:1"), None);
         assert_eq!(
             credits_url("4uLU6hMCjMI75M1A2tKUQC"),
@@ -459,7 +556,11 @@ mod tests {
     }
 
     fn reply(status: u16, body: &str) -> Result<Response, TransportError> {
-        Ok(Response { status, retry_after: None, body: Bytes::from(body.to_string()) })
+        Ok(Response {
+            status,
+            retry_after: None,
+            body: Bytes::from(body.to_string()),
+        })
     }
 
     impl Transport for FakeNet {
@@ -469,7 +570,11 @@ mod tests {
         fn get<'a>(&'a self, url: &'a str) -> BoxFuture<'a, Result<Response, TransportError>> {
             Box::pin(async move {
                 self.urls.lock().unwrap().push(url.to_string());
-                self.responses.lock().unwrap().pop_front().expect("beklenmeyen istek")
+                self.responses
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .expect("beklenmeyen istek")
             })
         }
         fn refresh_token<'a>(&'a self) -> BoxFuture<'a, Result<(), TransportError>> {
@@ -478,24 +583,36 @@ mod tests {
                 Ok(())
             })
         }
-        fn discover<'a>(&'a self, _: &'a str, _: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+        fn discover<'a>(
+            &'a self,
+            _: &'a str,
+            _: &'a str,
+        ) -> BoxFuture<'a, Result<String, DiscoverError>> {
             Box::pin(async { panic!("künye hash aramaz") })
         }
     }
 
     fn fast() -> Pathfinder {
-        Pathfinder::new(Config { interval: Duration::ZERO, server_retries: 1, backoff_base: Duration::from_millis(1) })
+        Pathfinder::new(Config {
+            interval: Duration::ZERO,
+            server_retries: 1,
+            backoff_base: Duration::from_millis(1),
+        })
     }
 
     #[tokio::test]
     async fn loads_through_the_shared_client_with_the_single_url() {
         let net = FakeNet::default();
         net.responses.lock().unwrap().push_back(reply(200, FIXTURE));
-        let c = load_with(&fast(), &net, "spotify:track:LoadsOk1").await.unwrap();
+        let c = load_with(&fast(), &net, "spotify:track:LoadsOk1")
+            .await
+            .unwrap();
         assert_eq!(c.roles.len(), 4);
         assert_eq!(*net.urls.lock().unwrap(), [credits_url("LoadsOk1")]);
         // İkinci açılış bellekten: ağa çıkmaz.
-        let again = load_with(&fast(), &net, "spotify:track:LoadsOk1").await.unwrap();
+        let again = load_with(&fast(), &net, "spotify:track:LoadsOk1")
+            .await
+            .unwrap();
         assert_eq!(again.roles.len(), 4);
         assert_eq!(net.urls.lock().unwrap().len(), 1);
     }
@@ -504,9 +621,13 @@ mod tests {
     async fn a_404_means_no_credits_and_non_tracks_never_hit_the_network() {
         let net = FakeNet::default();
         net.responses.lock().unwrap().push_back(reply(404, ""));
-        let c = load_with(&fast(), &net, "spotify:track:NoneHere1").await.unwrap();
+        let c = load_with(&fast(), &net, "spotify:track:NoneHere1")
+            .await
+            .unwrap();
         assert!(c.is_empty());
-        let c = load_with(&fast(), &net, "spotify:episode:abc").await.unwrap();
+        let c = load_with(&fast(), &net, "spotify:episode:abc")
+            .await
+            .unwrap();
         assert!(c.is_empty());
         assert_eq!(net.urls.lock().unwrap().len(), 1, "bölüm için istek yok");
     }
@@ -516,22 +637,50 @@ mod tests {
         let code = |responses: Vec<Result<Response, TransportError>>| async move {
             let net = FakeNet::default();
             net.responses.lock().unwrap().extend(responses);
-            load_with(&fast(), &net, "spotify:track:Fails1").await.unwrap_err()
+            load_with(&fast(), &net, "spotify:track:Fails1")
+                .await
+                .unwrap_err()
         };
-        assert_eq!(code(vec![reply(401, ""), reply(403, "")]).await, CreditsFailure::Denied);
+        assert_eq!(
+            code(vec![reply(401, ""), reply(403, "")]).await,
+            CreditsFailure::Denied
+        );
         assert_eq!(code(vec![reply(403, "")]).await, CreditsFailure::Denied);
-        assert_eq!(code(vec![reply(429, "")]).await, CreditsFailure::RateLimited);
-        assert_eq!(code(vec![reply(200, "not json")]).await, CreditsFailure::Unavailable);
-        assert_eq!(code(vec![reply(500, ""), reply(502, "")]).await, CreditsFailure::Offline);
-        assert_eq!(code(vec![Err(TransportError::Network("down".into()))]).await, CreditsFailure::Offline);
-        assert_eq!(code(vec![Err(TransportError::Token("none".into()))]).await, CreditsFailure::Offline);
+        assert_eq!(
+            code(vec![reply(429, "")]).await,
+            CreditsFailure::RateLimited
+        );
+        assert_eq!(
+            code(vec![reply(200, "not json")]).await,
+            CreditsFailure::Unavailable
+        );
+        assert_eq!(
+            code(vec![reply(500, ""), reply(502, "")]).await,
+            CreditsFailure::Offline
+        );
+        assert_eq!(
+            code(vec![Err(TransportError::Network("down".into()))]).await,
+            CreditsFailure::Offline
+        );
+        assert_eq!(
+            code(vec![Err(TransportError::Token("none".into()))]).await,
+            CreditsFailure::Offline
+        );
     }
 
     #[tokio::test]
     async fn a_401_refreshes_the_token_once_then_succeeds() {
         let net = FakeNet::default();
-        net.responses.lock().unwrap().extend([reply(401, ""), reply(200, FIXTURE)]);
-        assert!(!load_with(&fast(), &net, "spotify:track:Refresh1").await.unwrap().is_empty());
+        net.responses
+            .lock()
+            .unwrap()
+            .extend([reply(401, ""), reply(200, FIXTURE)]);
+        assert!(
+            !load_with(&fast(), &net, "spotify:track:Refresh1")
+                .await
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(net.refreshes.load(Ordering::SeqCst), 1);
     }
 
@@ -556,18 +705,36 @@ mod tests {
             .expect("Kayitli Spotify girisi yok");
         let credentials: Credentials = serde_json::from_str(&json).expect("kayitli giris bozuk");
         let session = Session::new(SessionConfig::default(), None);
-        session.connect(credentials, false).await.expect("Spotify'a baglanilamadi");
+        session
+            .connect(credentials, false)
+            .await
+            .expect("Spotify'a baglanilamadi");
 
         // Varsayılan: Rick Astley, "Never Gonna Give You Up".
-        let uri = std::env::var("OPENIFY_LIVE_TRACK").unwrap_or_else(|_| "spotify:track:4cOdK2wGLETKBW3PvgPWqT".into());
+        let uri = std::env::var("OPENIFY_LIVE_TRACK")
+            .unwrap_or_else(|_| "spotify:track:4cOdK2wGLETKBW3PvgPWqT".into());
         match load(&session, &uri).await {
             Ok(credits) => {
-                println!("kunye: {} rol, {} kaynak, bos: {}", credits.roles.len(), credits.sources.len(), credits.is_empty());
+                println!(
+                    "kunye: {} rol, {} kaynak, bos: {}",
+                    credits.roles.len(),
+                    credits.sources.len(),
+                    credits.is_empty()
+                );
                 for role in &credits.roles {
                     let with_uri = role.people.iter().filter(|p| p.uri.is_some()).count();
-                    println!("  rol {:?}: {} kisi, adresi olan {}", role.kind, role.people.len(), with_uri);
+                    println!(
+                        "  rol {:?}: {} kisi, adresi olan {}",
+                        role.kind,
+                        role.people.len(),
+                        with_uri
+                    );
                 }
-                println!("  baslik dolu {} / tiklanabilir kisi {}", !credits.title.is_empty(), credits.linkable());
+                println!(
+                    "  baslik dolu {} / tiklanabilir kisi {}",
+                    !credits.title.is_empty(),
+                    credits.linkable()
+                );
             }
             Err(e) => println!("kunye alinamadi: {e:?}"),
         }

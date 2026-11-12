@@ -14,8 +14,8 @@
 use std::{cell::Cell, rc::Rc};
 
 use gpui::{
-    AnyElement, Bounds, Context, ElementId, FontWeight, KeyDownEvent, Pixels, ScrollDelta, SharedString,
-    UniformListScrollHandle, Window, div, prelude::*, px, rgb, uniform_list,
+    AnyElement, Bounds, Context, ElementId, FontWeight, KeyDownEvent, Pixels, ScrollDelta,
+    SharedString, UniformListScrollHandle, Window, div, prelude::*, px, rgb, uniform_list,
 };
 
 use super::{
@@ -32,7 +32,7 @@ use super::{
     theme::*,
 };
 use crate::engine::CollectionId;
-use crate::{t, tf, tp, k};
+use crate::{k, t, tf, tp};
 
 // ── Ölçüler ─────────────────────────────────────────────────────────────
 
@@ -195,8 +195,11 @@ pub(super) enum Kind {
 }
 
 /// Kütüphane ızgarasındaki tür süzgeçleri.
-const KINDS: [(Kind, crate::i18n::K); 3] =
-    [(Kind::Lists, k!(KindLists)), (Kind::Albums, k!(KindAlbums)), (Kind::Artists, k!(KindArtists))];
+const KINDS: [(Kind, crate::i18n::K); 3] = [
+    (Kind::Lists, k!(KindLists)),
+    (Kind::Albums, k!(KindAlbums)),
+    (Kind::Artists, k!(KindArtists)),
+];
 
 /// Kütüphanenin sıralaması (kalıcı: `Settings::library_sort`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -248,7 +251,11 @@ impl Sort {
     /// Sanatçılar süzgecinde "son çalınan" diye bir sıra yok (sanatçı çalma
     /// bağlamı kaydedilmiyor): aynı sıra, en son takip edilen önde.
     pub(super) fn label_for(self, kind: Kind) -> &'static str {
-        if self == Sort::Recent && kind == Kind::Artists { t!(SortRecentlyFollowed) } else { self.label() }
+        if self == Sort::Recent && kind == Kind::Artists {
+            t!(SortRecentlyFollowed)
+        } else {
+            self.label()
+        }
     }
 }
 
@@ -335,7 +342,11 @@ pub(super) fn sort_key(sort: Sort, card: &Card, ctx: &SortCtx) -> Key {
                 }
             }
         }
-        Sort::Name => Key::new(0, 0, fold(if liked { liked_card_name() } else { &card.name })),
+        Sort::Name => Key::new(
+            0,
+            0,
+            fold(if liked { liked_card_name() } else { &card.name }),
+        ),
         Sort::Creator => {
             if liked {
                 return Key::new(0, 0, "");
@@ -353,14 +364,27 @@ pub(super) fn sort_key(sort: Sort, card: &Card, ctx: &SortCtx) -> Key {
 /// Düz sıralama: önce sabitlenenler (sabitlenme sırasıyla), sonra seçilen sıra.
 /// Kararlı: eşit anahtarlarda kaynak sırası kalır.
 pub(super) fn sort_flat(cards: &mut [Card], sort: Sort, ctx: &SortCtx) {
-    cards.sort_by_cached_key(|c| (c.meta.pin.is_none(), c.meta.pin.unwrap_or(0), sort_key(sort, c, ctx)));
+    cards.sort_by_cached_key(|c| {
+        (
+            c.meta.pin.is_none(),
+            c.meta.pin.unwrap_or(0),
+            sort_key(sort, c, ctx),
+        )
+    });
 }
 
 /// Raftaki sıra: sabitlenenler önde; hiç çalınmamışsa beğenilenler, sonra son
 /// çalınanlar (en yenisi önce), sonra geri kalanlar kütüphane sırasıyla.
 fn shelf_order(cards: &mut [Card], recent: &[String]) {
     let meta = crate::engine::LibraryMeta::default();
-    sort_flat(cards, Sort::Recent, &SortCtx { recent, meta: &meta });
+    sort_flat(
+        cards,
+        Sort::Recent,
+        &SortCtx {
+            recent,
+            meta: &meta,
+        },
+    );
 }
 
 impl Shell {
@@ -376,15 +400,30 @@ impl Shell {
             name: liked_card_name().into(),
             subtitle: tp!(Songs, library.liked_count),
             image: String::new(),
-            meta: CardMeta { pin: pin("liked"), seq: 0, ..Default::default() },
+            meta: CardMeta {
+                pin: pin("liked"),
+                seq: 0,
+                ..Default::default()
+            },
         }];
-        cards.extend(library.albums.iter().chain(&library.playlists).enumerate().map(|(n, i)| Card {
-            id: i.id.clone(),
-            name: i.name.clone(),
-            subtitle: crate::i18n::canon::localize(&i.subtitle).into_owned(),
-            image: i.image.clone(),
-            meta: CardMeta { pin: pin(i.id.key()), seq: n + 1, ..Default::default() },
-        }));
+        cards.extend(
+            library
+                .albums
+                .iter()
+                .chain(&library.playlists)
+                .enumerate()
+                .map(|(n, i)| Card {
+                    id: i.id.clone(),
+                    name: i.name.clone(),
+                    subtitle: crate::i18n::canon::localize(&i.subtitle).into_owned(),
+                    image: i.image.clone(),
+                    meta: CardMeta {
+                        pin: pin(i.id.key()),
+                        seq: n + 1,
+                        ..Default::default()
+                    },
+                }),
+        );
         cards
     }
 
@@ -428,15 +467,19 @@ impl Shell {
             if cards.iter().take(slots).any(|c| &c.id == selected) {
                 return None;
             }
-            cards.iter().find(|c| &c.id == selected).cloned().or_else(|| {
-                self.library.titles.get(selected).map(|title| Card {
-                    id: selected.clone(),
-                    name: title.clone(),
-                    subtitle: String::new(),
-                    image: String::new(),
-                    meta: CardMeta::default(),
+            cards
+                .iter()
+                .find(|c| &c.id == selected)
+                .cloned()
+                .or_else(|| {
+                    self.library.titles.get(selected).map(|title| Card {
+                        id: selected.clone(),
+                        name: title.clone(),
+                        subtitle: String::new(),
+                        image: String::new(),
+                        meta: CardMeta::default(),
+                    })
                 })
-            })
         });
         cards.truncate(slots);
         if let Some(card) = pinned {
@@ -451,7 +494,10 @@ impl Shell {
     /// Açık listenin raftaki sırası (yoksa 0).
     pub(super) fn selected_shelf_index(&self) -> usize {
         let selected = self.library.selected.as_ref();
-        self.shelf_cards().iter().position(|c| Some(&c.id) == selected).unwrap_or(0)
+        self.shelf_cards()
+            .iter()
+            .position(|c| Some(&c.id) == selected)
+            .unwrap_or(0)
     }
 
     /// Raf odaktayken: ← → gez, Home / End uçlar, Enter / Boşluk aç.
@@ -502,7 +548,11 @@ impl Shell {
         // doldurmuyorsa kartlar soldan 16 px arayla.
         let slots = self.shelf_slots();
         let spread = |row: gpui::Stateful<gpui::Div>, shown: usize| {
-            if shown >= slots { row.gap(px(lerp(shelf_gap(self.window_width, slots), STRIP_GAP, p))) } else { row }
+            if shown >= slots {
+                row.gap(px(lerp(shelf_gap(self.window_width, slots), STRIP_GAP, p)))
+            } else {
+                row
+            }
         };
         match &self.library.library {
             Loadable::Loading => {
@@ -521,7 +571,11 @@ impl Shell {
                 let cursor = self.shelf_cursor.min(cards.len().saturating_sub(1));
                 for (i, card) in cards.iter().enumerate() {
                     let state = CardState {
-                        look: if keyboard_here && cursor == i { Look::Focus } else { Look::Live },
+                        look: if keyboard_here && cursor == i {
+                            Look::Focus
+                        } else {
+                            Look::Live
+                        },
                         selected: self.library.selected.as_ref() == Some(&card.id),
                         playing: self.playing_collection() == Some(&card.id),
                     };
@@ -566,7 +620,11 @@ impl Shell {
 
     /// Şu an çalan liste (duraklatılmışken `None`: "çalıyor" demez).
     fn playing_collection(&self) -> Option<&CollectionId> {
-        self.state.queue.context.as_ref().filter(|_| self.state.is_playing())
+        self.state
+            .queue
+            .context
+            .as_ref()
+            .filter(|_| self.state.is_playing())
     }
 
     /// Raf, şerit ya da ızgara kartı: kapak ve altında tek satır ad. Kapak
@@ -645,7 +703,9 @@ impl Shell {
                 .child(icon("volume-2", side * 0.6, rgb(accent)))
         });
         // Sabitli listenin kapağının sol üstünde küçük iğne.
-        let pin = card.pinned().then(|| self.pin_mark(if big { S5 } else { S4 }));
+        let pin = card
+            .pinned()
+            .then(|| self.pin_mark(if big { S5 } else { S4 }));
 
         let name_opacity = (name_h / SHELF_NAME * 2. - 1.).clamp(0., 1.);
         let name = div().h(px(name_h)).overflow_hidden().child(
@@ -669,23 +729,28 @@ impl Shell {
             .flex()
             .flex_col()
             // Şeritte ad görünmez: ipucu yalnız o zaman (ad görünürken gereksiz).
-            .when(name_opacity < 0.5, |el| el.tooltip(Tooltip::text(card.name.clone(), None)))
-            .when(action != CardAction::Nothing && look != Look::Disabled, |el| {
-                el.cursor_pointer()
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        if action == CardAction::OpenAndClose {
-                            this.close_all(cx);
-                        }
-                        this.activate_card(&card, cx);
-                    }))
-                    .on_mouse_down(
-                        gpui::MouseButton::Right,
-                        cx.listener(move |this, ev: &gpui::MouseDownEvent, _, cx| {
-                            cx.stop_propagation();
-                            this.open_card_menu(menu_target.clone(), ev.position, cx);
-                        }),
-                    )
+            .when(name_opacity < 0.5, |el| {
+                el.tooltip(Tooltip::text(card.name.clone(), None))
             })
+            .when(
+                action != CardAction::Nothing && look != Look::Disabled,
+                |el| {
+                    el.cursor_pointer()
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            if action == CardAction::OpenAndClose {
+                                this.close_all(cx);
+                            }
+                            this.activate_card(&card, cx);
+                        }))
+                        .on_mouse_down(
+                            gpui::MouseButton::Right,
+                            cx.listener(move |this, ev: &gpui::MouseDownEvent, _, cx| {
+                                cx.stop_propagation();
+                                this.open_card_menu(menu_target.clone(), ev.position, cx);
+                            }),
+                        )
+                },
+            )
             .child(
                 div()
                     .relative()
@@ -751,7 +816,8 @@ impl Shell {
         let kind = self.all.kind;
         // İçine girilmiş klasör kütüphaneden kalktıysa (tazeleme) köke dön.
         if let Some(folder) = &self.all.folder {
-            if !matches!(&self.library.library, Loadable::Loaded(l) if l.meta.folders.iter().any(|f| &f.key == folder)) {
+            if !matches!(&self.library.library, Loadable::Loaded(l) if l.meta.folders.iter().any(|f| &f.key == folder))
+            {
                 self.all.folder = None;
             }
         }
@@ -779,15 +845,30 @@ impl Shell {
                 Loadable::Loaded(l) => &l.meta,
                 _ => &default_meta,
             };
-            sort_flat(&mut cards, self.all.sort, &SortCtx { recent: &self.recent, meta });
+            sort_flat(
+                &mut cards,
+                self.all.sort,
+                &SortCtx {
+                    recent: &self.recent,
+                    meta,
+                },
+            );
         }
         if let Some(mut f) = fuzzy::Fuzzy::new(&self.all.query) {
             let keys: Vec<String> = cards
                 .iter()
                 .map(|c| {
-                    let name = if c.id == CollectionId::Liked { t!(LikedSearchWords) } else { &c.name };
+                    let name = if c.id == CollectionId::Liked {
+                        t!(LikedSearchWords)
+                    } else {
+                        &c.name
+                    };
                     // Sanatçının altyazısı yalnız "Sanatçı": her "ar" araması hepsini getirmesin.
-                    let subtitle = if c.kind() == Kind::Artists { "" } else { c.subtitle.as_str() };
+                    let subtitle = if c.kind() == Kind::Artists {
+                        ""
+                    } else {
+                        c.subtitle.as_str()
+                    };
                     fuzzy::fold(&format!("{name} {subtitle}"))
                 })
                 .collect();
@@ -828,7 +909,9 @@ impl Shell {
                 self.all_query_changed(cx);
             }
             // Izgarada bir klasörün içindeyken Esc / Backspace bir üst klasöre çıkar.
-            "escape" | "backspace" if self.all.query.is_empty() && self.all.folder.is_some() && !self.all.list => {
+            "escape" | "backspace"
+                if self.all.query.is_empty() && self.all.folder.is_some() && !self.all.list =>
+            {
                 self.leave_folder(cx);
             }
             "escape" => return false,
@@ -853,7 +936,9 @@ impl Shell {
             }
             "v" if ctrl => {
                 if let Some(text) = cx.read_from_clipboard().and_then(|i| i.text()) {
-                    self.all.query.push_str(text.lines().next().unwrap_or_default());
+                    self.all
+                        .query
+                        .push_str(text.lines().next().unwrap_or_default());
                     self.all_query_changed(cx);
                 }
             }
@@ -865,12 +950,17 @@ impl Shell {
             }
             "space" => return false,
             // Ok tuşları kartlar arasında gezer (arkadaki gizli listede satır seçilmesin).
-            "up" | "down" | "left" | "right" if !ctrl && !ks.modifiers.alt && !ks.modifiers.shift => {
+            "up" | "down" | "left" | "right"
+                if !ctrl && !ks.modifiers.alt && !ks.modifiers.shift =>
+            {
                 self.move_all_cursor(ks.key.as_str(), cx);
             }
             "up" | "down" if !ctrl => {}
             _ if !ctrl && !ks.modifiers.alt => {
-                let Some(ch) = ks.key_char.as_deref().filter(|c| !c.is_empty() && !c.chars().any(char::is_control))
+                let Some(ch) = ks
+                    .key_char
+                    .as_deref()
+                    .filter(|c| !c.is_empty() && !c.chars().any(char::is_control))
                 else {
                     return false;
                 };
@@ -884,7 +974,11 @@ impl Shell {
 
     /// Izgarada bir satırda kaç kart var.
     pub(super) fn all_columns(&self) -> usize {
-        if self.all.list { 1 } else { all_columns(self.window_width) }
+        if self.all.list {
+            1
+        } else {
+            all_columns(self.window_width)
+        }
     }
 
     /// Izgarada baştan kaç kart atlanır (7 Kasım gecesi): sıralama "Son
@@ -899,7 +993,11 @@ impl Shell {
             && self.all.kind == Kind::All
             // Klasörlü kütüphane ağaç olarak çizilir: rafın kartlarını atlamak ağacı bozar.
             && !self.has_folders();
-        if plain && self.all.cards.len() > slots { slots } else { 0 }
+        if plain && self.all.cards.len() > slots {
+            slots
+        } else {
+            0
+        }
     }
 
     /// Izgaranın (atlananlar dışında) kart sayısı.
@@ -911,12 +1009,18 @@ impl Shell {
     pub(super) fn all_extent(&self) -> Option<(f32, f32)> {
         let viewport = f32::from(self.all.scroll.0.borrow().last_item_size?.item.height);
         let rows = self.all_shown().div_ceil(self.all_columns());
-        let row = if self.all.list { LIST_ROW } else { all_row_height(self.window_width) };
+        let row = if self.all.list {
+            LIST_ROW
+        } else {
+            all_row_height(self.window_width)
+        };
         Some((viewport, rows as f32 * row + PILL_CLEARANCE))
     }
 
     fn scroll_all_by(&self, d: f32) -> f32 {
-        let max = self.all_extent().map_or(0., |(viewport, content)| (content - viewport).max(0.));
+        let max = self
+            .all_extent()
+            .map_or(0., |(viewport, content)| (content - viewport).max(0.));
         let handle = self.all.scroll.0.borrow().base_handle.clone();
         let offset = handle.offset();
         let from = (-f32::from(offset.y)).max(0.);
@@ -927,7 +1031,13 @@ impl Shell {
         to - from
     }
 
-    fn wheel_all(&mut self, delta: ScrollDelta, line_height: Pixels, viewport: f32, cx: &mut Context<Self>) -> bool {
+    fn wheel_all(
+        &mut self,
+        delta: ScrollDelta,
+        line_height: Pixels,
+        viewport: f32,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if let Some(handled) = self.wheel_gate(cx) {
             return handled;
         }
@@ -951,7 +1061,9 @@ impl Shell {
             return false;
         }
         let position = (-f32::from(self.all.scroll.0.borrow().base_handle.offset().y)).max(0.);
-        glide.tick(std::time::Instant::now(), position, |d| self.scroll_all_by(d))
+        glide.tick(std::time::Instant::now(), position, |d| {
+            self.scroll_all_by(d)
+        })
     }
 
     pub(super) fn render_all(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
@@ -962,7 +1074,13 @@ impl Shell {
         }
         let accent = self.accent().text;
         let empty = self.all.query.is_empty();
-        let caret = || div().w(px(2.)).h(px(T_SECONDARY.line)).flex_shrink_0().bg(rgb(accent));
+        let caret = || {
+            div()
+                .w(px(2.))
+                .h(px(T_SECONDARY.line))
+                .flex_shrink_0()
+                .bg(rgb(accent))
+        };
         // Süzme kutusu: açılır açılmaz yazılır (odak hep burada, kenarı kapak
         // ışığı renginde).
         let field = div()
@@ -978,7 +1096,11 @@ impl Shell {
             // Sakin: boşken kenarsız ton zemini; yazılırken kenar kapak ışığı.
             .bg(veil(VEIL_HOVER))
             .border_1()
-            .border_color(if empty { gpui::transparent_black() } else { rgb(accent).into() })
+            .border_color(if empty {
+                gpui::transparent_black()
+            } else {
+                rgb(accent).into()
+            })
             .child(icon("search", 14., muted()))
             .child(
                 div()
@@ -998,12 +1120,17 @@ impl Shell {
         let mut chips = div().flex_none().flex().items_center().gap(px(S2));
         for (i, (kind, name_key)) in KINDS.into_iter().enumerate() {
             let name = crate::i18n::t(name_key);
-            let (stop, look) = self.stop_look(format!("all-kind-{i}"), super::tab::PAGE, true, window, cx);
+            let (stop, look) =
+                self.stop_look(format!("all-kind-{i}"), super::tab::PAGE, true, window, cx);
             chips = chips.child(
                 chip(("all-kind", i), name, self.all.kind == kind, look, accent)
                     .when_some(stop, |el, h| el.track_focus(&h))
                     .on_click(cx.listener(move |this, _, _, cx| {
-                        let next = if this.all.kind == kind { Kind::All } else { kind };
+                        let next = if this.all.kind == kind {
+                            Kind::All
+                        } else {
+                            kind
+                        };
                         this.set_all_kind(next, cx);
                     })),
             );
@@ -1011,7 +1138,12 @@ impl Shell {
 
         let sort = self.all.sort;
         let list = self.all.list;
-        let view_button = |id: &'static str, icon_name: &'static str, tip: &'static str, on: bool, to_list: bool, cx: &mut Context<Self>| {
+        let view_button = |id: &'static str,
+                           icon_name: &'static str,
+                           tip: &'static str,
+                           on: bool,
+                           to_list: bool,
+                           cx: &mut Context<Self>| {
             let (stop, look) = self.stop_look(id, super::tab::PAGE, true, window, cx);
             icon_button(id, icon_name, look, accent)
                 .when_some(stop, |el, h| el.track_focus(&h))
@@ -1021,7 +1153,8 @@ impl Shell {
         };
         let (sort_stop, sort_look) = self.stop_look("all-sort", super::tab::PAGE, true, window, cx);
         let (new_stop, new_look) = self.stop_look("all-new", super::tab::PAGE, true, window, cx);
-        let (tools_stop, tools_look) = self.stop_look("all-tools", super::tab::PAGE, true, window, cx);
+        let (tools_stop, tools_look) =
+            self.stop_look("all-tools", super::tab::PAGE, true, window, cx);
         let wide = self.window_width >= ALL_COUNT_MIN_WIDTH;
         // Sayaç yalnız süzülürken anlamlı ("n / N"); süzgeçsiz hâlde sessiz.
         let filtered = !empty || self.all.kind != Kind::All;
@@ -1056,13 +1189,23 @@ impl Shell {
                     .relative()
                     .flex_none()
                     .child(
-                        ghost_button("all-sort", "arrow-up-down", sort.label_for(self.all.kind), false, sort_look, accent)
-                            .when_some(sort_stop, |el, h| el.track_focus(&h))
-                            // Menü açıkken ipucu menünün üstüne binmesin.
-                            .when(self.manage.menu.is_none(), |el| {
-                                el.tooltip(Tooltip::text(tf!(SortTip, sort.label_for(self.all.kind)), None))
-                            })
-                            .on_click(cx.listener(|this, _, _, cx| this.open_sort_menu(cx))),
+                        ghost_button(
+                            "all-sort",
+                            "arrow-up-down",
+                            sort.label_for(self.all.kind),
+                            false,
+                            sort_look,
+                            accent,
+                        )
+                        .when_some(sort_stop, |el, h| el.track_focus(&h))
+                        // Menü açıkken ipucu menünün üstüne binmesin.
+                        .when(self.manage.menu.is_none(), |el| {
+                            el.tooltip(Tooltip::text(
+                                tf!(SortTip, sort.label_for(self.all.kind)),
+                                None,
+                            ))
+                        })
+                        .on_click(cx.listener(|this, _, _, cx| this.open_sort_menu(cx))),
                     )
                     .child(self.sort_anchor_probe()),
             )
@@ -1072,15 +1215,36 @@ impl Shell {
                     .flex_none()
                     .flex()
                     .items_center()
-                    .child(view_button("all-view-grid", "layout-grid", t!(ViewGrid), !list, false, cx))
-                    .child(view_button("all-view-list", "list", t!(ViewList), list, true, cx)),
+                    .child(view_button(
+                        "all-view-grid",
+                        "layout-grid",
+                        t!(ViewGrid),
+                        !list,
+                        false,
+                        cx,
+                    ))
+                    .child(view_button(
+                        "all-view-list",
+                        "list",
+                        t!(ViewList),
+                        list,
+                        true,
+                        cx,
+                    )),
             )
             // Kütüphane araçları sayfası (yinelenenler, birleştir / böl, sıralama, yedek, istatistik).
             .child(if wide {
-                ghost_button("all-tools", "wrench", t!(ToolsTitle), false, tools_look, accent)
-                    .when_some(tools_stop, |el, h| el.track_focus(&h))
-                    .on_click(cx.listener(|this, _, _, cx| this.open_tools(cx)))
-                    .into_any_element()
+                ghost_button(
+                    "all-tools",
+                    "wrench",
+                    t!(ToolsTitle),
+                    false,
+                    tools_look,
+                    accent,
+                )
+                .when_some(tools_stop, |el, h| el.track_focus(&h))
+                .on_click(cx.listener(|this, _, _, cx| this.open_tools(cx)))
+                .into_any_element()
             } else {
                 icon_button("all-tools", "wrench", tools_look, accent)
                     .when_some(tools_stop, |el, h| el.track_focus(&h))
@@ -1092,35 +1256,59 @@ impl Shell {
             .child(if wide {
                 ghost_button("all-new", "plus", t!(NewPlaylist), true, new_look, accent)
                     .when_some(new_stop, |el, h| el.track_focus(&h))
-                    .on_click(cx.listener(|this, _, _, cx| this.ask_new_playlist(Vec::new(), true, cx)))
+                    .on_click(
+                        cx.listener(|this, _, _, cx| this.ask_new_playlist(Vec::new(), true, cx)),
+                    )
                     .into_any_element()
             } else {
                 icon_button("all-new", "plus", new_look, accent)
                     .when_some(new_stop, |el, h| el.track_focus(&h))
                     .tooltip(Tooltip::text(t!(NewPlaylist), None))
-                    .on_click(cx.listener(|this, _, _, cx| this.ask_new_playlist(Vec::new(), true, cx)))
+                    .on_click(
+                        cx.listener(|this, _, _, cx| this.ask_new_playlist(Vec::new(), true, cx)),
+                    )
                     .into_any_element()
             });
 
         let body: AnyElement = match &self.library.library {
-            Loadable::Loading if !self.page_skeleton_due("library", window) => div().into_any_element(),
+            Loadable::Loading if !self.page_skeleton_due("library", window) => {
+                div().into_any_element()
+            }
             Loadable::Loading => self.library_skeleton(),
             // Hata `library_gate`te (yukarıda tam sayfa durum döndü); buraya gelinmez.
             Loadable::Failed(_) => div().into_any_element(),
             // İçine girilen klasör boş.
-            Loadable::Loaded(_) if self.all.cards.is_empty() && self.tree_mode() && self.all.folder.is_some() => {
-                centered(state_view("folder", t!(FolderEmptyTitle), t!(FolderEmptyBody)))
+            Loadable::Loaded(_)
+                if self.all.cards.is_empty() && self.tree_mode() && self.all.folder.is_some() =>
+            {
+                centered(state_view(
+                    "folder",
+                    t!(FolderEmptyTitle),
+                    t!(FolderEmptyBody),
+                ))
             }
             // Boş kütüphane; ya da yalnız sanatçı takip ediliyor (süzgeçsiz
             // "Tümü" listeleri ve albümleri gösterir, sanatçılar kendi süzgecinde).
             Loadable::Loaded(_)
                 if self.all.total == 0
-                    || (self.all.cards.is_empty() && self.all.kind == Kind::All && self.all.query.is_empty()) =>
+                    || (self.all.cards.is_empty()
+                        && self.all.kind == Kind::All
+                        && self.all.query.is_empty()) =>
             {
-                centered(state_view("library", t!(LibraryEmptyTitle), t!(LibraryEmptyBody)))
+                centered(state_view(
+                    "library",
+                    t!(LibraryEmptyTitle),
+                    t!(LibraryEmptyBody),
+                ))
             }
-            Loadable::Loaded(_) if self.all.cards.is_empty() && self.all.kind == Kind::Artists && empty => {
-                centered(state_view("user", t!(LibraryNoArtistsTitle), t!(LibraryNoArtistsBody)))
+            Loadable::Loaded(_)
+                if self.all.cards.is_empty() && self.all.kind == Kind::Artists && empty =>
+            {
+                centered(state_view(
+                    "user",
+                    t!(LibraryNoArtistsTitle),
+                    t!(LibraryNoArtistsBody),
+                ))
             }
             Loadable::Loaded(_) if self.all.cards.is_empty() => centered(state_view(
                 "search",
@@ -1130,7 +1318,14 @@ impl Shell {
             Loadable::Loaded(_) => self.render_all_grid(cx),
         };
 
-        div().size_full().flex().flex_col().child(top).children(self.render_folder_crumbs(window, cx)).child(body).into_any_element()
+        div()
+            .size_full()
+            .flex()
+            .flex_col()
+            .child(top)
+            .children(self.render_folder_crumbs(window, cx))
+            .child(body)
+            .into_any_element()
     }
 
     /// Kütüphane yüklenirken: ızgara ya da liste biçiminde iskelet (yerleşim
@@ -1148,14 +1343,31 @@ impl Shell {
                         .flex()
                         .items_center()
                         .gap(px(S3))
-                        .child(div().size(px(LIST_COVER)).rounded(px(R_SM)).bg(veil(VEIL_HOVER)))
+                        .child(
+                            div()
+                                .size(px(LIST_COVER))
+                                .rounded(px(R_SM))
+                                .bg(veil(VEIL_HOVER)),
+                        )
                         .child(
                             div()
                                 .flex()
                                 .flex_col()
                                 .gap(px(S1))
-                                .child(div().w(px(240. * w * 2.)).h(px(T_SECONDARY.size)).rounded(px(R_XS)).bg(veil(VEIL_HOVER)))
-                                .child(div().w(px(120.)).h(px(T_LABEL.size)).rounded(px(R_XS)).bg(veil(VEIL_HOVER))),
+                                .child(
+                                    div()
+                                        .w(px(240. * w * 2.))
+                                        .h(px(T_SECONDARY.size))
+                                        .rounded(px(R_XS))
+                                        .bg(veil(VEIL_HOVER)),
+                                )
+                                .child(
+                                    div()
+                                        .w(px(120.))
+                                        .h(px(T_LABEL.size))
+                                        .rounded(px(R_XS))
+                                        .bg(veil(VEIL_HOVER)),
+                                ),
                         ),
                 );
             }
@@ -1165,7 +1377,11 @@ impl Shell {
         let cover = all_cover(self.window_width);
         let mut grid = div().px(px(margin)).pt(px(S1)).flex().flex_col();
         for r in 0..3 {
-            let mut line = div().h(px(all_row_height(self.window_width))).flex().items_start().gap(px(GRID_GAP));
+            let mut line = div()
+                .h(px(all_row_height(self.window_width)))
+                .flex()
+                .items_start()
+                .gap(px(GRID_GAP));
             for c in 0..cols {
                 line = line.child(skeleton_card(r * cols + c, cover, SHELF_NAME));
             }
@@ -1196,19 +1412,31 @@ impl Shell {
     fn render_all_grid(&self, cx: &mut Context<Self>) -> AnyElement {
         let cols = self.all_columns();
         let list = self.all.list;
-        let rows = if list { self.all_shown() } else { self.all_shown().div_ceil(cols) };
+        let rows = if list {
+            self.all_shown()
+        } else {
+            self.all_shown().div_ceil(cols)
+        };
         // Satırlar şarkı listesi gibi hapın altından geçer (bkz.
         // `render_track_list`).
         let grid = uniform_list(
             "all-grid",
             rows,
-            cx.processor(move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
-                let rows = range
-                    .map(|r| if list { this.all_list_row(r, cx) } else { this.all_row(r, cols, cx) })
-                    .collect();
-                this.flush_image_requests(cx);
-                rows
-            }),
+            cx.processor(
+                move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
+                    let rows = range
+                        .map(|r| {
+                            if list {
+                                this.all_list_row(r, cx)
+                            } else {
+                                this.all_row(r, cols, cx)
+                            }
+                        })
+                        .collect();
+                    this.flush_image_requests(cx);
+                    rows
+                },
+            ),
         )
         .track_scroll(self.all.scroll.clone())
         // Boyu içerikten değil, iki kenarından (üst ve alt) gelsin.
@@ -1226,7 +1454,9 @@ impl Shell {
             let line_height = window.line_height();
             let viewport = f32::from(bounds.size.height);
             let handled = this
-                .update(cx, |shell, cx| shell.wheel_all(ev.delta, line_height, viewport, cx))
+                .update(cx, |shell, cx| {
+                    shell.wheel_all(ev.delta, line_height, viewport, cx)
+                })
                 .unwrap_or(false);
             if handled {
                 cx.notify(view);
@@ -1271,7 +1501,11 @@ impl Shell {
             let card = &self.all.cards[i];
             let state = CardState {
                 // Klavye imleci (ok tuşları) ya da yazarken Enter'ın açacağı kart (ilki) halkayla belli.
-                look: if self.card_focus(i - skip) { Look::Focus } else { Look::Live },
+                look: if self.card_focus(i - skip) {
+                    Look::Focus
+                } else {
+                    Look::Live
+                },
                 selected: self.library.selected.as_ref() == Some(&card.id),
                 playing: self.playing_collection() == Some(&card.id),
             };
@@ -1298,7 +1532,11 @@ impl Shell {
         let playing = self.playing_collection() == Some(&card.id);
         let selected = self.library.selected.as_ref() == Some(&card.id);
         let focus = self.card_focus(ix);
-        let name_color = if playing || selected { rgb(accent) } else { text() };
+        let name_color = if playing || selected {
+            rgb(accent)
+        } else {
+            text()
+        };
         let folder = card.meta.folder.clone();
         let art = if folder.is_some() {
             self.folder_art(LIST_COVER, R_SM)
@@ -1321,7 +1559,17 @@ impl Shell {
                 .flex()
                 .items_center()
                 .justify_center()
-                .children(folder.as_ref().map(|f| icon(if f.open { "chevron-down" } else { "chevron-right" }, 14., label())))
+                .children(folder.as_ref().map(|f| {
+                    icon(
+                        if f.open {
+                            "chevron-down"
+                        } else {
+                            "chevron-right"
+                        },
+                        14.,
+                        label(),
+                    )
+                }))
         });
         // Ağaçta satır, klasör satırlarıyla aynı kimlikte olmasın diye sırası da kimliğe girer
         // (sabitli bir liste hem en üstte hem klasörünün içinde görünebilir).
@@ -1348,7 +1596,12 @@ impl Shell {
                     .gap(px(S3))
                     .cursor_pointer()
                     .when(focus, |el| el.border_1().border_color(rgb(accent)))
-                    .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+                    .child(super::tween::hover_fill(
+                        veil(VEIL_HOVER),
+                        veil(VEIL_PRESSED),
+                        0.,
+                        R_MD,
+                    ))
                     .on_click(cx.listener({
                         let card = card.clone();
                         move |this, _, _, cx| this.activate_card(&card, cx)
@@ -1400,7 +1653,13 @@ impl Shell {
                     )
                     .when(playing, |el| el.child(icon("volume-2", 16., rgb(accent))))
                     .when(card.pinned(), |el| el.child(icon("pin", 14., label())))
-                    .child(div().flex_none().type_role(T_LABEL).text_color(label()).child(kind)),
+                    .child(
+                        div()
+                            .flex_none()
+                            .type_role(T_LABEL)
+                            .text_color(label())
+                            .child(kind),
+                    ),
             )
             .into_any_element()
     }
@@ -1410,13 +1669,19 @@ impl Shell {
 /// gerisi liste / albüm menüsünü açar.
 fn card_menu_target(card: &Card) -> super::manage::CardTarget {
     if let Some(folder) = &card.meta.folder {
-        return super::manage::CardTarget::Folder { key: folder.key.clone() };
+        return super::manage::CardTarget::Folder {
+            key: folder.key.clone(),
+        };
     }
     match &card.id {
         CollectionId::Artist(uri) => super::manage::CardTarget::Artist(uri.clone()),
         id => super::manage::CardTarget::Collection {
             id: id.clone(),
-            title: if *id == CollectionId::Liked { liked_card_name().into() } else { card.name.clone() },
+            title: if *id == CollectionId::Liked {
+                liked_card_name().into()
+            } else {
+                card.name.clone()
+            },
         },
     }
 }
@@ -1471,7 +1736,14 @@ fn skeleton_card(i: usize, cover: f32, name_h: f32) -> AnyElement {
         .child(div().size(px(cover)).rounded(px(R_LG)).bg(veil(VEIL_HOVER)))
         .child(
             div().h(px(name_h)).overflow_hidden().child(
-                div().pt(px(S2)).child(div().mt(px(S1)).w(px(name)).h(px(10.)).rounded(px(R_XS)).bg(veil(VEIL_HOVER))),
+                div().pt(px(S2)).child(
+                    div()
+                        .mt(px(S1))
+                        .w(px(name))
+                        .h(px(10.))
+                        .rounded(px(R_XS))
+                        .bg(veil(VEIL_HOVER)),
+                ),
             ),
         )
         .into_any_element()
@@ -1480,21 +1752,50 @@ fn skeleton_card(i: usize, cover: f32, name_h: f32) -> AnyElement {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::{TITLEBAR_HEIGHT, library::{COLUMN_HEADER_HEIGHT, ROW_HEIGHT}};
+    use crate::ui::{
+        TITLEBAR_HEIGHT,
+        library::{COLUMN_HEADER_HEIGHT, ROW_HEIGHT},
+    };
 
     fn card(id: CollectionId) -> Card {
-        Card { id, name: String::new(), subtitle: String::new(), image: String::new(), meta: CardMeta::default() }
+        Card {
+            id,
+            name: String::new(),
+            subtitle: String::new(),
+            image: String::new(),
+            meta: CardMeta::default(),
+        }
     }
 
     #[test]
     fn shelf_puts_recent_first_and_liked_first_if_never_played() {
         let album = |s: &str| CollectionId::Album(format!("spotify:album:{s}"));
-        let mut cards = vec![card(CollectionId::Liked), card(album("a")), card(album("b")), card(album("c"))];
-        shelf_order(&mut cards, &["spotify:album:c".into(), "spotify:album:a".into()]);
+        let mut cards = vec![
+            card(CollectionId::Liked),
+            card(album("a")),
+            card(album("b")),
+            card(album("c")),
+        ];
+        shelf_order(
+            &mut cards,
+            &["spotify:album:c".into(), "spotify:album:a".into()],
+        );
         let keys: Vec<&str> = cards.iter().map(|c| c.id.key()).collect();
-        assert_eq!(keys, ["liked", "spotify:album:c", "spotify:album:a", "spotify:album:b"]);
+        assert_eq!(
+            keys,
+            [
+                "liked",
+                "spotify:album:c",
+                "spotify:album:a",
+                "spotify:album:b"
+            ]
+        );
 
-        let mut cards = vec![card(CollectionId::Liked), card(album("a")), card(album("b"))];
+        let mut cards = vec![
+            card(CollectionId::Liked),
+            card(album("a")),
+            card(album("b")),
+        ];
         shelf_order(&mut cards, &["spotify:album:b".into(), "liked".into()]);
         let keys: Vec<&str> = cards.iter().map(|c| c.id.key()).collect();
         assert_eq!(keys, ["spotify:album:b", "liked", "spotify:album:a"]);
@@ -1511,16 +1812,27 @@ mod tests {
             meta: CardMeta::default(),
         };
         assert_eq!(artist.kind(), Kind::Artists);
-        assert!(matches!(card_menu_target(&artist), CardTarget::Artist(u) if u == "spotify:artist:a"));
+        assert!(
+            matches!(card_menu_target(&artist), CardTarget::Artist(u) if u == "spotify:artist:a")
+        );
         // Liste ve albüm kartları eskisi gibi liste menüsünü açar.
         let album = card(CollectionId::Album("spotify:album:x".into()));
-        assert!(matches!(card_menu_target(&album), CardTarget::Collection { .. }));
+        assert!(matches!(
+            card_menu_target(&album),
+            CardTarget::Collection { .. }
+        ));
         // Süzgeç hapları: Listeler, Albümler, Sanatçılar; sanatçı yalnız kendi hapında.
         let kinds: Vec<Kind> = KINDS.iter().map(|(k, _)| *k).collect();
         assert_eq!(kinds, [Kind::Lists, Kind::Albums, Kind::Artists]);
         // "Son takip edilen" yalnız sanatçı süzgecinde; öbür yerde "Son çalınan".
-        assert_ne!(Sort::Recent.label_for(Kind::Artists), Sort::Recent.label_for(Kind::Lists));
-        assert_eq!(Sort::Name.label_for(Kind::Artists), Sort::Name.label_for(Kind::All));
+        assert_ne!(
+            Sort::Recent.label_for(Kind::Artists),
+            Sort::Recent.label_for(Kind::Lists)
+        );
+        assert_eq!(
+            Sort::Name.label_for(Kind::Artists),
+            Sort::Name.label_for(Kind::All)
+        );
     }
 
     #[test]

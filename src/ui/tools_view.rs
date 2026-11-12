@@ -6,18 +6,21 @@
 //! tablosu tek durak, içinde ↑ / ↓ / Home / End / Sayfa tuşları ve Boşluk.
 
 use gpui::{
-    AnyElement, ClickEvent, Context, Div, ElementId, FontWeight, ScrollDelta, ScrollWheelEvent, Window, div,
-    prelude::*, px, rgb,
+    AnyElement, ClickEvent, Context, Div, ElementId, FontWeight, ScrollDelta, ScrollWheelEvent,
+    Window, div, prelude::*, px, rgb,
 };
 
 use super::{
     Shell,
-    components::{Look, chip, primary_button_sized, secondary_button, segment, segmented_track, state_view},
+    components::{
+        Look, chip, primary_button_sized, secondary_button, segment, segmented_track, state_view,
+    },
     library::Loadable,
     text::line_with_tip,
     theme::*,
     tools::{
-        BackupStatus, BoxId, Bulk, DupRow, ListBox, MAX_SORT_MOVES, MergeMode, Source, Sources, Tool, listened_text,
+        BackupStatus, BoxId, Bulk, DupRow, ListBox, MAX_SORT_MOVES, MergeMode, Source, Sources,
+        Tool, listened_text,
     },
 };
 use crate::engine::{
@@ -47,10 +50,20 @@ const TOP_SHORT: usize = 5;
 
 /// Onay kutusu: bir işaret (seçili), çoklu seçimde kare, tekilde yuvarlak.
 fn mark(on: bool, radio: bool, accent: u32) -> Div {
-    let el = div().size(px(18.)).flex_none().flex().items_center().justify_center();
-    let el = if radio { el.rounded_full() } else { el.rounded(px(R_SM)) };
+    let el = div()
+        .size(px(18.))
+        .flex_none()
+        .flex()
+        .items_center()
+        .justify_center();
+    let el = if radio {
+        el.rounded_full()
+    } else {
+        el.rounded(px(R_SM))
+    };
     if on {
-        el.bg(rgb(accent)).child(super::theme::icon("check", 12., rgb(BG)))
+        el.bg(rgb(accent))
+            .child(super::theme::icon("check", 12., rgb(BG)))
     } else {
         el.border_1().border_color(veil(LINE_HOVER))
     }
@@ -85,21 +98,37 @@ impl Shell {
 
     /// İçerik sütunu: sayfa kenar boşluğu, en çok `TOOLS_WIDTH`.
     fn tools_column(&self, children: Vec<AnyElement>) -> Div {
-        div()
-            .px(px(self.margin()))
-            .pb(px(S6))
-            .child(div().w(px(self.tools_col_width())).flex().flex_col().gap(px(S4)).children(children))
+        div().px(px(self.margin())).pb(px(S6)).child(
+            div()
+                .w(px(self.tools_col_width()))
+                .flex()
+                .flex_col()
+                .gap(px(S4))
+                .children(children),
+        )
     }
 
     fn tools_tabs(&self, window: &Window, cx: &mut Context<Self>) -> Div {
         let accent = self.accent().text;
         let mut track = segmented_track();
         for tool in Tool::ALL {
-            let (stop, look) = self.stop_look(format!("seg:tools-tab:{}", tool.key()), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("seg:tools-tab:{}", tool.key()),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             track = track.child(
-                segment(ElementId::Name(format!("tools-tab-{}", tool.key()).into()), tool.label(), self.tools.tool == tool, look, accent)
-                    .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                    .on_click(cx.listener(move |this, _, _, cx| this.tools_select_tool(tool, cx))),
+                segment(
+                    ElementId::Name(format!("tools-tab-{}", tool.key()).into()),
+                    tool.label(),
+                    self.tools.tool == tool,
+                    look,
+                    accent,
+                )
+                .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| this.tools_select_tool(tool, cx))),
             );
         }
         div().px(px(self.margin())).pb(px(S5)).flex().child(track)
@@ -108,7 +137,12 @@ impl Shell {
     // ── Ortak parçalar ──────────────────────────────────────────────────
 
     fn tools_text(&self, text: impl Into<gpui::SharedString>) -> AnyElement {
-        div().pb(px(S2)).type_role(T_BODY).text_color(muted()).child(text.into()).into_any_element()
+        div()
+            .pb(px(S2))
+            .type_role(T_BODY)
+            .text_color(muted())
+            .child(text.into())
+            .into_any_element()
     }
 
     fn tools_step(&self, title: impl Into<gpui::SharedString>, hint: Option<String>) -> AnyElement {
@@ -117,7 +151,13 @@ impl Shell {
             .flex_col()
             .gap(px(S0))
             .pt(px(S2))
-            .child(div().type_role(T_BODY).font_weight(FontWeight::SEMIBOLD).text_color(text()).child(title.into()))
+            .child(
+                div()
+                    .type_role(T_BODY)
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(text())
+                    .child(title.into()),
+            )
             .children(hint.map(|h| div().type_role(T_SECONDARY).text_color(muted()).child(h)))
             .into_any_element()
     }
@@ -148,12 +188,24 @@ impl Shell {
         let mut track = segmented_track();
         for (key, text_label) in options {
             let key: &'static str = key;
-            let (stop, look) = self.stop_look(format!("seg:{group}:{key}"), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("seg:{group}:{key}"),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             let pick = pick.clone();
             track = track.child(
-                segment(ElementId::Name(format!("{group}-{key}").into()), *text_label, current == key, look, accent)
-                    .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                    .on_click(cx.listener(move |this, _, _, cx| pick(this, key, cx))),
+                segment(
+                    ElementId::Name(format!("{group}-{key}").into()),
+                    *text_label,
+                    current == key,
+                    look,
+                    accent,
+                )
+                .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| pick(this, key, cx))),
             );
         }
         div()
@@ -161,7 +213,14 @@ impl Shell {
             .items_center()
             .gap(px(S4))
             .flex_wrap()
-            .child(div().min_w(px(120.)).type_role(T_BODY).font_weight(FontWeight::MEDIUM).text_color(text()).child(title.to_string()))
+            .child(
+                div()
+                    .min_w(px(120.))
+                    .type_role(T_BODY)
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(text())
+                    .child(title.to_string()),
+            )
             .child(track)
             .into_any_element()
     }
@@ -213,8 +272,9 @@ impl Shell {
         let focused = look == Look::Focus;
         let active = focused || self.tools.active == Some(id);
         let shown = len.saturating_sub(lb.offset).min(visible);
-        let rows: Vec<AnyElement> =
-            (lb.offset..lb.offset + shown).map(|i| row(i, active && lb.cursor == i, cx)).collect();
+        let rows: Vec<AnyElement> = (lb.offset..lb.offset + shown)
+            .map(|i| row(i, active && lb.cursor == i, cx))
+            .collect();
         let scroll = len > visible;
         let thumb = scroll.then(|| {
             // İnce kaydırma izi: kutunun yüksekliğinde orantılı bir çubuk.
@@ -241,7 +301,11 @@ impl Shell {
             .overflow_hidden()
             .bg(shade(SHADE_INPUT))
             .border_1()
-            .border_color(if focused { rgb(accent) } else { veil(LINE_INPUT) })
+            .border_color(if focused {
+                rgb(accent)
+            } else {
+                veil(LINE_INPUT)
+            })
             .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
             .when(scroll, |el| el.occlude())
             .on_scroll_wheel(cx.listener(move |this, ev: &ScrollWheelEvent, _, cx| {
@@ -250,7 +314,11 @@ impl Shell {
                     ScrollDelta::Pixels(p) => f32::from(p.y) / ROW_H,
                 };
                 if notches != 0. {
-                    this.tools_box_wheel(id, -(notches.signum() as isize) * notches.abs().ceil().max(1.) as isize, cx);
+                    this.tools_box_wheel(
+                        id,
+                        -(notches.signum() as isize) * notches.abs().ceil().max(1.) as isize,
+                        cx,
+                    );
                     cx.stop_propagation();
                 }
             }))
@@ -299,7 +367,11 @@ impl Shell {
                     .flex()
                     .type_role(T_BODY)
                     .text_color(text())
-                    .child(line_with_tip(("tools-pick-name", i), name.to_string()).flex().min_w_0()),
+                    .child(
+                        line_with_tip(("tools-pick-name", i), name.to_string())
+                            .flex()
+                            .min_w_0(),
+                    ),
             )
             .child(
                 div()
@@ -330,9 +402,16 @@ impl Shell {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let accent = self.accent().text;
-        let cancel = self.tools_action("tools-confirm-cancel", false, "x", t!(Cancel).to_string(), true, window, cx, |this, cx| {
-            this.tools_cancel_confirm(cx)
-        });
+        let cancel = self.tools_action(
+            "tools-confirm-cancel",
+            false,
+            "x",
+            t!(Cancel).to_string(),
+            true,
+            window,
+            cx,
+            |this, cx| this.tools_cancel_confirm(cx),
+        );
         let ok_bulk = bulk.clone();
         let ok = self.tools_action(
             "tools-confirm-ok",
@@ -360,13 +439,25 @@ impl Shell {
                     .text_color(text())
                     .child(tf!(ToolsConfirmTitle, count)),
             )
-            .child(div().type_role(T_SECONDARY).text_color(muted()).child(match bulk {
-                Bulk::Dupes => t!(ToolsConfirmBodyDupes),
-                Bulk::Merge => t!(ToolsConfirmBodyMerge),
-                Bulk::Split => t!(ToolsConfirmBodySplit),
-                Bulk::Sort => t!(ToolsConfirmBodySort),
-            }))
-            .child(div().flex().items_center().gap(px(S3)).child(ok).child(cancel))
+            .child(
+                div()
+                    .type_role(T_SECONDARY)
+                    .text_color(muted())
+                    .child(match bulk {
+                        Bulk::Dupes => t!(ToolsConfirmBodyDupes),
+                        Bulk::Merge => t!(ToolsConfirmBodyMerge),
+                        Bulk::Split => t!(ToolsConfirmBodySplit),
+                        Bulk::Sort => t!(ToolsConfirmBodySort),
+                    }),
+            )
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(S3))
+                    .child(ok)
+                    .child(cancel),
+            )
             .into_any_element()
     }
 
@@ -382,10 +473,21 @@ impl Shell {
         out.push(self.tools_step(t!(ToolsPickList), None));
         let selected = self.tools.dup.list.clone();
         let items_ref = items.clone();
-        out.push(self.tools_list_box(BoxId::DupPick, items.len(), window, cx, |i, cursor, cx| {
-            let it = &items_ref[i];
-            self.tools_pick_row(BoxId::DupPick, i, cursor, selected.as_ref() == Some(&it.id), true, &it.name, it.count, cx)
-        }));
+        out.push(
+            self.tools_list_box(BoxId::DupPick, items.len(), window, cx, |i, cursor, cx| {
+                let it = &items_ref[i];
+                self.tools_pick_row(
+                    BoxId::DupPick,
+                    i,
+                    cursor,
+                    selected.as_ref() == Some(&it.id),
+                    true,
+                    &it.name,
+                    it.count,
+                    cx,
+                )
+            }),
+        );
         let Some(id) = selected else {
             out.push(self.tools_note(t!(ToolsDupesPick), false));
             return out;
@@ -394,35 +496,52 @@ impl Shell {
             out.push(note);
             return out;
         }
-        let Some(view) = self.tools_dup_view() else { return out };
+        let Some(view) = self.tools_dup_view() else {
+            return out;
+        };
         if view.groups.is_empty() {
             out.push(
                 div()
                     .py(px(S4))
                     .flex()
                     .justify_center()
-                    .child(state_view("check", t!(ToolsDupesNoneTitle), t!(ToolsDupesNoneBody)))
+                    .child(state_view(
+                        "check",
+                        t!(ToolsDupesNoneTitle),
+                        t!(ToolsDupesNoneBody),
+                    ))
                     .into_any_element(),
             );
             return out;
         }
         let removals = self.tools_dup_removals();
-        let same = view.groups.iter().filter(|g| g.kind == DupKind::SameTrack).count();
+        let same = view
+            .groups
+            .iter()
+            .filter(|g| g.kind == DupKind::SameTrack)
+            .count();
         let versions = view.groups.len() - same;
         out.push(self.tools_step(
             format!(
                 "{} · {}",
                 tp!(ToolsDupeSets, view.groups.len()),
-                tp!(ToolsDupeExtra, view.groups.iter().map(|g| g.removable()).sum::<usize>())
+                tp!(
+                    ToolsDupeExtra,
+                    view.groups.iter().map(|g| g.removable()).sum::<usize>()
+                )
             ),
             Some(tf!(ToolsDupesKinds, same, versions)),
         ));
         let album_col = self.window_width - self.dock_inset() >= ALBUM_MIN_WIDTH;
         let view_ref = view.clone();
         let spared = self.tools.dup.spared.clone();
-        out.push(self.tools_list_box(BoxId::DupRows, view.rows.len(), window, cx, |i, cursor, cx| {
-            self.dup_row(&view_ref, i, cursor, &spared, album_col, cx)
-        }));
+        out.push(self.tools_list_box(
+            BoxId::DupRows,
+            view.rows.len(),
+            window,
+            cx,
+            |i, cursor, cx| self.dup_row(&view_ref, i, cursor, &spared, album_col, cx),
+        ));
         let n = removals.len();
         out.push(self.tools_note(t!(ToolsDupesHint), false));
         if self.tools.confirm == Some(Bulk::Dupes) {
@@ -469,7 +588,9 @@ impl Shell {
                     .cursor_pointer()
                     .when(cursor, |el| el.bg(veil(VEIL_SELECTED)))
                     .when(!cursor, |el| el.hover(|s| s.bg(veil(VEIL_HOVER))))
-                    .on_click(cx.listener(move |this, _, _, cx| this.tools_box_activate(BoxId::DupRows, i, cx)))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.tools_box_activate(BoxId::DupRows, i, cx)
+                    }))
                     .type_role(T_SECONDARY)
                     .font_weight(FontWeight::SEMIBOLD)
                     .text_color(text())
@@ -497,10 +618,20 @@ impl Shell {
                     .gap(px(S3))
                     .when(!it.keep, |el| el.cursor_pointer())
                     .when(cursor, |el| el.bg(veil(VEIL_SELECTED)))
-                    .when(!cursor && !it.keep, |el| el.hover(|s| s.bg(veil(VEIL_HOVER))))
-                    .on_click(cx.listener(move |this, _, _, cx| this.tools_box_activate(BoxId::DupRows, i, cx)))
+                    .when(!cursor && !it.keep, |el| {
+                        el.hover(|s| s.bg(veil(VEIL_HOVER)))
+                    })
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.tools_box_activate(BoxId::DupRows, i, cx)
+                    }))
                     .child(if it.keep {
-                        div().size(px(18.)).flex_none().flex().items_center().justify_center().child(super::theme::icon("pin", 14., label()))
+                        div()
+                            .size(px(18.))
+                            .flex_none()
+                            .flex()
+                            .items_center()
+                            .justify_center()
+                            .child(super::theme::icon("pin", 14., label()))
                     } else {
                         mark(remove, false, accent)
                     })
@@ -515,14 +646,18 @@ impl Shell {
                                     .flex()
                                     .type_role(T_BODY)
                                     .text_color(if remove || it.keep { text() } else { muted() })
-                                    .child(line_with_tip(("tools-dup-title", i), row.name.clone()).flex().min_w_0()),
+                                    .child(
+                                        line_with_tip(("tools-dup-title", i), row.name.clone())
+                                            .flex()
+                                            .min_w_0(),
+                                    ),
                             )
                             .child(
-                                div()
-                                    .flex()
-                                    .type_role(T_LABEL)
-                                    .text_color(label())
-                                    .child(line_with_tip(("tools-dup-artist", i), row.artists.clone()).flex().min_w_0()),
+                                div().flex().type_role(T_LABEL).text_color(label()).child(
+                                    line_with_tip(("tools-dup-artist", i), row.artists.clone())
+                                        .flex()
+                                        .min_w_0(),
+                                ),
                             ),
                     )
                     .when(album_col, |el| {
@@ -533,7 +668,11 @@ impl Shell {
                                 .flex()
                                 .type_role(T_SECONDARY)
                                 .text_color(label())
-                                .child(line_with_tip(("tools-dup-album", i), row.album.clone()).flex().min_w_0()),
+                                .child(
+                                    line_with_tip(("tools-dup-album", i), row.album.clone())
+                                        .flex()
+                                        .min_w_0(),
+                                ),
                         )
                     })
                     .child(
@@ -571,8 +710,21 @@ impl Shell {
             "tools-mode",
             t!(ToolsMode),
             &[("merge", t!(ToolsModeMerge)), ("split", t!(ToolsModeSplit))],
-            if mode == MergeMode::Merge { "merge" } else { "split" },
-            |this, key, cx| this.tools_set_mode(if key == "split" { MergeMode::Split } else { MergeMode::Merge }, cx),
+            if mode == MergeMode::Merge {
+                "merge"
+            } else {
+                "split"
+            },
+            |this, key, cx| {
+                this.tools_set_mode(
+                    if key == "split" {
+                        MergeMode::Split
+                    } else {
+                        MergeMode::Merge
+                    },
+                    cx,
+                )
+            },
             window,
             cx,
         ));
@@ -588,24 +740,49 @@ impl Shell {
         let mode = self.tools.merge.mode;
         let mut out = Vec::new();
         let items = self.tools_items(Source::Readable);
-        if matches!(self.library.library, Loadable::Loaded(_)) && items.len() < 2 && mode == MergeMode::Merge {
+        if matches!(self.library.library, Loadable::Loaded(_))
+            && items.len() < 2
+            && mode == MergeMode::Merge
+        {
             out.push(self.tools_note(t!(ToolsMergeTooFew), false));
         }
         out.push(match mode {
-            MergeMode::Merge => self.tools_step(t!(ToolsPickLists), Some(tf!(ToolsPickedCount, self.tools.merge.picked.len()))),
+            MergeMode::Merge => self.tools_step(
+                t!(ToolsPickLists),
+                Some(tf!(ToolsPickedCount, self.tools.merge.picked.len())),
+            ),
             MergeMode::Split => self.tools_step(t!(ToolsPickList), None),
         });
         let picked = self.tools_merge_selection();
         let items_ref = items.clone();
-        out.push(self.tools_list_box(BoxId::MergePick, items.len(), window, cx, |i, cursor, cx| {
-            let it = &items_ref[i];
-            self.tools_pick_row(BoxId::MergePick, i, cursor, picked.contains(&it.id), mode == MergeMode::Split, &it.name, it.count, cx)
-        }));
+        out.push(self.tools_list_box(
+            BoxId::MergePick,
+            items.len(),
+            window,
+            cx,
+            |i, cursor, cx| {
+                let it = &items_ref[i];
+                self.tools_pick_row(
+                    BoxId::MergePick,
+                    i,
+                    cursor,
+                    picked.contains(&it.id),
+                    mode == MergeMode::Split,
+                    &it.name,
+                    it.count,
+                    cx,
+                )
+            },
+        ));
         match mode {
             MergeMode::Merge => out.push(self.tools_options(
                 "tools-dedupe",
                 t!(ToolsDropDupes),
-                &[("off", t!(ToolsDedupeOff)), ("same", t!(ToolsDedupeSame)), ("versions", t!(ToolsDedupeVersions))],
+                &[
+                    ("off", t!(ToolsDedupeOff)),
+                    ("same", t!(ToolsDedupeSame)),
+                    ("versions", t!(ToolsDedupeVersions)),
+                ],
                 match self.tools.merge.dedupe {
                     DedupeMode::Off => "off",
                     DedupeMode::SameTrack => "same",
@@ -625,7 +802,11 @@ impl Shell {
             MergeMode::Split => out.push(self.tools_options(
                 "tools-splitby",
                 t!(ToolsSplitBy),
-                &[("artist", t!(ToolsByArtist)), ("album", t!(ToolsByAlbum)), ("year", t!(ToolsByYear))],
+                &[
+                    ("artist", t!(ToolsByArtist)),
+                    ("album", t!(ToolsByAlbum)),
+                    ("year", t!(ToolsByYear)),
+                ],
                 match self.tools.merge.split_by {
                     SplitBy::Artist => "artist",
                     SplitBy::Album => "album",
@@ -648,34 +829,60 @@ impl Shell {
             out.push(self.tools_note(t!(ToolsByYearNote), false));
         }
         let ids = self.tools_merge_selection();
-        let ready = self.tools_merge_ready() && matches!(self.tools_sources(&ids), Sources::Ready(_));
+        let ready =
+            self.tools_merge_ready() && matches!(self.tools_sources(&ids), Sources::Ready(_));
         if let Some(note) = self.tools_load_note(&ids).filter(|_| !ids.is_empty()) {
             out.push(note);
         }
-        out.push(self.tools_action("tools-review", true, "list-music", t!(ToolsPreview).to_string(), ready, window, cx, |this, cx| {
-            this.tools_review(cx)
-        }));
+        out.push(self.tools_action(
+            "tools-review",
+            true,
+            "list-music",
+            t!(ToolsPreview).to_string(),
+            ready,
+            window,
+            cx,
+            |this, cx| this.tools_review(cx),
+        ));
         out
     }
 
     fn merge_review(&self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let mode = self.tools.merge.mode;
-        let mut out = vec![self.tools_step(t!(ToolsReviewTitle), Some(t!(ToolsReviewHint).to_string()))];
+        let mut out =
+            vec![self.tools_step(t!(ToolsReviewTitle), Some(t!(ToolsReviewHint).to_string()))];
         out.push(self.tools_name_field(mode, window, cx));
         let count;
         match mode {
             MergeMode::Merge => {
-                let Some(plan) = self.tools_merge_plan() else { return out };
+                let Some(plan) = self.tools_merge_plan() else {
+                    return out;
+                };
                 count = plan.rows.len() + 1;
                 out.push(self.tools_summary(&[
                     tp!(Songs, plan.rows.len()),
                     tp!(FolderLists, self.tools.merge.picked.len()),
-                    if plan.dropped > 0 { tf!(ToolsMergeDropped, plan.dropped) } else { String::new() },
+                    if plan.dropped > 0 {
+                        tf!(ToolsMergeDropped, plan.dropped)
+                    } else {
+                        String::new()
+                    },
                 ]));
-                out.push(self.tools_preview_rows(plan.rows.iter().take(PREVIEW_ROWS).map(|r| (r.name.clone(), r.artists.clone())).collect(), plan.rows.len()));
+                out.push(
+                    self.tools_preview_rows(
+                        plan.rows
+                            .iter()
+                            .take(PREVIEW_ROWS)
+                            .map(|r| (r.name.clone(), r.artists.clone()))
+                            .collect(),
+                        plan.rows.len(),
+                    ),
+                );
             }
             MergeMode::Split => {
-                let Some(groups) = self.tools_split_groups() else { return out };
+                let Some(groups) = self.tools_split_groups() else {
+                    return out;
+                };
                 count = groups.iter().map(|g| g.rows.len() + 1).sum();
                 out.push(self.tools_summary(&[tp!(ToolsNewLists, groups.len())]));
                 let lines: Vec<(String, String)> = groups
@@ -688,30 +895,58 @@ impl Shell {
         }
         out.push(self.tools_note(t!(ToolsSourcesStay), false));
         let can = !self.tools.merge.name.trim().is_empty() && count > 1;
-        let back = self.tools_action("tools-back", false, "arrow-left", t!(Back).to_string(), true, window, cx, |this, cx| {
-            this.tools_back_from_review(cx)
-        });
+        let back = self.tools_action(
+            "tools-back",
+            false,
+            "arrow-left",
+            t!(Back).to_string(),
+            true,
+            window,
+            cx,
+            |this, cx| this.tools_back_from_review(cx),
+        );
         if let Some(bulk) = self.tools.confirm.clone() {
             out.push(self.tools_confirm_card(bulk, count, window, cx));
         } else {
-            let bulk = if mode == MergeMode::Merge { Bulk::Merge } else { Bulk::Split };
+            let bulk = if mode == MergeMode::Merge {
+                Bulk::Merge
+            } else {
+                Bulk::Split
+            };
             let apply = self.tools_action(
                 "tools-apply",
                 true,
                 "plus",
-                if mode == MergeMode::Merge { t!(ToolsCreateList).to_string() } else { t!(ToolsCreateLists).to_string() },
+                if mode == MergeMode::Merge {
+                    t!(ToolsCreateList).to_string()
+                } else {
+                    t!(ToolsCreateLists).to_string()
+                },
                 can,
                 window,
                 cx,
                 move |this, cx| this.tools_request(bulk.clone(), cx),
             );
-            out.push(div().flex().items_center().gap(px(S3)).child(apply).child(back).into_any_element());
+            out.push(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(S3))
+                    .child(apply)
+                    .child(back)
+                    .into_any_element(),
+            );
         }
         out
     }
 
     /// Adı yazılan alan (Tab durağı; yazı `tools_key`'te).
-    fn tools_name_field(&self, mode: MergeMode, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn tools_name_field(
+        &self,
+        mode: MergeMode,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
         let (stop, look) = self.stop_look("tools-name", super::tab::PAGE, true, window, cx);
         let focused = look == Look::Focus;
@@ -727,7 +962,11 @@ impl Shell {
                     .type_role(T_BODY)
                     .font_weight(FontWeight::MEDIUM)
                     .text_color(text())
-                    .child(if mode == MergeMode::Merge { t!(ToolsListName) } else { t!(ToolsListPrefix) }),
+                    .child(if mode == MergeMode::Merge {
+                        t!(ToolsListName)
+                    } else {
+                        t!(ToolsListPrefix)
+                    }),
             )
             .child(
                 div()
@@ -742,21 +981,35 @@ impl Shell {
                     .items_center()
                     .bg(shade(SHADE_INPUT))
                     .border_1()
-                    .border_color(if focused { rgb(accent) } else { veil(LINE_INPUT) })
+                    .border_color(if focused {
+                        rgb(accent)
+                    } else {
+                        veil(LINE_INPUT)
+                    })
                     .type_role(T_SECONDARY)
                     .text_color(text())
                     .when_some(stop, |el, h| {
                         let click = h.clone();
-                        el.child(self.focus_probe(&h)).track_focus(&h).on_click(cx.listener(move |this, _, window, cx| {
-                            window.focus(&click);
-                            this.keyboard_focus = true;
-                            cx.notify();
-                        }))
+                        el.child(self.focus_probe(&h))
+                            .track_focus(&h)
+                            .on_click(cx.listener(move |this, _, window, cx| {
+                                window.focus(&click);
+                                this.keyboard_focus = true;
+                                cx.notify();
+                            }))
                     })
-                    .child(div().flex().min_w_0().child(line_with_tip("tools-name-text", name)).child(
-                        // Yazma imleci: odaktayken ince çizgi.
-                        div().when(focused, |el| el.ml(px(S0)).w(px(S0)).h(px(S4)).bg(rgb(accent))),
-                    )),
+                    .child(
+                        div()
+                            .flex()
+                            .min_w_0()
+                            .child(line_with_tip("tools-name-text", name))
+                            .child(
+                                // Yazma imleci: odaktayken ince çizgi.
+                                div().when(focused, |el| {
+                                    el.ml(px(S0)).w(px(S0)).h(px(S4)).bg(rgb(accent))
+                                }),
+                            ),
+                    ),
             )
             .into_any_element()
     }
@@ -766,7 +1019,14 @@ impl Shell {
             .type_role(T_BODY)
             .font_weight(FontWeight::SEMIBOLD)
             .text_color(text())
-            .child(parts.iter().filter(|p| !p.is_empty()).cloned().collect::<Vec<_>>().join(" · "))
+            .child(
+                parts
+                    .iter()
+                    .filter(|p| !p.is_empty())
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" · "),
+            )
             .into_any_element()
     }
 
@@ -788,8 +1048,26 @@ impl Shell {
                     .flex()
                     .items_center()
                     .gap(px(S3))
-                    .child(div().flex_1().min_w_0().flex().type_role(T_BODY).text_color(text()).child(line_with_tip(("tools-prev-title", i), title).flex().min_w_0()))
-                    .child(div().flex_none().type_role(T_SECONDARY).text_color(label()).child(sub))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .type_role(T_BODY)
+                            .text_color(text())
+                            .child(
+                                line_with_tip(("tools-prev-title", i), title)
+                                    .flex()
+                                    .min_w_0(),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex_none()
+                            .type_role(T_SECONDARY)
+                            .text_color(label())
+                            .child(sub),
+                    )
             }))
             .when(total > shown, |el| {
                 el.child(
@@ -818,10 +1096,21 @@ impl Shell {
         out.push(self.tools_step(t!(ToolsPickList), None));
         let selected = self.tools.sort.list.clone();
         let items_ref = items.clone();
-        out.push(self.tools_list_box(BoxId::SortPick, items.len(), window, cx, |i, cursor, cx| {
-            let it = &items_ref[i];
-            self.tools_pick_row(BoxId::SortPick, i, cursor, selected.as_ref() == Some(&it.id), true, &it.name, it.count, cx)
-        }));
+        out.push(
+            self.tools_list_box(BoxId::SortPick, items.len(), window, cx, |i, cursor, cx| {
+                let it = &items_ref[i];
+                self.tools_pick_row(
+                    BoxId::SortPick,
+                    i,
+                    cursor,
+                    selected.as_ref() == Some(&it.id),
+                    true,
+                    &it.name,
+                    it.count,
+                    cx,
+                )
+            }),
+        );
         out.push(self.tools_options(
             "tools-sortby",
             t!(ToolsSortBy),
@@ -856,8 +1145,14 @@ impl Shell {
             "tools-sortdir",
             t!(ToolsSortDir),
             &[("asc", t!(ToolsAsc)), ("desc", t!(ToolsDesc))],
-            if self.tools.sort.dir == Dir::Asc { "asc" } else { "desc" },
-            |this, key, cx| this.tools_set_dir(if key == "desc" { Dir::Desc } else { Dir::Asc }, cx),
+            if self.tools.sort.dir == Dir::Asc {
+                "asc"
+            } else {
+                "desc"
+            },
+            |this, key, cx| {
+                this.tools_set_dir(if key == "desc" { Dir::Desc } else { Dir::Asc }, cx)
+            },
             window,
             cx,
         ));
@@ -869,7 +1164,9 @@ impl Shell {
             out.push(note);
             return out;
         }
-        let Some(view) = self.tools_sort_view() else { return out };
+        let Some(view) = self.tools_sort_view() else {
+            return out;
+        };
         let (tracks, order, n) = (&view.tracks, &view.order, view.count);
         if self.tools.sort.by == SortBy::Added && !self.library.added.contains_key(&id) {
             out.push(self.tools_note(t!(ToolsSortDatesLoading), false));
@@ -883,7 +1180,12 @@ impl Shell {
             .iter()
             .take(PREVIEW_ROWS)
             .enumerate()
-            .map(|(k, &i)| (format!("{}. {}", k + 1, tracks[i].name), tracks[i].artists.clone()))
+            .map(|(k, &i)| {
+                (
+                    format!("{}. {}", k + 1, tracks[i].name),
+                    tracks[i].artists.clone(),
+                )
+            })
             .collect();
         out.push(self.tools_preview_rows(first, tracks.len()));
         if n > MAX_SORT_MOVES {
@@ -921,7 +1223,10 @@ impl Shell {
             ]));
         }
         out.push(self.tools_note(t!(ToolsBackupNoRestore), false));
-        let busy = matches!(self.tools.backup, BackupStatus::Choosing | BackupStatus::Writing);
+        let busy = matches!(
+            self.tools.backup,
+            BackupStatus::Choosing | BackupStatus::Writing
+        );
         let ready = matches!(self.library.library, Loadable::Loaded(_));
         out.push(self.tools_action(
             "tools-backup-save",
@@ -940,14 +1245,21 @@ impl Shell {
             BackupStatus::Failed => out.push(self.tools_note(t!(ToolsBackupFailed), true)),
             BackupStatus::Done(s) => {
                 let path = s.path.clone();
-                out.push(self.tools_summary(&[t!(ToolsBackupDone).to_string(), tf!(ToolsBackupCounts, s.lists, s.tracks)]));
+                out.push(self.tools_summary(&[
+                    t!(ToolsBackupDone).to_string(),
+                    tf!(ToolsBackupCounts, s.lists, s.tracks),
+                ]));
                 out.push(
                     div()
                         .flex()
                         .min_w_0()
                         .type_role(T_SECONDARY)
                         .text_color(muted())
-                        .child(line_with_tip("tools-backup-path", s.path.display().to_string()).flex().min_w_0())
+                        .child(
+                            line_with_tip("tools-backup-path", s.path.display().to_string())
+                                .flex()
+                                .min_w_0(),
+                        )
                         .into_any_element(),
                 );
                 if s.missing > 0 {
@@ -976,16 +1288,28 @@ impl Shell {
         // Aralık düğmeleri.
         let mut chips = div().flex().items_center().gap(px(S2)).flex_wrap();
         for range in StatsRange::ALL {
-            let (stop, look) = self.stop_look(format!("tools-range-{range:?}"), super::tab::PAGE, true, window, cx);
+            let (stop, look) = self.stop_look(
+                format!("tools-range-{range:?}"),
+                super::tab::PAGE,
+                true,
+                window,
+                cx,
+            );
             let name = match range {
                 StatsRange::Weeks4 => t!(ToolsRange4w),
                 StatsRange::Months6 => t!(ToolsRange6m),
                 StatsRange::All => t!(ToolsRangeAll),
             };
             chips = chips.child(
-                chip(ElementId::Name(format!("tools-range-{range:?}").into()), name, self.tools.stats.range == range, look, accent)
-                    .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                    .on_click(cx.listener(move |this, _, _, cx| this.tools_set_range(range, cx))),
+                chip(
+                    ElementId::Name(format!("tools-range-{range:?}").into()),
+                    name,
+                    self.tools.stats.range == range,
+                    look,
+                    accent,
+                )
+                .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| this.tools_set_range(range, cx))),
             );
         }
         out.push(chips.into_any_element());
@@ -999,7 +1323,11 @@ impl Shell {
                     .py(px(S5))
                     .flex()
                     .justify_center()
-                    .child(state_view("music", t!(ToolsStatsEmptyTitle), t!(ToolsStatsEmptyBody)))
+                    .child(state_view(
+                        "music",
+                        t!(ToolsStatsEmptyTitle),
+                        t!(ToolsStatsEmptyBody),
+                    ))
                     .into_any_element(),
             );
             return out;
@@ -1010,39 +1338,82 @@ impl Shell {
                 .flex()
                 .gap(px(S6))
                 .flex_wrap()
-                .child(self.stat_figure(report.plays.to_string(), t!(ToolsPlaysCaption).to_string()))
-                .child(self.stat_figure(listened_text(report.listened_ms), t!(ToolsListened).to_string()))
+                .child(
+                    self.stat_figure(report.plays.to_string(), t!(ToolsPlaysCaption).to_string()),
+                )
+                .child(self.stat_figure(
+                    listened_text(report.listened_ms),
+                    t!(ToolsListened).to_string(),
+                ))
                 .into_any_element(),
         );
         // Saat dağılımı.
         out.push(self.tools_step(t!(ToolsHours), None));
         out.push(self.hours_chart(&report.hours, accent));
-        let take = if self.tools.stats.more { TOP_N } else { TOP_SHORT };
+        let take = if self.tools.stats.more {
+            TOP_N
+        } else {
+            TOP_SHORT
+        };
         out.push(self.tools_step(t!(ToolsTopTracks), None));
-        out.push(self.top_list(
-            "tools-top-tracks",
-            report.tracks.iter().take(take).map(|x| (x.name.clone(), x.artists.clone(), x.plays)).collect(),
-        ));
+        out.push(
+            self.top_list(
+                "tools-top-tracks",
+                report
+                    .tracks
+                    .iter()
+                    .take(take)
+                    .map(|x| (x.name.clone(), x.artists.clone(), x.plays))
+                    .collect(),
+            ),
+        );
         out.push(self.tools_step(t!(ToolsTopArtists), None));
-        out.push(self.top_list(
-            "tools-top-artists",
-            report.artists.iter().take(take).map(|x| (x.name.clone(), String::new(), x.plays)).collect(),
-        ));
+        out.push(
+            self.top_list(
+                "tools-top-artists",
+                report
+                    .artists
+                    .iter()
+                    .take(take)
+                    .map(|x| (x.name.clone(), String::new(), x.plays))
+                    .collect(),
+            ),
+        );
         out.push(self.tools_step(t!(ToolsTopAlbums), None));
-        out.push(self.top_list(
-            "tools-top-albums",
-            report.albums.iter().take(take).map(|x| (x.album.clone(), x.artist.clone(), x.plays)).collect(),
-        ));
-        let more = report.tracks.len() > TOP_SHORT || report.artists.len() > TOP_SHORT || report.albums.len() > TOP_SHORT;
+        out.push(
+            self.top_list(
+                "tools-top-albums",
+                report
+                    .albums
+                    .iter()
+                    .take(take)
+                    .map(|x| (x.album.clone(), x.artist.clone(), x.plays))
+                    .collect(),
+            ),
+        );
+        let more = report.tracks.len() > TOP_SHORT
+            || report.artists.len() > TOP_SHORT
+            || report.albums.len() > TOP_SHORT;
         if more {
-            let (stop, look) = self.stop_look("tools-stats-more", super::tab::PAGE, true, window, cx);
+            let (stop, look) =
+                self.stop_look("tools-stats-more", super::tab::PAGE, true, window, cx);
             out.push(
                 div()
                     .flex()
                     .child(
-                        chip("tools-stats-more", if self.tools.stats.more { t!(ShowLess) } else { t!(ShowAll) }, false, look, accent)
-                            .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                            .on_click(cx.listener(|this, _, _, cx| this.tools_more_stats(cx))),
+                        chip(
+                            "tools-stats-more",
+                            if self.tools.stats.more {
+                                t!(ShowLess)
+                            } else {
+                                t!(ShowAll)
+                            },
+                            false,
+                            look,
+                            accent,
+                        )
+                        .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
+                        .on_click(cx.listener(|this, _, _, cx| this.tools_more_stats(cx))),
                     )
                     .into_any_element(),
             );
@@ -1064,25 +1435,42 @@ impl Shell {
                     .text_color(text())
                     .child(value),
             )
-            .child(div().type_role(T_SECONDARY).text_color(muted()).child(caption))
+            .child(
+                div()
+                    .type_role(T_SECONDARY)
+                    .text_color(muted())
+                    .child(caption),
+            )
             .into_any_element()
     }
 
     /// 24 sütun: saat başına dinlenen süre; en yoğun saat vurgu renginde.
     fn hours_chart(&self, hours: &[u64; 24], accent: u32) -> AnyElement {
         let max = hours.iter().copied().max().unwrap_or(0).max(1);
-        let peak = hours.iter().enumerate().max_by_key(|(_, v)| **v).map(|(h, _)| h).unwrap_or(0);
-        let bars = (0..24).map(|h| {
-            let frac = hours[h] as f32 / max as f32;
-            let height = if hours[h] == 0 { S0 } else { (HOURS_HEIGHT * frac).max(S1) };
-            div().flex_1().h(px(HOURS_HEIGHT)).flex().items_end().child(
-                div()
-                    .w_full()
-                    .h(px(height))
-                    .rounded(px(R_XS))
-                    .bg(if h == peak && hours[h] > 0 { rgb(accent) } else { accent_veil(accent, 0.45) }),
-            )
-        });
+        let peak = hours
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, v)| **v)
+            .map(|(h, _)| h)
+            .unwrap_or(0);
+        let bars =
+            (0..24).map(|h| {
+                let frac = hours[h] as f32 / max as f32;
+                let height = if hours[h] == 0 {
+                    S0
+                } else {
+                    (HOURS_HEIGHT * frac).max(S1)
+                };
+                div().flex_1().h(px(HOURS_HEIGHT)).flex().items_end().child(
+                    div().w_full().h(px(height)).rounded(px(R_XS)).bg(
+                        if h == peak && hours[h] > 0 {
+                            rgb(accent)
+                        } else {
+                            accent_veil(accent, 0.45)
+                        },
+                    ),
+                )
+            });
         let axis = (0..24).map(|h| {
             div()
                 .flex_1()
@@ -1091,7 +1479,11 @@ impl Shell {
                 .type_role(T_LABEL)
                 .tabular()
                 .text_color(label())
-                .child(if h % 6 == 0 { h.to_string() } else { String::new() })
+                .child(if h % 6 == 0 {
+                    h.to_string()
+                } else {
+                    String::new()
+                })
         });
         div()
             .flex()
@@ -1123,17 +1515,39 @@ impl Shell {
                     .items_center()
                     .gap(px(S3))
                     .border_t_1()
-                    .border_color(if i == 0 { gpui::transparent_black() } else { veil(LINE).into() })
-                    .child(div().w(px(S5)).flex_none().type_role(T_SECONDARY).tabular().text_color(label()).child((i + 1).to_string()))
+                    .border_color(if i == 0 {
+                        gpui::transparent_black()
+                    } else {
+                        veil(LINE).into()
+                    })
+                    .child(
+                        div()
+                            .w(px(S5))
+                            .flex_none()
+                            .type_role(T_SECONDARY)
+                            .tabular()
+                            .text_color(label())
+                            .child((i + 1).to_string()),
+                    )
                     .child(
                         div()
                             .flex_1()
                             .min_w_0()
                             .flex()
                             .flex_col()
-                            .child(div().flex().type_role(T_BODY).text_color(text()).child(line_with_tip((id, i + 100), name).flex().min_w_0()))
+                            .child(
+                                div()
+                                    .flex()
+                                    .type_role(T_BODY)
+                                    .text_color(text())
+                                    .child(line_with_tip((id, i + 100), name).flex().min_w_0()),
+                            )
                             .children((!sub.is_empty()).then(|| {
-                                div().flex().type_role(T_LABEL).text_color(label()).child(line_with_tip((id, i + 200), sub).flex().min_w_0())
+                                div()
+                                    .flex()
+                                    .type_role(T_LABEL)
+                                    .text_color(label())
+                                    .child(line_with_tip((id, i + 200), sub).flex().min_w_0())
                             })),
                     )
                     .child(

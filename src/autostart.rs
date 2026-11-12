@@ -60,7 +60,9 @@ impl Autostart {
 
     /// Açılış listesinde Openify var mı?
     pub fn is_enabled(&self) -> bool {
-        self.key.get(VALUE_NAME).is_some_and(|c| !c.trim().is_empty())
+        self.key
+            .get(VALUE_NAME)
+            .is_some_and(|c| !c.trim().is_empty())
     }
 
     /// Anahtarı çevir. Açarken bu exe'nin yolu yazılır (zaten varsa yenilenir).
@@ -85,7 +87,10 @@ impl RunKey for MemoryRunKey {
     }
 
     fn set(&self, name: &str, command: &str) -> Result<(), String> {
-        self.0.lock().map_err(|e| e.to_string())?.insert(name.into(), command.into());
+        self.0
+            .lock()
+            .map_err(|e| e.to_string())?
+            .insert(name.into(), command.into());
         Ok(())
     }
 
@@ -109,7 +114,8 @@ mod registry {
         Win32::{
             Foundation::ERROR_SUCCESS,
             System::Registry::{
-                HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+                HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW,
+                RegSetKeyValueW,
             },
         },
         core::HSTRING,
@@ -123,7 +129,15 @@ mod registry {
             let subkey = HSTRING::from(self.0);
             let mut size = 0u32;
             let probe = unsafe {
-                RegGetValueW(HKEY_CURRENT_USER, &subkey, &name, RRF_RT_REG_SZ, None, None, Some(&mut size))
+                RegGetValueW(
+                    HKEY_CURRENT_USER,
+                    &subkey,
+                    &name,
+                    RRF_RT_REG_SZ,
+                    None,
+                    None,
+                    Some(&mut size),
+                )
             };
             if probe != ERROR_SUCCESS || size < 2 {
                 return None;
@@ -162,7 +176,11 @@ mod registry {
                     (data.len() * 2) as u32,
                 )
             };
-            if r == ERROR_SUCCESS { Ok(()) } else { Err(format!("kayıt defteri hatası {}", r.0)) }
+            if r == ERROR_SUCCESS {
+                Ok(())
+            } else {
+                Err(format!("kayıt defteri hatası {}", r.0))
+            }
         }
 
         fn remove(&self, name: &str) -> Result<(), String> {
@@ -170,7 +188,11 @@ mod registry {
             let subkey = HSTRING::from(self.0);
             let r = unsafe { RegDeleteKeyValueW(HKEY_CURRENT_USER, &subkey, &name) };
             // Değer zaten yoksa sorun değil.
-            if r == ERROR_SUCCESS || r.0 == 2 { Ok(()) } else { Err(format!("kayıt defteri hatası {}", r.0)) }
+            if r == ERROR_SUCCESS || r.0 == 2 {
+                Ok(())
+            } else {
+                Err(format!("kayıt defteri hatası {}", r.0))
+            }
         }
     }
 }
@@ -180,7 +202,10 @@ mod tests {
     use super::*;
 
     fn fake() -> Autostart {
-        Autostart::new(Box::new(MemoryRunKey::default()), PathBuf::from(r"C:\Openify\current\openify.exe"))
+        Autostart::new(
+            Box::new(MemoryRunKey::default()),
+            PathBuf::from(r"C:\Openify\current\openify.exe"),
+        )
     }
 
     #[test]
@@ -197,7 +222,10 @@ mod tests {
         assert!(!a.is_enabled(), "kendiliğinden açık gelmez");
         a.set_enabled(true).unwrap();
         assert!(a.is_enabled());
-        assert_eq!(a.key.get(VALUE_NAME).unwrap(), r#""C:\Openify\current\openify.exe" --tray"#);
+        assert_eq!(
+            a.key.get(VALUE_NAME).unwrap(),
+            r#""C:\Openify\current\openify.exe" --tray"#
+        );
         // Tekrar açmak zararsız, değeri yeniler.
         a.set_enabled(true).unwrap();
         a.set_enabled(false).unwrap();
@@ -233,8 +261,12 @@ mod tests {
     fn windows_run_key_round_trip_in_a_private_subkey() {
         let key = WindowsRunKey(r"Software\Openify-sinama\Run");
         assert_eq!(key.get("Openify"), None);
-        key.set("Openify", r#""C:\Test Klasör\openify.exe" --tray"#).unwrap();
-        assert_eq!(key.get("Openify").as_deref(), Some(r#""C:\Test Klasör\openify.exe" --tray"#));
+        key.set("Openify", r#""C:\Test Klasör\openify.exe" --tray"#)
+            .unwrap();
+        assert_eq!(
+            key.get("Openify").as_deref(),
+            Some(r#""C:\Test Klasör\openify.exe" --tray"#)
+        );
         key.remove("Openify").unwrap();
         assert_eq!(key.get("Openify"), None);
         key.remove("Openify").unwrap();

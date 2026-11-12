@@ -34,7 +34,11 @@ pub struct EqSetting {
 
 impl Default for EqSetting {
     fn default() -> Self {
-        Self { enabled: false, gains_db: [0.0; BANDS], preamp_db: 0.0 }
+        Self {
+            enabled: false,
+            gains_db: [0.0; BANDS],
+            preamp_db: 0.0,
+        }
     }
 }
 
@@ -50,7 +54,11 @@ impl EqSetting {
 }
 
 fn clamp_db(v: f32, range: f32) -> f32 {
-    if v.is_finite() { v.clamp(-range, range) } else { 0.0 }
+    if v.is_finite() {
+        v.clamp(-range, range)
+    } else {
+        0.0
+    }
 }
 
 /// Bir ayarı 0,5 dB'lik adıma yuvarlar ve sınırlar (sürgü, klavye).
@@ -64,13 +72,22 @@ pub const PRESETS: [(&str, [f32; BANDS]); 5] = [
     ("flat", [0.0; BANDS]),
     ("bass", [6.0, 5.5, 4.5, 2.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0]),
     ("treble", [0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.5, 3.0, 4.5, 5.5]),
-    ("vocal", [-2.0, -2.0, -1.5, -0.5, 1.0, 3.0, 3.5, 2.5, 0.5, -0.5]),
-    ("acoustic", [3.5, 3.0, 2.0, 0.5, 1.0, 1.0, 2.0, 2.5, 3.0, 2.0]),
+    (
+        "vocal",
+        [-2.0, -2.0, -1.5, -0.5, 1.0, 3.0, 3.5, 2.5, 0.5, -0.5],
+    ),
+    (
+        "acoustic",
+        [3.5, 3.0, 2.0, 0.5, 1.0, 1.0, 2.0, 2.5, 3.0, 2.0],
+    ),
 ];
 
 /// Bu kazançlar hangi hazır ayara eşit (yoksa `None`: elle ya da profil)?
 pub fn preset_of(gains_db: &[f32; BANDS]) -> Option<&'static str> {
-    PRESETS.iter().find(|(_, g)| g.iter().zip(gains_db).all(|(a, b)| (a - b).abs() < 0.01)).map(|(k, _)| *k)
+    PRESETS
+        .iter()
+        .find(|(_, g)| g.iter().zip(gains_db).all(|(a, b)| (a - b).abs() < 0.01))
+        .map(|(k, _)| *k)
 }
 
 // ── Parametrik profil ──────────────────────────────────────────────────
@@ -126,7 +143,11 @@ impl PeqBand {
         match self.kind {
             PeqKind::LowPass | PeqKind::HighPass => {
                 let n = (self.slope as f64 / 6.0).clamp(1.0, 6.0);
-                let ratio = if self.kind == PeqKind::LowPass { f / f0 } else { f0 / f };
+                let ratio = if self.kind == PeqKind::LowPass {
+                    f / f0
+                } else {
+                    f0 / f
+                };
                 -10.0 * (1.0 + ratio.powf(2.0 * n)).log10()
             }
             _ => biquad_db(self.kind, f0, self.gain_db as f64, q, f),
@@ -147,15 +168,34 @@ fn biquad_db(kind: PeqKind, f0: f64, gain_db: f64, q: f64, f: f64) -> f64 {
             [1.0 + alpha / a, -2.0 * cos, 1.0 - alpha / a],
         ),
         PeqKind::LowShelf => (
-            [a * ((a + 1.0) - (a - 1.0) * cos + sq), 2.0 * a * ((a - 1.0) - (a + 1.0) * cos), a * ((a + 1.0) - (a - 1.0) * cos - sq)],
-            [(a + 1.0) + (a - 1.0) * cos + sq, -2.0 * ((a - 1.0) + (a + 1.0) * cos), (a + 1.0) + (a - 1.0) * cos - sq],
+            [
+                a * ((a + 1.0) - (a - 1.0) * cos + sq),
+                2.0 * a * ((a - 1.0) - (a + 1.0) * cos),
+                a * ((a + 1.0) - (a - 1.0) * cos - sq),
+            ],
+            [
+                (a + 1.0) + (a - 1.0) * cos + sq,
+                -2.0 * ((a - 1.0) + (a + 1.0) * cos),
+                (a + 1.0) + (a - 1.0) * cos - sq,
+            ],
         ),
         PeqKind::HighShelf => (
-            [a * ((a + 1.0) + (a - 1.0) * cos + sq), -2.0 * a * ((a - 1.0) + (a + 1.0) * cos), a * ((a + 1.0) + (a - 1.0) * cos - sq)],
-            [(a + 1.0) - (a - 1.0) * cos + sq, 2.0 * ((a - 1.0) - (a + 1.0) * cos), (a + 1.0) - (a - 1.0) * cos - sq],
+            [
+                a * ((a + 1.0) + (a - 1.0) * cos + sq),
+                -2.0 * a * ((a - 1.0) + (a + 1.0) * cos),
+                a * ((a + 1.0) + (a - 1.0) * cos - sq),
+            ],
+            [
+                (a + 1.0) - (a - 1.0) * cos + sq,
+                2.0 * ((a - 1.0) - (a + 1.0) * cos),
+                (a + 1.0) - (a - 1.0) * cos - sq,
+            ],
         ),
         PeqKind::BandPass => ([alpha, 0.0, -alpha], [1.0 + alpha, -2.0 * cos, 1.0 - alpha]),
-        PeqKind::BandStop => ([1.0, -2.0 * cos, 1.0], [1.0 + alpha, -2.0 * cos, 1.0 - alpha]),
+        PeqKind::BandStop => (
+            [1.0, -2.0 * cos, 1.0],
+            [1.0 + alpha, -2.0 * cos, 1.0 - alpha],
+        ),
         PeqKind::LowPass | PeqKind::HighPass => return 0.0,
     };
     let w = 2.0 * PI * f / RATE;
@@ -196,13 +236,18 @@ pub struct Fit {
 }
 
 fn grid() -> Vec<f64> {
-    (0..GRID_N).map(|i| 20.0 * (1000f64).powf(i as f64 / (GRID_N - 1) as f64)).collect()
+    (0..GRID_N)
+        .map(|i| 20.0 * (1000f64).powf(i as f64 / (GRID_N - 1) as f64))
+        .collect()
 }
 
 /// `bands` profilini 10 sabit banta uydurur.
 pub fn fit(bands: &[PeqBand]) -> Fit {
     let freqs = grid();
-    let target: Vec<f64> = freqs.iter().map(|&f| profile_response_db(bands, f)).collect();
+    let target: Vec<f64> = freqs
+        .iter()
+        .map(|&f| profile_response_db(bands, f))
+        .collect();
     fit_target(&freqs, &target)
 }
 
@@ -210,14 +255,18 @@ pub fn fit(bands: &[PeqBand]) -> Fit {
 pub fn fit_target(freqs: &[f64], target: &[f64]) -> Fit {
     let n = freqs.len();
     let model = |g: &[f64; BANDS]| -> Vec<f64> {
-        freqs.iter().map(|&f| (0..BANDS).map(|b| band_response_db(b, g[b], f)).sum()).collect()
+        freqs
+            .iter()
+            .map(|&f| (0..BANDS).map(|b| band_response_db(b, g[b], f)).sum())
+            .collect()
     };
     // Sabit kayma en küçük kareler çözümüyle ortalamaya oturur.
     let offset = |m: &[f64]| (0..n).map(|j| target[j] - m[j]).sum::<f64>() / n as f64;
     let cost = |g: &[f64; BANDS]| -> f64 {
         let m = model(g);
         let c = offset(&m);
-        (0..n).map(|j| (target[j] - m[j] - c).powi(2)).sum::<f64>() + RIDGE * g.iter().map(|x| x * x).sum::<f64>()
+        (0..n).map(|j| (target[j] - m[j] - c).powi(2)).sum::<f64>()
+            + RIDGE * g.iter().map(|x| x * x).sum::<f64>()
     };
     let mut g = [0.0f64; BANDS];
     let mut best = cost(&g);
@@ -229,7 +278,8 @@ pub fn fit_target(freqs: &[f64], target: &[f64]) -> Fit {
         let mut jac = vec![[0.0f64; BANDS + 1]; n];
         for (j, &f) in freqs.iter().enumerate() {
             for b in 0..BANDS {
-                jac[j][b] = (band_response_db(b, g[b] + D, f) - band_response_db(b, g[b] - D, f)) / (2.0 * D);
+                jac[j][b] = (band_response_db(b, g[b] + D, f) - band_response_db(b, g[b] - D, f))
+                    / (2.0 * D);
             }
             jac[j][BANDS] = 1.0;
         }
@@ -293,7 +343,12 @@ pub fn fit_target(freqs: &[f64], target: &[f64]) -> Fit {
         count += 1;
     }
     let count = count.max(1) as f64;
-    Fit { gains_db: gains, rms_db: (sq / count).sqrt() as f32, max_db: max as f32, target_rms_db: (tsq / count).sqrt() as f32 }
+    Fit {
+        gains_db: gains,
+        rms_db: (sq / count).sqrt() as f32,
+        max_db: max as f32,
+        target_rms_db: (tsq / count).sqrt() as f32,
+    }
 }
 
 /// Gauss yok etme (kısmi eksen seçimi); tekilse `None`.
@@ -327,11 +382,23 @@ mod tests {
     use crate::engine::output::eq::{Params, response_db};
 
     fn peak(freq: f32, gain_db: f32, q: f32) -> PeqBand {
-        PeqBand { kind: PeqKind::Peak, freq, gain_db, q, slope: 12.0 }
+        PeqBand {
+            kind: PeqKind::Peak,
+            freq,
+            gain_db,
+            q,
+            slope: 12.0,
+        }
     }
 
     fn shelf(kind: PeqKind, freq: f32, gain_db: f32) -> PeqBand {
-        PeqBand { kind, freq, gain_db, q: 0.7, slope: 12.0 }
+        PeqBand {
+            kind,
+            freq,
+            gain_db,
+            q: 0.7,
+            slope: 12.0,
+        }
     }
 
     /// Tepe süzgecinin merkezdeki yanıtı tam kazancıdır; raflar uçta kazancına varır.
@@ -339,10 +406,24 @@ mod tests {
     fn target_filters_have_the_documented_gain() {
         assert!((peak(1000.0, 6.0, 1.0).response_db(1000.0) - 6.0).abs() < 1e-6);
         assert!((shelf(PeqKind::LowShelf, 200.0, 5.0).response_db(20.0) - 5.0).abs() < 0.1);
-        assert!(shelf(PeqKind::LowShelf, 200.0, 5.0).response_db(10_000.0).abs() < 0.1);
+        assert!(
+            shelf(PeqKind::LowShelf, 200.0, 5.0)
+                .response_db(10_000.0)
+                .abs()
+                < 0.1
+        );
         assert!((shelf(PeqKind::HighShelf, 8000.0, -4.0).response_db(20_000.0) + 4.0).abs() < 0.5);
-        let hp = PeqBand { kind: PeqKind::HighPass, freq: 100.0, gain_db: 0.0, q: 0.7, slope: 12.0 };
-        assert!((hp.response_db(100.0) + 3.0103).abs() < 0.01, "Butterworth kesim noktası -3 dB");
+        let hp = PeqBand {
+            kind: PeqKind::HighPass,
+            freq: 100.0,
+            gain_db: 0.0,
+            q: 0.7,
+            slope: 12.0,
+        };
+        assert!(
+            (hp.response_db(100.0) + 3.0103).abs() < 0.01,
+            "Butterworth kesim noktası -3 dB"
+        );
         assert!(hp.response_db(10_000.0).abs() < 1e-3);
     }
 
@@ -374,11 +455,21 @@ mod tests {
     #[test]
     fn fit_error_on_a_typical_profile_is_small() {
         let f = fit(&synthetic_profile());
-        println!("sentetik profil: rms {:.3} dB, en büyük {:.3} dB, hedef rms {:.3} dB, kazançlar {:?}", f.rms_db, f.max_db, f.target_rms_db, f.gains_db);
+        println!(
+            "sentetik profil: rms {:.3} dB, en büyük {:.3} dB, hedef rms {:.3} dB, kazançlar {:?}",
+            f.rms_db, f.max_db, f.target_rms_db, f.gains_db
+        );
         assert!(f.rms_db < 1.0, "rms {}", f.rms_db);
         assert!(f.max_db < 3.0, "en büyük {}", f.max_db);
-        assert!(f.rms_db < 0.5 * f.target_rms_db, "uydurma hedefin sapmasını yarıya indirmedi");
-        assert!(f.gains_db.iter().all(|g| g.abs() <= RANGE_DB), "{:?}", f.gains_db);
+        assert!(
+            f.rms_db < 0.5 * f.target_rms_db,
+            "uydurma hedefin sapmasını yarıya indirmedi"
+        );
+        assert!(
+            f.gains_db.iter().all(|g| g.abs() <= RANGE_DB),
+            "{:?}",
+            f.gains_db
+        );
     }
 
     /// Düz profil: bütün kazançlar sıfır.
@@ -387,15 +478,26 @@ mod tests {
         let f = fit(&[]);
         assert!(f.gains_db.iter().all(|g| *g == 0.0), "{:?}", f.gains_db);
         let f = fit(&[peak(1000.0, 0.0, 1.0)]);
-        assert!(f.gains_db.iter().all(|g| g.abs() < 0.05), "{:?}", f.gains_db);
+        assert!(
+            f.gains_db.iter().all(|g| g.abs() < 0.05),
+            "{:?}",
+            f.gains_db
+        );
     }
 
     /// Aşırı bir profil bile ±12 dB sınırında kalır.
     #[test]
     fn fit_respects_the_range() {
-        let extreme = [shelf(PeqKind::LowShelf, 300.0, 24.0), shelf(PeqKind::HighShelf, 6000.0, -24.0)];
+        let extreme = [
+            shelf(PeqKind::LowShelf, 300.0, 24.0),
+            shelf(PeqKind::HighShelf, 6000.0, -24.0),
+        ];
         let f = fit(&extreme);
-        assert!(f.gains_db.iter().all(|g| g.abs() <= RANGE_DB + 1e-6), "{:?}", f.gains_db);
+        assert!(
+            f.gains_db.iter().all(|g| g.abs() <= RANGE_DB + 1e-6),
+            "{:?}",
+            f.gains_db
+        );
     }
 
     /// Hazır ayarlar ±12 dB içinde, 0,5 dB adımında; adlar benzersiz; hepsi bir
@@ -407,7 +509,10 @@ mod tests {
             assert!(keys.insert(key), "{key} iki kez");
             for g in gains {
                 assert!(g.abs() <= RANGE_DB, "{key}: {g}");
-                assert!(((g / STEP_DB).round() * STEP_DB - g).abs() < 1e-6, "{key}: {g} adıma oturmuyor");
+                assert!(
+                    ((g / STEP_DB).round() * STEP_DB - g).abs() < 1e-6,
+                    "{key}: {g} adıma oturmuyor"
+                );
             }
             assert_eq!(preset_of(&gains), Some(key));
         }
@@ -441,7 +546,10 @@ mod tests {
         }
         // Elle ön kazanç eksilmeden eklenir: +3 dB isteyen +3 dB fazlasını alır.
         let g = PRESETS[1].1;
-        let (a, b) = (Params::from_gains(&g, 0.0).pre, Params::from_gains(&g, 3.0).pre);
+        let (a, b) = (
+            Params::from_gains(&g, 0.0).pre,
+            Params::from_gains(&g, 3.0).pre,
+        );
         assert!((20.0 * ((b / a) as f64).log10() - 3.0).abs() < 0.01);
     }
 
@@ -455,7 +563,12 @@ mod tests {
 
     #[test]
     fn setting_sanitizes() {
-        let s = EqSetting { enabled: true, gains_db: [99.0, f32::NAN, -99.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], preamp_db: 50.0 }.sanitized();
+        let s = EqSetting {
+            enabled: true,
+            gains_db: [99.0, f32::NAN, -99.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            preamp_db: 50.0,
+        }
+        .sanitized();
         assert_eq!(s.gains_db[0], RANGE_DB);
         assert_eq!(s.gains_db[1], 0.0);
         assert_eq!(s.gains_db[2], -RANGE_DB);

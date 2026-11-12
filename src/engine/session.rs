@@ -30,7 +30,8 @@ use librespot::{
 };
 
 use super::{
-    Deck, Engine, Event, Internal, LibrespotPort, NoticeKind, audio_cache, has_output_device, login, new_player,
+    Deck, Engine, Event, Internal, LibrespotPort, NoticeKind, audio_cache, has_output_device,
+    login, new_player,
     playback::{LinkFacts, volume_to_u16},
     recovery,
 };
@@ -126,7 +127,10 @@ impl SessionHost {
             return ReconnectStart::Joined;
         }
         // Başarısız denemelerin ardından Spotify'ı boğma.
-        if !recovery::backoff_elapsed(self.last_reconnect.map(|t| t.elapsed()), self.reconnect_failures) {
+        if !recovery::backoff_elapsed(
+            self.last_reconnect.map(|t| t.elapsed()),
+            self.reconnect_failures,
+        ) {
             return ReconnectStart::Backoff;
         }
         self.mark_reconnecting();
@@ -195,7 +199,11 @@ impl Engine {
     /// çaları kurar ve çaların olay kanalını döndürür (komut döngüsü sahibi);
     /// ses çıkışı yoksa `None` (oturum atılır, `Event::NoAudioOutput`).
     /// `Replace`te çalar korunur, `None` döner.
-    pub(super) fn install_session(&mut self, session: Session, how: Install) -> Option<PlayerEventChannel> {
+    pub(super) fn install_session(
+        &mut self,
+        session: Session,
+        how: Install,
+    ) -> Option<PlayerEventChannel> {
         self.host.connected();
         match how {
             Install::First => self.install_first(session),
@@ -227,14 +235,25 @@ impl Engine {
         // düzeyinden bağımsız ölçülsün (sessize alınca çubuklar düzleşmesin).
         let volume = mixer.get_soft_volume();
         let gain = volume.attenuation_factor() as f32;
-        let (player, out) = new_player(player_config, session.clone(), self.levels.clone(), gain, self.pb.crossfade_ms);
+        let (player, out) = new_player(
+            player_config,
+            session.clone(),
+            self.levels.clone(),
+            gain,
+            self.pb.crossfade_ms,
+        );
         let player_events = player.get_player_event_channel();
 
         self.emit(Event::Connected {
             username: session.username(),
         });
         self.host.conn = Some(Connected { session });
-        self.pb.deck = Some(Deck::new(Box::new(LibrespotPort(player)), out, mixer, volume));
+        self.pb.deck = Some(Deck::new(
+            Box::new(LibrespotPort(player)),
+            out,
+            mixer,
+            volume,
+        ));
         self.apply_eq();
         self.apply_karaoke();
         self.apply_automix();
@@ -261,7 +280,9 @@ impl Engine {
         // Eski oturumun Spirc'i oturumla birlikte ölür (dealer tek kullanımlık):
         // bırak, sürücü `Local`e döner; yenisi aşağıda kurulur.
         self.connect_stop();
-        let Some(conn) = self.host.conn.as_mut() else { return };
+        let Some(conn) = self.host.conn.as_mut() else {
+            return;
+        };
         log::info!("Spotify'a yeniden bağlanıldı");
         self.pb.rebind(&session);
         let username = session.username();
@@ -565,9 +586,12 @@ pub(super) async fn first_connect() -> Result<Session, auth::ConnectError> {
     }
     // Sınama koşusu (`OPENIFY_TEST_DISPLAY` / `OPENIFY_SETTINGS_PATH`) açıkça
     // `OPENIFY_TEST_ONLINE=1` verilmedikçe gerçek hesaba bağlanmaz.
-    let sandboxed = crate::crash::is_test_run() && std::env::var_os("OPENIFY_TEST_ONLINE").is_none();
+    let sandboxed =
+        crate::crash::is_test_run() && std::env::var_os("OPENIFY_TEST_ONLINE").is_none();
     if std::env::var_os("OPENIFY_TEST_OFFLINE").is_some() || sandboxed {
-        return Err(auth::ConnectError::Offline(anyhow::anyhow!("network: test offline")));
+        return Err(auth::ConnectError::Offline(anyhow::anyhow!(
+            "network: test offline"
+        )));
     }
     // Connect AÇIKSA oturum kalıcı aygıt kimliğiyle açılır (telefonun listesinde
     // hep aynı aygıt); kapalıyken bugünkü gibi rastgele kimlik (`connect.rs`).
@@ -582,13 +606,20 @@ pub(super) async fn first_connect() -> Result<Session, auth::ConnectError> {
 /// bekleyiş (`OPENIFY_TEST_LOGIN_MS`, varsayılan 4000 ms sonra zaman aşımı;
 /// iptal edilebilir).
 async fn login_flow(cancel: Arc<tokio::sync::Notify>) -> Result<Session, auth::LoginError> {
-    let test = ["OPENIFY_TEST_DISPLAY", "OPENIFY_TEST_OFFLINE", "OPENIFY_TEST_LINK"]
-        .iter()
-        .any(|k| std::env::var_os(k).is_some());
+    let test = [
+        "OPENIFY_TEST_DISPLAY",
+        "OPENIFY_TEST_OFFLINE",
+        "OPENIFY_TEST_LINK",
+    ]
+    .iter()
+    .any(|k| std::env::var_os(k).is_some());
     if !test {
         return auth::login(audio_cache(), cancel).await;
     }
-    let wait = std::env::var("OPENIFY_TEST_LOGIN_MS").ok().and_then(|v| v.trim().parse().ok()).unwrap_or(4000);
+    let wait = std::env::var("OPENIFY_TEST_LOGIN_MS")
+        .ok()
+        .and_then(|v| v.trim().parse().ok())
+        .unwrap_or(4000);
     tokio::select! {
         _ = cancel.notified() => Err(auth::LoginError::Cancelled),
         _ = tokio::time::sleep(std::time::Duration::from_millis(wait)) => Err(auth::LoginError::TimedOut),
@@ -606,9 +637,19 @@ mod tests {
     #[test]
     fn a_new_host_is_not_connected_and_starts_in_connecting() {
         let h = SessionHost::new();
-        assert!(h.conn.is_none() && h.session().is_none() && h.new_session.is_none() && h.login.is_none());
+        assert!(
+            h.conn.is_none()
+                && h.session().is_none()
+                && h.new_session.is_none()
+                && h.login.is_none()
+        );
         assert_eq!(h.link, login::LinkState::Connecting);
-        assert!(!h.reconnecting && !h.reconnect_wanted && h.reconnect_failures == 0 && h.premium_checks_left == 0);
+        assert!(
+            !h.reconnecting
+                && !h.reconnect_wanted
+                && h.reconnect_failures == 0
+                && h.premium_checks_left == 0
+        );
         let f = h.facts();
         assert!(!f.reconnecting && f.since_reconnect.is_none() && f.reconnect_failures == 0);
     }
@@ -618,7 +659,11 @@ mod tests {
         let mut h = SessionHost::new();
         assert_eq!(h.begin_reconnect(), ReconnectStart::Started);
         assert!(h.reconnecting && h.last_reconnect.is_some());
-        assert_eq!(h.begin_reconnect(), ReconnectStart::Joined, "süren bağlanmaya katılınır");
+        assert_eq!(
+            h.begin_reconnect(),
+            ReconnectStart::Joined,
+            "süren bağlanmaya katılınır"
+        );
         assert!(h.facts().reconnecting);
     }
 
@@ -648,7 +693,10 @@ mod tests {
         h.reconnect_failed();
         h.reconnect_failed();
         assert_eq!(h.reconnect_failures, 2);
-        assert!(h.reconnect_due(), "başarısız bağlanmanın ardından yeniden denenecek");
+        assert!(
+            h.reconnect_due(),
+            "başarısız bağlanmanın ardından yeniden denenecek"
+        );
         h.mark_reconnecting();
         assert!(!h.reconnect_due(), "bağlanma sürerken yeni istek yok");
         h.reconnect_finished();
@@ -677,8 +725,14 @@ mod tests {
         assert!(!h.premium_step(auth::AccountKind::Free));
         h.premium_checks_left = 3;
         assert!(!h.premium_step(auth::AccountKind::Unknown));
-        assert_eq!(h.premium_checks_left, 2, "bilinmiyor: tur harcanır, bakmaya devam");
-        assert!(h.premium_step(auth::AccountKind::Free), "geç gelen 'ücretsiz' yakalanır");
+        assert_eq!(
+            h.premium_checks_left, 2,
+            "bilinmiyor: tur harcanır, bakmaya devam"
+        );
+        assert!(
+            h.premium_step(auth::AccountKind::Free),
+            "geç gelen 'ücretsiz' yakalanır"
+        );
         assert!(!h.premium_step(auth::AccountKind::Premium));
         assert_eq!(h.premium_checks_left, 0, "Premium görününce denetim biter");
     }

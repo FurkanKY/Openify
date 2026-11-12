@@ -21,7 +21,10 @@
 
 use std::{collections::HashSet, ops::Range, sync::Arc, time::Instant};
 
-use gpui::{AnyElement, Context, Div, FontWeight, ScrollHandle, Window, div, img, linear_color_stop, linear_gradient, prelude::*, px, rgb};
+use gpui::{
+    AnyElement, Context, Div, FontWeight, ScrollHandle, Window, div, img, linear_color_stop,
+    linear_gradient, prelude::*, px, rgb,
+};
 
 use super::{
     Shell,
@@ -38,7 +41,7 @@ use super::{
     theme::*,
 };
 use crate::engine::{self, ArtistPage, CollectionId, LibraryItem, SyncKind};
-use crate::{t};
+use crate::t;
 
 /// Yerleşik panelin eni (7 Kasım, kullanıcı geri bildirimi): sabit 400 px.
 /// Liste artık panelin solundaki bütün yeri kullandığı için panelin pencereyle
@@ -146,31 +149,57 @@ pub(super) struct DockKind {
 impl DockKind {
     /// Şimdi çalıyor / Sıra / Sözler: geniş liste korunur (1720'den), panel
     /// pencerenin altına kadar iner.
-    pub const NOW: DockKind = DockKind { min_width: DOCK_MIN_WIDTH, panel_width: DOCK_PANEL_WIDTH, beside_pill: true };
+    pub const NOW: DockKind = DockKind {
+        min_width: DOCK_MIN_WIDTH,
+        panel_width: DOCK_PANEL_WIDTH,
+        beside_pill: true,
+    };
     /// Arkadaş etkinliği: içerik alanı en dar pencere eninin altına inmedikçe
     /// yerleşir; kısa panel hapın üstünde biter.
-    pub const FRIENDS: DockKind =
-        DockKind { min_width: FRIENDS_DOCK_MIN_WIDTH, panel_width: FRIENDS_PANEL_WIDTH, beside_pill: false };
+    pub const FRIENDS: DockKind = DockKind {
+        min_width: FRIENDS_DOCK_MIN_WIDTH,
+        panel_width: FRIENDS_PANEL_WIDTH,
+        beside_pill: false,
+    };
 }
 
 /// Gösterilen panelin yerleşim kuralı.
 pub(super) fn dock_kind(panel: Option<Panel>) -> DockKind {
-    if panel == Some(Panel::Friends) { DockKind::FRIENDS } else { DockKind::NOW }
+    if panel == Some(Panel::Friends) {
+        DockKind::FRIENDS
+    } else {
+        DockKind::NOW
+    }
 }
 
 /// `dock_layout_at`, panel türünün kuralıyla.
-pub(super) fn dock_layout_for(kind: DockKind, window_w: f32, panel_open: bool, slide: f32) -> DockLayout {
+pub(super) fn dock_layout_for(
+    kind: DockKind,
+    window_w: f32,
+    panel_open: bool,
+    slide: f32,
+) -> DockLayout {
     if window_w >= kind.min_width && (panel_open || slide > 0.) {
         let travel = kind.panel_width + S4;
         DockLayout {
             docked: true,
-            main_width: if slide > 0. && slide < 1. { (window_w - travel * slide).round() } else { window_w - travel * slide },
+            main_width: if slide > 0. && slide < 1. {
+                (window_w - travel * slide).round()
+            } else {
+                window_w - travel * slide
+            },
             panel_width: kind.panel_width,
             panel_right: S4 - travel * (1. - slide),
             beside_pill: kind.beside_pill,
         }
     } else {
-        DockLayout { docked: false, main_width: window_w, panel_width: PANEL_WIDTH, panel_right: S4, beside_pill: kind.beside_pill }
+        DockLayout {
+            docked: false,
+            main_width: window_w,
+            panel_width: PANEL_WIDTH,
+            panel_right: S4,
+            beside_pill: kind.beside_pill,
+        }
     }
 }
 
@@ -195,13 +224,21 @@ pub(super) fn dock_change(
     if !wide {
         // Daralınca yerleşik panel kalkar (dar pencerede yüzen panel
         // içeriği örter; kendiliğinden açılmaz). Tercih değişmez.
-        return if was_wide == Some(true) && panel_open { DockChange::Hide } else { DockChange::Keep };
+        return if was_wide == Some(true) && panel_open {
+            DockChange::Hide
+        } else {
+            DockChange::Keep
+        };
     }
     if panel_open || !prefer_open || !has_content {
         return DockChange::Keep;
     }
     // Genişledi, açılış, ya da ilk kez gösterilecek bir şey oldu.
-    if was_wide != Some(true) || !had_content { DockChange::Open } else { DockChange::Keep }
+    if was_wide != Some(true) || !had_content {
+        DockChange::Open
+    } else {
+        DockChange::Keep
+    }
 }
 
 /// "Şimdi çalıyor" sekmesinin hâli.
@@ -240,7 +277,11 @@ pub(super) fn now_cover_max(panel_w: f32) -> f32 {
 pub(super) fn now_cover_side(panel_w: f32, panel_h: f32, has_next: bool) -> f32 {
     let base = panel_h - ROW_HEIGHT - 2. - S1 - S4 - TITLE_BLOCK;
     let with_next = base - (S5 + T_BODY.line + S2 + ROW_HEIGHT) - S3;
-    let room = if has_next && with_next >= NOW_COVER_NEXT_MIN { with_next } else { base - S4 };
+    let room = if has_next && with_next >= NOW_COVER_NEXT_MIN {
+        with_next
+    } else {
+        base - S4
+    };
     room.clamp(NOW_COVER_MIN, now_cover_max(panel_w)).floor()
 }
 
@@ -271,9 +312,17 @@ pub(super) fn excerpt_below(panel_h: f32) -> usize {
 /// Söz kesitinin satırları: okunan satırdan öncekiler (en çok `above`) ve
 /// sonrakiler (en çok `below`). Okunan satır yoksa (ilk satırdan önce,
 /// eşzamansız söz) baştan.
-pub(super) fn excerpt_split(active: Option<usize>, len: usize, above: usize, below: usize) -> (Range<usize>, Range<usize>) {
+pub(super) fn excerpt_split(
+    active: Option<usize>,
+    len: usize,
+    above: usize,
+    below: usize,
+) -> (Range<usize>, Range<usize>) {
     match active {
-        Some(a) => (a.saturating_sub(above)..a, (a + 1).min(len)..(a + 1 + below).min(len)),
+        Some(a) => (
+            a.saturating_sub(above)..a,
+            (a + 1).min(len)..(a + 1 + below).min(len),
+        ),
         None => (0..0, 0..below.min(len)),
     }
 }
@@ -292,7 +341,6 @@ pub(super) fn short_bio(bio: &str, max_chars: usize) -> String {
     };
     format!("{}…", cut.trim_end_matches([',', '.', ';', ':', ' ']))
 }
-
 
 /// Panelin içeri / dışarı kayma hareketi (7 Kasım akşam): açılırken `motion`
 /// (220 ms, ease-out quint), kapanırken `motion_exit` (160 ms, ease-in). Kayma
@@ -314,12 +362,27 @@ pub(super) struct Slide {
 
 impl Slide {
     fn new() -> Self {
-        Self { value: 0., from: 0., to: 0., at: Instant::now(), started: false, wide: false, exiting: None, last: Panel::Now }
+        Self {
+            value: 0.,
+            from: 0.,
+            to: 0.,
+            at: Instant::now(),
+            started: false,
+            wide: false,
+            exiting: None,
+            last: Panel::Now,
+        }
     }
 
     /// Bu kare: panel `open` (hangi sekme), pencere `wide` mı. Hareket
     /// sürüyorsa `true`.
-    pub(super) fn advance(&mut self, now: Instant, wide: bool, open: Option<Panel>, animate: bool) -> bool {
+    pub(super) fn advance(
+        &mut self,
+        now: Instant,
+        wide: bool,
+        open: Option<Panel>,
+        animate: bool,
+    ) -> bool {
         let target = if open.is_some() { 1. } else { 0. };
         if let Some(p) = open {
             self.last = p;
@@ -342,9 +405,17 @@ impl Slide {
         let entering = self.to > self.from;
         // Yarıda dönülürse süre kalan yolla orantılı (en az %30).
         let span = (self.to - self.from).abs().max(0.3);
-        let full = if entering { super::theme::motion() } else { super::theme::motion_exit() };
+        let full = if entering {
+            super::theme::motion()
+        } else {
+            super::theme::motion_exit()
+        };
         let t = now.duration_since(self.at).as_secs_f32() / (full.as_secs_f32() * span);
-        let eased = if entering { super::theme::quint_out(t) } else { super::theme::cubic_in(t) };
+        let eased = if entering {
+            super::theme::quint_out(t)
+        } else {
+            super::theme::cubic_in(t)
+        };
         if t >= 1. {
             (self.value, self.exiting) = (self.to, None);
             return false;
@@ -409,11 +480,13 @@ impl Shell {
         if !matches!(self.library.library, Loadable::Loaded(_)) {
             return false;
         }
-        self.recent.iter().any(|key| match CollectionId::from_key(key) {
-            Some(CollectionId::Liked) => true,
-            Some(id) => self.library.item(&id).is_some(),
-            None => false,
-        })
+        self.recent
+            .iter()
+            .any(|key| match CollectionId::from_key(key) {
+                Some(CollectionId::Liked) => true,
+                Some(id) => self.library.item(&id).is_some(),
+                None => false,
+            })
     }
 
     /// Kökün her karesinde, parçalar çizilmeden önce: panelin pencere enine
@@ -430,14 +503,25 @@ impl Shell {
         let wide = window_w >= DOCK_MIN_WIDTH;
         let content = self.panel_has_content();
         let d = &self.now.dock;
-        let change = dock_change(d.synced.then_some(d.wide), wide, d.has_content, content, d.open, self.now.panel.is_some());
+        let change = dock_change(
+            d.synced.then_some(d.wide),
+            wide,
+            d.has_content,
+            content,
+            d.open,
+            self.now.panel.is_some(),
+        );
         // Arkadaş paneli kendi eşiğinde (1136) yerleşir: Şimdi çalıyor
         // eşiğinden (1720) daralınca kapanmaz; yalnız kendi eşiğinin altına
         // inince (yerleşikken yüzen olacaksa) kalkar.
         let friends_open = self.now.panel == Some(Panel::Friends);
         let change = match change {
             DockChange::Hide if friends_open => DockChange::Keep,
-            DockChange::Keep if friends_open && d.visual_docked && window_w < FRIENDS_DOCK_MIN_WIDTH => DockChange::Hide,
+            DockChange::Keep
+                if friends_open && d.visual_docked && window_w < FRIENDS_DOCK_MIN_WIDTH =>
+            {
+                DockChange::Hide
+            }
             other => other,
         };
         self.now.dock.wide = wide;
@@ -456,7 +540,11 @@ impl Shell {
         }
 
         let open = self.now.panel;
-        let sliding = self.now.dock.slide.advance(Instant::now(), wide, open, animations_enabled());
+        let sliding = self
+            .now
+            .dock
+            .slide
+            .advance(Instant::now(), wide, open, animations_enabled());
         self.now.dock.sliding = sliding;
         let kind = dock_kind(self.now.shown_panel());
         let layout = dock_layout_for(kind, window_w, open.is_some(), self.now.dock.slide.value);
@@ -468,7 +556,11 @@ impl Shell {
     /// Yerleşik panelin kapladığı sağ şerit (panel ve sağ boşluğu); panel
     /// yerleşik değilse 0. Sağ alttaki bildirim bunun solunda durur.
     pub(super) fn dock_inset(&self) -> f32 {
-        if self.now.dock.visual_docked { self.now.dock.panel_box.0 + self.now.dock.panel_box.1 } else { 0. }
+        if self.now.dock.visual_docked {
+            self.now.dock.panel_box.0 + self.now.dock.panel_box.1
+        } else {
+            0.
+        }
     }
 
     // ── "Şimdi çalıyor" sekmesi ─────────────────────────────────────────
@@ -481,13 +573,27 @@ impl Shell {
         }
     }
 
-    pub(super) fn render_now_body(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_now_body(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let has_track = self.state.track.is_some() || self.state.pending.is_some();
-        let recent = if has_track { Vec::new() } else { self.recent_items(RECENT_LIMIT) };
+        let recent = if has_track {
+            Vec::new()
+        } else {
+            self.recent_items(RECENT_LIMIT)
+        };
         // Kısa pencerede kapak küçülür: ad ve sanatçı kaydırmadan görünsün.
         let viewport = window.viewport_size();
-        let (_, panel_h) = self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
-        let has_next = self.now.queue.upcoming.first().is_some_and(|e| e.track.is_some());
+        let (_, panel_h) =
+            self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
+        let has_next = self
+            .now
+            .queue
+            .upcoming
+            .first()
+            .is_some_and(|e| e.track.is_some());
         let cover = now_cover_side(self.now.dock.panel_box.0, panel_h, has_next);
         let body = match now_body_kind(has_track, recent.len()) {
             NowBody::Track => self.now_track(cover, panel_h, window, cx),
@@ -499,11 +605,7 @@ impl Shell {
                     .items_center()
                     .justify_center()
                     .px(px(S5))
-                    .child(state_view(
-                        "music",
-                        t!(NothingPlaying),
-                        t!(NowEmptyBody),
-                    ))
+                    .child(state_view("music", t!(NothingPlaying), t!(NowEmptyBody)))
                     .into_any_element();
             }
         };
@@ -532,7 +634,13 @@ impl Shell {
     }
 
     /// Çalan şarkı: kapak, ad / sanatçı, sıradaki, söz kesiti, sanatçı.
-    fn now_track(&mut self, side: f32, panel_h: f32, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    fn now_track(
+        &mut self,
+        side: f32,
+        panel_h: f32,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let (uri, name, artists, art) = match (&self.state.track, &self.state.pending) {
             (_, Some(p)) => (
                 String::new(),
@@ -558,7 +666,11 @@ impl Shell {
                                 .child(img(sharp).size_full().rounded(px(R_LG)))
                         });
                         framed(
-                            div().relative().size_full().child(img(image).size_full().rounded(px(R_LG))).children(sharp),
+                            div()
+                                .relative()
+                                .size_full()
+                                .child(img(image).size_full().rounded(px(R_LG)))
+                                .children(sharp),
                             side,
                             R_LG,
                         )
@@ -608,9 +720,18 @@ impl Shell {
         // tonda; ikisi kapakla aynı sol kenardan başlar, adlar tıklanabilir.
         // Kalp ad satırının hizasında (satırın dikey ortası).
         let second = if uri.is_empty() {
-            div().type_role(T_TITLE).text_color(label()).child(super::text::line(t!(Loading))).into_any_element()
+            div()
+                .type_role(T_TITLE)
+                .text_color(label())
+                .child(super::text::line(t!(Loading)))
+                .into_any_element()
         } else {
-            div().flex().type_role(T_TITLE).text_color(soft()).child(self.pill_artists(&uri, &name, &artists, cx)).into_any_element()
+            div()
+                .flex()
+                .type_role(T_TITLE)
+                .text_color(soft())
+                .child(self.pill_artists(&uri, &name, &artists, cx))
+                .into_any_element()
         };
         let titles = div()
             .flex()
@@ -635,16 +756,38 @@ impl Shell {
             )
             .children(
                 (!uri.is_empty())
-                    .then(|| self.pill_heart(&uri, &name, &artists, Some(("panel-heart", super::tab::PANEL, window)), cx))
+                    .then(|| {
+                        self.pill_heart(
+                            &uri,
+                            &name,
+                            &artists,
+                            Some(("panel-heart", super::tab::PANEL, window)),
+                            cx,
+                        )
+                    })
                     .flatten()
-                    .map(|heart| div().flex_none().h(px(T_HEADLINE.line)).flex().items_center().child(heart)),
+                    .map(|heart| {
+                        div()
+                            .flex_none()
+                            .h(px(T_HEADLINE.line))
+                            .flex()
+                            .items_center()
+                            .child(heart)
+                    }),
             )
             // Künye (bkz. `credits`): kalbin sağında, aynı hizada.
             .children(
                 (!uri.is_empty())
                     .then(|| self.credits_button(window, cx))
                     .flatten()
-                    .map(|button| div().flex_none().h(px(T_HEADLINE.line)).flex().items_center().child(button)),
+                    .map(|button| {
+                        div()
+                            .flex_none()
+                            .h(px(T_HEADLINE.line))
+                            .flex()
+                            .items_center()
+                            .child(button)
+                    }),
             );
 
         // Sütun panelin boyunu doldurur: söz kesiti kalan yüksekliği alır
@@ -659,7 +802,10 @@ impl Shell {
             .pt(px(S1))
             .child(div().flex().justify_center().child(cover))
             .child(div().pt(px(S4)).child(titles));
-        for block in [self.now_next(cx), lyrics, self.now_artist(&uri, cx)].into_iter().flatten() {
+        for block in [self.now_next(cx), lyrics, self.now_artist(&uri, cx)]
+            .into_iter()
+            .flatten()
+        {
             column = column.child(block);
         }
         column.into_any_element()
@@ -670,9 +816,28 @@ impl Shell {
         let t = self.now.queue.upcoming.first()?.track.clone()?;
         let row = list_row("now-next", Look::Live)
             .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Queue, cx)))
-            .child(cover_image(&self.images, &t.image, &t.album, THUMB, R_SM, "music"))
-            .child(two_lines("now-next-name", t.name.clone(), "now-next-artists", t.artists.clone()))
-            .child(div().flex_none().type_role(T_LABEL).tabular().text_color(label()).child(fmt_time(t.duration_ms)));
+            .child(cover_image(
+                &self.images,
+                &t.image,
+                &t.album,
+                THUMB,
+                R_SM,
+                "music",
+            ))
+            .child(two_lines(
+                "now-next-name",
+                t.name.clone(),
+                "now-next-artists",
+                t.artists.clone(),
+            ))
+            .child(
+                div()
+                    .flex_none()
+                    .type_role(T_LABEL)
+                    .tabular()
+                    .text_color(label())
+                    .child(fmt_time(t.duration_ms)),
+            );
         Some(section(t!(NowUpNext)).child(row).into_any_element())
     }
 
@@ -684,7 +849,9 @@ impl Shell {
     /// gösterileceği panelin boyundan hesaplanır (ölçüm ya da ek kare yok);
     /// kesit yalnız satır değişince çizilir (zamanlayıcı, `schedule_lyrics`).
     fn now_lyrics(&self, panel_h: f32, cover: f32, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let LyricsStatus::Ready(lyrics) = &self.now.lyrics else { return None };
+        let LyricsStatus::Ready(lyrics) = &self.now.lyrics else {
+            return None;
+        };
         if lyrics.lines.is_empty() {
             return None;
         }
@@ -696,9 +863,19 @@ impl Shell {
             None
         };
         let accent = self.accent().text;
-        let has_next = self.now.queue.upcoming.first().is_some_and(|e| e.track.is_some());
+        let has_next = self
+            .now
+            .queue
+            .upcoming
+            .first()
+            .is_some_and(|e| e.track.is_some());
         let room = excerpt_room(panel_h, cover, has_next);
-        let (above, below) = excerpt_split(active, lyrics.lines.len(), excerpt_above(room), excerpt_below(panel_h));
+        let (above, below) = excerpt_split(
+            active,
+            lyrics.lines.len(),
+            excerpt_above(room),
+            excerpt_below(panel_h),
+        );
         let line = |i: usize| {
             let content = match lyrics.lines[i].text.as_str() {
                 "" => "• • •".to_string(),
@@ -718,7 +895,14 @@ impl Shell {
             .justify_end()
             .gap(px(S2))
             .children(above.clone().map(line));
-        let rest = div().flex_1().min_h_0().overflow_hidden().flex().flex_col().gap(px(S2)).children(below.clone().map(line));
+        let rest = div()
+            .flex_1()
+            .min_h_0()
+            .overflow_hidden()
+            .flex()
+            .flex_col()
+            .gap(px(S2))
+            .children(below.clone().map(line));
         let block = div()
             .id("now-lyrics")
             .group("now-lyrics")
@@ -738,7 +922,13 @@ impl Shell {
             .child(rest)
             .when(earlier, |el| el.child(excerpt_fade(true)))
             .when(!below.is_empty(), |el| el.child(excerpt_fade(false)));
-        Some(section(t!(Lyrics)).flex_grow().flex_shrink_0().child(block).into_any_element())
+        Some(
+            section(t!(Lyrics))
+                .flex_grow()
+                .flex_shrink_0()
+                .child(block)
+                .into_any_element(),
+        )
     }
 
     /// Sanatçı hakkında: yalnız önbellekte sayfası varsa (portre, ad,
@@ -757,17 +947,38 @@ impl Shell {
             .flex_col()
             .gap(px(S3))
             .cursor_pointer()
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_LG))
-            .on_click(cx.listener(move |this, _, _, cx| this.navigate(Route::Artist(target.clone()), cx)))
+            .child(super::tween::hover_fill(
+                veil(VEIL_HOVER),
+                veil(VEIL_PRESSED),
+                0.,
+                R_LG,
+            ))
+            .on_click(
+                cx.listener(move |this, _, _, cx| this.navigate(Route::Artist(target.clone()), cx)),
+            )
             .child(
                 div()
                     .flex()
                     .items_center()
                     .gap(px(S3))
-                    .child(cover_image(&self.images, &page.image, &page.name, S7, S7 / 2., "user"))
-                    .child(two_lines("now-artist-name", page.name.clone(), "now-artist-meta", t!(NowArtistPage).into())),
+                    .child(cover_image(
+                        &self.images,
+                        &page.image,
+                        &page.name,
+                        S7,
+                        S7 / 2.,
+                        "user",
+                    ))
+                    .child(two_lines(
+                        "now-artist-name",
+                        page.name.clone(),
+                        "now-artist-meta",
+                        t!(NowArtistPage).into(),
+                    )),
             )
-            .when(!bio.is_empty(), |el| el.child(div().type_role(T_SECONDARY).text_color(muted()).child(bio)));
+            .when(!bio.is_empty(), |el| {
+                el.child(div().type_role(T_SECONDARY).text_color(muted()).child(bio))
+            });
         Some(section(t!(Artist)).child(card).into_any_element())
     }
 
@@ -816,17 +1027,31 @@ impl Shell {
                     .text_color(text())
                     .child(t!(NothingPlaying)),
             )
-            .child(div().type_role(T_SECONDARY).text_color(muted()).child(t!(NowRecentHint)));
+            .child(
+                div()
+                    .type_role(T_SECONDARY)
+                    .text_color(muted())
+                    .child(t!(NowRecentHint)),
+            );
         let mut list = section(t!(NowRecentTitle));
         for (i, item) in recent.into_iter().enumerate() {
             let id = item.id.clone();
-            let name = if item.id == CollectionId::Liked { t!(LikedSongs).to_string() } else { item.name.clone() };
+            let name = if item.id == CollectionId::Liked {
+                t!(LikedSongs).to_string()
+            } else {
+                item.name.clone()
+            };
             list = list.child(
                 list_row(("now-recent", i), Look::Live)
                     .group("now-recent")
                     .on_click(cx.listener(move |this, _, _, cx| this.play_recent(id.clone(), cx)))
                     .child(self.collection_art(&item.id, &item.name, &item.image, THUMB, R_SM))
-                    .child(two_lines(("now-recent-name", i), name, ("now-recent-sub", i), crate::i18n::canon::localize(&item.subtitle).into_owned()))
+                    .child(two_lines(
+                        ("now-recent-name", i),
+                        name,
+                        ("now-recent-sub", i),
+                        crate::i18n::canon::localize(&item.subtitle).into_owned(),
+                    ))
                     .child(
                         div()
                             .flex_none()
@@ -837,7 +1062,12 @@ impl Shell {
             );
         }
         // Bölüm kendi üst boşluğuyla (24 px) gelir.
-        div().flex().flex_col().child(intro).child(list).into_any_element()
+        div()
+            .flex()
+            .flex_col()
+            .child(intro)
+            .child(list)
+            .into_any_element()
     }
 
     /// Son çalınan listeyi baştan çal (kart menüsündeki "Çal" gibi).
@@ -879,10 +1109,21 @@ fn lyric_line(content: String, active: bool, plain: bool, accent: u32) -> Div {
         .type_role(T_TITLE)
         .font_weight(FontWeight::BOLD)
         .text_color(if active || plain { text() } else { muted() })
-        .when(!active && !plain, |el| el.group_hover("now-lyrics", |s| s.text_color(soft())))
+        .when(!active && !plain, |el| {
+            el.group_hover("now-lyrics", |s| s.text_color(soft()))
+        })
         .child(content)
         .when(active, |el| {
-            el.child(div().absolute().left(px(-S2)).top(px(S1)).bottom(px(S1)).w(px(S0)).rounded(px(R_XS)).bg(rgb(accent)))
+            el.child(
+                div()
+                    .absolute()
+                    .left(px(-S2))
+                    .top(px(S1))
+                    .bottom(px(S1))
+                    .w(px(S0))
+                    .rounded(px(R_XS))
+                    .bg(rgb(accent)),
+            )
         })
 }
 
@@ -892,7 +1133,12 @@ fn excerpt_fade(top: bool) -> Div {
     let solid = linear_color_stop(with_alpha(BAR, 1.), if top { 0. } else { 1. });
     let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
-    let fade = div().absolute().left_0().right_0().h(px(EXCERPT_FADE)).bg(linear_gradient(180., from, to));
+    let fade = div()
+        .absolute()
+        .left_0()
+        .right_0()
+        .h(px(EXCERPT_FADE))
+        .bg(linear_gradient(180., from, to));
     if top { fade.top_0() } else { fade.bottom_0() }
 }
 
@@ -912,9 +1158,12 @@ fn list_row(id: impl Into<gpui::ElementId>, look: Look) -> gpui::Stateful<Div> {
         Look::Hover => row.bg(veil(VEIL_HOVER)),
         Look::Pressed => row.bg(veil(VEIL_PRESSED)),
         Look::Disabled => row,
-        Look::Live | Look::Focus => row
-            .cursor_pointer()
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+        Look::Live | Look::Focus => row.cursor_pointer().child(super::tween::hover_fill(
+            veil(VEIL_HOVER),
+            veil(VEIL_PRESSED),
+            0.,
+            R_MD,
+        )),
     }
 }
 
@@ -924,18 +1173,53 @@ impl Shell {
     /// satırları (sıradaki, son çalınan) durumlarıyla ve söz kesiti.
     pub(super) fn now_panel_gallery(&self, _cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
-        let caption = |name: &'static str| div().w(px(160.)).type_role(T_SECONDARY).text_color(muted()).child(name);
+        let caption = |name: &'static str| {
+            div()
+                .w(px(160.))
+                .type_role(T_SECONDARY)
+                .text_color(muted())
+                .child(name)
+        };
         let width = PANEL_WIDTH - 2. * S4;
         let mut rows = div().flex().flex_col().gap(px(S1));
-        for (i, (name, look)) in [("Normal", Look::Disabled), ("Üzerine gelme", Look::Hover), ("Basma", Look::Pressed)].into_iter().enumerate() {
+        for (i, (name, look)) in [
+            ("Normal", Look::Disabled),
+            ("Üzerine gelme", Look::Hover),
+            ("Basma", Look::Pressed),
+        ]
+        .into_iter()
+        .enumerate()
+        {
             let next = list_row(("g-now-next", i), look)
                 .child(cover_image(&self.images, "", "Dal", THUMB, R_SM, "music"))
-                .child(two_lines(("g-now-n", i), "Dal".into(), ("g-now-a", i), "Adamlar".into()))
-                .child(div().flex_none().type_role(T_LABEL).tabular().text_color(label()).child("3:41"));
+                .child(two_lines(
+                    ("g-now-n", i),
+                    "Dal".into(),
+                    ("g-now-a", i),
+                    "Adamlar".into(),
+                ))
+                .child(
+                    div()
+                        .flex_none()
+                        .type_role(T_LABEL)
+                        .tabular()
+                        .text_color(label())
+                        .child("3:41"),
+                );
             let recent = list_row(("g-now-recent", i), look)
                 .child(self.collection_art(&CollectionId::Liked, t!(LikedSongs), "", THUMB, R_SM))
-                .child(two_lines(("g-now-rn", i), t!(LikedSongs).into(), ("g-now-rs", i), "326 şarkı".into()))
-                .child(div().flex_none().when(look != Look::Hover, |el| el.opacity(0.)).child(icon("play-fill", 16., soft())));
+                .child(two_lines(
+                    ("g-now-rn", i),
+                    t!(LikedSongs).into(),
+                    ("g-now-rs", i),
+                    "326 şarkı".into(),
+                ))
+                .child(
+                    div()
+                        .flex_none()
+                        .when(look != Look::Hover, |el| el.opacity(0.))
+                        .child(icon("play-fill", 16., soft())),
+                );
             rows = rows.child(
                 div()
                     .flex()
@@ -947,16 +1231,33 @@ impl Shell {
             );
         }
         let excerpt = div().w(px(width)).flex().flex_col().gap(px(S2)).children(
-            [("Gece uzun, şehir sessiz", false), ("Bir şarkı çalıyor eski bir radyoda", true), ("Sözler akıyor satır satır", false)]
-                .map(|(t, active)| lyric_line(t.to_string(), active, false, accent)),
+            [
+                ("Gece uzun, şehir sessiz", false),
+                ("Bir şarkı çalıyor eski bir radyoda", true),
+                ("Sözler akıyor satır satır", false),
+            ]
+            .map(|(t, active)| lyric_line(t.to_string(), active, false, accent)),
         );
         div()
             .flex()
             .flex_col()
             .gap(px(S3))
-            .child(div().type_role(T_LABEL).font_weight(FontWeight::SEMIBOLD).text_color(label()).child("Şimdi çalıyor sekmesi: sıradaki ve son çalınan satırları, söz kesiti"))
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(label())
+                    .child("Şimdi çalıyor sekmesi: sıradaki ve son çalınan satırları, söz kesiti"),
+            )
             .child(rows)
-            .child(div().flex().items_center().gap(px(S5)).child(caption("Söz kesiti")).child(excerpt))
+            .child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap(px(S5))
+                    .child(caption("Söz kesiti"))
+                    .child(excerpt),
+            )
             .into_any_element()
     }
     // i18n-skip-end: geliştirme vitrini (OPENIFY_GALLERY), kullanıcıya görünmez
@@ -1017,11 +1318,20 @@ mod tests {
         // panelin solundaki bütün yeri alır, panel sağ kenardan 16 px
         // içeride, aralarında listenin sağ sayfa kenarı (32) kadar; panel
         // eni her pencerede 400.
-        for w in [1720., 1721.5, 1760., 1800., 1890., 1920., 2200., 2560., 3840.] {
+        for w in [
+            1720., 1721.5, 1760., 1800., 1890., 1920., 2200., 2560., 3840.,
+        ] {
             let l = dock_layout(w, true);
             assert!(l.docked, "{w}");
-            assert_eq!((l.panel_width, l.panel_right), (DOCK_PANEL_WIDTH, S4), "{w}");
-            assert!((l.main_width + l.panel_width + l.panel_right - w).abs() < 1e-3, "{w}");
+            assert_eq!(
+                (l.panel_width, l.panel_right),
+                (DOCK_PANEL_WIDTH, S4),
+                "{w}"
+            );
+            assert!(
+                (l.main_width + l.panel_width + l.panel_right - w).abs() < 1e-3,
+                "{w}"
+            );
             let list_right = l.main_width - PAGE_PAD;
             let panel_left = w - l.panel_right - l.panel_width;
             assert_eq!(panel_left - list_right, PAGE_PAD, "{w}");
@@ -1057,10 +1367,19 @@ mod tests {
         }
         let l = dock_layout(DOCK_MIN_WIDTH, true);
         let (left, width) = l.pill_frame(DOCK_MIN_WIDTH);
-        assert_eq!(DOCK_MIN_WIDTH - l.panel_right - l.panel_width - (left + width), 44.);
+        assert_eq!(
+            DOCK_MIN_WIDTH - l.panel_right - l.panel_width - (left + width),
+            44.
+        );
         // Panel daha geniş olsaydı hap daralırdı (dar hap kuralları o enle):
         // ortası yine pencerenin ortası, panele 24 px.
-        let wide_panel = DockLayout { docked: true, main_width: 1100., panel_width: 604., panel_right: S4, beside_pill: true };
+        let wide_panel = DockLayout {
+            docked: true,
+            main_width: 1100.,
+            panel_width: 604.,
+            panel_right: S4,
+            beside_pill: true,
+        };
         let (left, width) = wide_panel.pill_frame(1720.);
         assert!(width < pill_width(1720.));
         assert_eq!(left + width + S5, 1720. - S4 - 604.);
@@ -1077,12 +1396,21 @@ mod tests {
         // Hiçbir şey yok: panel kapalı kalır (içerik ortalanır).
         assert_eq!(dock_change(None, true, false, false, true, false), Keep);
         // İlk şarkı / ilk son çalınan gelince açılır.
-        assert_eq!(dock_change(Some(true), true, false, true, true, false), Open);
+        assert_eq!(
+            dock_change(Some(true), true, false, true, true, false),
+            Open
+        );
         // Pencere daralınca yerleşik panel kalkar, genişleyince geri gelir.
         assert_eq!(dock_change(Some(true), false, true, true, true, true), Hide);
-        assert_eq!(dock_change(Some(false), true, true, true, true, false), Open);
+        assert_eq!(
+            dock_change(Some(false), true, true, true, true, false),
+            Open
+        );
         // Dar pencerede kullanıcının açtığı yüzen panele dokunulmaz.
-        assert_eq!(dock_change(Some(false), false, true, true, true, true), Keep);
+        assert_eq!(
+            dock_change(Some(false), false, true, true, true, true),
+            Keep
+        );
         // Geniş pencerede aynı durum sürerken hiçbir şey değişmez.
         assert_eq!(dock_change(Some(true), true, true, true, true, true), Keep);
         assert_eq!(dock_change(Some(true), true, true, true, true, false), Keep);
@@ -1108,7 +1436,10 @@ mod tests {
         assert_eq!(now_cover_side(PANEL_WIDTH, 588., true), 326.);
         // Sıradaki varken kapak 224'ün altına inecekse "Sıradaki" kaydırmaya
         // kalır, kapak sıradaki yokkenki boyunda durur.
-        assert_eq!(now_cover_side(PANEL_WIDTH, 428., true), now_cover_side(PANEL_WIDTH, 428., false));
+        assert_eq!(
+            now_cover_side(PANEL_WIDTH, 428., true),
+            now_cover_side(PANEL_WIDTH, 428., false)
+        );
     }
 
     #[test]
@@ -1155,7 +1486,10 @@ mod tests {
         assert_eq!(excerpt_above(room), 4);
         assert!(excerpt_below(1004.) as f32 * EXCERPT_STEP >= 1004.);
         // Sıradaki şarkı varsa kesit o kadar kısa.
-        assert_eq!(excerpt_room(1004., 366., true), room - (S5 + T_BODY.line + S2 + ROW_HEIGHT));
+        assert_eq!(
+            excerpt_room(1004., 366., true),
+            room - (S5 + T_BODY.line + S2 + ROW_HEIGHT)
+        );
         // Kısa yüzen panelde (1180×760) en az: okunan satır ve iki yanında
         // solmanın dışında birer tam satır; üstte bir önceki satır.
         let short = excerpt_room(588., now_cover_side(PANEL_WIDTH, 588., false), true);
@@ -1187,7 +1521,11 @@ mod tests {
         assert!(half.docked);
         assert!(half.main_width < w && half.main_width > w - DOCK_PANEL_WIDTH - S4);
         let panel_left = w - half.panel_right - half.panel_width;
-        assert!((panel_left - half.main_width).abs() <= 0.5, "{panel_left} {}", half.main_width);
+        assert!(
+            (panel_left - half.main_width).abs() <= 0.5,
+            "{panel_left} {}",
+            half.main_width
+        );
         // Dar pencerede içerik hiç oynamaz (panel yüzer).
         let narrow = dock_layout_at(DOCK_MIN_WIDTH - 1., true, 0.5);
         assert!(!narrow.docked);
@@ -1217,8 +1555,17 @@ mod tests {
         // Açılış: yavaşlayarak gelir; yarıda ara değer, sonunda 1.
         assert!(s.advance(t0 + ms(3000), true, Some(Panel::Now), true));
         assert!(s.advance(t0 + ms(3000) + motion() / 2, true, Some(Panel::Now), true));
-        assert!(s.value > 0.5 && s.value < 1., "ease-out: yarı sürede yarıdan fazla yol {}", s.value);
-        assert!(!s.advance(t0 + ms(3000) + motion() + ms(5), true, Some(Panel::Now), true));
+        assert!(
+            s.value > 0.5 && s.value < 1.,
+            "ease-out: yarı sürede yarıdan fazla yol {}",
+            s.value
+        );
+        assert!(!s.advance(
+            t0 + ms(3000) + motion() + ms(5),
+            true,
+            Some(Panel::Now),
+            true
+        ));
         assert_eq!(s.value, 1.);
         // Pencere genişliği durumu değişince ve hareket kapalıyken atlar.
         assert!(!s.advance(t0 + ms(4000), false, None, true));

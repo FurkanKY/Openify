@@ -78,7 +78,11 @@ pub struct Edge {
 }
 
 impl Edge {
-    pub const NONE: Self = Self { bpm: 0.0, conf: 0.0, beat_ms: 0 };
+    pub const NONE: Self = Self {
+        bpm: 0.0,
+        conf: 0.0,
+        beat_ms: 0,
+    };
 }
 
 /// Bir şarkının çözümlemesi. `flags`: hangi uçlar geçerli (`HAS_HEAD`: şarkı
@@ -282,13 +286,22 @@ impl BeatTap {
         let inv = 1.0 / HOP as f32;
         // Genlik alanında (karekök) akı: log sıkıştırma sessizlikten çıkan her olayı eşit
         // büyük gösterip vurgu farkını (tekme ≫ şapka) siliyordu.
-        let logs = [(self.acc[0] * inv).sqrt(), (self.acc[1] * inv).sqrt(), (self.acc[2] * inv).sqrt()];
+        let logs = [
+            (self.acc[0] * inv).sqrt(),
+            (self.acc[1] * inv).sqrt(),
+            (self.acc[2] * inv).sqrt(),
+        ];
         let onset = if self.have_prev {
-            (0..3).map(|b| BAND_W[b] * (logs[b] - self.prev_log[b]).max(0.0)).sum()
+            (0..3)
+                .map(|b| BAND_W[b] * (logs[b] - self.prev_log[b]).max(0.0))
+                .sum()
         } else {
             0.0
         };
-        let hop = Hop { power: self.acc[3] * inv, onset };
+        let hop = Hop {
+            power: self.acc[3] * inv,
+            onset,
+        };
         self.prev_log = logs;
         self.have_prev = true;
         let silent = self.peak < SILENCE_PEAK;
@@ -378,7 +391,9 @@ impl BeatTap {
             if content >= MIN_HOPS && trail < len {
                 // Halkayı sırayla (eski → yeni) aç, müziğin bittiği yere kadar.
                 let start = (self.tail_pos + WIN_HOPS - len) % WIN_HOPS;
-                let ordered: Vec<Hop> = (0..content).map(|i| self.tail[(start + i) % WIN_HOPS]).collect();
+                let ordered: Vec<Hop> = (0..content)
+                    .map(|i| self.tail[(start + i) % WIN_HOPS])
+                    .collect();
                 let window = &ordered[ordered.len().saturating_sub(MAX_HOPS)..];
                 let env = env_db(&ordered, true);
                 let edge = tempo_of(window).map_or(Edge::NONE, |t| {
@@ -389,7 +404,11 @@ impl BeatTap {
                         last += t.lag;
                     }
                     let delta = (n - last).max(0.0) % t.lag;
-                    Edge { bpm: t.bpm as f32, conf: t.conf as f32, beat_ms: hops_to_ms(delta) }
+                    Edge {
+                        bpm: t.bpm as f32,
+                        conf: t.conf as f32,
+                        beat_ms: hops_to_ms(delta),
+                    }
                 });
                 a.flags |= HAS_TAIL;
                 a.total_ms = hops_to_ms(self.hops as f64);
@@ -418,7 +437,11 @@ fn env_db(hops: &[Hop], from_end: bool) -> [i8; ENV_SECS] {
             break;
         }
         let range = if from_end { (n - b)..(n - a) } else { a..b };
-        let mean = hops[range.clone()].iter().map(|h| h.power as f64).sum::<f64>() / range.len().max(1) as f64;
+        let mean = hops[range.clone()]
+            .iter()
+            .map(|h| h.power as f64)
+            .sum::<f64>()
+            / range.len().max(1) as f64;
         *slot = (10.0 * mean.max(1e-10).log10()).round().clamp(-100.0, 0.0) as i8;
     }
     env
@@ -489,7 +512,11 @@ pub fn tempo(onset: &[f32], level: f64) -> Option<Tempo> {
                 return 1.0;
             }
             let m = n - lag;
-            let sum: f64 = o[..m].iter().zip(&o[lag..]).map(|(a, b)| *a as f64 * *b as f64).sum();
+            let sum: f64 = o[..m]
+                .iter()
+                .zip(&o[lag..])
+                .map(|(a, b)| *a as f64 * *b as f64)
+                .sum();
             sum / m as f64 / var
         })
         .collect();
@@ -510,7 +537,8 @@ pub fn tempo(onset: &[f32], level: f64) -> Option<Tempo> {
         if half < LAG_MIN {
             break;
         }
-        let cand = (half.saturating_sub(1).max(1)..=half + 1).max_by(|a, b| rn[*a].total_cmp(&rn[*b]))?;
+        let cand =
+            (half.saturating_sub(1).max(1)..=half + 1).max_by(|a, b| rn[*a].total_cmp(&rn[*b]))?;
         if rn[cand] >= 0.9 * rn[best] {
             best = cand;
         } else {
@@ -587,5 +615,10 @@ pub fn tempo(onset: &[f32], level: f64) -> Option<Tempo> {
     }
     // Vuruş başlangıcı hop'un içinde, ortalama yarısında.
     let phase = (phase + 0.5) % lag;
-    Some(Tempo { bpm: bpm_of(lag), conf, lag, phase })
+    Some(Tempo {
+        bpm: bpm_of(lag),
+        conf,
+        lag,
+        phase,
+    })
 }

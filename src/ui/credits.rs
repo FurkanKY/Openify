@@ -27,8 +27,8 @@
 use std::sync::{Arc, OnceLock};
 
 use gpui::{
-    AnyElement, Context, FocusHandle, FontWeight, KeyDownEvent, MouseButton, ScrollHandle, Window, deferred, div,
-    prelude::*, px, rgb,
+    AnyElement, Context, FocusHandle, FontWeight, KeyDownEvent, MouseButton, ScrollHandle, Window,
+    deferred, div, prelude::*, px, rgb,
 };
 
 use super::{
@@ -86,7 +86,12 @@ impl CreditsUi {
     /// Tıklanabilir adların adresleri, gösterim sırasıyla.
     fn links(&self) -> Vec<String> {
         match &self.status {
-            Status::Ready(c) => c.roles.iter().flat_map(|r| &r.people).filter_map(|p| p.uri.clone()).collect(),
+            Status::Ready(c) => c
+                .roles
+                .iter()
+                .flat_map(|r| &r.people)
+                .filter_map(|p| p.uri.clone())
+                .collect(),
             _ => Vec::new(),
         }
     }
@@ -94,20 +99,30 @@ impl CreditsUi {
 
 /// Sınama koşusu mu? (Kanca gerçek hesaba dokunamasın.)
 fn test_run() -> bool {
-    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
+    std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+        || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
 }
 
 /// `OPENIFY_TEST_CREDITS_JSON` (bkz. modül başlığı): kancanın durumu; yoksa `None`.
 fn fixture() -> Option<Status> {
     static SPEC: OnceLock<Option<String>> = OnceLock::new();
-    let spec = SPEC.get_or_init(|| std::env::var("OPENIFY_TEST_CREDITS_JSON").ok().filter(|_| test_run())).as_deref()?;
+    let spec = SPEC
+        .get_or_init(|| {
+            std::env::var("OPENIFY_TEST_CREDITS_JSON")
+                .ok()
+                .filter(|_| test_run())
+        })
+        .as_deref()?;
     Some(match spec {
         "!error" => Status::Failed(CreditsFailure::Offline),
         "!busy" => Status::Failed(CreditsFailure::RateLimited),
         "!denied" => Status::Failed(CreditsFailure::Denied),
         "!loading" => Status::Loading,
         "!empty" => Status::Ready(Arc::new(Credits::default())),
-        path => match std::fs::read_to_string(path).ok().and_then(|s| serde_json::from_str(&s).ok()) {
+        path => match std::fs::read_to_string(path)
+            .ok()
+            .and_then(|s| serde_json::from_str(&s).ok())
+        {
             Some(value) => Status::Ready(Arc::new(engine::parse_credits(&value))),
             None => {
                 log::warn!("OPENIFY_TEST_CREDITS_JSON okunamadı: {path}");
@@ -164,7 +179,10 @@ impl Shell {
         let status = match fixture() {
             Some(status) => status,
             None => {
-                self.engine.send(engine::Command::Library(LibraryCommand::OpenCredits(uri.clone())));
+                self.engine
+                    .send(engine::Command::Library(LibraryCommand::OpenCredits(
+                        uri.clone(),
+                    )));
                 Status::Loading
             }
         };
@@ -229,7 +247,12 @@ impl Shell {
     }
 
     /// Pencere açıkken tuşlar (bkz. modül başlığı). Hep işlenir (`true`).
-    pub(super) fn credits_key(&mut self, event: &KeyDownEvent, window: &mut Window, cx: &mut Context<Self>) -> bool {
+    pub(super) fn credits_key(
+        &mut self,
+        event: &KeyDownEvent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> bool {
         let ks = &event.keystroke;
         let links = self.sui.credits.links();
         let step = |cursor: Option<usize>, back: bool| -> Option<usize> {
@@ -298,10 +321,20 @@ impl Shell {
                     .type_role(T_BODY)
                     .font_weight(FontWeight::SEMIBOLD)
                     .text_color(text())
-                    .child(super::text::line_with_tip("credits-name", c.name.clone()).flex().min_w_0()),
+                    .child(
+                        super::text::line_with_tip("credits-name", c.name.clone())
+                            .flex()
+                            .min_w_0(),
+                    ),
             )
             .when(!c.artists.is_empty(), |el| {
-                el.child(div().type_role(T_SECONDARY).text_color(muted()).child(super::text::line_with_tip("credits-artists", c.artists.clone()).flex().min_w_0()))
+                el.child(
+                    div().type_role(T_SECONDARY).text_color(muted()).child(
+                        super::text::line_with_tip("credits-artists", c.artists.clone())
+                            .flex()
+                            .min_w_0(),
+                    ),
+                )
             });
 
         let body: AnyElement = match &c.status {
@@ -349,10 +382,14 @@ impl Shell {
                         // Virgül adın hemen yanında; boşluk virgülden sonra.
                         names = names.child(name);
                         if more {
-                            names = names.child(div().type_role(T_BODY).text_color(muted()).child(","));
+                            names =
+                                names.child(div().type_role(T_BODY).text_color(muted()).child(","));
                         }
                     }
-                    list = list.child(row(role_label(role.kind, &role.title), names.into_any_element()));
+                    list = list.child(row(
+                        role_label(role.kind, &role.title),
+                        names.into_any_element(),
+                    ));
                 }
                 if !credits.sources.is_empty() {
                     let sources = div()
@@ -362,14 +399,22 @@ impl Shell {
                         .type_role(T_BODY)
                         .text_color(soft())
                         .child(credits.sources.join(" · "));
-                    list = list.child(row(t!(CreditsSource).to_string(), sources.into_any_element()));
+                    list = list.child(row(
+                        t!(CreditsSource).to_string(),
+                        sources.into_any_element(),
+                    ));
                 }
                 list.into_any_element()
             }
         };
 
-        let scroll =
-            div().id("credits-scroll").min_h_0().overflow_y_scroll().track_scroll(&c.scroll).child(song).child(body);
+        let scroll = div()
+            .id("credits-scroll")
+            .min_h_0()
+            .overflow_y_scroll()
+            .track_scroll(&c.scroll)
+            .child(song)
+            .child(body);
 
         let panel = div()
             .id("credits")
@@ -398,7 +443,10 @@ impl Shell {
                 .flex()
                 .items_center()
                 .justify_center()
-                .on_mouse_down(MouseButton::Left, cx.listener(|this, _, window, cx| this.close_credits(window, cx)))
+                .on_mouse_down(
+                    MouseButton::Left,
+                    cx.listener(|this, _, window, cx| this.close_credits(window, cx)),
+                )
                 .child(panel),
         )
         .with_priority(4)
@@ -407,8 +455,16 @@ impl Shell {
 
     /// "Şimdi çalıyor" panelindeki künye düğmesi (başlığın yanında, kalbin
     /// solunda). Şarkı yokken ya da şarkı Spotify'ın şarkısı değilken yok.
-    pub(super) fn credits_button(&self, window: &Window, cx: &mut Context<Self>) -> Option<AnyElement> {
-        let track = self.state.track.as_ref().filter(|t| t.uri.starts_with("spotify:track:"))?;
+    pub(super) fn credits_button(
+        &self,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
+        let track = self
+            .state
+            .track
+            .as_ref()
+            .filter(|t| t.uri.starts_with("spotify:track:"))?;
         let (stop, look) = self.stop_look("panel-credits", super::tab::PANEL, true, window, cx);
         let (uri, name, artists) = (track.uri.clone(), track.name.clone(), track.artists.clone());
         Some(
@@ -432,7 +488,12 @@ impl Shell {
 
 /// Tek satırlık durum yazısı (yükleniyor, künye yok, hata).
 fn note(message: &'static str) -> AnyElement {
-    div().py(px(S2)).type_role(T_SECONDARY).text_color(muted()).child(message).into_any_element()
+    div()
+        .py(px(S2))
+        .type_role(T_SECONDARY)
+        .text_color(muted())
+        .child(message)
+        .into_any_element()
 }
 
 /// Bir künye satırı: solda rol adı (sabit enli), sağda adlar.
@@ -461,11 +522,17 @@ mod tests {
     fn links_follow_the_display_order_and_skip_unlinked_names() {
         let mut ui = CreditsUi::new();
         assert!(ui.links().is_empty(), "yüklenirken tıklanacak ad yok");
-        let value: serde_json::Value = serde_json::from_str(include_str!("../engine/fixtures/track_credits.json")).unwrap();
+        let value: serde_json::Value =
+            serde_json::from_str(include_str!("../engine/fixtures/track_credits.json")).unwrap();
         ui.status = Status::Ready(Arc::new(engine::parse_credits(&value)));
         assert_eq!(
             ui.links(),
-            ["spotify:artist:r01", "spotify:artist:r02", "spotify:artist:w01", "spotify:artist:p01"],
+            [
+                "spotify:artist:r01",
+                "spotify:artist:r02",
+                "spotify:artist:w01",
+                "spotify:artist:p01"
+            ],
             "Seslendiren, Yazan, Yapımcı sırasıyla; adresi olmayanlar atlanır"
         );
         ui.status = Status::Failed(CreditsFailure::Offline);
@@ -476,32 +543,70 @@ mod tests {
     fn role_labels_use_the_ui_language_for_the_three_known_roles() {
         use crate::i18n::{Lang, with_lang};
         with_lang(Lang::Tr, || {
-            assert_eq!(role_label(CreditRoleKind::Performer, "Performed By"), "Seslendiren");
+            assert_eq!(
+                role_label(CreditRoleKind::Performer, "Performed By"),
+                "Seslendiren"
+            );
             assert_eq!(role_label(CreditRoleKind::Writer, "Written By"), "Yazan");
-            assert_eq!(role_label(CreditRoleKind::Producer, "Produced By"), "Yapımcı");
-            assert_eq!(role_label(CreditRoleKind::Other, "Mixing Engineer"), "Miks mühendisi");
+            assert_eq!(
+                role_label(CreditRoleKind::Producer, "Produced By"),
+                "Yapımcı"
+            );
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "Mixing Engineer"),
+                "Miks mühendisi"
+            );
             assert_eq!(role_label(CreditRoleKind::Other, "MIXER"), "Miks mühendisi");
-            assert_eq!(role_label(CreditRoleKind::Other, "mastering engineer"), "Mastering mühendisi");
-            assert_eq!(role_label(CreditRoleKind::Other, "Engineer"), "Kayıt mühendisi");
-            assert_eq!(role_label(CreditRoleKind::Other, "Recording Engineer"), "Kayıt mühendisi");
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "mastering engineer"),
+                "Mastering mühendisi"
+            );
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "Engineer"),
+                "Kayıt mühendisi"
+            );
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "Recording Engineer"),
+                "Kayıt mühendisi"
+            );
             assert_eq!(role_label(CreditRoleKind::Other, "Composer"), "Besteci");
             assert_eq!(role_label(CreditRoleKind::Other, "LYRICIST"), "Söz yazarı");
             assert_eq!(role_label(CreditRoleKind::Other, "Arranger"), "Aranjör");
-            assert_eq!(role_label(CreditRoleKind::Other, "String Quartet"), "String Quartet");
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "String Quartet"),
+                "String Quartet"
+            );
         });
         with_lang(Lang::En, || {
-            assert_eq!(role_label(CreditRoleKind::Other, "Mixing Engineer"), "Mixing engineer");
-            assert_eq!(role_label(CreditRoleKind::Other, "engineer"), "Recording engineer");
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "Mixing Engineer"),
+                "Mixing engineer"
+            );
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "engineer"),
+                "Recording engineer"
+            );
             assert_eq!(role_label(CreditRoleKind::Other, "Composer"), "Composer");
-            assert_eq!(role_label(CreditRoleKind::Other, "Foley Artist"), "Foley Artist");
-            assert_eq!(role_label(CreditRoleKind::Performer, "Performed By"), "Performed by");
+            assert_eq!(
+                role_label(CreditRoleKind::Other, "Foley Artist"),
+                "Foley Artist"
+            );
+            assert_eq!(
+                role_label(CreditRoleKind::Performer, "Performed By"),
+                "Performed by"
+            );
             assert_eq!(role_label(CreditRoleKind::Writer, "x"), "Written by");
         });
     }
 
     #[test]
     fn every_failure_has_a_single_line_text() {
-        for why in [CreditsFailure::Offline, CreditsFailure::RateLimited, CreditsFailure::Denied, CreditsFailure::Unavailable] {
+        for why in [
+            CreditsFailure::Offline,
+            CreditsFailure::RateLimited,
+            CreditsFailure::Denied,
+            CreditsFailure::Unavailable,
+        ] {
             let s = failure_text(why);
             assert!(!s.is_empty() && !s.contains('\n'));
         }

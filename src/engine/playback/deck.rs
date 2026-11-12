@@ -32,7 +32,12 @@ impl Deck {
         mixer: SoftMixer,
         volume: Box<dyn VolumeGetter + Send>,
     ) -> Self {
-        Self { port, out, mixer, volume }
+        Self {
+            port,
+            out,
+            mixer,
+            volume,
+        }
     }
 
     /// Kullanıcının duraklatması: ses beklemeden susar (çalarınki kuyruğun

@@ -149,7 +149,10 @@ impl Playback {
             PlayerSignal::TrackChanged(info) => {
                 self.last_position = None;
                 if let Some(url) = info.cover_url.clone() {
-                    cx.fx.push(Effect::FetchCover { uri: info.uri.clone(), url });
+                    cx.fx.push(Effect::FetchCover {
+                        uri: info.uri.clone(),
+                        url,
+                    });
                 }
                 self.track_info = Some(info.clone());
                 cx.persist();

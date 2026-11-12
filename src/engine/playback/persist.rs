@@ -4,8 +4,7 @@
 
 use super::Driver;
 use crate::engine::{
-    Engine, Event, PlaybackEvent, RESUME, Restored, TrackInfo, cache, palette,
-    queue::Queue,
+    Engine, Event, PlaybackEvent, RESUME, Restored, TrackInfo, cache, palette, queue::Queue,
     queue_state, resume,
 };
 
@@ -45,7 +44,9 @@ impl Engine {
 
     /// Her `PERSIST_INTERVAL`'de, çalıyorsa konumu kaydeder.
     pub(in crate::engine) fn persist_tick(&mut self) {
-        if matches!(self.pb.driver, Driver::Local(_)) && matches!(self.pb.last_position, Some((_, _, true))) {
+        if matches!(self.pb.driver, Driver::Local(_))
+            && matches!(self.pb.last_position, Some((_, _, true)))
+        {
             self.persist();
             // Radyo sona yaklaştıysa devamı (yalnız çalarken; bkz. `listening.rs`).
             self.radio_tick();
@@ -98,7 +99,10 @@ impl Engine {
             let _ = self.playback.try_send(PlaybackEvent::Queue(view));
             return;
         };
-        let row = self.queue.current_row().or_else(|| self.meta.get(&uri).cloned());
+        let row = self
+            .queue
+            .current_row()
+            .or_else(|| self.meta.get(&uri).cloned());
         let info = match (restored.track, row) {
             (Some(t), _) if t.uri == uri => TrackInfo {
                 uri,
@@ -114,7 +118,13 @@ impl Engine {
                 duration_ms: r.duration_ms,
                 cover_url: (!r.image.is_empty()).then_some(r.image),
             },
-            _ => TrackInfo { uri, name: String::new(), artists: String::new(), duration_ms: 0, cover_url: None },
+            _ => TrackInfo {
+                uri,
+                name: String::new(),
+                artists: String::new(),
+                duration_ms: 0,
+                cover_url: None,
+            },
         };
         let position_ms = match info.duration_ms {
             0 => restored.position_ms,

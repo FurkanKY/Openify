@@ -8,10 +8,21 @@ impl Engine {
     /// `Playback`i sıra ve şarkı bilgileriyle çalıştırır; yazdığı etkileri,
     /// yazıldıkları sırayla, hemen yürütür (çağrı bitmeden sonraki iş
     /// başlamaz: olay sırası doğrudan çağırmakla aynıdır).
-    pub(in crate::engine) fn with_pb<R>(&mut self, f: impl FnOnce(&mut Playback, &mut Cx<'_>) -> R) -> R {
+    pub(in crate::engine) fn with_pb<R>(
+        &mut self,
+        f: impl FnOnce(&mut Playback, &mut Cx<'_>) -> R,
+    ) -> R {
         let mut fx = Vec::new();
         let link = self.host.facts();
-        let result = f(&mut self.pb, &mut Cx { queue: &mut self.queue, meta: &self.meta, link, fx: &mut fx });
+        let result = f(
+            &mut self.pb,
+            &mut Cx {
+                queue: &mut self.queue,
+                meta: &self.meta,
+                link,
+                fx: &mut fx,
+            },
+        );
         self.run_effects(fx);
         result
     }
@@ -33,7 +44,11 @@ impl Engine {
                 Effect::Connect(status) => {
                     let _ = self.playback.try_send(PlaybackEvent::Connect(status));
                 }
-                Effect::Reconnect { retry_current, skip_if_refused, started } => {
+                Effect::Reconnect {
+                    retry_current,
+                    skip_if_refused,
+                    started,
+                } => {
                     if self.reconnect(retry_current) {
                         if let Some(message) = started {
                             self.notice(NoticeKind::Working, message);

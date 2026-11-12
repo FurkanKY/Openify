@@ -110,7 +110,9 @@ pub fn set_window_icons(hwnd: HWND) {
         },
     };
     unsafe {
-        let Ok(module) = GetModuleHandleW(None) else { return };
+        let Ok(module) = GetModuleHandleW(None) else {
+            return;
+        };
         let dpi = GetDpiForWindow(hwnd).max(96);
         for (which, metric) in [(ICON_BIG, SM_CXICON), (ICON_SMALL, SM_CXSMICON)] {
             let size = GetSystemMetricsForDpi(metric, dpi);
@@ -123,7 +125,12 @@ pub fn set_window_icons(hwnd: HWND) {
                 LR_DEFAULTCOLOR,
             ) {
                 Ok(icon) => {
-                    SendMessageW(hwnd, WM_SETICON, Some(WPARAM(which as usize)), Some(LPARAM(icon.0 as isize)));
+                    SendMessageW(
+                        hwnd,
+                        WM_SETICON,
+                        Some(WPARAM(which as usize)),
+                        Some(LPARAM(icon.0 as isize)),
+                    );
                 }
                 Err(e) => log::warn!("uygulama simgesi yüklenemedi ({size} px): {e}"),
             }
@@ -145,7 +152,11 @@ pub fn rasterize(svg: &[u8], size: u32) -> Option<Vec<u8>> {
         .ok()?;
     let mut pixmap = tiny_skia::Pixmap::new(size, size)?;
     let scale = size as f32 / tree.size().width().max(tree.size().height());
-    resvg::render(&tree, tiny_skia::Transform::from_scale(scale, scale), &mut pixmap.as_mut());
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::from_scale(scale, scale),
+        &mut pixmap.as_mut(),
+    );
     Some(pixmap.pixels().iter().map(|p| p.alpha()).collect())
 }
 
@@ -167,7 +178,8 @@ fn to_hicon(alpha: &[u8], size: u32, color: u32) -> Option<Icon> {
     unsafe {
         let screen = GetDC(None::<HWND>);
         let mut bits: *mut core::ffi::c_void = std::ptr::null_mut();
-        let color_bitmap = CreateDIBSection(Some(screen), &info, DIB_RGB_COLORS, &mut bits, None, 0);
+        let color_bitmap =
+            CreateDIBSection(Some(screen), &info, DIB_RGB_COLORS, &mut bits, None, 0);
         ReleaseDC(None::<HWND>, screen);
         let color_bitmap = color_bitmap.ok()?;
         if bits.is_null() {
@@ -184,7 +196,13 @@ fn to_hicon(alpha: &[u8], size: u32, color: u32) -> Option<Icon> {
             out[i * 4 + 3] = *a;
         }
         let mask_bits = vec![0u8; (size.div_ceil(16) * 2 * size) as usize];
-        let mask = CreateBitmap(size as i32, size as i32, 1, 1, Some(mask_bits.as_ptr() as *const _));
+        let mask = CreateBitmap(
+            size as i32,
+            size as i32,
+            1,
+            1,
+            Some(mask_bits.as_ptr() as *const _),
+        );
         let icon = CreateIconIndirect(&ICONINFO {
             fIcon: true.into(),
             xHotspot: 0,
@@ -228,7 +246,10 @@ mod tests {
         let zoom = 4u32;
         let cell = size * zoom + 8;
         let mut out = image::RgbaImage::new(cell * icons.len() as u32, cell * 2);
-        for (row, (light, bg)) in [(false, 0x202020u32), (true, 0xF3F3F3u32)].iter().enumerate() {
+        for (row, (light, bg)) in [(false, 0x202020u32), (true, 0xF3F3F3u32)]
+            .iter()
+            .enumerate()
+        {
             let fg = ink(*light);
             for (col, svg) in icons.iter().enumerate() {
                 let alpha = rasterize(svg, size).unwrap();

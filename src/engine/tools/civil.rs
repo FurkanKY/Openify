@@ -88,7 +88,10 @@ mod tests {
         assert_eq!(hour_of(ms, 180), 15);
         // Gün sınırı: UTC 22:00 + 3 sa = ertesi gün 01:00.
         let late = ms + (22 * 3600 - (12 * 3600 + 34 * 60 + 56)) * 1000;
-        assert_eq!((date_stamp(late, 0), date_stamp(late, 180)), ("2026-11-11".into(), "2026-11-12".into()));
+        assert_eq!(
+            (date_stamp(late, 0), date_stamp(late, 180)),
+            ("2026-11-11".into(), "2026-11-12".into())
+        );
         assert_eq!(hour_of(late, 180), 1);
         // Yıl sınırı ve eski (1970 öncesi değil ama sıfır) an.
         assert_eq!(year_of(0, 0), 1970);

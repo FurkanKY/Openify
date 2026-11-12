@@ -136,7 +136,11 @@ impl Playback {
 
     /// Kip (sabit süre + AutoMix) değişti: halka ve pay derinliği buna göre.
     fn apply_crossfade(&mut self, cx: &mut Cx<'_>) {
-        self.crossfade_ms = if self.automix { MAX_OVERLAP_MS } else { self.fixed_ms };
+        self.crossfade_ms = if self.automix {
+            MAX_OVERLAP_MS
+        } else {
+            self.fixed_ms
+        };
         if let Some(deck) = &self.deck {
             deck.out.reserve(ring_frames(self.crossfade_ms));
             deck.out.set_automix(self.automix);
@@ -179,14 +183,20 @@ impl Playback {
             let inc = next_uri.and_then(|u| self.beats.get(u));
             spec_for_auto(prev, next, same_track, how, out, inc)
         } else {
-            (spec_for(prev, next, same_track, self.crossfade_ms, how), None)
+            (
+                spec_for(prev, next, same_track, self.crossfade_ms, how),
+                None,
+            )
         }
     }
 
     /// Çalan şarkının adresi ve satırı (sıradan, yoksa şarkı bilgilerinden).
     pub(super) fn current_track(cx: &Cx<'_>) -> Option<(String, Option<TrackRow>)> {
         let uri = cx.queue.current_uri()?.to_owned();
-        let row = cx.queue.current_row().or_else(|| cx.meta.get(&uri).cloned());
+        let row = cx
+            .queue
+            .current_row()
+            .or_else(|| cx.meta.get(&uri).cloned());
         Some((uri, row))
     }
 
@@ -200,8 +210,19 @@ impl Playback {
                 // Gelenin satırı: sıranın kendi satırından ya da şarkı bilgilerinden
                 // (bağlam satırları `meta`da olmayabilir, `view` ikisine de bakar).
                 let view = cx.queue.view(&|u| cx.meta.get(u).cloned());
-                let next = view.upcoming.iter().find(|e| e.uri == next_uri).and_then(|e| e.track.as_ref());
-                self.spec_now(Some(&prev_uri), prev.as_ref(), Some(&next_uri), next, false, Advance::Auto)
+                let next = view
+                    .upcoming
+                    .iter()
+                    .find(|e| e.uri == next_uri)
+                    .and_then(|e| e.track.as_ref());
+                self.spec_now(
+                    Some(&prev_uri),
+                    prev.as_ref(),
+                    Some(&next_uri),
+                    next,
+                    false,
+                    Advance::Auto,
+                )
             }
             _ => (TransitionSpec::NONE, None),
         };
@@ -211,13 +232,29 @@ impl Playback {
     /// Çalara sıradaki şarkıyı yüklemeden HEMEN ÖNCE: bu geçişin bindirmesini
     /// çıkışa ver. `prev`: yüklemeden önce çalan şarkı (`current_track`),
     /// `next_uri`: yüklenecek; sıra zaten ilerledi, gelenin satırı oradan.
-    pub(super) fn arm_transition(&self, cx: &Cx<'_>, prev: &Option<(String, Option<TrackRow>)>, next_uri: &str, how: Advance) {
+    pub(super) fn arm_transition(
+        &self,
+        cx: &Cx<'_>,
+        prev: &Option<(String, Option<TrackRow>)>,
+        next_uri: &str,
+        how: Advance,
+    ) {
         let Some(deck) = &self.deck else { return };
-        let next = cx.queue.current_row().or_else(|| cx.meta.get(next_uri).cloned());
+        let next = cx
+            .queue
+            .current_row()
+            .or_else(|| cx.meta.get(next_uri).cloned());
         let same_track = prev.as_ref().is_some_and(|(uri, _)| uri == next_uri);
         let prev_row = prev.as_ref().and_then(|(_, row)| row.as_ref());
         let prev_uri = prev.as_ref().map(|(uri, _)| uri.as_str());
-        let (spec, incoming) = self.spec_now(prev_uri, prev_row, Some(next_uri), next.as_ref(), same_track, how);
+        let (spec, incoming) = self.spec_now(
+            prev_uri,
+            prev_row,
+            Some(next_uri),
+            next.as_ref(),
+            same_track,
+            how,
+        );
         deck.out.arm_automix(spec, incoming);
     }
 }
@@ -257,25 +294,37 @@ mod tests {
 
     #[test]
     fn consecutive_tracks_of_the_same_album_stay_gapless() {
-        let (p, n) = (a1(), row("a2", "Album A", "Sanatçı, Konuk", "img-a", 200_000));
+        let (p, n) = (
+            a1(),
+            row("a2", "Album A", "Sanatçı, Konuk", "img-a", 200_000),
+        );
         assert!(spec_for(Some(&p), Some(&n), false, 8_000, Advance::Auto).is_none());
         // Albüm adı aynı, kapak farklı: farklı albüm ("Greatest Hits").
         let other = row("c1", "album a", "Sanatçı", "img-other", 200_000);
         assert!(!spec_for(Some(&p), Some(&other), false, 8_000, Advance::Auto).is_none());
         // Kapak bilgisi yoksa ilk sanatçı karar verir.
-        let (p, n) = (row("a1", "X", "Biri", "", 1), row("a2", "x", "Biri, Öteki", "", 1));
+        let (p, n) = (
+            row("a1", "X", "Biri", "", 1),
+            row("a2", "x", "Biri, Öteki", "", 1),
+        );
         assert!(same_album(&p, &n));
         let n = row("a2", "x", "Başkası", "", 1);
         assert!(!same_album(&p, &n));
         // Albüm adı boşsa (bilinmiyor) aynı sayılmaz.
-        assert!(!same_album(&row("a", "", "S", "", 1), &row("b", "", "S", "", 1)));
+        assert!(!same_album(
+            &row("a", "", "S", "", 1),
+            &row("b", "", "S", "", 1)
+        ));
     }
 
     #[test]
     fn user_driven_moves_never_overlap() {
         let (p, n) = (a1(), row("b1", "Album B", "Başka", "img-b", 200_000));
         for how in [Advance::Next, Advance::Previous] {
-            assert!(spec_for(Some(&p), Some(&n), false, 8_000, how).is_none(), "{how:?}");
+            assert!(
+                spec_for(Some(&p), Some(&n), false, 8_000, how).is_none(),
+                "{how:?}"
+            );
         }
     }
 
@@ -287,12 +336,30 @@ mod tests {
 
     #[test]
     fn overlap_never_exceeds_half_of_either_track() {
-        let (p, n) = (row("a", "A", "S", "x", 30_000), row("b", "B", "T", "y", 200_000));
-        assert_eq!(spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto), TransitionSpec::from_ms(12_000, Curve::EqualPower));
-        let (p, n) = (row("a", "A", "S", "x", 20_000), row("b", "B", "T", "y", 200_000));
-        assert_eq!(spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto), TransitionSpec::from_ms(10_000, Curve::EqualPower));
-        let (p, n) = (row("a", "A", "S", "x", 200_000), row("b", "B", "T", "y", 6_000));
-        assert_eq!(spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto), TransitionSpec::from_ms(3_000, Curve::EqualPower));
+        let (p, n) = (
+            row("a", "A", "S", "x", 30_000),
+            row("b", "B", "T", "y", 200_000),
+        );
+        assert_eq!(
+            spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto),
+            TransitionSpec::from_ms(12_000, Curve::EqualPower)
+        );
+        let (p, n) = (
+            row("a", "A", "S", "x", 20_000),
+            row("b", "B", "T", "y", 200_000),
+        );
+        assert_eq!(
+            spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto),
+            TransitionSpec::from_ms(10_000, Curve::EqualPower)
+        );
+        let (p, n) = (
+            row("a", "A", "S", "x", 200_000),
+            row("b", "B", "T", "y", 6_000),
+        );
+        assert_eq!(
+            spec_for(Some(&p), Some(&n), false, 12_000, Advance::Auto),
+            TransitionSpec::from_ms(3_000, Curve::EqualPower)
+        );
     }
 
     #[test]
@@ -303,7 +370,10 @@ mod tests {
 
     #[test]
     fn setting_is_capped_at_twelve_seconds() {
-        assert_eq!(spec_for(None, None, false, 60_000, Advance::Auto), TransitionSpec::from_ms(12_000, Curve::EqualPower));
+        assert_eq!(
+            spec_for(None, None, false, 60_000, Advance::Auto),
+            TransitionSpec::from_ms(12_000, Curve::EqualPower)
+        );
     }
 
     // ── Çalma düzeyi: sinyal → çıkışa verilen istek ────────────────────
@@ -349,8 +419,16 @@ mod tests {
             pb.crossfade_ms = crossfade_ms;
             let mut queue = Queue::new();
             let uris = (0..albums.len()).map(uri).collect();
-            queue.restart(None, uris, Some(rows(albums)), 0, 1, true).unwrap();
-            let mut b = Self { pb, queue, meta: HashMap::new(), out, _spy: spy };
+            queue
+                .restart(None, uris, Some(rows(albums)), 0, 1, true)
+                .unwrap();
+            let mut b = Self {
+                pb,
+                queue,
+                meta: HashMap::new(),
+                out,
+                _spy: spy,
+            };
             let first = b.queue.current_uri().unwrap().to_owned();
             b.run(|pb, cx| pb.begin(cx, first, 0));
             b
@@ -358,7 +436,15 @@ mod tests {
 
         fn run<R>(&mut self, f: impl FnOnce(&mut Playback, &mut Cx<'_>) -> R) -> R {
             let mut fx = Vec::new();
-            f(&mut self.pb, &mut Cx { queue: &mut self.queue, meta: &self.meta, link: LinkFacts::default(), fx: &mut fx })
+            f(
+                &mut self.pb,
+                &mut Cx {
+                    queue: &mut self.queue,
+                    meta: &self.meta,
+                    link: LinkFacts::default(),
+                    fx: &mut fx,
+                },
+            )
         }
 
         fn signal(&mut self, signal: PlayerSignal) {
@@ -386,7 +472,10 @@ mod tests {
         let mut b = Bench::new(&[("x", "ix"), ("x", "ix"), ("y", "iy"), ("y", "iy")], 5_000);
         b.signal(PlayerSignal::EndOfTrack); // 0 → 1: aynı albüm
         assert_eq!(b.queue.current_uri(), Some(uri(1).as_str()));
-        assert!(b.armed().is_none(), "aynı albümün ardışık şarkısı boşluksuz kalmalı");
+        assert!(
+            b.armed().is_none(),
+            "aynı albümün ardışık şarkısı boşluksuz kalmalı"
+        );
         b.signal(PlayerSignal::EndOfTrack); // 1 → 2: albüm değişti
         assert_eq!(b.queue.current_uri(), Some(uri(2).as_str()));
         assert_eq!(b.armed(), five());
@@ -399,7 +488,11 @@ mod tests {
         let mut b = Bench::new(&[("x", "ix"), ("y", "iy")], 5_000);
         assert!(b.armed().is_none());
         b.signal(PlayerSignal::PreloadDue);
-        assert_eq!(b.armed(), five(), "pay açılırken istek önceden verilir (payın derinliği için)");
+        assert_eq!(
+            b.armed(),
+            five(),
+            "pay açılırken istek önceden verilir (payın derinliği için)"
+        );
         // Aynı albümde ön istek de bindirmesiz.
         let mut b = Bench::new(&[("x", "ix"), ("x", "ix")], 5_000);
         b.signal(PlayerSignal::PreloadDue);
@@ -413,7 +506,10 @@ mod tests {
             b.signal(PlayerSignal::PreloadDue);
             assert_eq!(b.armed(), five());
             b.run(|pb, cx| pb.transport(cx, how.clone()));
-            assert!(b.armed().is_none(), "{how:?}: kullanıcı geçişi bindirmesiz olmalı");
+            assert!(
+                b.armed().is_none(),
+                "{how:?}: kullanıcı geçişi bindirmesiz olmalı"
+            );
         }
         // Önceki: bir şarkı ilerledikten sonra geri dönmek de.
         let mut b = Bench::new(&[("x", "ix"), ("y", "iy"), ("z", "iz")], 5_000);
@@ -435,9 +531,16 @@ mod tests {
         let mut b = Bench::new(&[("x", "ix"), ("y", "iy")], 5_000);
         b.queue.set_repeat(RepeatMode::One);
         b.signal(PlayerSignal::PreloadDue);
-        assert!(b.armed().is_none(), "tekrar tek: önyükleme de bindirme de yok");
+        assert!(
+            b.armed().is_none(),
+            "tekrar tek: önyükleme de bindirme de yok"
+        );
         b.signal(PlayerSignal::EndOfTrack);
-        assert_eq!(b.queue.current_uri(), Some(uri(0).as_str()), "aynı şarkı yeniden");
+        assert_eq!(
+            b.queue.current_uri(),
+            Some(uri(0).as_str()),
+            "aynı şarkı yeniden"
+        );
         assert!(b.armed().is_none());
     }
 
@@ -483,8 +586,19 @@ mod tests {
         let mut queue = Queue::new();
         let meta = HashMap::new();
         let mut fx = Vec::new();
-        pb.set_crossfade(&mut Cx { queue: &mut queue, meta: &meta, link: LinkFacts::default(), fx: &mut fx }, 5_000);
-        assert_eq!(pb.crossfade_ms, 5_000, "çalar yokken de saklanır (bağlanınca halka ona göre kurulur)");
+        pb.set_crossfade(
+            &mut Cx {
+                queue: &mut queue,
+                meta: &meta,
+                link: LinkFacts::default(),
+                fx: &mut fx,
+            },
+            5_000,
+        );
+        assert_eq!(
+            pb.crossfade_ms, 5_000,
+            "çalar yokken de saklanır (bağlanınca halka ona göre kurulur)"
+        );
     }
 
     // ── AutoMix ─────────────────────────────────────────────────────────
@@ -516,15 +630,31 @@ mod tests {
         assert!(spec.auto && inc.is_none());
         // Kullanıcı geçişleri, aynı albüm, tekrar-tek: bindirme yok.
         for how in [Advance::Next, Advance::Previous] {
-            assert!(spec_for_auto(Some(&p), Some(&n), false, how, None, None).0.is_none(), "{how:?}");
+            assert!(
+                spec_for_auto(Some(&p), Some(&n), false, how, None, None)
+                    .0
+                    .is_none(),
+                "{how:?}"
+            );
         }
         let same = row("a2", "Album A", "Sanatçı", "img-a", 200_000);
-        assert!(spec_for_auto(Some(&p), Some(&same), false, Advance::Auto, None, None).0.is_none());
-        assert!(spec_for_auto(Some(&p), Some(&p), true, Advance::Auto, None, None).0.is_none());
+        assert!(
+            spec_for_auto(Some(&p), Some(&same), false, Advance::Auto, None, None)
+                .0
+                .is_none()
+        );
+        assert!(
+            spec_for_auto(Some(&p), Some(&p), true, Advance::Auto, None, None)
+                .0
+                .is_none()
+        );
         // Süre iki şarkının yarısını aşmaz.
         let short = row("s", "S", "T", "i", 6_000);
         let (spec, _) = spec_for_auto(Some(&p), Some(&short), false, Advance::Auto, None, None);
-        assert_eq!(spec.overlap, TransitionSpec::from_ms(3_000, Curve::EqualPower).overlap);
+        assert_eq!(
+            spec.overlap,
+            TransitionSpec::from_ms(3_000, Curve::EqualPower).overlap
+        );
     }
 
     #[test]
@@ -532,7 +662,11 @@ mod tests {
         let (p, n) = (a1(), row("b1", "Album B", "Başka", "img-b", 200_000));
         let out = fading_tail();
         let (spec, inc) = spec_for_auto(Some(&p), Some(&n), false, Advance::Auto, Some(&out), None);
-        assert_eq!(spec, TransitionSpec::automix(7_000), "7 sn'lik sönme: ön plan 7 sn");
+        assert_eq!(
+            spec,
+            TransitionSpec::automix(7_000),
+            "7 sn'lik sönme: ön plan 7 sn"
+        );
         assert!(inc.is_none(), "gelenin baş ucu bilinmiyor");
         // Gelenin baş ucu önbellekteyse yazara iletilir.
         let mut head = Analysis::EMPTY;
@@ -540,7 +674,14 @@ mod tests {
         head.head.bpm = 120.0;
         head.head.conf = 0.8;
         head.head_env = [-14; crate::engine::output::ENV_SECS];
-        let (_, inc) = spec_for_auto(Some(&p), Some(&n), false, Advance::Auto, Some(&out), Some(&head));
+        let (_, inc) = spec_for_auto(
+            Some(&p),
+            Some(&n),
+            false,
+            Advance::Auto,
+            Some(&out),
+            Some(&head),
+        );
         assert_eq!(inc.map(|v| v.bpm), Some(120.0));
         // Yalnız baş ucu bilinen giden şarkıda (son uç yok) sabit 5 sn.
         let (spec, _) = spec_for_auto(Some(&p), Some(&n), false, Advance::Auto, Some(&head), None);
@@ -552,7 +693,10 @@ mod tests {
         // Şarkı 0-1 albüm x, 2-3 albüm y.
         let mut b = Bench::new(&[("x", "ix"), ("x", "ix"), ("y", "iy"), ("y", "iy")], 0);
         b.run(|pb, cx| pb.set_automix(cx, true));
-        assert_eq!(b.pb.crossfade_ms, 12_000, "AutoMix: halka en uzun bindirmeye göre");
+        assert_eq!(
+            b.pb.crossfade_ms, 12_000,
+            "AutoMix: halka en uzun bindirmeye göre"
+        );
         b.signal(PlayerSignal::EndOfTrack); // 0 -> 1 aynı albüm
         assert!(b.armed().is_none());
         b.signal(PlayerSignal::EndOfTrack); // 1 -> 2 albüm değişti
@@ -569,7 +713,10 @@ mod tests {
             b.signal(PlayerSignal::PreloadDue);
             assert_eq!(b.armed(), auto_five());
             b.run(|pb, cx| pb.transport(cx, how.clone()));
-            assert!(b.armed().is_none(), "{how:?}: kullanıcı geçişi bindirmesiz olmalı");
+            assert!(
+                b.armed().is_none(),
+                "{how:?}: kullanıcı geçişi bindirmesiz olmalı"
+            );
         }
         let mut b = Bench::new(&[("x", "ix"), ("y", "iy")], 0);
         b.run(|pb, cx| pb.set_automix(cx, true));
@@ -586,7 +733,11 @@ mod tests {
         let current = b.queue.current_uri().unwrap().to_owned();
         b.pb.beats.insert(current, fading_tail());
         b.signal(PlayerSignal::PreloadDue);
-        assert_eq!(b.armed(), TransitionSpec::automix(7_000), "önbellekten 7 sn");
+        assert_eq!(
+            b.armed(),
+            TransitionSpec::automix(7_000),
+            "önbellekten 7 sn"
+        );
         // AutoMix açıkken sabit süre ayarı isteği değiştirmez.
         b.run(|pb, cx| pb.set_crossfade(cx, 8_000));
         assert!(b.armed().auto);
@@ -594,7 +745,10 @@ mod tests {
         b.run(|pb, cx| pb.set_automix(cx, false));
         assert_eq!(b.armed(), TransitionSpec::from_ms(8_000, Curve::EqualPower));
         assert_eq!(b.pb.crossfade_ms, 8_000);
-        assert!(b.pb.beats.is_empty(), "AutoMix kapanınca defter boşalır (bellek)");
+        assert!(
+            b.pb.beats.is_empty(),
+            "AutoMix kapanınca defter boşalır (bellek)"
+        );
         b.run(|pb, cx| pb.set_crossfade(cx, 0));
         assert!(b.armed().is_none());
     }
@@ -610,21 +764,40 @@ mod tests {
         b.out.publish_analysis_for_test("spotify:track:x", a);
         let mut fx = Vec::new();
         {
-            let mut cx = Cx { queue: &mut b.queue, meta: &b.meta, link: LinkFacts::default(), fx: &mut fx };
+            let mut cx = Cx {
+                queue: &mut b.queue,
+                meta: &b.meta,
+                link: LinkFacts::default(),
+                fx: &mut fx,
+            };
             b.pb.collect_analyses(&mut cx);
         }
-        assert_eq!(b.pb.beats.get("spotify:track:x").map(|a| a.lead_ms), Some(321));
-        assert!(fx.iter().any(|e| matches!(e, Effect::SaveAnalysis { uri, .. } if uri == "spotify:track:x")));
+        assert_eq!(
+            b.pb.beats.get("spotify:track:x").map(|a| a.lead_ms),
+            Some(321)
+        );
+        assert!(
+            fx.iter()
+                .any(|e| matches!(e, Effect::SaveAnalysis { uri, .. } if uri == "spotify:track:x"))
+        );
         // İkinci yayın eskisiyle birleşir (baş uç korunur, yeni son uç eklenir).
         let mut t = Analysis::EMPTY;
         t.flags = HAS_TAIL;
         t.tail_ms = 99;
         b.out.publish_analysis_for_test("spotify:track:x", t);
         {
-            let mut cx = Cx { queue: &mut b.queue, meta: &b.meta, link: LinkFacts::default(), fx: &mut fx };
+            let mut cx = Cx {
+                queue: &mut b.queue,
+                meta: &b.meta,
+                link: LinkFacts::default(),
+                fx: &mut fx,
+            };
             b.pb.collect_analyses(&mut cx);
         }
         let book = b.pb.beats.get("spotify:track:x").unwrap();
-        assert_eq!((book.flags, book.lead_ms, book.tail_ms), (HAS_HEAD | HAS_TAIL, 321, 99));
+        assert_eq!(
+            (book.flags, book.lead_ms, book.tail_ms),
+            (HAS_HEAD | HAS_TAIL, 321, 99)
+        );
     }
 }

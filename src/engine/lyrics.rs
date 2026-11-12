@@ -86,9 +86,16 @@ impl Lyrics {
     /// (`LyricLine::alts` içindeki yer). Etiket tam ya da ana dilce eşleşir
     /// ("en" ile "en-US").
     pub fn translation_index(&self, lang: &str) -> Option<usize> {
-        let primary = |s: &str| s.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+        let primary = |s: &str| {
+            s.split(['-', '_'])
+                .next()
+                .unwrap_or("")
+                .to_ascii_lowercase()
+        };
         let want = primary(lang);
-        (!want.is_empty()).then(|| self.translations.iter().position(|t| primary(t) == want)).flatten()
+        (!want.is_empty())
+            .then(|| self.translations.iter().position(|t| primary(t) == want))
+            .flatten()
     }
 
     /// `audible_ms` anında okunan satır: başlangıcı bu ana eşit ya da önce olan
@@ -123,8 +130,8 @@ fn finish(
     if lines.iter().all(|l| l.text.is_empty()) {
         return None;
     }
-    let synced = claimed == SyncKind::Line
-        && (lines.len() == 1 || lines.iter().any(|l| l.start_ms > 0));
+    let synced =
+        claimed == SyncKind::Line && (lines.len() == 1 || lines.iter().any(|l| l.start_ms > 0));
     if synced {
         lines.sort_by_key(|l| l.start_ms); // kararlı: eşit anlarda sıra korunur
         for l in &mut lines {
@@ -154,7 +161,11 @@ fn finish(
     }
     Some(Lyrics {
         source,
-        sync: if synced { SyncKind::Line } else { SyncKind::Unsynced },
+        sync: if synced {
+            SyncKind::Line
+        } else {
+            SyncKind::Unsynced
+        },
         lines,
         provider,
         translations,
@@ -265,7 +276,9 @@ fn lenient_ms<'de, D: Deserializer<'de>>(d: D) -> Result<Option<u64>, D::Error> 
         Num::F(v) => from_f(v),
         Num::S(s) => {
             let s = s.trim();
-            s.parse::<u64>().ok().or_else(|| s.parse::<f64>().ok().and_then(from_f))
+            s.parse::<u64>()
+                .ok()
+                .or_else(|| s.parse::<f64>().ok().and_then(from_f))
         }
         Num::Other(_) => None,
     })
@@ -307,17 +320,29 @@ pub fn parse_spotify(raw: &str) -> Option<Lyrics> {
 /// sırada). Yalnız satır sayısı asıl sözle aynı olan, dili belli, en az bir
 /// satırı asıl metinden farklı olan çeviri alınır; gerisi (eksik ya da kaymış
 /// satır sayısı: hizayı tutturamayız) atılır. Aynı dil bir kez.
-fn attach_translations(lines: &mut [LyricLine], alternatives: Vec<SpotifyAlternative>) -> Vec<String> {
+fn attach_translations(
+    lines: &mut [LyricLine],
+    alternatives: Vec<SpotifyAlternative>,
+) -> Vec<String> {
     let mut languages: Vec<String> = Vec::new();
     let mut columns: Vec<Vec<String>> = Vec::new();
     for alt in alternatives {
-        let language = alt.language.map(|l| l.trim().to_ascii_lowercase()).unwrap_or_default();
+        let language = alt
+            .language
+            .map(|l| l.trim().to_ascii_lowercase())
+            .unwrap_or_default();
         let Some(texts) = alt.lines else { continue };
         if language.is_empty() || texts.len() != lines.len() || languages.contains(&language) {
             continue;
         }
-        let texts: Vec<String> = texts.into_iter().map(|t| t.into_text().trim().to_owned()).collect();
-        let differs = texts.iter().zip(lines.iter()).any(|(t, l)| !t.is_empty() && t != l.text.trim());
+        let texts: Vec<String> = texts
+            .into_iter()
+            .map(|t| t.into_text().trim().to_owned())
+            .collect();
+        let differs = texts
+            .iter()
+            .zip(lines.iter())
+            .any(|(t, l)| !t.is_empty() && t != l.text.trim());
         if !differs {
             continue;
         }
@@ -353,7 +378,11 @@ fn parse_timestamp(tag: &str) -> Option<u64> {
     }
     // Kesir: 1 hane onda bir, 2 hane yüzde bir, 3+ hane binde bir.
     let mut ms = 0u64;
-    let mut digits = frac.bytes().take(3).map(|b| u64::from(b - b'0')).collect::<Vec<_>>();
+    let mut digits = frac
+        .bytes()
+        .take(3)
+        .map(|b| u64::from(b - b'0'))
+        .collect::<Vec<_>>();
     digits.resize(3, 0);
     for d in digits {
         ms = ms * 10 + d;
@@ -423,8 +452,16 @@ pub fn parse_lrc(text: &str) -> Vec<LyricLine> {
     let mut out: Vec<LyricLine> = stamped
         .into_iter()
         .map(|(t, text)| {
-            let t = i64::try_from(t).unwrap_or(i64::MAX).saturating_sub(offset_ms).max(0);
-            LyricLine { start_ms: u32::try_from(t).unwrap_or(u32::MAX), end_ms: None, text, alts: Vec::new() }
+            let t = i64::try_from(t)
+                .unwrap_or(i64::MAX)
+                .saturating_sub(offset_ms)
+                .max(0);
+            LyricLine {
+                start_ms: u32::try_from(t).unwrap_or(u32::MAX),
+                end_ms: None,
+                text,
+                alts: Vec::new(),
+            }
         })
         .collect();
     out.sort_by_key(|l| l.start_ms);
@@ -460,7 +497,12 @@ pub fn parse_lrclib(raw: &str) -> Option<Lyrics> {
     let plain = rec.plain.as_deref().filter(|s| !s.trim().is_empty())?;
     let lines = plain
         .lines()
-        .map(|t| LyricLine { start_ms: 0, end_ms: None, text: t.to_owned(), alts: Vec::new() })
+        .map(|t| LyricLine {
+            start_ms: 0,
+            end_ms: None,
+            text: t.to_owned(),
+            alts: Vec::new(),
+        })
         .collect();
     finish(Source::Lrclib, SyncKind::Unsynced, None, Vec::new(), lines)
 }
@@ -549,18 +591,42 @@ where
 
 /// Spotify, sonra gerekirse LRCLIB. Satır eşzamanlı söz her zaman
 /// eşzamansızdan üstün; Spotify'ın eşzamansızı, LRCLIB'de eşzamanlı yoksa kalır.
-async fn resolve<S, SFut, L, LFut>(db: &Db, uri: &str, now: i64, spotify: S, lrclib: L) -> Option<Lyrics>
+async fn resolve<S, SFut, L, LFut>(
+    db: &Db,
+    uri: &str,
+    now: i64,
+    spotify: S,
+    lrclib: L,
+) -> Option<Lyrics>
 where
     S: FnOnce() -> SFut,
     SFut: Future<Output = Fetched>,
     L: FnOnce() -> LFut,
     LFut: Future<Output = Fetched>,
 {
-    let sp = from_source(db, uri, Source::Spotify, now, TTL_NONE_SPOTIFY, parse_spotify, spotify).await;
+    let sp = from_source(
+        db,
+        uri,
+        Source::Spotify,
+        now,
+        TTL_NONE_SPOTIFY,
+        parse_spotify,
+        spotify,
+    )
+    .await;
     if sp.as_ref().is_some_and(|l| l.sync == SyncKind::Line) {
         return sp;
     }
-    let lr = from_source(db, uri, Source::Lrclib, now, TTL_NONE_LRCLIB, parse_lrclib, lrclib).await;
+    let lr = from_source(
+        db,
+        uri,
+        Source::Lrclib,
+        now,
+        TTL_NONE_LRCLIB,
+        parse_lrclib,
+        lrclib,
+    )
+    .await;
     match (sp, lr) {
         (_, Some(l)) if l.sync == SyncKind::Line => Some(l),
         (Some(s), _) => Some(s),
@@ -572,7 +638,10 @@ where
 /// ağa iki kez gitmesin: ikincisi birincisi bitince önbellekten okur.
 fn inflight_lock(uri: &str) -> Arc<tokio::sync::Mutex<()>> {
     static LOCKS: OnceLock<Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>> = OnceLock::new();
-    let mut map = LOCKS.get_or_init(Default::default).lock().unwrap_or_else(|e| e.into_inner());
+    let mut map = LOCKS
+        .get_or_init(Default::default)
+        .lock()
+        .unwrap_or_else(|e| e.into_inner());
     // Kimse beklemeyen girdileri at (harita şişmesin).
     map.retain(|_, v| Arc::strong_count(v) > 1);
     map.entry(uri.to_owned()).or_default().clone()
@@ -670,14 +739,18 @@ fn client() -> Option<&'static reqwest::Client> {
 /// 0..=30 % rastgelelik (rastgele sayı üreteci bağımlılığı eklememek için
 /// sistem saatinin alt saniye kısmı).
 fn jitter_factor() -> f64 {
-    let nanos = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.subsec_nanos());
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
     1.0 + f64::from(nanos % 1000) / 1000.0 * 0.3
 }
 
 /// 429'daki bekleme: `Retry-After` (sn) + en çok %30 rastgelelik; başlık yoksa
 /// ya da anlaşılmazsa 5 sn.
 fn retry_wait(header: Option<&str>, jitter: f64) -> Duration {
-    let secs = header.and_then(|h| h.trim().parse::<f64>().ok()).filter(|s| s.is_finite() && *s >= 0.0);
+    let secs = header
+        .and_then(|h| h.trim().parse::<f64>().ok())
+        .filter(|s| s.is_finite() && *s >= 0.0);
     Duration::from_secs_f64(secs.unwrap_or(5.0) * jitter)
 }
 
@@ -698,7 +771,12 @@ async fn lrclib_request(path: &str, params: &[(&str, String)]) -> Result<Option<
         };
         tokio::time::sleep_until(wait_until.into()).await;
 
-        let response = match client.get(format!("{LRCLIB}/{path}")).query(params).send().await {
+        let response = match client
+            .get(format!("{LRCLIB}/{path}"))
+            .query(params)
+            .send()
+            .await
+        {
             Ok(r) => r,
             Err(e) => {
                 log::debug!("LRCLIB isteği başarısız: {e}");
@@ -738,7 +816,8 @@ async fn lrclib_request(path: &str, params: &[(&str, String)]) -> Result<Option<
 /// sonekleri atar (LRCLIB'deki adlar genelde sade).
 pub fn clean_title(name: &str) -> String {
     const NOISE: [&str; 11] = [
-        "remaster", "version", "mix", "edit", "live", "mono", "stereo", "deluxe", "bonus", "single", "feat",
+        "remaster", "version", "mix", "edit", "live", "mono", "stereo", "deluxe", "bonus",
+        "single", "feat",
     ];
     let mut out = String::with_capacity(name.len());
     let mut depth = 0u32;
@@ -757,7 +836,11 @@ pub fn clean_title(name: &str) -> String {
             out = head.trim().to_owned();
         }
     }
-    if out.is_empty() { name.trim().to_owned() } else { out }
+    if out.is_empty() {
+        name.trim().to_owned()
+    } else {
+        out
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -769,20 +852,41 @@ struct LrclibQuery {
 
 /// Denenecek `get` sorguları, en kesinden gevşeğe (en çok 3).
 fn lrclib_queries(track: &TrackInfo, album: Option<&str>) -> Vec<LrclibQuery> {
-    let primary = track.artists.split(", ").next().unwrap_or("").trim().to_owned();
+    let primary = track
+        .artists
+        .split(", ")
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     let cleaned = clean_title(&track.name);
-    let album = album.map(str::trim).filter(|a| !a.is_empty()).map(str::to_owned);
+    let album = album
+        .map(str::trim)
+        .filter(|a| !a.is_empty())
+        .map(str::to_owned);
     let mut out: Vec<LrclibQuery> = Vec::new();
     let mut add = |q: LrclibQuery| {
         if !out.contains(&q) {
             out.push(q);
         }
     };
-    add(LrclibQuery { track: track.name.clone(), artist: primary.clone(), album: album.clone() });
+    add(LrclibQuery {
+        track: track.name.clone(),
+        artist: primary.clone(),
+        album: album.clone(),
+    });
     if album.is_some() {
-        add(LrclibQuery { track: track.name.clone(), artist: primary.clone(), album: None });
+        add(LrclibQuery {
+            track: track.name.clone(),
+            artist: primary.clone(),
+            album: None,
+        });
     }
-    add(LrclibQuery { track: cleaned, artist: primary, album: None });
+    add(LrclibQuery {
+        track: cleaned,
+        artist: primary,
+        album: None,
+    });
     out
 }
 
@@ -795,7 +899,9 @@ fn duration_s(track: &TrackInfo) -> Option<f64> {
 fn pick_search_result(results: &str, want_s: Option<f64>) -> Option<String> {
     let records: Vec<Value> = serde_json::from_str(results).ok()?;
     let usable = |r: &&Value, field: &str| {
-        r.get(field).and_then(Value::as_str).is_some_and(|s| !s.trim().is_empty())
+        r.get(field)
+            .and_then(Value::as_str)
+            .is_some_and(|s| !s.trim().is_empty())
     };
     let delta = |r: &Value| match (want_s, r.get("duration").and_then(Value::as_f64)) {
         (Some(w), Some(d)) => (d - w).abs(),
@@ -811,16 +917,27 @@ fn pick_search_result(results: &str, want_s: Option<f64>) -> Option<String> {
     };
     // Süre bilinmiyorsa belirsiz eşleşmeyi kabul etme.
     want_s?;
-    best("syncedLyrics").or_else(|| best("plainLyrics")).map(Value::to_string)
+    best("syncedLyrics")
+        .or_else(|| best("plainLyrics"))
+        .map(Value::to_string)
 }
 
 async fn fetch_lrclib(track: &TrackInfo, album: Option<&str>) -> Fetched {
     let want_s = duration_s(track);
-    let primary = track.artists.split(", ").next().unwrap_or("").trim().to_owned();
+    let primary = track
+        .artists
+        .split(", ")
+        .next()
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     let queries = lrclib_queries(track, album);
     let mut failed = false;
     for q in &queries {
-        let mut params = vec![("track_name", q.track.clone()), ("artist_name", q.artist.clone())];
+        let mut params = vec![
+            ("track_name", q.track.clone()),
+            ("artist_name", q.artist.clone()),
+        ];
         if let Some(a) = &q.album {
             params.push(("album_name", a.clone()));
         }
@@ -850,7 +967,11 @@ async fn fetch_lrclib(track: &TrackInfo, album: Option<&str>) -> Fetched {
             Err(()) => failed = true,
         }
     }
-    if failed { Fetched::Failed } else { Fetched::Nothing }
+    if failed {
+        Fetched::Failed
+    } else {
+        Fetched::Nothing
+    }
 }
 
 // ── Testler ─────────────────────────────────────────────────────────────
@@ -897,8 +1018,24 @@ mod tests {
         assert_eq!((l.source, l.sync), (Source::Spotify, SyncKind::Line));
         assert_eq!(l.provider.as_deref(), Some("Musixmatch"));
         assert_eq!(l.lines.len(), 3);
-        assert_eq!(l.lines[0], LyricLine { start_ms: 1230, end_ms: None, text: "Birinci satır".into(), alts: vec![] });
-        assert_eq!(l.lines[1], LyricLine { start_ms: 5000, end_ms: Some(7500), text: "İkinci satır".into(), alts: vec![] });
+        assert_eq!(
+            l.lines[0],
+            LyricLine {
+                start_ms: 1230,
+                end_ms: None,
+                text: "Birinci satır".into(),
+                alts: vec![]
+            }
+        );
+        assert_eq!(
+            l.lines[1],
+            LyricLine {
+                start_ms: 5000,
+                end_ms: Some(7500),
+                text: "İkinci satır".into(),
+                alts: vec![]
+            }
+        );
         assert_eq!(l.lines[2].start_ms, 9000);
         assert_eq!(l.lines[2].text, "");
     }
@@ -966,13 +1103,25 @@ mod tests {
         assert_eq!(l.sync, SyncKind::Line);
         assert_eq!(l.translations, ["en", "tr"]);
         assert_eq!(l.lines.len(), 10);
-        assert!(l.lines.iter().all(|x| x.alts.len() == 2), "her satırda her dilin satırı var (boş olabilir)");
+        assert!(
+            l.lines.iter().all(|x| x.alts.len() == 2),
+            "her satırda her dilin satırı var (boş olabilir)"
+        );
         assert_eq!(l.lines[0].text, "La noche es larga y la ciudad en silencio");
-        assert_eq!(l.lines[0].alts[0], "The night is long and the city is silent");
+        assert_eq!(
+            l.lines[0].alts[0],
+            "The night is long and the city is silent"
+        );
         assert_eq!(l.lines[0].alts[1], "Gece uzun, şehir sessiz");
         // Enstrümantal ara: çevirisi de boş, hizayı bozmaz.
-        assert_eq!((l.lines[3].text.as_str(), l.lines[3].alts[0].as_str()), ("", ""));
-        assert_eq!(l.lines[4].alts[0], "The cover is the only light in the room");
+        assert_eq!(
+            (l.lines[3].text.as_str(), l.lines[3].alts[0].as_str()),
+            ("", "")
+        );
+        assert_eq!(
+            l.lines[4].alts[0],
+            "The cover is the only light in the room"
+        );
         // Dil eşleşmesi: tam, ana dil, büyük harf; olmayan ya da boş dil yok.
         assert_eq!(l.translation_index("tr"), Some(1));
         assert_eq!(l.translation_index("en"), Some(0));
@@ -1017,19 +1166,32 @@ mod tests {
         let l = parse_spotify(&body(r#"[{"language":"es","lines":["uno","dos"]}]"#)).unwrap();
         assert!(l.translations.is_empty());
         // Çeviri satırı nesne / null olabilir; düşmez.
-        let l = parse_spotify(&body(r#"[{"language":"en","lines":[{"words":" one "},null]}]"#)).unwrap();
+        let l = parse_spotify(&body(
+            r#"[{"language":"en","lines":[{"words":" one "},null]}]"#,
+        ))
+        .unwrap();
         assert_eq!(l.translations, ["en"]);
         assert_eq!(l.lines[0].alts, ["one"]);
         assert_eq!(l.lines[1].alts, [""]);
         // Başka anahtar adı (`translations`, `lang`).
-        let swapped = body("0").replace(r#""alternatives":0"#, r#""translations":[{"lang":"en","lines":["one","two"]}]"#);
+        let swapped = body("0").replace(
+            r#""alternatives":0"#,
+            r#""translations":[{"lang":"en","lines":["one","two"]}]"#,
+        );
         assert_eq!(parse_spotify(&swapped).unwrap().translations, ["en"]);
         // Alan null ya da bozuksa söz yine de okunur (çevirisiz) ya da yanıt atılır, düşmez.
-        assert!(parse_spotify(&body("null")).unwrap().translations.is_empty());
+        assert!(
+            parse_spotify(&body("null"))
+                .unwrap()
+                .translations
+                .is_empty()
+        );
         let _ = parse_spotify(&body(r#""bozuk""#));
         // En çok MAX_TRANSLATIONS dil.
-        let many: Vec<String> =
-            ["a", "b", "c", "d", "e", "f"].iter().map(|c| format!(r#"{{"language":"{c}","lines":["x","y"]}}"#)).collect();
+        let many: Vec<String> = ["a", "b", "c", "d", "e", "f"]
+            .iter()
+            .map(|c| format!(r#"{{"language":"{c}","lines":["x","y"]}}"#))
+            .collect();
         let l = parse_spotify(&body(&format!("[{}]", many.join(",")))).unwrap();
         assert_eq!(l.translations.len(), MAX_TRANSLATIONS);
     }
@@ -1043,7 +1205,11 @@ mod tests {
         )
         .unwrap();
         // Baştaki / art arda / sondaki boşlar gitti; çeviri aynı satırlarla gitti.
-        let pairs: Vec<(&str, &str)> = l.lines.iter().map(|x| (x.text.as_str(), x.alts[0].as_str())).collect();
+        let pairs: Vec<(&str, &str)> = l
+            .lines
+            .iter()
+            .map(|x| (x.text.as_str(), x.alts[0].as_str()))
+            .collect();
         assert_eq!(pairs, [("uno", "one"), ("", ""), ("dos", "two")]);
     }
 
@@ -1055,8 +1221,14 @@ mod tests {
                 "alternatives":[{"language":"en","lines":["two","one"]}]}}"#,
         )
         .unwrap();
-        assert_eq!((l.lines[0].text.as_str(), l.lines[0].alts[0].as_str()), ("uno", "one"));
-        assert_eq!((l.lines[1].text.as_str(), l.lines[1].alts[0].as_str()), ("dos", "two"));
+        assert_eq!(
+            (l.lines[0].text.as_str(), l.lines[0].alts[0].as_str()),
+            ("uno", "one")
+        );
+        assert_eq!(
+            (l.lines[1].text.as_str(), l.lines[1].alts[0].as_str()),
+            ("dos", "two")
+        );
     }
 
     #[test]
@@ -1077,7 +1249,12 @@ mod tests {
             provider: None,
             translations: vec![],
             lines: [(0, "a"), (10, "b"), (10, "c"), (20, "d")]
-                .map(|(t, s)| LyricLine { start_ms: t, end_ms: None, text: s.into(), alts: vec![] })
+                .map(|(t, s)| LyricLine {
+                    start_ms: t,
+                    end_ms: None,
+                    text: s.into(),
+                    alts: vec![],
+                })
                 .to_vec(),
         };
         assert_eq!(dup.line_at(10), Some(2));
@@ -1109,7 +1286,10 @@ mod tests {
                    [01:00]\n\
                    [02:00.5]Son";
         let lines = parse_lrc(lrc);
-        let got: Vec<(u32, &str)> = lines.iter().map(|l| (l.start_ms, l.text.as_str())).collect();
+        let got: Vec<(u32, &str)> = lines
+            .iter()
+            .map(|l| (l.start_ms, l.text.as_str()))
+            .collect();
         assert_eq!(
             got,
             [
@@ -1128,7 +1308,10 @@ mod tests {
     fn lrc_offset_applies() {
         // +ms: sözler daha erken görünür.
         let lines = parse_lrc("[offset:+500]\n[00:01.00]a\n[00:00.20]b");
-        assert_eq!(lines.iter().map(|l| l.start_ms).collect::<Vec<_>>(), [0, 500]);
+        assert_eq!(
+            lines.iter().map(|l| l.start_ms).collect::<Vec<_>>(),
+            [0, 500]
+        );
         let lines = parse_lrc("[offset:-250]\n[00:01.00]a");
         assert_eq!(lines[0].start_ms, 1250);
     }
@@ -1138,13 +1321,19 @@ mod tests {
         let both = r#"{"id":1,"trackName":"x","duration":200.0,"instrumental":false,
             "plainLyrics":"a\nb","syncedLyrics":"[00:01.00]a\n[00:02.50]b"}"#;
         let l = parse_lrclib(both).unwrap();
-        assert_eq!((l.source, l.sync, l.lines.len()), (Source::Lrclib, SyncKind::Line, 2));
+        assert_eq!(
+            (l.source, l.sync, l.lines.len()),
+            (Source::Lrclib, SyncKind::Line, 2)
+        );
         assert_eq!(l.lines[1].start_ms, 2500);
 
         let plain = r#"{"plainLyrics":"bir\n\niki\n","syncedLyrics":null}"#;
         let l = parse_lrclib(plain).unwrap();
         assert_eq!(l.sync, SyncKind::Unsynced);
-        assert_eq!(l.lines.iter().map(|x| x.text.as_str()).collect::<Vec<_>>(), ["bir", "", "iki"]);
+        assert_eq!(
+            l.lines.iter().map(|x| x.text.as_str()).collect::<Vec<_>>(),
+            ["bir", "", "iki"]
+        );
 
         // Zaman damgasız "synced": düz metne düşer.
         let weird = r#"{"plainLyrics":"p","syncedLyrics":"zaman damgası yok"}"#;
@@ -1170,7 +1359,11 @@ mod tests {
         assert!(pick_search_result(results, None).is_none());
         assert!(pick_search_result("bozuk", Some(1.0)).is_none());
         let only_plain = r#"[{"id":2,"duration":201.5,"plainLyrics":"y","syncedLyrics":""}]"#;
-        assert!(pick_search_result(only_plain, Some(200.0)).unwrap().contains("\"id\":2"));
+        assert!(
+            pick_search_result(only_plain, Some(200.0))
+                .unwrap()
+                .contains("\"id\":2")
+        );
     }
 
     #[test]
@@ -1202,7 +1395,10 @@ mod tests {
         let w = retry_wait(Some(" 10 "), 1.3);
         assert!((w.as_secs_f64() - 13.0).abs() < 1e-6);
         assert_eq!(retry_wait(None, 1.0), Duration::from_secs(5));
-        assert_eq!(retry_wait(Some("Wed, 21 Oct 2026 07:28:00 GMT"), 1.0), Duration::from_secs(5));
+        assert_eq!(
+            retry_wait(Some("Wed, 21 Oct 2026 07:28:00 GMT"), 1.0),
+            Duration::from_secs(5)
+        );
         for _ in 0..50 {
             let j = jitter_factor();
             assert!((1.0..=1.3).contains(&j), "{j}");
@@ -1235,7 +1431,10 @@ mod tests {
         .await
         .unwrap();
         assert_eq!((got.source, got.sync), (Source::Spotify, SyncKind::Line));
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (1, 0));
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (1, 0)
+        );
         // İkinci çağrıda ağa çıkılmaz; ham yanıt diskte.
         let again = resolve(
             &db,
@@ -1247,8 +1446,18 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(again, got);
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (1, 0));
-        assert_eq!(db.lyrics_row("spotify:track:a", "spotify").unwrap().unwrap().body.as_deref(), Some(LINE_SYNCED));
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (1, 0)
+        );
+        assert_eq!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .unwrap()
+                .body
+                .as_deref(),
+            Some(LINE_SYNCED)
+        );
     }
 
     #[tokio::test]
@@ -1302,22 +1511,55 @@ mod tests {
         let run = |now: i64, sp_out: fn() -> Fetched, lr_out: fn() -> Fetched| {
             let (db, sp, lr) = (&db, &sp, &lr);
             async move {
-                resolve(db, "spotify:track:n", now, counted(sp, sp_out), counted(lr, lr_out)).await
+                resolve(
+                    db,
+                    "spotify:track:n",
+                    now,
+                    counted(sp, sp_out),
+                    counted(lr, lr_out),
+                )
+                .await
             }
         };
-        assert!(run(0, || Fetched::Nothing, || Fetched::Nothing).await.is_none());
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (1, 1));
+        assert!(
+            run(0, || Fetched::Nothing, || Fetched::Nothing)
+                .await
+                .is_none()
+        );
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (1, 1)
+        );
         // TTL içinde: ağa çıkılmaz.
-        assert!(run(TTL_NONE_LRCLIB - 1, || Fetched::Failed, || Fetched::Failed).await.is_none());
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (1, 1));
+        assert!(
+            run(TTL_NONE_LRCLIB - 1, || Fetched::Failed, || Fetched::Failed)
+                .await
+                .is_none()
+        );
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (1, 1)
+        );
         // LRCLIB'in süresi doldu (3 gün), Spotify'ınki (7 gün) dolmadı.
-        assert!(run(TTL_NONE_LRCLIB + 1, || Fetched::Failed, || Fetched::Nothing).await.is_none());
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (1, 2));
+        assert!(
+            run(TTL_NONE_LRCLIB + 1, || Fetched::Failed, || Fetched::Nothing)
+                .await
+                .is_none()
+        );
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (1, 2)
+        );
         // İkisi de doldu: ikisine de yeniden sorulur ve bu sefer bulunur.
         let lrc = || Fetched::Body(r#"{"syncedLyrics":"[00:01.00]a"}"#.into());
-        let got = run(TTL_NONE_SPOTIFY + 10, || Fetched::Nothing, lrc).await.unwrap();
+        let got = run(TTL_NONE_SPOTIFY + 10, || Fetched::Nothing, lrc)
+            .await
+            .unwrap();
         assert_eq!(got.source, Source::Lrclib);
-        assert_eq!((sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)), (2, 3));
+        assert_eq!(
+            (sp.load(Ordering::SeqCst), lr.load(Ordering::SeqCst)),
+            (2, 3)
+        );
     }
 
     #[tokio::test]
@@ -1326,10 +1568,27 @@ mod tests {
         let n = AtomicUsize::new(0);
         let fail = || Fetched::Failed;
         for now in [0, TTL_TRANSIENT - 1] {
-            assert!(resolve(&db, "spotify:track:t", now, counted(&n, fail), counted(&n, fail)).await.is_none());
+            assert!(
+                resolve(
+                    &db,
+                    "spotify:track:t",
+                    now,
+                    counted(&n, fail),
+                    counted(&n, fail)
+                )
+                .await
+                .is_none()
+            );
         }
         assert_eq!(n.load(Ordering::SeqCst), 2); // yalnız ilk çağrı (iki kaynak) ağa çıktı
-        let _ = resolve(&db, "spotify:track:t", TTL_TRANSIENT + 1, counted(&n, fail), counted(&n, fail)).await;
+        let _ = resolve(
+            &db,
+            "spotify:track:t",
+            TTL_TRANSIENT + 1,
+            counted(&n, fail),
+            counted(&n, fail),
+        )
+        .await;
         assert_eq!(n.load(Ordering::SeqCst), 4); // süre doldu: yeniden denendi
     }
 
@@ -1338,13 +1597,21 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         let n = AtomicUsize::new(0);
         let inst = || Fetched::Body(r#"{"instrumental":true}"#.into());
-        let r = resolve(&db, "spotify:track:i", 0, counted(&n, || Fetched::Nothing), counted(&n, inst)).await;
+        let r = resolve(
+            &db,
+            "spotify:track:i",
+            0,
+            counted(&n, || Fetched::Nothing),
+            counted(&n, inst),
+        )
+        .await;
         assert!(r.is_none());
         let row = db.lyrics_row("spotify:track:i", "lrclib").unwrap().unwrap();
         assert_eq!((row.body, row.expires_at), (None, Some(TTL_NONE_LRCLIB)));
 
         // Bozuk önbellek kaydı yeniden indirilir.
-        db.save_lyrics("spotify:track:c", "spotify", Some("bozuk"), None, 0).unwrap();
+        db.save_lyrics("spotify:track:c", "spotify", Some("bozuk"), None, 0)
+            .unwrap();
         let got = resolve(
             &db,
             "spotify:track:c",
@@ -1363,8 +1630,18 @@ mod tests {
     async fn live_lrclib() {
         let cases = [
             ("Kolay Değildir", "Duman", 310_507, Some("Darmaduman")),
-            ("Blinding Lights", "The Weeknd", 200_040, Some("After Hours")),
-            ("Blinding Lights", "Revelries, Victoria Voss", 176_406, Some("Blinding Lights")),
+            (
+                "Blinding Lights",
+                "The Weeknd",
+                200_040,
+                Some("After Hours"),
+            ),
+            (
+                "Blinding Lights",
+                "Revelries, Victoria Voss",
+                176_406,
+                Some("Blinding Lights"),
+            ),
         ];
         for (i, (name, artists, duration_ms, album)) in cases.into_iter().enumerate() {
             if i > 0 {
@@ -1413,28 +1690,42 @@ mod tests {
         // OPENIFY_LYRICS_PICKS="uri;uri;uri": Türkçe, popüler İngilizce, sönük.
         // Ad / sanatçı / süre / albüm Spotify'dan okunur (kodlama sorunu yok).
         let picks = std::env::var("OPENIFY_LYRICS_PICKS").unwrap_or_default();
-        let picks: Vec<String> = picks.split(';').filter(|s| !s.is_empty()).map(str::to_owned).collect();
+        let picks: Vec<String> = picks
+            .split(';')
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
         assert!(picks.len() <= 3, "en çok 3 şarkı");
         for (i, uri) in picks.iter().enumerate() {
             if i > 0 {
                 tokio::time::sleep(Duration::from_secs(8)).await;
             }
             let parsed = SpotifyUri::from_uri(uri).expect("geçersiz adres");
-            let meta = librespot::metadata::Track::get(&session, &parsed).await.expect("şarkı bilgisi");
+            let meta = librespot::metadata::Track::get(&session, &parsed)
+                .await
+                .expect("şarkı bilgisi");
             use librespot::metadata::Metadata;
             let track = TrackInfo {
                 uri: uri.clone(),
                 name: meta.name.clone(),
-                artists: meta.artists.iter().map(|a| a.name.as_str()).collect::<Vec<_>>().join(", "),
+                artists: meta
+                    .artists
+                    .iter()
+                    .map(|a| a.name.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", "),
                 duration_ms: u32::try_from(meta.duration).unwrap_or(0),
                 cover_url: None,
             };
             let album = Some(meta.album.name.as_str());
             println!("has_lyrics bayrağı: {}", meta.has_lyrics);
-            let spotify_raw = fetch_spotify(&session, match SpotifyUri::from_uri(&track.uri).unwrap() {
-                SpotifyUri::Track { id } => id,
-                _ => unreachable!(),
-            })
+            let spotify_raw = fetch_spotify(
+                &session,
+                match SpotifyUri::from_uri(&track.uri).unwrap() {
+                    SpotifyUri::Track { id } => id,
+                    _ => unreachable!(),
+                },
+            )
             .await;
             let sp = match &spotify_raw {
                 Fetched::Body(b) => parse_spotify(b),
@@ -1450,8 +1741,10 @@ mod tests {
                 "{} — {}\n  Spotify doğrudan: {spotify_state}, ayrıştı: {:?}\n  get(): {:?}",
                 track.artists,
                 track.name,
-                sp.as_ref().map(|l| (l.sync, l.lines.len(), l.provider.clone())),
-                got.as_ref().map(|l| (l.source, l.sync, l.lines.len(), l.provider.clone())),
+                sp.as_ref()
+                    .map(|l| (l.sync, l.lines.len(), l.provider.clone())),
+                got.as_ref()
+                    .map(|l| (l.source, l.sync, l.lines.len(), l.provider.clone())),
             );
             if let Some(l) = &got {
                 for line in l.lines.iter().take(3) {
@@ -1490,15 +1783,30 @@ mod tests {
         assert!(picks.len() <= 4, "en cok 4 sarki");
         let mut with_translation = 0usize;
         for (i, uri) in picks.iter().enumerate() {
-            let Ok(SpotifyUri::Track { id }) = SpotifyUri::from_uri(uri) else { panic!("gecersiz adres: {uri}") };
+            let Ok(SpotifyUri::Track { id }) = SpotifyUri::from_uri(uri) else {
+                panic!("gecersiz adres: {uri}")
+            };
             let base = format!("/color-lyrics/v2/track/{}", id.to_base62().unwrap());
             let variants: [(&str, String, Option<&str>); 3] = [
                 ("duz", base.clone(), None),
-                ("web", format!("{base}?format=json&vocalRemoval=false&market=from_token"), None),
-                ("web+dil", format!("{base}?format=json&vocalRemoval=false&market=from_token"), Some("tr")),
+                (
+                    "web",
+                    format!("{base}?format=json&vocalRemoval=false&market=from_token"),
+                    None,
+                ),
+                (
+                    "web+dil",
+                    format!("{base}?format=json&vocalRemoval=false&market=from_token"),
+                    Some("tr"),
+                ),
             ];
             for (name, endpoint, language) in variants {
-                tokio::time::sleep(Duration::from_secs(if i == 0 && name == "duz" { 0 } else { 3 })).await;
+                tokio::time::sleep(Duration::from_secs(if i == 0 && name == "duz" {
+                    0
+                } else {
+                    3
+                }))
+                .await;
                 let mut headers = HeaderMap::new();
                 if let Some(l) = language {
                     headers.insert("app-language", l.parse().unwrap());
@@ -1516,21 +1824,37 @@ mod tests {
                 };
                 let value: Value = serde_json::from_str(&body).unwrap_or(Value::Null);
                 let lyrics = value.get("lyrics");
-                let keys: Vec<&str> = lyrics.and_then(Value::as_object).map(|o| o.keys().map(String::as_str).collect()).unwrap_or_default();
-                let alt = lyrics.and_then(|l| l.get("alternatives").or_else(|| l.get("translations"))).and_then(Value::as_array);
-                let asil = lyrics.and_then(|l| l.get("lines")).and_then(Value::as_array).map_or(0, Vec::len);
+                let keys: Vec<&str> = lyrics
+                    .and_then(Value::as_object)
+                    .map(|o| o.keys().map(String::as_str).collect())
+                    .unwrap_or_default();
+                let alt = lyrics
+                    .and_then(|l| l.get("alternatives").or_else(|| l.get("translations")))
+                    .and_then(Value::as_array);
+                let asil = lyrics
+                    .and_then(|l| l.get("lines"))
+                    .and_then(Value::as_array)
+                    .map_or(0, Vec::len);
                 let langs: Vec<String> = alt
                     .map(|a| {
                         a.iter()
                             .map(|x| {
-                                let n = x.get("lines").and_then(Value::as_array).map_or(0, Vec::len);
-                                format!("{}:{}satir", x.get("language").and_then(Value::as_str).unwrap_or("?"), n)
+                                let n =
+                                    x.get("lines").and_then(Value::as_array).map_or(0, Vec::len);
+                                format!(
+                                    "{}:{}satir",
+                                    x.get("language").and_then(Value::as_str).unwrap_or("?"),
+                                    n
+                                )
                             })
                             .collect()
                     })
                     .unwrap_or_default();
                 let parsed = parse_spotify(&body);
-                let kept: Vec<String> = parsed.as_ref().map(|l| l.translations.clone()).unwrap_or_default();
+                let kept: Vec<String> = parsed
+                    .as_ref()
+                    .map(|l| l.translations.clone())
+                    .unwrap_or_default();
                 println!(
                     "sarki {} [{name}]: alan adlari {keys:?}\n    asil satir {asil}, ceviri alani {} ({}), ayristirinca korunan diller {kept:?}",
                     i + 1,

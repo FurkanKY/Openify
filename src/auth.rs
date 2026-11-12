@@ -42,7 +42,8 @@ use tokio::sync::{Notify, oneshot};
 const SPOTIFY_DESKTOP_CLIENT_ID: &str = "65b708073fc0480ea92a077233ca87bd";
 const SPOTIFY_DESKTOP_REDIRECT_URI: &str = "http://127.0.0.1:8898/login";
 /// Yukarıdaki yönlendirme adresinin yerel dinleyicisi (iptalde serbest bırakılır).
-const LOGIN_ADDR: SocketAddr = SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), 8898);
+const LOGIN_ADDR: SocketAddr =
+    SocketAddr::new(std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), 8898);
 
 /// Tarayıcıda girişin tamamlanması için beklenen en uzun süre.
 pub const LOGIN_TIMEOUT: Duration = Duration::from_secs(180);
@@ -67,7 +68,11 @@ fn login_done_page() -> String {
 <html lang="{}"><head><meta charset="utf-8"><title>{}</title></head><body style="font-family:system-ui;background:#111;color:#eee;display:grid;place-items:center;height:100vh;margin:0">
 <h1>{}</h1>
 </body></html>"#,
-        if crate::i18n::lang() == crate::i18n::Lang::Tr { "tr" } else { "en" },
+        if crate::i18n::lang() == crate::i18n::Lang::Tr {
+            "tr"
+        } else {
+            "en"
+        },
         crate::brand::APP_NAME,
         crate::t!(LoginDonePage),
     )
@@ -131,7 +136,12 @@ pub async fn wait_account_kind_with(
 }
 
 async fn wait_account_kind(session: &Session) -> AccountKind {
-    wait_account_kind_with(|key| session.get_user_attribute(key), ACCOUNT_WAIT, Duration::from_millis(50)).await
+    wait_account_kind_with(
+        |key| session.get_user_attribute(key),
+        ACCOUNT_WAIT,
+        Duration::from_millis(50),
+    )
+    .await
 }
 
 // ── Hatalar ─────────────────────────────────────────────────────────────
@@ -209,7 +219,10 @@ fn refusal(e: &SpotifyError) -> Refusal {
     if e.kind != ErrorKind::PermissionDenied {
         return Refusal::Other;
     }
-    if e.to_string().to_ascii_lowercase().contains("premium account required") {
+    if e.to_string()
+        .to_ascii_lowercase()
+        .contains("premium account required")
+    {
         Refusal::PremiumRequired
     } else {
         Refusal::Rejected
@@ -258,7 +271,9 @@ pub async fn connect_saved_with(
                     }
                     ConnectError::Rejected
                 }
-                Refusal::Other => ConnectError::Offline(anyhow::Error::new(e).context("Spotify'a bağlanılamadı")),
+                Refusal::Other => {
+                    ConnectError::Offline(anyhow::Error::new(e).context("Spotify'a bağlanılamadı"))
+                }
             });
         }
     }
@@ -278,9 +293,17 @@ pub async fn connect_saved_with(
 pub async fn login(cache: Option<Cache>, cancel: Arc<Notify>) -> Result<Session, LoginError> {
     let token = browser_token(&cancel, LOGIN_TIMEOUT).await?;
     let session = new_session(cache, None);
-    match tokio::time::timeout(SESSION_TIMEOUT, session.connect(Credentials::with_access_token(&token), false)).await {
+    match tokio::time::timeout(
+        SESSION_TIMEOUT,
+        session.connect(Credentials::with_access_token(&token), false),
+    )
+    .await
+    {
         Err(_) => {
-            log::warn!("Spotify oturumu {} sn'de açılamadı", SESSION_TIMEOUT.as_secs());
+            log::warn!(
+                "Spotify oturumu {} sn'de açılamadı",
+                SESSION_TIMEOUT.as_secs()
+            );
             return Err(LoginError::Network);
         }
         Ok(Err(e)) => {
@@ -321,9 +344,13 @@ pub async fn connect(cache: Option<Cache>) -> Result<Session> {
         Ok(session) => Ok(session),
         Err(ConnectError::NoCredentials | ConnectError::Rejected) => {
             println!("Tarayıcıda Spotify girişi açılıyor...");
-            login(cache, Arc::new(Notify::new())).await.map_err(anyhow::Error::new)
+            login(cache, Arc::new(Notify::new()))
+                .await
+                .map_err(anyhow::Error::new)
         }
-        Err(ConnectError::NeedsPremium) => anyhow::bail!("Bu hesap Spotify Premium değil; Openify yalnız Premium'la çalar"),
+        Err(ConnectError::NeedsPremium) => {
+            anyhow::bail!("Bu hesap Spotify Premium değil; Openify yalnız Premium'la çalar")
+        }
         Err(ConnectError::Offline(e)) => Err(e),
     }
 }
@@ -359,26 +386,36 @@ fn new_session(cache: Option<Cache>, device_id: Option<&str>) -> Session {
 /// bağlantısıyla uyandırıp (`release_listener`) iş parçacığının bitmesini sağlar.
 async fn browser_token(cancel: &Notify, timeout: Duration) -> Result<String, LoginError> {
     log::info!("Tarayıcıda Spotify girişi açılıyor...");
-    let oauth = OAuthClientBuilder::new(SPOTIFY_DESKTOP_CLIENT_ID, SPOTIFY_DESKTOP_REDIRECT_URI, SCOPES.to_vec())
-        .open_in_browser()
-        .with_custom_message(&login_done_page())
-        .build()
-        .map_err(|e| LoginError::Failed(e.to_string()))?;
+    let oauth = OAuthClientBuilder::new(
+        SPOTIFY_DESKTOP_CLIENT_ID,
+        SPOTIFY_DESKTOP_REDIRECT_URI,
+        SCOPES.to_vec(),
+    )
+    .open_in_browser()
+    .with_custom_message(&login_done_page())
+    .build()
+    .map_err(|e| LoginError::Failed(e.to_string()))?;
     let (tx, rx) = oneshot::channel();
     let done = Arc::new(AtomicBool::new(false));
     let thread_done = done.clone();
     std::thread::Builder::new()
         .name("openify-login".into())
         .spawn(move || {
-            let result = oauth.get_access_token().map(|t| t.access_token).map_err(|e| match e {
-                OAuthError::AuthCodeListenerBind { .. } => LoginError::PortBusy,
-                other => LoginError::Failed(other.to_string()),
-            });
+            let result = oauth
+                .get_access_token()
+                .map(|t| t.access_token)
+                .map_err(|e| match e {
+                    OAuthError::AuthCodeListenerBind { .. } => LoginError::PortBusy,
+                    other => LoginError::Failed(other.to_string()),
+                });
             thread_done.store(true, Ordering::SeqCst);
             let _ = tx.send(result);
         })
         .map_err(|e| LoginError::Failed(e.to_string()))?;
-    wait_login(rx, cancel, timeout, move || release_listener(LOGIN_ADDR, done)).await
+    wait_login(rx, cancel, timeout, move || {
+        release_listener(LOGIN_ADDR, done)
+    })
+    .await
 }
 
 /// Giriş sonucunu, iptali ve zaman aşımını bekler. İptal ya da zaman
@@ -410,17 +447,21 @@ pub async fn wait_login<T>(
 /// bağlanmamış olabilir (iptal çok erken geldi): `done` (iş parçacığı bitti)
 /// oluncaya ya da ~5 sn dolana dek 200 ms'de bir yeniden dener.
 pub fn release_listener(addr: SocketAddr, done: Arc<AtomicBool>) {
-    let _ = std::thread::Builder::new().name("openify-login-release".into()).spawn(move || {
-        for _ in 0..25 {
-            if done.load(Ordering::SeqCst) {
-                return;
+    let _ = std::thread::Builder::new()
+        .name("openify-login-release".into())
+        .spawn(move || {
+            for _ in 0..25 {
+                if done.load(Ordering::SeqCst) {
+                    return;
+                }
+                if let Ok(mut stream) =
+                    TcpStream::connect_timeout(&addr, Duration::from_millis(200))
+                {
+                    let _ = stream.write_all(b"GET /iptal HTTP/1.1\r\n\r\n");
+                }
+                std::thread::sleep(Duration::from_millis(200));
             }
-            if let Ok(mut stream) = TcpStream::connect_timeout(&addr, Duration::from_millis(200)) {
-                let _ = stream.write_all(b"GET /iptal HTTP/1.1\r\n\r\n");
-            }
-            std::thread::sleep(Duration::from_millis(200));
-        }
-    });
+        });
 }
 
 // ── Credential Manager ──────────────────────────────────────────────────
@@ -447,7 +488,9 @@ fn load() -> Result<Option<Credentials>> {
 
 fn save(credentials: &Credentials) -> Result<()> {
     let json = serde_json::to_string(credentials)?;
-    entry()?.set_password(&json).context("Giriş Credential Manager'a yazılamadı")
+    entry()?
+        .set_password(&json)
+        .context("Giriş Credential Manager'a yazılamadı")
 }
 
 #[cfg(test)]
@@ -466,7 +509,9 @@ mod tests {
             auth_type: AuthenticationType::AUTHENTICATION_STORED_SPOTIFY_CREDENTIALS,
             auth_data: vec![1, 2, 3, 250],
         };
-        entry.set_password(&serde_json::to_string(&creds).unwrap()).unwrap();
+        entry
+            .set_password(&serde_json::to_string(&creds).unwrap())
+            .unwrap();
         let back: Credentials = serde_json::from_str(&entry.get_password().unwrap()).unwrap();
         entry.delete_credential().unwrap();
         assert_eq!(back, creds);
@@ -474,29 +519,61 @@ mod tests {
     }
 
     fn attrs(pairs: &[(&str, &str)]) -> HashMap<String, String> {
-        pairs.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect()
+        pairs
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect()
     }
 
     #[test]
     fn account_kind_maps_the_type_attribute() {
-        assert_eq!(account_kind(&attrs(&[("type", "premium")])), AccountKind::Premium);
+        assert_eq!(
+            account_kind(&attrs(&[("type", "premium")])),
+            AccountKind::Premium
+        );
         assert_eq!(account_kind(&attrs(&[("type", "free")])), AccountKind::Free);
         assert_eq!(account_kind(&attrs(&[("type", "open")])), AccountKind::Free);
-        assert_eq!(account_kind(&attrs(&[("type", " FREE ")])), AccountKind::Free, "boşluk ve büyük harf");
+        assert_eq!(
+            account_kind(&attrs(&[("type", " FREE ")])),
+            AccountKind::Free,
+            "boşluk ve büyük harf"
+        );
         // Bilmediğimiz plan adı Premium sayılır: ödeme yapanı engelleme.
-        assert_eq!(account_kind(&attrs(&[("type", "family")])), AccountKind::Premium);
+        assert_eq!(
+            account_kind(&attrs(&[("type", "family")])),
+            AccountKind::Premium
+        );
     }
 
     #[test]
     fn account_kind_falls_back_to_product_and_unknown() {
-        assert_eq!(account_kind(&attrs(&[("product", "free")])), AccountKind::Free);
-        assert_eq!(account_kind(&attrs(&[("product", "premium")])), AccountKind::Premium);
+        assert_eq!(
+            account_kind(&attrs(&[("product", "free")])),
+            AccountKind::Free
+        );
+        assert_eq!(
+            account_kind(&attrs(&[("product", "premium")])),
+            AccountKind::Premium
+        );
         // `type` varsa `product`'a bakılmaz.
-        assert_eq!(account_kind(&attrs(&[("type", "premium"), ("product", "free")])), AccountKind::Premium);
-        assert_eq!(account_kind(&attrs(&[("type", ""), ("product", "open")])), AccountKind::Free, "boş değer atlanır");
+        assert_eq!(
+            account_kind(&attrs(&[("type", "premium"), ("product", "free")])),
+            AccountKind::Premium
+        );
+        assert_eq!(
+            account_kind(&attrs(&[("type", ""), ("product", "open")])),
+            AccountKind::Free,
+            "boş değer atlanır"
+        );
         assert_eq!(account_kind(&attrs(&[])), AccountKind::Unknown);
-        assert_eq!(account_kind(&attrs(&[("country", "TR"), ("autoplay", "1")])), AccountKind::Unknown);
-        assert_eq!(account_kind(&attrs(&[("type", "  ")])), AccountKind::Unknown);
+        assert_eq!(
+            account_kind(&attrs(&[("country", "TR"), ("autoplay", "1")])),
+            AccountKind::Unknown
+        );
+        assert_eq!(
+            account_kind(&attrs(&[("type", "  ")])),
+            AccountKind::Unknown
+        );
     }
 
     #[tokio::test]
@@ -516,15 +593,27 @@ mod tests {
         assert_eq!(kind, AccountKind::Free);
         // Hiç gelmezse süre dolunca "bilinmiyor".
         let started = Instant::now();
-        let kind = wait_account_kind_with(|_| None, Duration::from_millis(60), Duration::from_millis(10)).await;
+        let kind = wait_account_kind_with(
+            |_| None,
+            Duration::from_millis(60),
+            Duration::from_millis(10),
+        )
+        .await;
         assert_eq!(kind, AccountKind::Unknown);
-        assert!(started.elapsed() >= Duration::from_millis(60) && started.elapsed() < Duration::from_secs(2));
+        assert!(
+            started.elapsed() >= Duration::from_millis(60)
+                && started.elapsed() < Duration::from_secs(2)
+        );
     }
 
     #[test]
     fn refusal_tells_premium_required_from_bad_credentials() {
-        let premium = SpotifyError::permission_denied(anyhow::anyhow!("Login failed with reason: Premium account required"));
-        let bad = SpotifyError::permission_denied(anyhow::anyhow!("Login failed with reason: Bad credentials"));
+        let premium = SpotifyError::permission_denied(anyhow::anyhow!(
+            "Login failed with reason: Premium account required"
+        ));
+        let bad = SpotifyError::permission_denied(anyhow::anyhow!(
+            "Login failed with reason: Bad credentials"
+        ));
         let network = SpotifyError::unavailable(anyhow::anyhow!("transport returned no data"));
         assert_eq!(refusal(&premium), Refusal::PremiumRequired);
         assert_eq!(refusal(&bad), Refusal::Rejected);
@@ -541,9 +630,15 @@ mod tests {
         let (tx, rx) = oneshot::channel();
         tx.send(Ok::<_, LoginError>("jeton".to_string())).unwrap();
         let aborted = AtomicBool::new(false);
-        let got = wait_login(rx, &Notify::new(), Duration::from_secs(5), || aborted.store(true, Ordering::SeqCst)).await;
+        let got = wait_login(rx, &Notify::new(), Duration::from_secs(5), || {
+            aborted.store(true, Ordering::SeqCst)
+        })
+        .await;
         assert_eq!(got, Ok("jeton".to_string()));
-        assert!(!aborted.load(Ordering::SeqCst), "başarıda dinleyiciye dokunulmaz");
+        assert!(
+            !aborted.load(Ordering::SeqCst),
+            "başarıda dinleyiciye dokunulmaz"
+        );
 
         let (tx, rx) = oneshot::channel();
         tx.send(Err::<String, _>(LoginError::PortBusy)).unwrap();
@@ -554,7 +649,10 @@ mod tests {
         // İş parçacığı sonuç vermeden öldü.
         let (tx, rx) = oneshot::channel::<Result<String, LoginError>>();
         drop(tx);
-        assert!(matches!(wait_login(rx, &Notify::new(), Duration::from_secs(5), || {}).await, Err(LoginError::Failed(_))));
+        assert!(matches!(
+            wait_login(rx, &Notify::new(), Duration::from_secs(5), || {}).await,
+            Err(LoginError::Failed(_))
+        ));
     }
 
     #[tokio::test]
@@ -564,7 +662,10 @@ mod tests {
         let aborted = Arc::new(AtomicBool::new(false));
         let (c, a) = (cancel.clone(), aborted.clone());
         let waiter = tokio::spawn(async move {
-            wait_login(rx, &c, Duration::from_secs(30), move || a.store(true, Ordering::SeqCst)).await
+            wait_login(rx, &c, Duration::from_secs(30), move || {
+                a.store(true, Ordering::SeqCst)
+            })
+            .await
         });
         tokio::time::sleep(Duration::from_millis(20)).await;
         cancel.notify_one();
@@ -574,7 +675,10 @@ mod tests {
         let (_tx2, rx2) = oneshot::channel::<Result<String, LoginError>>();
         let cancel = Notify::new();
         cancel.notify_one();
-        assert_eq!(wait_login(rx2, &cancel, Duration::from_secs(30), || {}).await, Err(LoginError::Cancelled));
+        assert_eq!(
+            wait_login(rx2, &cancel, Duration::from_secs(30), || {}).await,
+            Err(LoginError::Cancelled)
+        );
     }
 
     #[tokio::test]
@@ -582,7 +686,10 @@ mod tests {
         let (_tx, rx) = oneshot::channel::<Result<String, LoginError>>();
         let aborted = AtomicBool::new(false);
         let started = Instant::now();
-        let got = wait_login(rx, &Notify::new(), Duration::from_millis(60), || aborted.store(true, Ordering::SeqCst)).await;
+        let got = wait_login(rx, &Notify::new(), Duration::from_millis(60), || {
+            aborted.store(true, Ordering::SeqCst)
+        })
+        .await;
         assert_eq!(got, Err(LoginError::TimedOut));
         assert!(aborted.load(Ordering::SeqCst));
         assert!(started.elapsed() < Duration::from_secs(5));
@@ -606,7 +713,10 @@ mod tests {
         while !done.load(Ordering::SeqCst) && started.elapsed() < Duration::from_secs(5) {
             std::thread::sleep(Duration::from_millis(10));
         }
-        assert!(done.load(Ordering::SeqCst), "dinleyici 5 sn içinde uyanmalı");
+        assert!(
+            done.load(Ordering::SeqCst),
+            "dinleyici 5 sn içinde uyanmalı"
+        );
         assert!(worker.join().unwrap());
     }
 

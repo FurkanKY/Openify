@@ -86,7 +86,10 @@ fn days_from_civil(y: i64, m: u32, d: u32) -> i64 {
 /// Yerel saatin UTC'den farkı (dakika; Türkiye için 180). Windows'un o anki
 /// saat dilimi ve yaz saati durumu; okunamazsa 0 (UTC).
 pub fn local_offset_minutes() -> i64 {
-    use windows::Win32::{Foundation::SYSTEMTIME, System::SystemInformation::{GetLocalTime, GetSystemTime}};
+    use windows::Win32::{
+        Foundation::SYSTEMTIME,
+        System::SystemInformation::{GetLocalTime, GetSystemTime},
+    };
     let minutes = |t: &SYSTEMTIME| {
         days_from_civil(i64::from(t.wYear), u32::from(t.wMonth), u32::from(t.wDay)) * 1440
             + i64::from(t.wHour) * 60
@@ -132,7 +135,10 @@ mod tests {
             assert_eq!(label(Lang::Tr, secs), tr, "{secs} s");
         }
         // Gelecekteki an (saat kayması) "Az önce".
-        assert_eq!(with_lang(Lang::Tr, || added_label_in(NOW, NOW + 5_000, 180)), "Az önce");
+        assert_eq!(
+            with_lang(Lang::Tr, || added_label_in(NOW, NOW + 5_000, 180)),
+            "Az önce"
+        );
     }
 
     #[test]
@@ -150,7 +156,9 @@ mod tests {
 
     #[test]
     fn civil_conversions_agree_both_ways() {
-        for days in [-800_000, -1, 0, 1, 59, 60, 365, 11_000, 19_000, 20_400, 2_932_896] {
+        for days in [
+            -800_000, -1, 0, 1, 59, 60, 365, 11_000, 19_000, 20_400, 2_932_896,
+        ] {
             let (y, m, d) = civil_from_days(days);
             assert_eq!(days_from_civil(y, m, d), days, "{y}-{m}-{d}");
         }

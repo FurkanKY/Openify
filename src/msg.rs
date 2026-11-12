@@ -37,10 +37,20 @@ mod tests {
     fn every_code_has_a_text_in_both_languages() {
         for lang in [Lang::Tr, Lang::En] {
             with_lang(lang, || {
-                for b in [PlayBlock::NeedsLogin, PlayBlock::LoggingIn, PlayBlock::LoginFailed, PlayBlock::NeedsPremium] {
+                for b in [
+                    PlayBlock::NeedsLogin,
+                    PlayBlock::LoggingIn,
+                    PlayBlock::LoginFailed,
+                    PlayBlock::NeedsPremium,
+                ] {
                     assert!(!play_block_text(b).is_empty());
                 }
-                for r in [LoginFailReason::TimedOut, LoginFailReason::PortBusy, LoginFailReason::Network, LoginFailReason::Other] {
+                for r in [
+                    LoginFailReason::TimedOut,
+                    LoginFailReason::PortBusy,
+                    LoginFailReason::Network,
+                    LoginFailReason::Other,
+                ] {
                     assert!(!login_failed_text(r).is_empty());
                 }
             });

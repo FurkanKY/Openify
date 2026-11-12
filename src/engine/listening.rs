@@ -56,7 +56,9 @@ fn failure_text(why: RadioFailure) -> &'static str {
     match why {
         RadioFailure::RateLimited => t!(NoticeRadioLimited),
         RadioFailure::Denied => t!(NoticeRadioDenied),
-        RadioFailure::Offline | RadioFailure::Unavailable | RadioFailure::Empty => t!(NoticeRadioFailed),
+        RadioFailure::Offline | RadioFailure::Unavailable | RadioFailure::Empty => {
+            t!(NoticeRadioFailed)
+        }
     }
 }
 
@@ -81,16 +83,25 @@ async fn gather(
             uris.push(t.uri.clone());
         }
     }
-    let hinted: HashMap<String, TrackRow> =
-        station.tracks.iter().filter_map(|t| t.row.clone().map(|r| (t.uri.clone(), r))).collect();
+    let hinted: HashMap<String, TrackRow> = station
+        .tracks
+        .iter()
+        .filter_map(|t| t.row.clone().map(|r| (t.uri.clone(), r)))
+        .collect();
 
     let mut rows: HashMap<String, TrackRow> = HashMap::new();
     if let Some(db) = db.clone() {
         let wanted = uris.clone();
-        let cached = tokio::task::spawn_blocking(move || db.tracks(&wanted).unwrap_or_default()).await.unwrap_or_default();
+        let cached = tokio::task::spawn_blocking(move || db.tracks(&wanted).unwrap_or_default())
+            .await
+            .unwrap_or_default();
         rows.extend(cached);
     }
-    let missing: Vec<String> = uris.iter().filter(|u| !rows.contains_key(*u)).cloned().collect();
+    let missing: Vec<String> = uris
+        .iter()
+        .filter(|u| !rows.contains_key(*u))
+        .cloned()
+        .collect();
     if !missing.is_empty() {
         let fetched = library::fetch_tracks(session, missing).await;
         if let Some(db) = db.clone()
@@ -111,17 +122,26 @@ async fn gather(
     }
     let ordered: Vec<TrackRow> = uris.iter().filter_map(|u| rows.remove(u)).collect();
     if ordered.is_empty() {
-        log::info!("radyo: {} şarkı geldi ama hiçbirinin bilgisi alınamadı", uris.len());
+        log::info!(
+            "radyo: {} şarkı geldi ama hiçbirinin bilgisi alınamadı",
+            uris.len()
+        );
         return Err(RadioFailure::Unavailable);
     }
     let traits = match db {
         Some(db) => {
             let wanted: Vec<String> = ordered.iter().map(|r| r.uri.clone()).collect();
-            tokio::task::spawn_blocking(move || db.track_traits(&wanted).unwrap_or_default()).await.unwrap_or_default()
+            tokio::task::spawn_blocking(move || db.track_traits(&wanted).unwrap_or_default())
+                .await
+                .unwrap_or_default()
         }
         None => HashMap::new(),
     };
-    Ok(Fetched { rows: ordered, traits, station_title: station.title })
+    Ok(Fetched {
+        rows: ordered,
+        traits,
+        station_title: station.title,
+    })
 }
 
 impl Engine {
@@ -148,7 +168,13 @@ impl Engine {
         let generation = self.radio.generation();
         self.bg.spawn(async move {
             let result = gather(&session, db, &seed, &prev, start).await;
-            let _ = internal.send(Internal::Radio(RadioBatch { seed, title, start, generation, result }));
+            let _ = internal.send(Internal::Radio(RadioBatch {
+                seed,
+                title,
+                start,
+                generation,
+                result,
+            }));
         });
     }
 
@@ -156,8 +182,16 @@ impl Engine {
     /// (`persist_tick`) çağrılır: duraklatılmış / kaldığı yerden açılmış radyo
     /// istek atmaz.
     pub(super) fn radio_tick(&mut self) {
-        let Some(info) = self.queue.radio().cloned() else { return };
-        if self.host.conn.is_none() || !self.radio.due(Instant::now(), self.queue.context_remaining(), self.queue.ctx_uris().len()) {
+        let Some(info) = self.queue.radio().cloned() else {
+            return;
+        };
+        if self.host.conn.is_none()
+            || !self.radio.due(
+                Instant::now(),
+                self.queue.context_remaining(),
+                self.queue.ctx_uris().len(),
+            )
+        {
             return;
         }
         let prev = self.queue.ctx_uris().to_vec();
@@ -166,7 +200,13 @@ impl Engine {
 
     /// Arka plandan gelen radyo yanıtı (bkz. `Internal::Radio`).
     pub(super) fn on_radio_batch(&mut self, batch: RadioBatch) {
-        let RadioBatch { seed, title, start, generation, result } = batch;
+        let RadioBatch {
+            seed,
+            title,
+            start,
+            generation,
+            result,
+        } = batch;
         if start {
             // Daha yeni bir radyo istenmişse bu yanıt eskidir.
             if !self.radio.take_wanted(&seed) {
@@ -182,7 +222,9 @@ impl Engine {
             return;
         }
         // Devam: yalnız hâlâ aynı radyo çalıyorsa.
-        if generation != self.radio.generation() || self.queue.radio().map(|r| r.seed.as_str()) != Some(seed.as_str()) {
+        if generation != self.radio.generation()
+            || self.queue.radio().map(|r| r.seed.as_str()) != Some(seed.as_str())
+        {
             return;
         }
         let added = match result {
@@ -200,10 +242,24 @@ impl Engine {
 
     /// Yeni radyoyu çalma bağlamı olarak başlatır.
     fn begin_radio(&mut self, seed: String, title: String, fetched: Fetched) {
-        let Fetched { rows, traits, station_title } = fetched;
+        let Fetched {
+            rows,
+            traits,
+            station_title,
+        } = fetched;
         let uris: Vec<String> = rows.iter().map(|r| r.uri.clone()).collect();
-        let start = radio::first_playable(&rows, &|u| traits.get(u).copied(), &self.rules, &self.hidden, radio::is_track_seed(&seed));
-        let title = if title.trim().is_empty() { station_title } else { title };
+        let start = radio::first_playable(
+            &rows,
+            &|u| traits.get(u).copied(),
+            &self.rules,
+            &self.hidden,
+            radio::is_track_seed(&seed),
+        );
+        let title = if title.trim().is_empty() {
+            station_title
+        } else {
+            title
+        };
         self.start_queue(None, uris, Some(Arc::new(rows)), start);
         // Başlatma sıraya `radio`yu düşürdü (yeni bağlam): kimliğini şimdi koy.
         self.queue.set_radio(Some(RadioInfo { seed, title }));
@@ -220,7 +276,10 @@ impl Engine {
         {
             let uris = self.queue.ctx_uris().to_vec();
             let found = db.tracks(&uris).unwrap_or_default();
-            let info: Vec<TrackRow> = uris.iter().map(|u| found.get(u).cloned().unwrap_or_else(|| blank_row(u))).collect();
+            let info: Vec<TrackRow> = uris
+                .iter()
+                .map(|u| found.get(u).cloned().unwrap_or_else(|| blank_row(u)))
+                .collect();
             self.queue.attach_info(Arc::new(info));
         }
         let added = self.queue.extend_context(fetched.rows);
@@ -253,7 +312,10 @@ impl Engine {
         let now = now_ms();
         for s in &songs {
             let done = if on {
-                db.hide_song(&HiddenSong { hidden_at: now, ..s.clone() })
+                db.hide_song(&HiddenSong {
+                    hidden_at: now,
+                    ..s.clone()
+                })
             } else {
                 db.show_song(&s.uri, s.context.as_deref()).map(|_| ())
             };

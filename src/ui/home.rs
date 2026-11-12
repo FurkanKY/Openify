@@ -17,15 +17,16 @@
 use std::time::Instant;
 
 use gpui::{
-    AnyElement, Context, Div, ElementId, FontWeight, Window, div, img, linear_color_stop, linear_gradient,
-    prelude::*, px, rgb,
+    AnyElement, Context, Div, ElementId, FontWeight, Window, div, img, linear_color_stop,
+    linear_gradient, prelude::*, px, rgb,
 };
 
 use super::{
     Shell,
     components::{Look, Tooltip, primary_button, secondary_button},
-    cover_image, framed, fuzzy,
+    cover_image,
     explore::card_spec,
+    framed, fuzzy,
     library::Loadable,
     pages::{Art, CardSpec, collection_card, local_hour},
     player::{Status, fmt_time},
@@ -95,10 +96,31 @@ impl DayPart {
     /// sadeleşmiş, küçük harf): sabah enerjik, akşam sakin.
     fn keywords(self) -> &'static [&'static str] {
         match self {
-            Self::Morning => &["morning", "sabah", "workout", "spor", "energy", "enerji", "upbeat", "happy", "mutlu", "dance", "feel good", "motivation"],
-            Self::Afternoon => &["focus", "odak", "work", "calisma", "indie", "pop", "rock", "summer", "yaz", "hits"],
-            Self::Evening => &["chill", "moody", "evening", "aksam", "jazz", "soul", "acoustic", "akustik", "lofi", "relax", "sakin", "rahat", "slow", "sunset"],
-            Self::Night => &["sleep", "uyku", "night", "gece", "ambient", "piano", "calm", "lofi", "dream", "sakin", "deep"],
+            Self::Morning => &[
+                "morning",
+                "sabah",
+                "workout",
+                "spor",
+                "energy",
+                "enerji",
+                "upbeat",
+                "happy",
+                "mutlu",
+                "dance",
+                "feel good",
+                "motivation",
+            ],
+            Self::Afternoon => &[
+                "focus", "odak", "work", "calisma", "indie", "pop", "rock", "summer", "yaz", "hits",
+            ],
+            Self::Evening => &[
+                "chill", "moody", "evening", "aksam", "jazz", "soul", "acoustic", "akustik",
+                "lofi", "relax", "sakin", "rahat", "slow", "sunset",
+            ],
+            Self::Night => &[
+                "sleep", "uyku", "night", "gece", "ambient", "piano", "calm", "lofi", "dream",
+                "sakin", "deep",
+            ],
         }
     }
 }
@@ -107,7 +129,10 @@ impl DayPart {
 /// radar ve tekrar listeleri zamanla ilgili değil).
 fn pickable(card: &ExploreCard) -> bool {
     card.kind == CardKind::Playlist
-        && !matches!(card.format.as_str(), "discover-weekly" | "release-radar" | "on-repeat" | "repeat-rewind")
+        && !matches!(
+            card.format.as_str(),
+            "discover-weekly" | "release-radar" | "on-repeat" | "repeat-rewind"
+        )
 }
 
 /// Günün saatine göre karışımlardan biri (kartın sırası), her saat için
@@ -133,7 +158,12 @@ pub(super) fn time_pick(cards: &[&ExploreCard], hour: u16) -> Option<usize> {
     if let Some((_, i)) = best {
         return Some(i);
     }
-    let daily: Vec<usize> = cards.iter().enumerate().filter(|(_, c)| c.format == "daily-mix").map(|(i, _)| i).collect();
+    let daily: Vec<usize> = cards
+        .iter()
+        .enumerate()
+        .filter(|(_, c)| c.format == "daily-mix")
+        .map(|(i, _)| i)
+        .collect();
     if !daily.is_empty() {
         return Some(daily[(hour as usize / 4) % daily.len()]);
     }
@@ -159,7 +189,11 @@ fn hero_fill(tint: Option<u32>) -> gpui::Background {
     match tint {
         Some(glow) => {
             let (top, bottom) = hero_tint(glow);
-            linear_gradient(160., linear_color_stop(rgb(top), 0.), linear_color_stop(rgb(bottom), 1.))
+            linear_gradient(
+                160.,
+                linear_color_stop(rgb(top), 0.),
+                linear_color_stop(rgb(bottom), 1.),
+            )
         }
         None => rgb(BAR).into(),
     }
@@ -185,7 +219,9 @@ impl Shell {
 
     /// Spotify'ın ana sayfa akışındaki bütün kartlar (bölümlere bakılmaz).
     fn feed_cards(&self) -> Vec<&ExploreCard> {
-        self.home_feed().map(|f| f.sections.iter().flat_map(|s| s.cards.iter()).collect()).unwrap_or_default()
+        self.home_feed()
+            .map(|f| f.sections.iter().flat_map(|s| s.cards.iter()).collect())
+            .unwrap_or_default()
     }
 
     /// Günün saatine göre öneri: akıştan; akış yoksa (çevrimdışı) kütüphanedeki
@@ -194,7 +230,12 @@ impl Shell {
         let feed = self.feed_cards();
         if let Some(i) = time_pick(&feed, hour) {
             let c = feed[i];
-            return Some(Pick { spec: card_spec("home-pick", c), name: c.name.clone(), subtitle: c.subtitle.clone(), image: c.image.clone() });
+            return Some(Pick {
+                spec: card_spec("home-pick", c),
+                name: c.name.clone(),
+                subtitle: c.subtitle.clone(),
+                image: c.image.clone(),
+            });
         }
         let cards: Vec<ExploreCard> = made
             .iter()
@@ -210,14 +251,30 @@ impl Shell {
         let refs: Vec<&ExploreCard> = cards.iter().collect();
         let i = time_pick(&refs, hour)?;
         let item = &made[i];
-        Some(Pick { spec: collection_card(item), name: item.name.clone(), subtitle: crate::i18n::canon::localize(&item.subtitle).into_owned(), image: item.image.clone() })
+        Some(Pick {
+            spec: collection_card(item),
+            name: item.name.clone(),
+            subtitle: crate::i18n::canon::localize(&item.subtitle).into_owned(),
+            image: item.image.clone(),
+        })
     }
 
     fn spec_art(&self, spec: &CardSpec, side: f32, radius: f32) -> AnyElement {
         match &spec.art {
-            Art::Image { url, icon } => cover_image(&self.images, url, &spec.title, side, radius, icon),
-            Art::Collection { id, image } => self.collection_art(id, &spec.title, image, side, radius),
-            Art::Stack(urls) => cover_image(&self.images, urls.first().map(String::as_str).unwrap_or_default(), &spec.title, side, radius, "list-music"),
+            Art::Image { url, icon } => {
+                cover_image(&self.images, url, &spec.title, side, radius, icon)
+            }
+            Art::Collection { id, image } => {
+                self.collection_art(id, &spec.title, image, side, radius)
+            }
+            Art::Stack(urls) => cover_image(
+                &self.images,
+                urls.first().map(String::as_str).unwrap_or_default(),
+                &spec.title,
+                side,
+                radius,
+                "list-music",
+            ),
         }
     }
 
@@ -236,7 +293,12 @@ impl Shell {
             // Kütüphane yok: bağlantı durumu varsa tam sayfa durum (karşılama,
             // çevrimdışı …), yoksa gerçekten yükleniyor (boş sayfa, sonra
             // iskelet; bkz. `welcome`).
-            return self.pending_page(self.library_gate(), || self.page_skeleton(false, false), window, cx);
+            return self.pending_page(
+                self.library_gate(),
+                || self.page_skeleton(false, false),
+                window,
+                cx,
+            );
         };
         let hour = local_hour();
         let part = DayPart::of(hour);
@@ -259,28 +321,50 @@ impl Shell {
                     .type_role(if compact { T_HEADLINE } else { T_DISPLAY })
                     .font_weight(FontWeight::EXTRA_BOLD)
                     .text_color(text())
-                    .child(line_with_tip("home-greeting", part.greeting().to_string()).flex().min_w_0()),
+                    .child(
+                        line_with_tip("home-greeting", part.greeting().to_string())
+                            .flex()
+                            .min_w_0(),
+                    ),
             )
-            .child(div().type_role(T_BODY).text_color(muted()).child(part.tagline()));
+            .child(
+                div()
+                    .type_role(T_BODY)
+                    .text_color(muted())
+                    .child(part.tagline()),
+            );
 
         let pick = self.home_pick(&home.made_for_you, hour);
-        let mut body = div().flex().flex_col().child(greeting).child(self.home_hero(library, &home.recent, pick.as_ref(), cx));
+        let mut body = div()
+            .flex()
+            .flex_col()
+            .child(greeting)
+            .child(self.home_hero(library, &home.recent, pick.as_ref(), cx));
 
         // Çok dinlediklerin: Spotify'ın tekrar listeleri (varsa) ve son
         // çalınanlar.
         let feed = self.feed_cards();
         let (cols, _) = self.grid();
-        let mut often: Vec<CardSpec> =
-            feed.iter().filter(|c| matches!(c.format.as_str(), "on-repeat" | "repeat-rewind")).map(|c| card_spec("home-often", c)).collect();
+        let mut often: Vec<CardSpec> = feed
+            .iter()
+            .filter(|c| matches!(c.format.as_str(), "on-repeat" | "repeat-rewind"))
+            .map(|c| card_spec("home-often", c))
+            .collect();
         let mut often_ids: Vec<CollectionId> = Vec::new();
         // Hiçbir şey yüklü değilken kahraman kart son çalınan listeyi gösterir:
         // aynı liste altta tekrarlanmaz.
-        let in_hero = if self.state.track.is_none() { home.recent.first().map(|i| i.id.clone()) } else { None };
+        let in_hero = if self.state.track.is_none() {
+            home.recent.first().map(|i| i.id.clone())
+        } else {
+            None
+        };
         for item in &home.recent {
             if often.len() >= cols {
                 break;
             }
-            if in_hero.as_ref() == Some(&item.id) || often.iter().any(|c| c.key.ends_with(item.id.key())) {
+            if in_hero.as_ref() == Some(&item.id)
+                || often.iter().any(|c| c.key.ends_with(item.id.key()))
+            {
                 continue;
             }
             often_ids.push(item.id.clone());
@@ -304,10 +388,21 @@ impl Shell {
         let mine: Vec<CardSpec> = library
             .playlists
             .iter()
-            .filter(|p| !home.made_for_you.iter().any(|m| m.id == p.id) && !often_ids.contains(&p.id) && in_hero.as_ref() != Some(&p.id))
+            .filter(|p| {
+                !home.made_for_you.iter().any(|m| m.id == p.id)
+                    && !often_ids.contains(&p.id)
+                    && in_hero.as_ref() != Some(&p.id)
+            })
             .map(collection_card)
             .collect();
-        let body = body.children(self.home_row("home#lists", t!(HomeListsTitle), t!(HomeListsDesc), mine.clone(), mine, cx));
+        let body = body.children(self.home_row(
+            "home#lists",
+            t!(HomeListsTitle),
+            t!(HomeListsDesc),
+            mine.clone(),
+            mine,
+            cx,
+        ));
         // İskelet ya da durumdan sonra gelen içerik belirerek gelir.
         self.settle("home", body)
     }
@@ -318,17 +413,37 @@ impl Shell {
     /// günün zaman önerisi olmayan "daylist" ve günlük karışımlar TEK yığın
     /// kart; "Tümünü göster" hepsini tek tek açar (günlük karışımlar, tür
     /// karışımları, radyolar dahil).
-    fn home_new(&self, made_for_you: &[LibraryItem], pick: Option<&str>, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    fn home_new(
+        &self,
+        made_for_you: &[LibraryItem],
+        pick: Option<&str>,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
         let Some(feed) = self.home_feed() else {
             if !self.home_feed_failed() && self.load_may_arrive() {
                 return vec![self.skeleton_section(t!(HomeNewTitle))];
             }
             let made: Vec<CardSpec> = made_for_you.iter().map(collection_card).collect();
-            return self.home_row("home#new", t!(HomeNewTitle), t!(HomeNewDescMade), made.clone(), made, cx).into_iter().collect();
+            return self
+                .home_row(
+                    "home#new",
+                    t!(HomeNewTitle),
+                    t!(HomeNewDescMade),
+                    made.clone(),
+                    made,
+                    cx,
+                )
+                .into_iter()
+                .collect();
         };
         let all: Vec<&ExploreCard> = feed.sections.iter().flat_map(|s| s.cards.iter()).collect();
         let is_pick = |c: &&&ExploreCard| pick.is_some_and(|p| p == format!("home-pick:{}", c.uri));
-        let by = |format: &str| all.iter().filter(|c| c.format == format && !is_pick(c)).copied().collect::<Vec<_>>();
+        let by = |format: &str| {
+            all.iter()
+                .filter(|c| c.format == format && !is_pick(c))
+                .copied()
+                .collect::<Vec<_>>()
+        };
         let spec = |c: &ExploreCard| card_spec("home-new", c);
 
         let mut short: Vec<CardSpec> = Vec::new();
@@ -355,13 +470,30 @@ impl Shell {
         }
         let rest: Vec<&ExploreCard> = all
             .iter()
-            .filter(|c| !matches!(c.format.as_str(), "discover-weekly" | "release-radar" | "daylist" | "daily-mix" | "on-repeat" | "repeat-rewind") && !is_pick(c))
+            .filter(|c| {
+                !matches!(
+                    c.format.as_str(),
+                    "discover-weekly"
+                        | "release-radar"
+                        | "daylist"
+                        | "daily-mix"
+                        | "on-repeat"
+                        | "repeat-rewind"
+                ) && !is_pick(c)
+            })
             .copied()
             .collect();
         full.extend(rest.into_iter().map(spec));
-        self.home_row("home#new", t!(HomeNewTitle), t!(HomeNewDescWeekly), short, full, cx)
-            .into_iter()
-            .collect()
+        self.home_row(
+            "home#new",
+            t!(HomeNewTitle),
+            t!(HomeNewDescWeekly),
+            short,
+            full,
+            cx,
+        )
+        .into_iter()
+        .collect()
     }
 
     /// Bölüm: başlık, altında açıklama satırı ve bir sıra kart; `full` kartın
@@ -381,7 +513,11 @@ impl Shell {
         let (cols, width) = self.grid();
         let expanded = self.pages.expanded.contains(key);
         let toggle = full.len() > short.len().min(cols);
-        let shown: &[CardSpec] = if expanded { &full } else { &short[..short.len().min(cols)] };
+        let shown: &[CardSpec] = if expanded {
+            &full
+        } else {
+            &short[..short.len().min(cols)]
+        };
         let mut grid = div().px(px(self.margin())).flex().flex_col().gap(px(S5));
         for row in shown.chunks(cols) {
             let mut line = div().flex().gap(px(super::pages::CARD_GAP));
@@ -401,25 +537,59 @@ impl Shell {
 
     // ── Kahramanlar ─────────────────────────────────────────────────────
 
-    fn home_hero(&self, library: &Library, recent: &[LibraryItem], pick: Option<&Pick>, cx: &mut Context<Self>) -> AnyElement {
+    fn home_hero(
+        &self,
+        library: &Library,
+        recent: &[LibraryItem],
+        pick: Option<&Pick>,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let room = self.window_width - 2. * self.margin();
         let stacked = room < HERO_STACK_BELOW || pick.is_none();
         let pick_width = ((room - S5) * PICK_SHARE).floor();
-        let resume = self.home_resume(library, recent, if stacked { room } else { room - S5 - pick_width }, cx);
-        let mut row = div().px(px(self.margin())).pb(px(SECTION_GAP)).flex().gap(px(S5));
+        let resume = self.home_resume(
+            library,
+            recent,
+            if stacked {
+                room
+            } else {
+                room - S5 - pick_width
+            },
+            cx,
+        );
+        let mut row = div()
+            .px(px(self.margin()))
+            .pb(px(SECTION_GAP))
+            .flex()
+            .gap(px(S5));
         if room < HERO_STACK_BELOW {
             row = row.flex_col().gap(px(S4));
         }
         row = row.child(resume);
         if let Some(pick) = pick {
-            row = row.child(self.home_pick_card(pick, if room < HERO_STACK_BELOW { room } else { pick_width }, room < HERO_STACK_BELOW, cx));
+            row = row.child(self.home_pick_card(
+                pick,
+                if room < HERO_STACK_BELOW {
+                    room
+                } else {
+                    pick_width
+                },
+                room < HERO_STACK_BELOW,
+                cx,
+            ));
         }
         row.into_any_element()
     }
 
     /// Kaldığın yerden: çalan (ya da kaldığı yerden yüklenen) şarkı; yoksa son
     /// çalınan liste (Çal) ya da Beğenilenler.
-    fn home_resume(&self, library: &Library, recent: &[LibraryItem], width: f32, cx: &mut Context<Self>) -> AnyElement {
+    fn home_resume(
+        &self,
+        library: &Library,
+        recent: &[LibraryItem],
+        width: f32,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let now = Instant::now();
         let accent = self.accent().text;
         let card = div()
@@ -442,21 +612,32 @@ impl Shell {
                         .type_role(T_HEADLINE)
                         .font_weight(FontWeight::BOLD)
                         .text_color(text())
-                        .child(line_with_tip(ElementId::Name(format!("{tip_id}-name").into()), name).flex().min_w_0()),
+                        .child(
+                            line_with_tip(ElementId::Name(format!("{tip_id}-name").into()), name)
+                                .flex()
+                                .min_w_0(),
+                        ),
                 )
                 .child(
-                    div()
-                        .flex()
-                        .type_role(T_TITLE)
-                        .text_color(soft())
-                        .child(line_with_tip(ElementId::Name(format!("{tip_id}-sub").into()), second).flex().min_w_0()),
+                    div().flex().type_role(T_TITLE).text_color(soft()).child(
+                        line_with_tip(ElementId::Name(format!("{tip_id}-sub").into()), second)
+                            .flex()
+                            .min_w_0(),
+                    ),
                 )
         };
 
         if let Some(t) = &self.state.track {
             let cover = match self.state.cover.clone() {
                 Some(image) => framed(img(image).size_full().rounded(px(R_LG)), HERO_COVER, R_LG),
-                None => cover_image(&self.images, t.cover_url.as_deref().unwrap_or_default(), &t.name, HERO_COVER, R_LG, "music"),
+                None => cover_image(
+                    &self.images,
+                    t.cover_url.as_deref().unwrap_or_default(),
+                    &t.name,
+                    HERO_COVER,
+                    R_LG,
+                    "music",
+                ),
             };
             let (icon_name, label_text) = match self.state.status {
                 Status::Playing => ("pause-fill", t!(Pause)),
@@ -476,7 +657,13 @@ impl Shell {
                         .w_full()
                         .rounded_full()
                         .bg(veil(VEIL_SELECTED))
-                        .child(div().h_full().w(gpui::relative(progress)).rounded_full().bg(rgb(accent))),
+                        .child(
+                            div()
+                                .h_full()
+                                .w(gpui::relative(progress))
+                                .rounded_full()
+                                .bg(rgb(accent)),
+                        ),
                 )
                 .child(
                     div()
@@ -493,8 +680,14 @@ impl Shell {
                 .items_center()
                 .gap(px(S5))
                 .child(
-                    primary_button("home-resume-play", icon_name, label_text, Look::Live, accent)
-                        .on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx))),
+                    primary_button(
+                        "home-resume-play",
+                        icon_name,
+                        label_text,
+                        Look::Live,
+                        accent,
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx))),
                 )
                 .child(bar);
             let cover = div()
@@ -505,7 +698,9 @@ impl Shell {
                 .on_click(cx.listener(|this, _, window, cx| this.toggle_fullscreen(window, cx)))
                 .child(cover);
             return card
-                .bg(hero_fill(Some(self.state.accent_at(now).glow).filter(|g| *g != BG)))
+                .bg(hero_fill(
+                    Some(self.state.accent_at(now).glow).filter(|g| *g != BG),
+                ))
                 .child(cover)
                 .child(
                     div()
@@ -531,7 +726,11 @@ impl Shell {
         let target = spec.target.clone();
         let tint = self.cover_tint(&item.image);
         card.bg(hero_fill(tint))
-            .child(div().flex_none().child(self.spec_art(&spec, HERO_COVER, R_LG)))
+            .child(
+                div()
+                    .flex_none()
+                    .child(self.spec_art(&spec, HERO_COVER, R_LG)),
+            )
             .child(
                 div()
                     .flex_1()
@@ -539,18 +738,40 @@ impl Shell {
                     .flex()
                     .flex_col()
                     .justify_between()
-                    .child(texts(spec.title.clone(), spec.subtitle.clone(), "home-resume"))
-                    .child(div().flex().child(
-                        primary_button("home-resume-play", "play-fill", t!(Play), Look::Live, accent)
-                            .on_click(cx.listener(move |this, _, _, cx| this.play_card(target.clone(), cx))),
-                    )),
+                    .child(texts(
+                        spec.title.clone(),
+                        spec.subtitle.clone(),
+                        "home-resume",
+                    ))
+                    .child(
+                        div().flex().child(
+                            primary_button(
+                                "home-resume-play",
+                                "play-fill",
+                                t!(Play),
+                                Look::Live,
+                                accent,
+                            )
+                            .on_click(
+                                cx.listener(move |this, _, _, cx| {
+                                    this.play_card(target.clone(), cx)
+                                }),
+                            ),
+                        ),
+                    ),
             )
             .into_any_element()
     }
 
     /// Günün saatine göre öneri kartı: kapak, ad, açıklama ve
     /// Çal; kartın kendisi listeyi açar.
-    fn home_pick_card(&self, pick: &Pick, width: f32, stacked: bool, cx: &mut Context<Self>) -> AnyElement {
+    fn home_pick_card(
+        &self,
+        pick: &Pick,
+        width: f32,
+        stacked: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
         let open = pick.spec.target.clone();
         let play = pick.spec.target.clone();
@@ -558,7 +779,11 @@ impl Shell {
         div()
             .id("home-pick")
             .w(px(width))
-            .h(px(if stacked { PICK_STACKED_HEIGHT } else { HERO_HEIGHT }))
+            .h(px(if stacked {
+                PICK_STACKED_HEIGHT
+            } else {
+                HERO_HEIGHT
+            }))
             .flex_none()
             .p(px(S5))
             .rounded(px(R_XL))
@@ -575,8 +800,17 @@ impl Shell {
                     this.open_card_menu(menu.clone(), ev.position, cx);
                 }),
             )
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_XL))
-            .child(div().flex_none().child(self.spec_art(&pick.spec, PICK_COVER, R_LG)))
+            .child(super::tween::hover_fill(
+                veil(VEIL_HOVER),
+                veil(VEIL_PRESSED),
+                0.,
+                R_XL,
+            ))
+            .child(
+                div()
+                    .flex_none()
+                    .child(self.spec_art(&pick.spec, PICK_COVER, R_LG)),
+            )
             .child(
                 div()
                     .flex_1()
@@ -591,20 +825,36 @@ impl Shell {
                             .type_role(T_TITLE)
                             .font_weight(FontWeight::EXTRA_BOLD)
                             .text_color(text())
-                            .child(line_with_tip("home-pick-name", pick.name.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip("home-pick-name", pick.name.clone())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
                     .child(
                         div()
                             .flex()
                             .type_role(T_SECONDARY)
                             .text_color(muted())
-                            .child(line_with_tip("home-pick-sub", pick.subtitle.clone()).flex().min_w_0()),
+                            .child(
+                                line_with_tip("home-pick-sub", pick.subtitle.clone())
+                                    .flex()
+                                    .min_w_0(),
+                            ),
                     )
                     .child(
                         div().pt(px(S3)).flex().child(
-                            secondary_button("home-pick-play", "play-fill", t!(Play), Look::Live, accent)
-                                .block_mouse_except_scroll()
-                                .on_click(cx.listener(move |this, _, _, cx| this.play_card(play.clone(), cx))),
+                            secondary_button(
+                                "home-pick-play",
+                                "play-fill",
+                                t!(Play),
+                                Look::Live,
+                                accent,
+                            )
+                            .block_mouse_except_scroll()
+                            .on_click(
+                                cx.listener(move |this, _, _, cx| this.play_card(play.clone(), cx)),
+                            ),
                         ),
                     ),
             )
@@ -647,7 +897,10 @@ mod tests {
 
     #[test]
     fn spotifys_own_daylist_wins_at_any_hour() {
-        let cards = [card("Chill Mix", "", "genre-mix"), card("sunny afternoon indie", "", "daylist")];
+        let cards = [
+            card("Chill Mix", "", "genre-mix"),
+            card("sunny afternoon indie", "", "daylist"),
+        ];
         for hour in [8, 14, 20, 2] {
             assert_eq!(pick(&cards, hour).as_deref(), Some("sunny afternoon indie"));
         }
@@ -685,7 +938,10 @@ mod tests {
 
     #[test]
     fn nothing_pickable_gives_none() {
-        let cards = [card("Discover Weekly", "", "discover-weekly"), card("On Repeat", "", "on-repeat")];
+        let cards = [
+            card("Discover Weekly", "", "discover-weekly"),
+            card("On Repeat", "", "on-repeat"),
+        ];
         assert_eq!(pick(&cards, 12), None);
         assert_eq!(pick(&[], 12), None);
     }
@@ -701,9 +957,21 @@ mod tests {
             let glow = hsl(hue, 0.9, 0.55);
             let (top, bottom) = hero_tint(glow);
             for color in [top, bottom] {
-                assert!(luminance(color) <= HERO_MAX_LUMINANCE + 1e-3, "{hue}: {:.4}", luminance(color));
-                assert!(contrast(TEXT, color) >= 10., "{hue}: {:.2}", contrast(TEXT, color));
-                assert!(contrast(blend(0.64, color), color) >= 4.5, "{hue}: {:.2}", contrast(blend(0.64, color), color));
+                assert!(
+                    luminance(color) <= HERO_MAX_LUMINANCE + 1e-3,
+                    "{hue}: {:.4}",
+                    luminance(color)
+                );
+                assert!(
+                    contrast(TEXT, color) >= 10.,
+                    "{hue}: {:.2}",
+                    contrast(TEXT, color)
+                );
+                assert!(
+                    contrast(blend(0.64, color), color) >= 4.5,
+                    "{hue}: {:.2}",
+                    contrast(blend(0.64, color), color)
+                );
             }
         }
         // Renksiz kapakta (BG) ton kart yüzeyine çok yakın.

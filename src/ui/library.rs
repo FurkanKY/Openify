@@ -12,8 +12,8 @@ use gpui::{
 use super::{
     Shell,
     components::{
-        Look, explain_error, icon_button, icon_button_tinted, is_forbidden, primary_button_sized, secondary_button,
-        state_view,
+        Look, explain_error, icon_button, icon_button_tinted, is_forbidden, primary_button_sized,
+        secondary_button, state_view,
     },
     cover_image,
     manage::ListKey,
@@ -156,7 +156,12 @@ impl Shell {
     /// Listeyi göster. Raf açık ya da şerit hâlinde, nasılsa öyle kalır:
     /// şeritteki bir kapağa tıklayınca raf farenin altında yeniden açılmasın.
     /// `scroll`: geri / ileri ile dönülünce bırakıldığı konum (raf + liste).
-    pub(super) fn show_collection(&mut self, id: CollectionId, scroll: Option<f32>, cx: &mut Context<Self>) {
+    pub(super) fn show_collection(
+        &mut self,
+        id: CollectionId,
+        scroll: Option<f32>,
+        cx: &mut Context<Self>,
+    ) {
         if self.library.selected.as_ref() == Some(&id) && scroll.is_none() {
             cx.notify();
             return;
@@ -171,7 +176,10 @@ impl Shell {
                 let handle = self.library.scroll.0.borrow().base_handle.clone();
                 handle.set_offset(gpui::point(px(0.), px(-(position - collapse))));
             }
-            None => self.library.scroll.scroll_to_item_strict(0, ScrollStrategy::Top),
+            None => self
+                .library
+                .scroll
+                .scroll_to_item_strict(0, ScrollStrategy::Top),
         }
         self.trace_scroll("select", || format!("{}", id.key()));
         // Geliştirme denemesi: OPENIFY_TEST_FIND="sorgu" ilk açılan listede
@@ -182,10 +190,10 @@ impl Shell {
             if let Ok(query) = std::env::var("OPENIFY_TEST_FIND") {
                 self.manage.find = Some(super::manage::Find::with_query(query));
             }
-            if let Some((a, b)) = std::env::var("OPENIFY_TEST_SELECT")
-                .ok()
-                .and_then(|v| v.split_once('-').and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?))))
-            {
+            if let Some((a, b)) = std::env::var("OPENIFY_TEST_SELECT").ok().and_then(|v| {
+                v.split_once('-')
+                    .and_then(|(a, b)| Some((a.parse().ok()?, b.parse().ok()?)))
+            }) {
                 self.manage.sel = super::manage::Selection {
                     list: Some(ListKey::Collection(id.clone())),
                     rows: (a..=b).collect(),
@@ -209,8 +217,14 @@ impl Shell {
                 let _ = this.update(cx, |shell, cx| {
                     match hit {
                         Some((page, _)) => {
-                            shell.pages.lists.insert(format!("album:{uri}"), Arc::new(page.tracks.clone()));
-                            shell.pages.albums.insert(uri, super::pages::PageLoad::Ready(page));
+                            shell
+                                .pages
+                                .lists
+                                .insert(format!("album:{uri}"), Arc::new(page.tracks.clone()));
+                            shell
+                                .pages
+                                .albums
+                                .insert(uri, super::pages::PageLoad::Ready(page));
                         }
                         None => shell.prefetch(uri),
                     }
@@ -238,13 +252,18 @@ impl Shell {
     /// ağa gidilmez; liste her yüklendiğinde yenilenir).
     pub(super) fn request_added_dates(&self, id: &CollectionId) {
         if matches!(id, CollectionId::Liked | CollectionId::Playlist(_)) {
-            self.engine.send(Command::Library(crate::engine::LibraryCommand::AddedDates(id.clone())));
+            self.engine
+                .send(Command::Library(crate::engine::LibraryCommand::AddedDates(
+                    id.clone(),
+                )));
         }
     }
 
     /// Alınamayan listeyi yeniden iste.
     fn retry_collection(&mut self, id: CollectionId, cx: &mut Context<Self>) {
-        self.library.collections.insert(id.clone(), Loadable::Loading);
+        self.library
+            .collections
+            .insert(id.clone(), Loadable::Loading);
         self.engine.send(Command::OpenCollection(id));
         cx.notify();
     }
@@ -254,7 +273,9 @@ impl Shell {
         if self.page_open() {
             return;
         }
-        let Some(id) = self.library.selected.clone() else { return };
+        let Some(id) = self.library.selected.clone() else {
+            return;
+        };
         let list = ListKey::Collection(id.clone());
         let Some(count) = self.library.tracks(&id).map(|t| t.len()).filter(|n| *n > 0) else {
             return;
@@ -265,10 +286,11 @@ impl Shell {
         if shown == 0 {
             return;
         }
-        let pos = self
-            .library
-            .selected_row
-            .and_then(|r| visible.as_ref().map_or(Some(r), |v| v.iter().position(|x| *x == r)));
+        let pos = self.library.selected_row.and_then(|r| {
+            visible
+                .as_ref()
+                .map_or(Some(r), |v| v.iter().position(|x| *x == r))
+        });
         let next_pos = match pos {
             None if delta > 0 => 0,
             None => shown - 1,
@@ -294,7 +316,9 @@ impl Shell {
     /// çizilmediyse ona bırakılır (çizimdeki onarım değişmezi kurar).
     fn reveal_row(&mut self, ix: usize) {
         let Some((viewport, content)) = self.list_extent() else {
-            self.library.scroll.scroll_to_item(ix, ScrollStrategy::Center);
+            self.library
+                .scroll
+                .scroll_to_item(ix, ScrollStrategy::Center);
             return;
         };
         let y = self.list_offset();
@@ -374,12 +398,14 @@ impl Shell {
             self.select_single(ListKey::Collection(id.clone()), index);
         }
         self.state.notice = None;
-        self.state.pending = self.library.tracks(&id).and_then(|t| t.get(index)).map(|t| {
-            super::player::PendingTrack {
+        self.state.pending = self
+            .library
+            .tracks(&id)
+            .and_then(|t| t.get(index))
+            .map(|t| super::player::PendingTrack {
                 name: t.name.clone(),
                 image: t.image.clone(),
-            }
-        });
+            });
         self.note_played(&id);
         self.engine.send(Command::PlayCollection { id, index });
         cx.notify();
@@ -403,12 +429,17 @@ impl Shell {
     /// değişince hemen doğru. Liste hiç çizilmediyse `None`.
     pub(super) fn list_extent(&self) -> Option<(f32, f32)> {
         let viewport = f32::from(self.library.scroll.0.borrow().last_item_size?.item.height);
-        Some((viewport, self.shown_rows() as f32 * ROW_HEIGHT + PILL_LIST_END))
+        Some((
+            viewport,
+            self.shown_rows() as f32 * ROW_HEIGHT + PILL_LIST_END,
+        ))
     }
 
     /// Açık listede görünen satır sayısı (süzgeç açıksa eşleşenler).
     fn shown_rows(&self) -> usize {
-        let Some(id) = self.library.selected.as_ref() else { return 0 };
+        let Some(id) = self.library.selected.as_ref() else {
+            return 0;
+        };
         match self.visible_rows(&ListKey::Collection(id.clone())) {
             Some(v) => v.len(),
             None => self.library.tracks(id).map_or(0, |t| t.len()),
@@ -423,7 +454,12 @@ impl Shell {
     /// Kaydırma izine bir olay satırı (bkz. `scroll_trace`).
     pub(super) fn trace_scroll(&self, event: &str, detail: impl FnOnce() -> String) {
         if scroll_trace::enabled() {
-            scroll_trace::event(event, self.library.header_collapse.min(COLLAPSE_MAX), self.list_offset(), detail);
+            scroll_trace::event(
+                event,
+                self.library.header_collapse.min(COLLAPSE_MAX),
+                self.list_offset(),
+                detail,
+            );
         }
     }
 
@@ -440,7 +476,9 @@ impl Shell {
     /// liste kayar, en üste gelince raf ve başlık açılır.
     pub(super) fn scroll_list_by(&mut self, d: f32) -> f32 {
         let from_collapse = self.library.header_collapse.min(COLLAPSE_MAX);
-        let max_y = self.list_extent().map_or(0., |(viewport, content)| (content - viewport).max(0.));
+        let max_y = self
+            .list_extent()
+            .map_or(0., |(viewport, content)| (content - viewport).max(0.));
         let handle = self.library.scroll.0.borrow().base_handle.clone();
         let offset = handle.offset();
         // En üst konum tam 0 değil, eksi tarafta çok küçük bir değer
@@ -509,14 +547,25 @@ impl Shell {
     }
 
     /// Liste alanının (ya da rafın) üstünde tekerlek. İşlendiyse `true`.
-    pub(super) fn wheel_list(&mut self, delta: ScrollDelta, line_height: Pixels, viewport: f32, cx: &mut Context<Self>) -> bool {
+    pub(super) fn wheel_list(
+        &mut self,
+        delta: ScrollDelta,
+        line_height: Pixels,
+        viewport: f32,
+        cx: &mut Context<Self>,
+    ) -> bool {
         if let Some(handled) = self.wheel_gate(cx) {
             return handled;
         }
         let now = Instant::now();
         let glide = self.library.list_glide.clone();
         let wheel = glide.classify(delta, line_height, viewport, now);
-        self.trace_scroll("wheel", || format!("{wheel:?} viewport={viewport:.1} line={:.2}", f32::from(line_height)));
+        self.trace_scroll("wheel", || {
+            format!(
+                "{wheel:?} viewport={viewport:.1} line={:.2}",
+                f32::from(line_height)
+            )
+        });
         match wheel {
             Some(Wheel::Glide(d)) => glide.push(d, viewport, now),
             Some(Wheel::Now(d)) => {
@@ -540,7 +589,11 @@ impl Shell {
         glide.tick(Instant::now(), position, |d| self.scroll_list_by(d))
     }
 
-    pub(super) fn render_collection(&self, window: &gpui::Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn render_collection(
+        &self,
+        window: &gpui::Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         // `Route::Collection` hep `show_collection` ile açılır, o da `selected`i
         // koyar; yani burada seçili liste vardır. Kütüphane yok / bağlantı yok
         // durumları `welcome`ın tam sayfa durumunda (Ana sayfa, Kütüphane).
@@ -556,7 +609,9 @@ impl Shell {
         let (lead, kind): (SharedString, Option<&str>) = match &id {
             CollectionId::Liked => (t!(LibraryYours).into(), None),
             CollectionId::Album(_) => (owner.clone().into(), Some(t!(Album))),
-            CollectionId::Playlist(_) if crate::i18n::canon::is_spotify(&owner) => ("Spotify".into(), None),
+            CollectionId::Playlist(_) if crate::i18n::canon::is_spotify(&owner) => {
+                ("Spotify".into(), None)
+            }
             CollectionId::Playlist(_) if crate::i18n::canon::is_followed(&owner) => {
                 (t!(LibraryFollowedList).into(), None)
             }
@@ -569,7 +624,10 @@ impl Shell {
             // Yüklenirken satırların yerini iskelet satırlar tutar.
             None | Some(Loadable::Loading) => (
                 t!(Loading).into(),
-                skeleton_rows_at(matches!(id, CollectionId::Album(_)), page_margin(self.window_width)),
+                skeleton_rows_at(
+                    matches!(id, CollectionId::Album(_)),
+                    page_margin(self.window_width),
+                ),
             ),
             Some(Loadable::Failed(e)) => {
                 let (icon_name, title, message) = explain_error(e);
@@ -577,15 +635,30 @@ impl Shell {
                 // Erişim yoksa yeniden denemek bir şey değiştirmez: çıkış yolu
                 // beğenilen şarkılar.
                 let forbidden = is_forbidden(e);
-                let action = if forbidden {
-                    secondary_button("collection-back", "heart-fill", t!(BackToLiked), Look::Live, self.accent().text)
-                        .on_click(cx.listener(|this, _, _, cx| this.select_collection(CollectionId::Liked, cx)))
-                } else {
-                    secondary_button("collection-retry", "refresh-cw", t!(Retry), Look::Live, self.accent().text)
+                let action =
+                    if forbidden {
+                        secondary_button(
+                            "collection-back",
+                            "heart-fill",
+                            t!(BackToLiked),
+                            Look::Live,
+                            self.accent().text,
+                        )
+                        .on_click(cx.listener(|this, _, _, cx| {
+                            this.select_collection(CollectionId::Liked, cx)
+                        }))
+                    } else {
+                        secondary_button(
+                            "collection-retry",
+                            "refresh-cw",
+                            t!(Retry),
+                            Look::Live,
+                            self.accent().text,
+                        )
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.retry_collection(retry_id.clone(), cx)
                         }))
-                };
+                    };
                 (
                     t!(LibraryLoadFailed).into(),
                     centered(state_view(icon_name, title, message).child(action)),
@@ -606,11 +679,9 @@ impl Shell {
                 parts.push(fmt_total(total_ms));
                 let visible = self.visible_rows(&ListKey::Collection(id.clone()));
                 let body = match &visible {
-                    Some(v) if v.is_empty() => centered(state_view(
-                        "search",
-                        t!(NoMatchTitle),
-                        t!(NoMatchBody),
-                    )),
+                    Some(v) if v.is_empty() => {
+                        centered(state_view("search", t!(NoMatchTitle), t!(NoMatchBody)))
+                    }
                     _ => self.render_track_list(&id, visible, cx),
                 };
                 (parts.join(" · ").into(), body)
@@ -623,10 +694,15 @@ impl Shell {
         let progress = self.collapse_progress();
         let compact = progress >= COMPACT_AT;
         let accent = self.accent().text;
-        let playing_here = self.state.queue.context.as_ref() == Some(&id) && self.state.is_playing();
+        let playing_here =
+            self.state.queue.context.as_ref() == Some(&id) && self.state.is_playing();
         let play = primary_button_sized(
             "collection-play",
-            if playing_here { "pause-fill" } else { "play-fill" },
+            if playing_here {
+                "pause-fill"
+            } else {
+                "play-fill"
+            },
             if playing_here { t!(Pause) } else { t!(Play) },
             self.look(&self.nav.collection_play, window, true),
             accent,
@@ -639,11 +715,14 @@ impl Shell {
         let lead_el: AnyElement = match (&id, self.album_artists(&id)) {
             (CollectionId::Album(_), Some(artists)) => {
                 let names: Vec<&str> = artists.iter().map(|a| a.name.as_str()).collect();
-                let uris: Rc<Vec<String>> = Rc::new(artists.iter().map(|a| a.uri.clone()).collect());
+                let uris: Rc<Vec<String>> =
+                    Rc::new(artists.iter().map(|a| a.uri.clone()).collect());
                 let (this, u) = (cx.entity().downgrade(), uris.clone());
                 let on_click: super::link_text::SpanHandler = Rc::new(move |i, _, cx| {
                     if let Some(uri) = u.get(i).cloned() {
-                        let _ = this.update(cx, |shell, cx| shell.navigate(super::history::Route::Artist(uri), cx));
+                        let _ = this.update(cx, |shell, cx| {
+                            shell.navigate(super::history::Route::Artist(uri), cx)
+                        });
                     }
                 });
                 let (this, u) = (cx.entity().downgrade(), uris);
@@ -652,9 +731,15 @@ impl Shell {
                         let _ = this.update(cx, |shell, _| shell.prefetch(uri));
                     }
                 });
-                super::link_text::link_line("meta-lead", &names, on_click, Some(on_hover)).flex().min_w_0().into_any_element()
+                super::link_text::link_line("meta-lead", &names, on_click, Some(on_hover))
+                    .flex()
+                    .min_w_0()
+                    .into_any_element()
             }
-            _ => line_with_tip("meta-lead", lead).flex().min_w_0().into_any_element(),
+            _ => line_with_tip("meta-lead", lead)
+                .flex()
+                .min_w_0()
+                .into_any_element(),
         };
         // Meta: öndeki ad (sahip / sanatçı) ön plan renginde, gerisi ikincil
         // renkte. Açık başlıkta adın ALTINDA, Body rolünde ayrı satır; şerit
@@ -688,7 +773,11 @@ impl Shell {
                     .flex()
                     .text_color(muted())
                     .child(div().flex_none().child(" · "))
-                    .child(line_with_tip("meta-rest", rest.to_string()).flex().min_w_0()),
+                    .child(
+                        line_with_tip("meta-rest", rest.to_string())
+                            .flex()
+                            .min_w_0(),
+                    ),
             );
         let title_el = div()
             .flex()
@@ -705,9 +794,22 @@ impl Shell {
         // satır (ad, altında meta), düğmeler bloğa göre dikey ortada;
         // küçülünce tek satır.
         let identity = if compact {
-            div().flex_1().min_w_0().flex().items_center().gap(px(S4)).child(div().flex().flex_shrink().min_w_0().child(title_el)).child(div().flex_1().min_w_0().flex().child(meta))
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .items_center()
+                .gap(px(S4))
+                .child(div().flex().flex_shrink().min_w_0().child(title_el))
+                .child(div().flex_1().min_w_0().flex().child(meta))
         } else {
-            div().flex_1().min_w_0().flex().flex_col().child(title_el).child(meta)
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .flex_col()
+                .child(title_el)
+                .child(meta)
         };
         let content = div()
             .w_full()
@@ -720,7 +822,11 @@ impl Shell {
             .child(play)
             // İki boy arasında geçerken yeni hâl belirerek gelir.
             .with_animation(
-                if compact { "header-compact" } else { "header-open" },
+                if compact {
+                    "header-compact"
+                } else {
+                    "header-open"
+                },
                 Animation::new(motion()).with_easing(ease_out_quint()),
                 |el, d| el.opacity(d),
             );
@@ -742,7 +848,9 @@ impl Shell {
             let line_height = window.line_height();
             let viewport = f32::from(bounds.size.height);
             let handled = this
-                .update(cx, |shell, cx| shell.wheel_list(ev.delta, line_height, viewport, cx))
+                .update(cx, |shell, cx| {
+                    shell.wheel_list(ev.delta, line_height, viewport, cx)
+                })
                 .unwrap_or(false);
             if handled {
                 cx.notify(view);
@@ -761,7 +869,11 @@ impl Shell {
             .relative()
             .child(header)
             .children(self.render_find_bar(cx))
-            .child(column_header(matches!(id, CollectionId::Album(_)), self.shows_added_column(&id), page_margin(self.window_width)))
+            .child(column_header(
+                matches!(id, CollectionId::Album(_)),
+                self.shows_added_column(&id),
+                page_margin(self.window_width),
+            ))
             .child(body)
             .child(wheel);
         super::pages::page_enter(ElementId::Name(format!("page-{}", id.key()).into()), page)
@@ -774,13 +886,19 @@ impl Shell {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let id = id.clone();
-        let count = visible.as_ref().map_or_else(|| self.library.tracks(&id).map_or(0, |t| t.len()), |v| v.len());
+        let count = visible.as_ref().map_or_else(
+            || self.library.tracks(&id).map_or(0, |t| t.len()),
+            |v| v.len(),
+        );
         // Albümde her satır aynı kapağı ve albüm adını tekrarlardı: ikisi de
         // gizlenir.
         let album = matches!(id, CollectionId::Album(_));
         // Kendi listende satırlar sürüklenerek sıralanır (süzgeç yokken).
-        let reorder = visible.is_none() && self.library.item(&id).is_some_and(super::manage::is_own);
-        let album_artists = album.then(|| self.library.item(&id).map(|i| i.subtitle.clone())).flatten();
+        let reorder =
+            visible.is_none() && self.library.item(&id).is_some_and(super::manage::is_own);
+        let album_artists = album
+            .then(|| self.library.item(&id).map(|i| i.subtitle.clone()))
+            .flatten();
         let show_added = self.shows_added_column(&id);
         // Satırlar yüzen hapın altından geçer: liste pencerenin altına kadar
         // (ve hap payı kadar ötesine) uzanır, altındaki iç boşluk (`pb`) son
@@ -791,63 +909,69 @@ impl Shell {
         let list = uniform_list(
             "tracks",
             count,
-            cx.processor(move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
-                let Some(tracks) = this.library.tracks(&id).cloned() else {
-                    return Vec::new();
-                };
-                // Çalan satır: sıradaki yeri ve şarkısı tutuyorsa orası; liste
-                // bu arada değiştiyse (satır çıkarıldı, taşındı) şarkının yeni yeri.
-                let current = this.state.track.as_ref().map(|t| t.uri.as_str());
-                let playing_index = (this.state.queue.context.as_ref() == Some(&id))
-                    .then(|| {
-                        let i = this.state.queue.index;
-                        match current {
-                            Some(uri) if tracks.get(i).is_none_or(|t| t.uri != uri) => {
-                                tracks.iter().position(|t| t.uri == uri)
+            cx.processor(
+                move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
+                    let Some(tracks) = this.library.tracks(&id).cloned() else {
+                        return Vec::new();
+                    };
+                    // Çalan satır: sıradaki yeri ve şarkısı tutuyorsa orası; liste
+                    // bu arada değiştiyse (satır çıkarıldı, taşındı) şarkının yeni yeri.
+                    let current = this.state.track.as_ref().map(|t| t.uri.as_str());
+                    let playing_index = (this.state.queue.context.as_ref() == Some(&id))
+                        .then(|| {
+                            let i = this.state.queue.index;
+                            match current {
+                                Some(uri) if tracks.get(i).is_none_or(|t| t.uri != uri) => {
+                                    tracks.iter().position(|t| t.uri == uri)
+                                }
+                                _ => Some(i),
                             }
-                            _ => Some(i),
-                        }
-                    })
-                    .flatten();
-                let list = ListKey::Collection(id.clone());
-                let dates = show_added.then(|| this.library.added.get(&id).cloned()).flatten();
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_or(0, |d| d.as_millis() as i64);
-                let rows = range
-                    .filter_map(|pos| {
-                        let ix = match &visible {
-                            Some(v) => *v.get(pos)?,
-                            None => pos,
-                        };
-                        let track = tracks.get(ix)?;
-                        let spec = RowSpec {
-                            list: list.clone(),
-                            ix,
-                            show_cover: !album,
-                            show_album: !album,
-                            hide_artist: album_artists.as_deref().is_some_and(|a| same_artists(a, &track.artists)),
-                            artist_column: false,
-                            playing: playing_index == Some(ix),
-                            selected: this.is_selected(&list, ix),
-                            look: Look::Live,
-                            reorder,
-                            added: show_added.then(|| {
-                                dates
-                                    .as_ref()
-                                    .and_then(|d| d.get(&track.uri))
-                                    .map(|at| super::added_date::added_label(now, *at))
-                                    .unwrap_or_default()
-                                    .into()
-                            }),
-                        };
-                        Some(this.song_row(spec, track, cx))
-                    })
-                    .collect();
-                // Satırlar çizilirken istenen küçük kapaklar.
-                this.flush_image_requests(cx);
-                rows
-            }),
+                        })
+                        .flatten();
+                    let list = ListKey::Collection(id.clone());
+                    let dates = show_added
+                        .then(|| this.library.added.get(&id).cloned())
+                        .flatten();
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .map_or(0, |d| d.as_millis() as i64);
+                    let rows = range
+                        .filter_map(|pos| {
+                            let ix = match &visible {
+                                Some(v) => *v.get(pos)?,
+                                None => pos,
+                            };
+                            let track = tracks.get(ix)?;
+                            let spec = RowSpec {
+                                list: list.clone(),
+                                ix,
+                                show_cover: !album,
+                                show_album: !album,
+                                hide_artist: album_artists
+                                    .as_deref()
+                                    .is_some_and(|a| same_artists(a, &track.artists)),
+                                artist_column: false,
+                                playing: playing_index == Some(ix),
+                                selected: this.is_selected(&list, ix),
+                                look: Look::Live,
+                                reorder,
+                                added: show_added.then(|| {
+                                    dates
+                                        .as_ref()
+                                        .and_then(|d| d.get(&track.uri))
+                                        .map(|at| super::added_date::added_label(now, *at))
+                                        .unwrap_or_default()
+                                        .into()
+                                }),
+                            };
+                            Some(this.song_row(spec, track, cx))
+                        })
+                        .collect();
+                    // Satırlar çizilirken istenen küçük kapaklar.
+                    this.flush_image_requests(cx);
+                    rows
+                },
+            ),
         )
         .track_scroll(self.library.scroll.clone())
         // Boyu içerikten değil, iki kenarından (üst ve alt) gelsin.
@@ -864,7 +988,9 @@ impl Shell {
         // çubuğu bu çizimde eski bir boyla ya da konumla çizildiyse (pencere
         // boyu değişti, raf kapandı, klavyeyle satıra gidildi) görünüm bir
         // kare sonra kendini yeniden çizer.
-        let drawn = self.scroll_metrics(super::ScrollBar::List).map(|m| (m.viewport, m.offset));
+        let drawn = self
+            .scroll_metrics(super::ScrollBar::List)
+            .map(|m| (m.viewport, m.offset));
         let viewport = self.list_viewport.clone();
         let scroll = self.library.scroll.clone();
         let drawn_collapse = self.library.header_collapse.min(COLLAPSE_MAX);
@@ -873,7 +999,10 @@ impl Shell {
                 viewport.set(Some(bounds));
                 let state = scroll.0.borrow();
                 let laid_out = state.last_item_size.map(|size| {
-                    (f32::from(size.item.height), -f32::from(state.base_handle.offset().y))
+                    (
+                        f32::from(size.item.height),
+                        -f32::from(state.base_handle.offset().y),
+                    )
                 });
                 if let Some((lv, lo)) = laid_out {
                     scroll_trace::state(drawn_collapse, lo, || format!("layout viewport={lv:.1}"));
@@ -937,8 +1066,25 @@ impl Shell {
     /// seçer (Ctrl ekler, Shift aralık), çift tık ve ▶ çalar, sağ tık menü
     /// açar; sanatçı ve albüm adları tıklanabilir; kalp beğenir; kendi
     /// listende satır sürüklenip başka bir satırın yerine bırakılır.
-    pub(super) fn song_row(&self, spec: RowSpec, track: &TrackRow, cx: &mut Context<Self>) -> AnyElement {
-        let RowSpec { list, ix, show_cover, show_album, hide_artist, artist_column, playing, selected, look, reorder, added } = spec;
+    pub(super) fn song_row(
+        &self,
+        spec: RowSpec,
+        track: &TrackRow,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let RowSpec {
+            list,
+            ix,
+            show_cover,
+            show_album,
+            hide_artist,
+            artist_column,
+            playing,
+            selected,
+            look,
+            reorder,
+            added,
+        } = spec;
         let accent = self.accent().text;
         // Numara sütunundaki her şey (numara, çal simgesi, ekolayzer, "#")
         // 32 px'lik hücrenin ortasında: üzerine gelince beliren ▶, yerini
@@ -983,7 +1129,12 @@ impl Shell {
         // üzerindeki satırda kurulur: her satırda kurulunca kaydırırken kare
         // ~0,9 ms (%17) pahalanıyordu (`OPENIFY_PROF_HIDE=rowx` ile ölçüldü).
         // Diğer satırlar düz yazı; görünüş aynı.
-        let hot = look == Look::Hover || self.manage.hover.as_ref().is_some_and(|(l, i)| *i == ix && *l == list);
+        let hot = look == Look::Hover
+            || self
+                .manage
+                .hover
+                .as_ref()
+                .is_some_and(|(l, i)| *i == ix && *l == list);
         self.want_links(&track.uri);
         // Yerel olarak gizlenen şarkının satırı soluk görünür (bkz. `listening`).
         let hidden = self.row_hidden(&list, &track.uri);
@@ -1007,9 +1158,17 @@ impl Shell {
         let hover_list = list.clone();
         let row = row_states(row, look, selected, playing.then_some(accent))
             .when(hidden, |el| el.opacity(Self::hidden_opacity()))
-            .on_hover(cx.listener(move |this, hovered: &bool, _, cx| this.hover_row(hover_list.clone(), ix, *hovered, cx)))
+            .on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
+                this.hover_row(hover_list.clone(), ix, *hovered, cx)
+            }))
             .on_click(cx.listener(move |this, event: &ClickEvent, _, cx| {
-                this.click_row(click_list.clone(), ix, event.modifiers(), event.click_count(), cx);
+                this.click_row(
+                    click_list.clone(),
+                    ix,
+                    event.modifiers(),
+                    event.click_count(),
+                    cx,
+                );
             }))
             .on_mouse_down(
                 gpui::MouseButton::Right,
@@ -1029,11 +1188,12 @@ impl Shell {
                     .items_center()
                     .justify_center()
                     .when(!playing, |el| {
-                        el.hover(|s| s.bg(veil(VEIL_HOVER)))
-                            .on_click(cx.listener(move |this, _, _, cx| {
+                        el.hover(|s| s.bg(veil(VEIL_HOVER))).on_click(cx.listener(
+                            move |this, _, _, cx| {
                                 cx.stop_propagation();
                                 this.play_in(&play_list, ix, cx);
-                            }))
+                            },
+                        ))
                     })
                     .child(number)
                     .children(play_icon),
@@ -1066,22 +1226,40 @@ impl Shell {
                         if !hot || super::frames::hidden("links") || super::frames::hidden("rowx") {
                             el.child(line_with_tip(("t-artists", ix), track.artists.clone()))
                         } else {
-                            el.child(div().flex().child(self.artist_links(("t-artists", ix).into(), track, cx)))
+                            el.child(div().flex().child(self.artist_links(
+                                ("t-artists", ix).into(),
+                                track,
+                                cx,
+                            )))
                         }
                     }),
             )
             .when(artist_column, |el| {
                 if !hot || super::frames::hidden("links") || super::frames::hidden("rowx") {
-                    el.child(column(ALBUM_COLUMN).child(line_with_tip(("t-artists-col", ix), track.artists.clone())))
+                    el.child(
+                        column(ALBUM_COLUMN)
+                            .child(line_with_tip(("t-artists-col", ix), track.artists.clone())),
+                    )
                 } else {
-                    el.child(column(ALBUM_COLUMN).flex().child(self.artist_links(("t-artists-col", ix).into(), track, cx)))
+                    el.child(column(ALBUM_COLUMN).flex().child(self.artist_links(
+                        ("t-artists-col", ix).into(),
+                        track,
+                        cx,
+                    )))
                 }
             })
             .when(show_album, |el| {
                 if !hot || super::frames::hidden("links") || super::frames::hidden("rowx") {
-                    el.child(column(ALBUM_COLUMN).child(line_with_tip(("t-album", ix), track.album.clone())))
+                    el.child(
+                        column(ALBUM_COLUMN)
+                            .child(line_with_tip(("t-album", ix), track.album.clone())),
+                    )
                 } else {
-                    el.child(column(ALBUM_COLUMN).flex().child(self.album_link(("t-album", ix).into(), track, cx)))
+                    el.child(column(ALBUM_COLUMN).flex().child(self.album_link(
+                        ("t-album", ix).into(),
+                        track,
+                        cx,
+                    )))
                 }
             })
             // Eklenme tarihi (listeler ve Beğenilenler; dar pencerede sütun yok).
@@ -1095,11 +1273,23 @@ impl Shell {
                 )
             })
             // Beğenilenlerde her satır beğenili: kalp yalnız üzerine gelince.
-            .child(if !(hot || liked && list != ListKey::Collection(CollectionId::Liked)) || super::frames::hidden("hearts") || super::frames::hidden("rowx") {
-                div().w(px(NUMBER_CELL)).flex_none().into_any_element()
-            } else {
-                self.heart_cell(ix, track, liked, if hot { Look::Hover } else { look }, list == ListKey::Collection(CollectionId::Liked), cx)
-            })
+            .child(
+                if !(hot || liked && list != ListKey::Collection(CollectionId::Liked))
+                    || super::frames::hidden("hearts")
+                    || super::frames::hidden("rowx")
+                {
+                    div().w(px(NUMBER_CELL)).flex_none().into_any_element()
+                } else {
+                    self.heart_cell(
+                        ix,
+                        track,
+                        liked,
+                        if hot { Look::Hover } else { look },
+                        list == ListKey::Collection(CollectionId::Liked),
+                        cx,
+                    )
+                },
+            )
             .child(
                 div()
                     .w(px(48.))
@@ -1116,32 +1306,64 @@ impl Shell {
             (ListKey::Collection(id), true) => {
                 let from_selection = self.is_selected(&list, ix) && self.manage.sel.rows.len() > 1;
                 // Seçim bitişikse bütün blok taşınır, değilse yalnız bu satır.
-                let (from, len) = match from_selection.then(|| contiguous(&self.manage.sel.rows)).flatten() {
+                let (from, len) = match from_selection
+                    .then(|| contiguous(&self.manage.sel.rows))
+                    .flatten()
+                {
                     Some((start, n)) => (start, n),
                     None => (ix, 1),
                 };
-                let label: SharedString =
-                    if len == 1 { track.name.clone().into() } else { tp!(Songs, len).into() };
-                let drag = super::manage::DragRows { list: id.clone(), from, len, label };
+                let label: SharedString = if len == 1 {
+                    track.name.clone().into()
+                } else {
+                    tp!(Songs, len).into()
+                };
+                let drag = super::manage::DragRows {
+                    list: id.clone(),
+                    from,
+                    len,
+                    label,
+                };
                 row.on_drag(drag, move |d, _, _, cx| {
-                    cx.new(|_| super::manage::DragPreview { label: d.label.clone(), accent })
+                    cx.new(|_| super::manage::DragPreview {
+                        label: d.label.clone(),
+                        accent,
+                    })
                 })
                 .drag_over::<super::manage::DragRows>(move |s, d, _, _| {
                     let s = s.bg(veil(VEIL_HOVER));
-                    if d.from < ix { s.border_b_2().border_color(rgb(accent)) } else { s.border_t_2().border_color(rgb(accent)) }
+                    if d.from < ix {
+                        s.border_b_2().border_color(rgb(accent))
+                    } else {
+                        s.border_t_2().border_color(rgb(accent))
+                    }
                 })
-                .on_drop(cx.listener(move |this, d: &super::manage::DragRows, _, cx| this.drop_rows(d, ix, cx)))
+                .on_drop(cx.listener(
+                    move |this, d: &super::manage::DragRows, _, cx| this.drop_rows(d, ix, cx),
+                ))
             }
             _ => row,
         };
 
         // Liste öğeleri içerik kadar daralmasın: dış kap tam genişlikte.
-        div().w_full().px(px(page_margin(self.window_width) - ROW_INSET)).child(row).into_any_element()
+        div()
+            .w_full()
+            .px(px(page_margin(self.window_width) - ROW_INSET))
+            .child(row)
+            .into_any_element()
     }
 
     /// Satırdaki kalp: beğenilmişse hep görünür (kapak ışığı renginde, dolu),
     /// değilse yalnız satırın üzerine gelince.
-    pub(super) fn heart_cell(&self, ix: usize, track: &TrackRow, liked: bool, look: Look, quiet: bool, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn heart_cell(
+        &self,
+        ix: usize,
+        track: &TrackRow,
+        liked: bool,
+        look: Look,
+        quiet: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let accent = self.accent().text;
         let row = track.clone();
         div()
@@ -1152,31 +1374,56 @@ impl Shell {
             .flex()
             .items_center()
             .justify_center()
-            .when((!liked || quiet) && look != Look::Hover, |el| el.opacity(0.).group_hover(ROW_GROUP, |s| s.opacity(1.)))
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., super::tween::FULL))
+            .when((!liked || quiet) && look != Look::Hover, |el| {
+                el.opacity(0.).group_hover(ROW_GROUP, |s| s.opacity(1.))
+            })
+            .child(super::tween::hover_fill(
+                veil(VEIL_HOVER),
+                veil(VEIL_PRESSED),
+                0.,
+                super::tween::FULL,
+            ))
             .cursor_pointer()
-            .tooltip(super::components::Tooltip::text(if liked { t!(UnlikeTip) } else { t!(LikeTip) }, None))
+            .tooltip(super::components::Tooltip::text(
+                if liked { t!(UnlikeTip) } else { t!(LikeTip) },
+                None,
+            ))
             .on_click(cx.listener(move |this, _, _, cx| {
                 cx.stop_propagation();
                 let on = !this.is_liked(&row.uri);
                 this.set_liked(vec![row.clone()], on, cx);
             }))
-            .child(icon(if liked { "heart-fill" } else { "heart" }, 16., if liked { rgb(accent) } else { muted() }))
+            .child(icon(
+                if liked { "heart-fill" } else { "heart" },
+                16.,
+                if liked { rgb(accent) } else { muted() },
+            ))
             .into_any_element()
     }
 
     /// Kütüphanedeki albümün sanatçıları (albüm sayfası önbellekteyse).
     fn album_artists(&self, id: &CollectionId) -> Option<Vec<crate::engine::ArtistCard>> {
-        let CollectionId::Album(uri) = id else { return None };
+        let CollectionId::Album(uri) = id else {
+            return None;
+        };
         match self.pages.albums.get(uri) {
-            Some(super::pages::PageLoad::Ready(p)) if !p.artists.is_empty() => Some(p.artists.clone()),
+            Some(super::pages::PageLoad::Ready(p)) if !p.artists.is_empty() => {
+                Some(p.artists.clone())
+            }
             _ => None,
         }
     }
 
     /// Liste başlığındaki ikincil eylemler: kendi listende "Yeniden adlandır"
     /// ve "Diğer", albümde kalp. Küçülmüş başlıkta yalnız "Diğer".
-    fn collection_actions(&self, id: &CollectionId, title: &str, compact: bool, window: &gpui::Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    fn collection_actions(
+        &self,
+        id: &CollectionId,
+        title: &str,
+        compact: bool,
+        window: &gpui::Window,
+        cx: &mut Context<Self>,
+    ) -> Vec<AnyElement> {
         let _ = window;
         let accent = self.accent().text;
         let mut out = Vec::new();
@@ -1184,15 +1431,29 @@ impl Shell {
             if !compact {
                 let uri = uri.clone();
                 out.push(
-                    icon_button_tinted("collection-save", "heart-fill", rgb(accent), Look::Live, accent)
-                        .tooltip(super::components::Tooltip::text(t!(RemoveFromLibrary), None))
-                        .on_click(cx.listener(move |this, _, _, cx| this.set_album_saved(uri.clone(), false, None, cx)))
-                        .into_any_element(),
+                    icon_button_tinted(
+                        "collection-save",
+                        "heart-fill",
+                        rgb(accent),
+                        Look::Live,
+                        accent,
+                    )
+                    .tooltip(super::components::Tooltip::text(
+                        t!(RemoveFromLibrary),
+                        None,
+                    ))
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.set_album_saved(uri.clone(), false, None, cx)
+                    }))
+                    .into_any_element(),
                 );
             }
         }
         if *id != CollectionId::Liked {
-            let target = super::manage::CardTarget::Collection { id: id.clone(), title: title.to_string() };
+            let target = super::manage::CardTarget::Collection {
+                id: id.clone(),
+                title: title.to_string(),
+            };
             let (probe, anchor) = super::components::anchor_probe();
             out.push(
                 icon_button("collection-more", "ellipsis", Look::Live, accent)
@@ -1200,7 +1461,11 @@ impl Shell {
                     .tooltip(super::components::Tooltip::text(t!(MoreTip), None))
                     .child(probe)
                     .on_click(cx.listener(move |this, ev: &ClickEvent, _, cx| {
-                        this.open_card_menu(target.clone(), super::components::menu_below(anchor.get(), ev.position()), cx);
+                        this.open_card_menu(
+                            target.clone(),
+                            super::components::menu_below(anchor.get(), ev.position()),
+                            cx,
+                        );
                     }))
                     .into_any_element(),
             );
@@ -1213,10 +1478,18 @@ impl Shell {
         let find = self.manage.find.as_ref()?;
         let accent = self.accent().text;
         let empty = find.query.is_empty();
-        let caret = || div().w(px(2.)).h(px(T_SECONDARY.line)).flex_shrink_0().bg(rgb(accent));
+        let caret = || {
+            div()
+                .w(px(2.))
+                .h(px(T_SECONDARY.line))
+                .flex_shrink_0()
+                .bg(rgb(accent))
+        };
         let id = self.library.selected.clone()?;
         let total = self.library.tracks(&id).map_or(0, |t| t.len());
-        let shown = self.visible_rows(&ListKey::Collection(id)).map_or(total, |v| v.len());
+        let shown = self
+            .visible_rows(&ListKey::Collection(id))
+            .map_or(total, |v| v.len());
         Some(
             div()
                 .flex_shrink_0()
@@ -1280,9 +1553,13 @@ impl Shell {
     ) -> AnyElement {
         match id {
             CollectionId::Liked => liked_art(side, radius, self.accent().text),
-            CollectionId::Album(_) => cover_image(&self.images, image, name, side, radius, "disc-3"),
+            CollectionId::Album(_) => {
+                cover_image(&self.images, image, name, side, radius, "disc-3")
+            }
             // Takip edilen sanatçı: yuvarlak portre (köşe yarıçapı yok sayılır).
-            CollectionId::Artist(_) => cover_image(&self.images, image, name, side, side / 2., "user"),
+            CollectionId::Artist(_) => {
+                cover_image(&self.images, image, name, side, side / 2., "user")
+            }
             // Kapağı olmayan liste: ilk şarkılarının dört albüm kapağından 2x2
             // mozaik (bkz. `engine::library::with_mosaics`).
             CollectionId::Playlist(_) => match crate::engine::mosaic_urls(image) {
@@ -1298,7 +1575,12 @@ impl Shell {
     fn mosaic_art(&self, urls: &[&str], side: f32, radius: f32) -> AnyElement {
         let tile = (side - S0) / 2.;
         let cell = |url: &str, corner: usize| {
-            let mut el = div().relative().size(px(tile)).flex_none().overflow_hidden().bg(rgb(PLACEHOLDER));
+            let mut el = div()
+                .relative()
+                .size(px(tile))
+                .flex_none()
+                .overflow_hidden()
+                .bg(rgb(PLACEHOLDER));
             el = match corner {
                 0 => el.rounded_tl(px(radius)),
                 1 => el.rounded_tr(px(radius)),
@@ -1357,7 +1639,11 @@ fn row_states(
             accent_veil(a, ACCENT_PLAYING_HOVER),
             accent_veil(a, ACCENT_PLAYING_PRESSED),
         ),
-        (None, true) => (Some(veil(VEIL_SELECTED)), veil(VEIL_SELECTED), veil(VEIL_PRESSED)),
+        (None, true) => (
+            Some(veil(VEIL_SELECTED)),
+            veil(VEIL_SELECTED),
+            veil(VEIL_PRESSED),
+        ),
         (None, false) => (None, veil(VEIL_HOVER), veil(VEIL_PRESSED)),
     };
     let el = match rest {
@@ -1367,9 +1653,12 @@ fn row_states(
     match look {
         // Üzerine gelme / basma rengi 140 ms'de gelir (`tween::HoverFill`,
         // satırın ilk çocuğu): zemin yerine katman, aradaki fark kadar.
-        Look::Live | Look::Focus => el
-            .cursor_pointer()
-            .child(super::tween::hover_fill(hover, pressed, rest.map_or(0., |c| c.a), R_MD)),
+        Look::Live | Look::Focus => el.cursor_pointer().child(super::tween::hover_fill(
+            hover,
+            pressed,
+            rest.map_or(0., |c| c.a),
+            R_MD,
+        )),
         Look::Hover => el.bg(hover),
         Look::Pressed => el.bg(pressed),
         Look::Disabled => el,
@@ -1459,7 +1748,14 @@ fn column_header(album: bool, added: bool, margin: f32) -> AnyElement {
         .when(!album, |el| el.child(div().w(px(ROW_THUMB))))
         .child(title_column().child(t!(ColTitle)))
         .when(!album, |el| el.child(column(ALBUM_COLUMN).child(t!(Album))))
-        .when(added, |el| el.child(div().w(px(ADDED_COLUMN)).flex_none().child(t!(ColDateAdded))))
+        .when(added, |el| {
+            el.child(
+                div()
+                    .w(px(ADDED_COLUMN))
+                    .flex_none()
+                    .child(t!(ColDateAdded)),
+            )
+        })
         // Kalp sütunu: başlığı yok.
         .child(div().w(px(NUMBER_CELL)).flex_none())
         .child(div().w(px(48.)).flex().justify_end().child(t!(ColDuration)))
@@ -1562,7 +1858,13 @@ pub(super) fn skeleton_rows(album: bool) -> AnyElement {
 
 /// `skeleton_rows`, verilen kenar boşluğuyla (`theme::page_margin`).
 pub(super) fn skeleton_rows_at(album: bool, margin: f32) -> AnyElement {
-    let bar = |w: f32, h: f32| div().w(px(w)).h(px(h)).rounded(px(R_XS)).bg(veil(VEIL_HOVER));
+    let bar = |w: f32, h: f32| {
+        div()
+            .w(px(w))
+            .h(px(h))
+            .rounded(px(R_XS))
+            .bg(veil(VEIL_HOVER))
+    };
     let mut rows = div().flex().flex_col().px(px(margin - ROW_INSET));
     for i in 0..10 {
         // Genişlikler satırdan satıra değişir, gerçek bir liste gibi dursun.
@@ -1575,8 +1877,16 @@ pub(super) fn skeleton_rows_at(album: bool, margin: f32) -> AnyElement {
                 .flex()
                 .items_center()
                 .gap(px(S4))
-                .child(div().w(px(NUMBER_CELL)).flex().justify_center().child(bar(12., 10.)))
-                .when(!album, |el| el.child(bar(ROW_THUMB, ROW_THUMB).rounded(px(R_SM))))
+                .child(
+                    div()
+                        .w(px(NUMBER_CELL))
+                        .flex()
+                        .justify_center()
+                        .child(bar(12., 10.)),
+                )
+                .when(!album, |el| {
+                    el.child(bar(ROW_THUMB, ROW_THUMB).rounded(px(R_SM)))
+                })
                 .child(
                     title_column()
                         .flex()
@@ -1585,7 +1895,9 @@ pub(super) fn skeleton_rows_at(album: bool, margin: f32) -> AnyElement {
                         .child(bar(title, 10.))
                         .when(!album, |el| el.child(bar(artist, 8.))),
                 )
-                .when(!album, |el| el.child(column(ALBUM_COLUMN).child(bar(artist + 30., 8.))))
+                .when(!album, |el| {
+                    el.child(column(ALBUM_COLUMN).child(bar(artist + 30., 8.)))
+                })
                 .child(div().w(px(NUMBER_CELL)).flex_none())
                 .child(div().w(px(48.)).flex().justify_end().child(bar(28., 8.))),
         );

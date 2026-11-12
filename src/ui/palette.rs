@@ -14,13 +14,13 @@
 use std::{sync::Arc, time::Duration};
 
 use gpui::{
-    AnimationExt,
-    AnyElement, Context, KeyDownEvent, MouseButton, ScrollHandle, SharedString, Task, Window,
-    deferred, div, prelude::*, px, rgb,
+    AnimationExt, AnyElement, Context, KeyDownEvent, MouseButton, ScrollHandle, SharedString, Task,
+    Window, deferred, div, prelude::*, px, rgb,
 };
 
 use super::{
-    Shell, components::kbd, cover_image, fuzzy, library::Loadable, player::fmt_time, text::line_with_tip, theme::*,
+    Shell, components::kbd, cover_image, fuzzy, library::Loadable, player::fmt_time,
+    text::line_with_tip, theme::*,
 };
 use crate::engine::{CollectionId, Command, SearchResults, TrackRow};
 use crate::{t, tf, tp};
@@ -78,24 +78,104 @@ pub enum PaletteCommand {
 
 /// Komut, adı, açıklaması, kısayolu. Çal ve sessize al komutlarının adı
 /// o anki duruma göre değişir (bkz. `command_state`).
-fn commands() -> [(PaletteCommand, &'static str, &'static str, Option<&'static str>); 16] {
+fn commands() -> [(
+    PaletteCommand,
+    &'static str,
+    &'static str,
+    Option<&'static str>,
+); 16] {
     [
-    (PaletteCommand::TogglePlay, t!(CmdTogglePlay), "", Some(t!(KeySpace))),
-    (PaletteCommand::Next, t!(CmdNext), "", Some("Ctrl →")),
-    (PaletteCommand::Previous, t!(CmdPrevious), "", Some("Ctrl ←")),
-    (PaletteCommand::ToggleMute, t!(CmdToggleMute), "", Some("Ctrl Shift ↓")),
-    (PaletteCommand::RefreshLibrary, t!(CmdRefreshLibrary), t!(CmdRefreshLibraryDesc), None),
-    (PaletteCommand::Home, t!(NavHome), t!(CmdHomeDesc), Some("Ctrl 1")),
-    (PaletteCommand::Explore, t!(NavExplore), t!(CmdExploreDesc), Some("Ctrl 2")),
-    (PaletteCommand::Library, t!(NavLibrary), t!(CmdLibraryDesc), Some("Ctrl 3")),
-    (PaletteCommand::Recent, t!(RecentPageTitle), t!(CmdRecentDesc), None),
-    (PaletteCommand::NewPlaylist, t!(NewPlaylist), t!(CmdNewPlaylistDesc), None),
-    (PaletteCommand::Tools, t!(ToolsTitle), t!(CmdToolsDesc), None),
-    (PaletteCommand::StartRadio, t!(CmdStartRadio), t!(CmdStartRadioDesc), None),
-    (PaletteCommand::PrivateSession, t!(CmdPrivateSession), t!(CmdPrivateSessionDesc), None),
-    (PaletteCommand::Settings, t!(Settings), t!(CmdSettingsDesc), Some("Ctrl ,")),
-    (PaletteCommand::Shortcuts, t!(Shortcuts), t!(CmdShortcutsDesc), Some("?")),
-    (PaletteCommand::Logout, t!(SignOut), t!(CmdSignOutDesc), None),
+        (
+            PaletteCommand::TogglePlay,
+            t!(CmdTogglePlay),
+            "",
+            Some(t!(KeySpace)),
+        ),
+        (PaletteCommand::Next, t!(CmdNext), "", Some("Ctrl →")),
+        (
+            PaletteCommand::Previous,
+            t!(CmdPrevious),
+            "",
+            Some("Ctrl ←"),
+        ),
+        (
+            PaletteCommand::ToggleMute,
+            t!(CmdToggleMute),
+            "",
+            Some("Ctrl Shift ↓"),
+        ),
+        (
+            PaletteCommand::RefreshLibrary,
+            t!(CmdRefreshLibrary),
+            t!(CmdRefreshLibraryDesc),
+            None,
+        ),
+        (
+            PaletteCommand::Home,
+            t!(NavHome),
+            t!(CmdHomeDesc),
+            Some("Ctrl 1"),
+        ),
+        (
+            PaletteCommand::Explore,
+            t!(NavExplore),
+            t!(CmdExploreDesc),
+            Some("Ctrl 2"),
+        ),
+        (
+            PaletteCommand::Library,
+            t!(NavLibrary),
+            t!(CmdLibraryDesc),
+            Some("Ctrl 3"),
+        ),
+        (
+            PaletteCommand::Recent,
+            t!(RecentPageTitle),
+            t!(CmdRecentDesc),
+            None,
+        ),
+        (
+            PaletteCommand::NewPlaylist,
+            t!(NewPlaylist),
+            t!(CmdNewPlaylistDesc),
+            None,
+        ),
+        (
+            PaletteCommand::Tools,
+            t!(ToolsTitle),
+            t!(CmdToolsDesc),
+            None,
+        ),
+        (
+            PaletteCommand::StartRadio,
+            t!(CmdStartRadio),
+            t!(CmdStartRadioDesc),
+            None,
+        ),
+        (
+            PaletteCommand::PrivateSession,
+            t!(CmdPrivateSession),
+            t!(CmdPrivateSessionDesc),
+            None,
+        ),
+        (
+            PaletteCommand::Settings,
+            t!(Settings),
+            t!(CmdSettingsDesc),
+            Some("Ctrl ,"),
+        ),
+        (
+            PaletteCommand::Shortcuts,
+            t!(Shortcuts),
+            t!(CmdShortcutsDesc),
+            Some("?"),
+        ),
+        (
+            PaletteCommand::Logout,
+            t!(SignOut),
+            t!(CmdSignOutDesc),
+            None,
+        ),
     ]
 }
 
@@ -109,7 +189,10 @@ pub fn search_placeholder() -> &'static str {
 #[derive(Debug, Clone)]
 pub enum Action {
     Command(PaletteCommand),
-    OpenCollection { id: CollectionId, title: String },
+    OpenCollection {
+        id: CollectionId,
+        title: String,
+    },
     PlayTrack(String),
     /// Sanatçı sayfası, albüm (kütüphanedeyse liste, değilse sayfa), tam
     /// arama sonuçları (Adım 12).
@@ -155,7 +238,13 @@ pub struct Item {
 }
 
 impl Item {
-    fn new(section: &'static str, title: impl Into<String>, subtitle: impl Into<String>, action: Action, thumb: Thumb) -> Self {
+    fn new(
+        section: &'static str,
+        title: impl Into<String>,
+        subtitle: impl Into<String>,
+        action: Action,
+        thumb: Thumb,
+    ) -> Self {
         Self {
             thumb,
             name_key: String::new(),
@@ -238,16 +327,17 @@ impl PaletteState {
         if q.chars().count() < MIN_SPOTIFY_QUERY {
             return;
         }
-        self.recent_searches.retain(|s| !s.eq_ignore_ascii_case(q) && s != q);
+        self.recent_searches
+            .retain(|s| !s.eq_ignore_ascii_case(q) && s != q);
         self.recent_searches.insert(0, q.to_string());
-        self.recent_searches.truncate(crate::settings::RECENT_SEARCHES_MAX);
+        self.recent_searches
+            .truncate(crate::settings::RECENT_SEARCHES_MAX);
     }
 
     pub fn set_index(&mut self, tracks: Arc<Vec<TrackRow>>, keys: Vec<String>) {
         self.track_keys = keys;
         self.tracks = tracks;
     }
-
 }
 
 /// Şarkıların arama anahtarları (Türkçe harfler sadeleşmiş ad, sanatçı,
@@ -286,7 +376,11 @@ impl Shell {
         cx.notify();
     }
 
-    pub(super) fn on_search_results(&mut self, seq: u64, results: Result<Arc<SearchResults>, String>) {
+    pub(super) fn on_search_results(
+        &mut self,
+        seq: u64,
+        results: Result<Arc<SearchResults>, String>,
+    ) {
         if seq != self.palette.seq {
             return; // Eski bir sorgunun sonucu.
         }
@@ -341,7 +435,9 @@ impl Shell {
         if typed.chars().count() >= MIN_SPOTIFY_QUERY {
             let all_commands = commands();
             let keys: Vec<String> = all_commands.iter().map(|c| fuzzy::fold(c.1)).collect();
-            let named: Vec<usize> = (0..keys.len()).filter(|i| keys[*i].contains(&typed)).collect();
+            let named: Vec<usize> = (0..keys.len())
+                .filter(|i| keys[*i].contains(&typed))
+                .collect();
             for i in f.top(named.iter().map(|i| keys[*i].as_str()), MAX_COMMANDS) {
                 let (cmd, title, detail, _) = all_commands[named[i]];
                 items.push(command_item(cmd, title, detail, None));
@@ -350,22 +446,34 @@ impl Shell {
 
         // Kütüphanedeki listeler ve albümler.
         if let Loadable::Loaded(library) = &self.library.library {
-            let mut all = vec![(CollectionId::Liked, t!(LikedSongs).to_string(), tp!(Songs, library.liked_count), String::new())];
-            all.extend(
-                library
-                    .albums
-                    .iter()
-                    .chain(&library.playlists)
-                    .map(|i| (i.id.clone(), i.name.clone(), crate::i18n::canon::localize(&i.subtitle).into_owned(), i.image.clone())),
-            );
-            let keys: Vec<String> = all.iter().map(|(_, n, s, _)| fuzzy::fold(&format!("{n} {s}"))).collect();
+            let mut all = vec![(
+                CollectionId::Liked,
+                t!(LikedSongs).to_string(),
+                tp!(Songs, library.liked_count),
+                String::new(),
+            )];
+            all.extend(library.albums.iter().chain(&library.playlists).map(|i| {
+                (
+                    i.id.clone(),
+                    i.name.clone(),
+                    crate::i18n::canon::localize(&i.subtitle).into_owned(),
+                    i.image.clone(),
+                )
+            }));
+            let keys: Vec<String> = all
+                .iter()
+                .map(|(_, n, s, _)| fuzzy::fold(&format!("{n} {s}")))
+                .collect();
             for i in f.top(keys.iter().map(String::as_str), MAX_COLLECTIONS) {
                 let (id, name, subtitle, image) = all[i].clone();
                 items.push(Item::new(
                     t!(LibraryYours),
                     name.clone(),
                     subtitle,
-                    Action::OpenCollection { id: id.clone(), title: name },
+                    Action::OpenCollection {
+                        id: id.clone(),
+                        title: name,
+                    },
                     Thumb::Collection { id, url: image },
                 ));
             }
@@ -374,14 +482,22 @@ impl Shell {
         // Kütüphanedeki şarkılar.
         let tracks = self.palette.tracks.clone();
         let mut local_uris = std::collections::HashSet::new();
-        for i in f.top(self.palette.track_keys.iter().map(String::as_str), MAX_LOCAL_TRACKS) {
+        for i in f.top(
+            self.palette.track_keys.iter().map(String::as_str),
+            MAX_LOCAL_TRACKS,
+        ) {
             local_uris.insert(tracks[i].uri.clone());
             items.push(track_item(t!(PaletteYourSongs), &tracks[i]));
         }
 
         // Spotify'ın tamamı (kütüphanedekiyle aynı şarkı iki kez çıkmaz).
         if let Spotify::Done(results) = &self.palette.spotify {
-            for t in results.tracks.iter().filter(|t| !local_uris.contains(&t.uri)).take(MAX_SPOTIFY_TRACKS) {
+            for t in results
+                .tracks
+                .iter()
+                .filter(|t| !local_uris.contains(&t.uri))
+                .take(MAX_SPOTIFY_TRACKS)
+            {
                 items.push(track_item(t!(SectionSongs), t));
             }
             // Sanatçı ve albüm kendi sayfasında açılır (Adım 12).
@@ -391,7 +507,9 @@ impl Shell {
                     a.name.clone(),
                     t!(Artist),
                     Action::OpenArtist(a.uri.clone()),
-                    Thumb::Artist { url: a.image.clone() },
+                    Thumb::Artist {
+                        url: a.image.clone(),
+                    },
                 ));
             }
             for hit in results.albums.iter().take(MAX_SPOTIFY_OTHER) {
@@ -400,7 +518,10 @@ impl Shell {
                     hit.name.clone(),
                     crate::i18n::canon::localize(&hit.subtitle).into_owned(),
                     Action::OpenAlbum(hit.uri.clone()),
-                    Thumb::Cover { url: hit.image.clone(), icon: "disc-3" },
+                    Thumb::Cover {
+                        url: hit.image.clone(),
+                        icon: "disc-3",
+                    },
                 ));
             }
             for hit in results.playlists.iter().take(MAX_SPOTIFY_OTHER) {
@@ -408,8 +529,14 @@ impl Shell {
                     t!(KindLists),
                     hit.name.clone(),
                     crate::i18n::canon::localize(&hit.subtitle).into_owned(),
-                    Action::OpenCollection { id: CollectionId::Playlist(hit.uri.clone()), title: hit.name.clone() },
-                    Thumb::Cover { url: hit.image.clone(), icon: "list-music" },
+                    Action::OpenCollection {
+                        id: CollectionId::Playlist(hit.uri.clone()),
+                        title: hit.name.clone(),
+                    },
+                    Thumb::Cover {
+                        url: hit.image.clone(),
+                        icon: "list-music",
+                    },
                 ));
             }
         }
@@ -448,9 +575,17 @@ impl Shell {
         }
 
         self.palette.items = items;
-        self.palette.selected = self.palette.selected.min(self.palette.items.len().saturating_sub(1));
+        self.palette.selected = self
+            .palette
+            .selected
+            .min(self.palette.items.len().saturating_sub(1));
         // Seçim kullanılamayan bir komutta durmasın.
-        if self.palette.items.get(self.palette.selected).is_some_and(|i| i.disabled) {
+        if self
+            .palette
+            .items
+            .get(self.palette.selected)
+            .is_some_and(|i| i.disabled)
+        {
             self.move_palette_selection(1);
         }
     }
@@ -459,8 +594,19 @@ impl Shell {
     /// (kapaklı). Hiçbiri yoksa boş: palet yalnız giriş satırı.
     fn palette_idle_items(&self) -> Vec<Item> {
         let mut items = Vec::new();
-        for q in self.palette.recent_searches.iter().take(MAX_RECENT_SEARCHES) {
-            items.push(Item::new(t!(PaletteRecentSearches), q.clone(), "", Action::Search(q.clone()), Thumb::Glyph("search")));
+        for q in self
+            .palette
+            .recent_searches
+            .iter()
+            .take(MAX_RECENT_SEARCHES)
+        {
+            items.push(Item::new(
+                t!(PaletteRecentSearches),
+                q.clone(),
+                "",
+                Action::Search(q.clone()),
+                Thumb::Glyph("search"),
+            ));
         }
         if let Loadable::Loaded(library) = &self.library.library {
             for it in crate::engine::home(library, &self.recent, MAX_RECENT_PLAYED).recent {
@@ -468,8 +614,14 @@ impl Shell {
                     t!(NowRecentTitle),
                     it.name.clone(),
                     crate::i18n::canon::localize(&it.subtitle).into_owned(),
-                    Action::OpenCollection { id: it.id.clone(), title: it.name.clone() },
-                    Thumb::Collection { id: it.id, url: it.image },
+                    Action::OpenCollection {
+                        id: it.id.clone(),
+                        title: it.name.clone(),
+                    },
+                    Thumb::Collection {
+                        id: it.id,
+                        url: it.image,
+                    },
                 ));
             }
         }
@@ -481,7 +633,9 @@ impl Shell {
     fn command_state(&self, cmd: PaletteCommand) -> (Option<String>, bool) {
         let has_track = self.state.track.is_some();
         match cmd {
-            PaletteCommand::TogglePlay if self.state.is_playing() => (Some(t!(Pause).into()), false),
+            PaletteCommand::TogglePlay if self.state.is_playing() => {
+                (Some(t!(Pause).into()), false)
+            }
             PaletteCommand::TogglePlay if has_track => (Some(t!(Play).into()), false),
             PaletteCommand::TogglePlay => match self.startable_collection() {
                 Some(name) => (Some(tf!(PlayNamed, name)), false),
@@ -489,9 +643,13 @@ impl Shell {
             },
             PaletteCommand::Next => (None, !self.state.queue.has_next),
             PaletteCommand::Previous => (None, !has_track),
-            PaletteCommand::ToggleMute if self.state.volume == 0.0 => (Some(t!(Unmute).into()), false),
+            PaletteCommand::ToggleMute if self.state.volume == 0.0 => {
+                (Some(t!(Unmute).into()), false)
+            }
             PaletteCommand::ToggleMute => (Some(t!(Mute).into()), false),
-            PaletteCommand::PrivateSession if self.private_session() => (Some(t!(CmdPrivateOff).into()), false),
+            PaletteCommand::PrivateSession if self.private_session() => {
+                (Some(t!(CmdPrivateOff).into()), false)
+            }
             PaletteCommand::PrivateSession => (Some(t!(CmdPrivateOn).into()), false),
             // Çalan şarkı yoksa radyonun tohumu yok.
             PaletteCommand::StartRadio => (None, !has_track),
@@ -644,7 +802,9 @@ impl Shell {
             "backspace" => {
                 if ctrl {
                     let trimmed = self.palette.query.trim_end().len();
-                    let cut = self.palette.query[..trimmed].rfind(' ').map_or(0, |i| i + 1);
+                    let cut = self.palette.query[..trimmed]
+                        .rfind(' ')
+                        .map_or(0, |i| i + 1);
                     self.palette.query.truncate(cut);
                 } else {
                     self.palette.query.pop();
@@ -653,12 +813,18 @@ impl Shell {
             }
             "v" if ctrl => {
                 if let Some(text) = cx.read_from_clipboard().and_then(|i| i.text()) {
-                    self.palette.query.push_str(text.lines().next().unwrap_or_default());
+                    self.palette
+                        .query
+                        .push_str(text.lines().next().unwrap_or_default());
                     self.on_query_changed(cx);
                 }
             }
             _ if !ctrl && !ks.modifiers.alt => {
-                if let Some(ch) = ks.key_char.as_deref().filter(|c| !c.chars().any(char::is_control)) {
+                if let Some(ch) = ks
+                    .key_char
+                    .as_deref()
+                    .filter(|c| !c.chars().any(char::is_control))
+                {
                     self.palette.query.push_str(ch);
                     self.on_query_changed(cx);
                 }
@@ -721,9 +887,10 @@ impl Shell {
             .flex()
             .items_center()
             .gap(px(S3))
-            .when(!self.palette.items.is_empty() || !self.palette.query.is_empty(), |el| {
-                el.border_b_1().border_color(rgb(BORDER))
-            })
+            .when(
+                !self.palette.items.is_empty() || !self.palette.query.is_empty(),
+                |el| el.border_b_1().border_color(rgb(BORDER)),
+            )
             .child(icon("search", 18., muted()))
             .child(
                 div()
@@ -733,13 +900,26 @@ impl Shell {
                     .overflow_hidden()
                     .whitespace_nowrap()
                     .type_role(T_TITLE)
-                    .text_color(if self.palette.query.is_empty() { muted() } else { text() })
+                    .text_color(if self.palette.query.is_empty() {
+                        muted()
+                    } else {
+                        text()
+                    })
                     // İmleç: yazılanın sonunda (boşken yer tutucunun başında).
-                    .when(self.palette.query.is_empty(), |el| el.child(caret(self.accent().text)))
+                    .when(self.palette.query.is_empty(), |el| {
+                        el.child(caret(self.accent().text))
+                    })
                     .child(query)
-                    .when(!self.palette.query.is_empty(), |el| el.child(caret(self.accent().text))),
+                    .when(!self.palette.query.is_empty(), |el| {
+                        el.child(caret(self.accent().text))
+                    }),
             )
-            .child(div().type_role(T_LABEL).text_color(label()).child(spotify_status(&self.palette.spotify)));
+            .child(
+                div()
+                    .type_role(T_LABEL)
+                    .text_color(label())
+                    .child(spotify_status(&self.palette.spotify)),
+            );
 
         let mut list = div()
             .id("palette-results")
@@ -764,11 +944,13 @@ impl Shell {
                     .type_role(T_SECONDARY)
                     .text_color(muted())
                     // Spotify araması sürerken "sonuç yok" demek erken.
-                    .child(if matches!(self.palette.spotify, Spotify::Waiting | Spotify::Loading) {
-                        t!(PaletteSearching)
-                    } else {
-                        t!(PaletteNoResults)
-                    }),
+                    .child(
+                        if matches!(self.palette.spotify, Spotify::Waiting | Spotify::Loading) {
+                            t!(PaletteSearching)
+                        } else {
+                            t!(PaletteNoResults)
+                        },
+                    ),
             );
         }
 
@@ -818,7 +1000,11 @@ impl Shell {
                 String::new(),
             )
         } else {
-            (item.title.clone(), item.subtitle.clone(), item.detail.clone())
+            (
+                item.title.clone(),
+                item.subtitle.clone(),
+                item.detail.clone(),
+            )
         };
         let title_color = if item.disabled {
             label()
@@ -852,7 +1038,12 @@ impl Shell {
                     .flex()
                     .flex_col()
                     .gap(px(S0))
-                    .child(div().type_role(T_BODY).text_color(title_color).child(line_with_tip(("palette-title", i), title)))
+                    .child(
+                        div()
+                            .type_role(T_BODY)
+                            .text_color(title_color)
+                            .child(line_with_tip(("palette-title", i), title)),
+                    )
                     .when(!subtitle.is_empty(), |el| {
                         el.child(
                             div()
@@ -888,7 +1079,14 @@ impl Shell {
                 // Tek satırlık "Daha fazlası" bölümünün adı yer kaplamasın: yalnız
                 // ince bir çizgi (satırın kendisi zaten ne olduğunu söylüyor).
                 if is_divider_header(h) {
-                    el.child(div().mx(px(S2)).mt(px(S2)).mb(px(S1)).h(px(1.)).bg(veil(LINE)))
+                    el.child(
+                        div()
+                            .mx(px(S2))
+                            .mt(px(S2))
+                            .mb(px(S1))
+                            .h(px(1.))
+                            .bg(veil(LINE)),
+                    )
                 } else {
                     el.child(
                         div()
@@ -922,10 +1120,18 @@ impl Shell {
                 .into_any_element()
         };
         match thumb {
-            Thumb::Cover { url, icon: icon_name } => {
-                Some(cover_image(&self.images, url, name, THUMB, R_SM, icon_name))
-            }
-            Thumb::Artist { url } => Some(cover_image(&self.images, url, name, THUMB, THUMB / 2., "user")),
+            Thumb::Cover {
+                url,
+                icon: icon_name,
+            } => Some(cover_image(&self.images, url, name, THUMB, R_SM, icon_name)),
+            Thumb::Artist { url } => Some(cover_image(
+                &self.images,
+                url,
+                name,
+                THUMB,
+                THUMB / 2.,
+                "user",
+            )),
             Thumb::Collection { id, url } => Some(self.collection_art(id, name, url, THUMB, R_SM)),
             Thumb::Icon(icon_name) => Some(quiet(icon_name)),
             Thumb::Glyph(icon_name) => Some(
@@ -961,7 +1167,10 @@ fn rank_items(query: &str, items: Vec<Item>) -> (Vec<Item>, Option<usize>) {
     let typed = fuzzy::fold(query.trim());
     let scores: Vec<u32> = items
         .iter()
-        .map(|i| f.score(&fuzzy::fold(&format!("{} {}", i.title, i.subtitle))).unwrap_or(0))
+        .map(|i| {
+            f.score(&fuzzy::fold(&format!("{} {}", i.title, i.subtitle)))
+                .unwrap_or(0)
+        })
         .collect();
     let best = scores.iter().copied().max().unwrap_or(0);
     let cutoff = (best as f32 * COMMAND_RELATIVE_SCORE).ceil() as u32;
@@ -977,7 +1186,9 @@ fn rank_items(query: &str, items: Vec<Item>) -> (Vec<Item>, Option<usize>) {
     let named = (typed.chars().count() >= 3)
         .then(|| {
             kept.iter().position(|i| {
-                matches!(i.action, Action::Command(_)) && !i.disabled && i.name_key.starts_with(&typed)
+                matches!(i.action, Action::Command(_))
+                    && !i.disabled
+                    && i.name_key.starts_with(&typed)
             })
         })
         .flatten();
@@ -995,16 +1206,29 @@ fn rank_items(query: &str, items: Vec<Item>) -> (Vec<Item>, Option<usize>) {
 
 /// Yazı kutusunun imleci.
 fn caret(accent: u32) -> gpui::Div {
-    div().w(px(2.)).h(px(T_TITLE.size + S1)).flex_shrink_0().bg(rgb(accent))
+    div()
+        .w(px(2.))
+        .h(px(T_TITLE.size + S1))
+        .flex_shrink_0()
+        .bg(rgb(accent))
 }
 
-fn command_item(cmd: PaletteCommand, title: &str, detail: &str, shortcut: Option<&'static str>) -> Item {
+fn command_item(
+    cmd: PaletteCommand,
+    title: &str,
+    detail: &str,
+    shortcut: Option<&'static str>,
+) -> Item {
     let danger = matches!(cmd, PaletteCommand::Logout);
     Item {
         thumb: Thumb::Icon(command_icon(cmd)),
         name_key: fuzzy::fold(title),
         // Geri dönüşü zor işlem kendi bölümünde, en altta.
-        section: if danger { t!(PaletteSectionAccount) } else { t!(PaletteSectionCommands) },
+        section: if danger {
+            t!(PaletteSectionAccount)
+        } else {
+            t!(PaletteSectionCommands)
+        },
         title: title.into(),
         subtitle: detail.into(),
         detail: String::new(),
@@ -1039,7 +1263,10 @@ fn command_icon(cmd: PaletteCommand) -> &'static str {
 
 fn track_item(section: &'static str, t: &TrackRow) -> Item {
     Item {
-        thumb: Thumb::Cover { url: t.image.clone(), icon: "music" },
+        thumb: Thumb::Cover {
+            url: t.image.clone(),
+            icon: "music",
+        },
         name_key: String::new(),
         section,
         title: t.name.clone(),
@@ -1099,12 +1326,21 @@ mod tests {
     fn typed_song_beats_a_loosely_matching_command() {
         // "dal" harfleri "Çal / Duraklat"a dağılıyor; Enter şarkıyı çalmalı.
         let items = vec![
-            command_item(PaletteCommand::TogglePlay, "Çal / Duraklat", "", Some("Boşluk")),
+            command_item(
+                PaletteCommand::TogglePlay,
+                "Çal / Duraklat",
+                "",
+                Some("Boşluk"),
+            ),
             track("Dal", "Adamlar"),
             track("Dalgalar", "Başka Biri"),
         ];
         let (items, selected) = rank_items("dal", items);
-        assert!(items.iter().all(|i| !matches!(i.action, Action::Command(_))));
+        assert!(
+            items
+                .iter()
+                .all(|i| !matches!(i.action, Action::Command(_)))
+        );
         assert_eq!(items[selected.unwrap()].title, "Dal");
     }
 
@@ -1127,7 +1363,11 @@ mod tests {
             track("Sessizlik", "Ceza"),
         ];
         let (items, selected) = rank_items("sessize", items);
-        assert!(items.iter().any(|i| matches!(i.action, Action::Command(PaletteCommand::ToggleMute))));
+        assert!(
+            items
+                .iter()
+                .any(|i| matches!(i.action, Action::Command(PaletteCommand::ToggleMute)))
+        );
         assert_eq!(items[selected.unwrap()].title, "Sessize al");
     }
 
@@ -1142,7 +1382,10 @@ mod tests {
         for i in 0..20 {
             p.note_search(&format!("sorgu {i}"));
         }
-        assert_eq!(p.recent_searches.len(), crate::settings::RECENT_SEARCHES_MAX);
+        assert_eq!(
+            p.recent_searches.len(),
+            crate::settings::RECENT_SEARCHES_MAX
+        );
         assert_eq!(p.recent_searches[0], "sorgu 19");
     }
 

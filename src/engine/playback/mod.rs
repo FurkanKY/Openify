@@ -20,6 +20,8 @@
 
 mod bridge;
 mod connect;
+#[cfg(test)]
+mod connect_tests;
 mod crossfade;
 mod deck;
 mod driver;
@@ -32,14 +34,15 @@ mod signal;
 #[cfg(test)]
 pub(super) mod testkit;
 #[cfg(test)]
-mod connect_tests;
-#[cfg(test)]
 mod tests;
 
-use std::{collections::HashMap, time::{Duration, Instant}};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
-pub(super) use deck::{Deck, volume_to_u16};
 pub(super) use connect::Link;
+pub(super) use deck::{Deck, volume_to_u16};
 pub(super) use driver::{Driver, Local, LocalSnapshot, RemoteDrive, SpircDrive, TransportCmd};
 pub(super) use handover::Gate;
 pub(super) use port::{LibrespotPort, PlayerPort, PlayerSignal};
@@ -110,7 +113,10 @@ pub(in crate::engine) enum Effect {
     /// Arayüze olay (boşluksuz geçişte kapıdan geçer).
     Emit(Event),
     /// Kullanıcıya kısa bilgi.
-    Notice { kind: NoticeKind, message: &'static str },
+    Notice {
+        kind: NoticeKind,
+        message: &'static str,
+    },
     /// Kaldığı yer kaydı; `Some(ms)`: konum olarak bu yazılır (ör. biten
     /// sırada 0), `None`: tahmin edilen konum, boşluksuz geçişte tutma
     /// sürerken yazılmaz.
@@ -122,7 +128,11 @@ pub(in crate::engine) enum Effect {
     /// Yeniden bağlan (`retry_current`: bağlanınca çalan şarkıyı yeniden yükle).
     /// Başladıysa (ya da sürüyorsa) `started` bildirimi gösterilir; başlamadıysa
     /// ve `skip_if_refused` ise çalınamayan şarkı atlanır.
-    Reconnect { retry_current: bool, skip_if_refused: bool, started: Option<&'static str> },
+    Reconnect {
+        retry_current: bool,
+        skip_if_refused: bool,
+        started: Option<&'static str>,
+    },
     /// AutoMix: çalınan şarkının çözümlemesini önbelleğe yaz (`engine/automix.rs`).
     SaveAnalysis { uri: String, analysis: Analysis },
     /// Spotify Connect durumu değişti (`PlaybackEvent::Connect`).
@@ -268,7 +278,11 @@ impl Playback {
 impl Playback {
     /// Kaldığı yer kaydının konumu ve şarkısı (`position`: verilirse o konum).
     /// Şarkı: çaların son bildirdiği, yoksa sıradaki satır, yoksa önbellekteki.
-    pub fn resume_state(&self, cx: &Cx<'_>, position: Option<u32>) -> (u32, Option<resume::SnapTrack>) {
+    pub fn resume_state(
+        &self,
+        cx: &Cx<'_>,
+        position: Option<u32>,
+    ) -> (u32, Option<resume::SnapTrack>) {
         let position = position.unwrap_or_else(|| self.position_now());
         let current = cx.queue.current_uri();
         let track = self
@@ -283,7 +297,10 @@ impl Playback {
                 cover_url: t.cover_url.clone(),
             })
             .or_else(|| {
-                let row = cx.queue.current_row().or_else(|| cx.meta.get(current?).cloned())?;
+                let row = cx
+                    .queue
+                    .current_row()
+                    .or_else(|| cx.meta.get(current?).cloned())?;
                 Some(resume::SnapTrack {
                     uri: row.uri,
                     name: row.name,

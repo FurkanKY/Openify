@@ -37,7 +37,7 @@ use super::{
     windows_titlebar,
 };
 use crate::system;
-use crate::{t};
+use crate::t;
 
 /// Panelin yüzen gölgesi için pencerede her yanda bırakılan saydam pay.
 const SHADOW_ROOM: f32 = S6;
@@ -51,7 +51,10 @@ const PALETTE_TOP: f32 = 0.25;
 
 /// Gizli açılır: yerine `system::show_popup` koyar ve etkinleştirmeden
 /// gösterir (ilk kare öne almayı beklemesin).
-fn popup_options(bounds: Bounds<gpui::Pixels>, display_id: Option<gpui::DisplayId>) -> WindowOptions {
+fn popup_options(
+    bounds: Bounds<gpui::Pixels>,
+    display_id: Option<gpui::DisplayId>,
+) -> WindowOptions {
     WindowOptions {
         window_bounds: Some(WindowBounds::Windowed(bounds)),
         titlebar: None,
@@ -69,7 +72,9 @@ fn popup_options(bounds: Bounds<gpui::Pixels>, display_id: Option<gpui::DisplayI
 }
 
 fn display_id(index: usize, cx: &mut AsyncApp) -> Option<gpui::DisplayId> {
-    cx.update(|cx| cx.displays().get(index).map(|d| d.id())).ok().flatten()
+    cx.update(|cx| cx.displays().get(index).map(|d| d.id()))
+        .ok()
+        .flatten()
 }
 
 /// Var olan açılır pencereyi yeniden kullan (`show` onu açılışa hazırlar),
@@ -81,7 +86,9 @@ fn reuse_or_open<V: 'static + Render>(
     cx: &mut AsyncApp,
 ) -> anyhow::Result<WindowHandle<V>> {
     if let Some(handle) = existing
-        && handle.update(cx, |view, window, cx| show(view, window, cx)).is_ok()
+        && handle
+            .update(cx, |view, window, cx| show(view, window, cx))
+            .is_ok()
     {
         return Ok(handle);
     }
@@ -92,15 +99,27 @@ fn reuse_or_open<V: 'static + Render>(
 
 /// Pencereyi yerine koy, diğerlerinin üstünde göster, sonra odağı ver
 /// (sınama koşusunda vermez). `rect` ekran pikseli: sol, üst, en, boy.
-fn raise<V: 'static>(handle: WindowHandle<V>, rect: (i32, i32, i32, i32), cx: &mut AsyncApp) -> bool {
-    let hwnd = handle.update(cx, |_, window, _| windows_titlebar::hwnd(window)).ok().flatten();
+fn raise<V: 'static>(
+    handle: WindowHandle<V>,
+    rect: (i32, i32, i32, i32),
+    cx: &mut AsyncApp,
+) -> bool {
+    let hwnd = handle
+        .update(cx, |_, window, _| windows_titlebar::hwnd(window))
+        .ok()
+        .flatten();
     hwnd.is_some_and(|hwnd| system::show_popup(hwnd, rect, !system::test_mode()))
 }
 
 /// Mantıksal (gpui) dikdörtgenin ekran pikseli karşılığı.
 fn physical(bounds: Bounds<gpui::Pixels>, scale: f32) -> (i32, i32, i32, i32) {
     let p = |v: gpui::Pixels| (f32::from(v) * scale).round() as i32;
-    (p(bounds.origin.x), p(bounds.origin.y), p(bounds.size.width), p(bounds.size.height))
+    (
+        p(bounds.origin.x),
+        p(bounds.origin.y),
+        p(bounds.size.width),
+        p(bounds.size.height),
+    )
 }
 
 /// Kapanan açılır pencere gizlensin (gpui güncellemesinin dışında).
@@ -123,7 +142,9 @@ fn menu_height() -> f32 {
 
 /// Tepsi simgesine sağ tıklandı: menüyü imlecin yanında aç.
 pub fn open_tray_menu(shell: &WeakEntity<Shell>, x: i32, y: i32, at: Instant, cx: &mut AsyncApp) {
-    let Some(monitor) = system::monitor_at(Some((x, y))) else { return };
+    let Some(monitor) = system::monitor_at(Some((x, y))) else {
+        return;
+    };
     let s = monitor.scale;
     let (w, h) = (MENU_WIDTH, menu_height());
     let (pw, ph) = ((w * s).round() as i32, (h * s).round() as i32);
@@ -133,11 +154,16 @@ pub fn open_tray_menu(shell: &WeakEntity<Shell>, x: i32, y: i32, at: Instant, cx
     let left = (if x - pw >= l { x - pw } else { x }).clamp(l, (r - pw).max(l));
     let top = (if y - ph >= t { y - ph } else { y }).clamp(t, (b - ph).max(t));
     let bounds = Bounds {
-        origin: point(px(left as f32 / s - SHADOW_ROOM), px(top as f32 / s - SHADOW_ROOM)),
+        origin: point(
+            px(left as f32 / s - SHADOW_ROOM),
+            px(top as f32 / s - SHADOW_ROOM),
+        ),
         size: size(px(w + 2. * SHADOW_ROOM), px(h + 2. * SHADOW_ROOM)),
     };
     let display = display_id(monitor.index, cx);
-    let Some(entity) = shell.upgrade() else { return };
+    let Some(entity) = shell.upgrade() else {
+        return;
+    };
     let existing = shell.update(cx, |s, _| s.desk.menu_window).ok().flatten();
     let handle = reuse_or_open(
         existing,
@@ -272,12 +298,24 @@ impl TrayMenu {
         vec![
             (MenuAction::Open, item(t!(TrayOpen), None, true)),
             if state.playing {
-                (MenuAction::TogglePlay, item(t!(Pause), Some("pause-fill"), true))
+                (
+                    MenuAction::TogglePlay,
+                    item(t!(Pause), Some("pause-fill"), true),
+                )
             } else {
-                (MenuAction::TogglePlay, item(t!(Play), Some("play-fill"), state.can_play))
+                (
+                    MenuAction::TogglePlay,
+                    item(t!(Play), Some("play-fill"), state.can_play),
+                )
             },
-            (MenuAction::Next, item(t!(NextTrack), Some("skip-forward-fill"), state.can_next)),
-            (MenuAction::Previous, item(t!(PrevTrack), Some("skip-back-fill"), state.can_previous)),
+            (
+                MenuAction::Next,
+                item(t!(NextTrack), Some("skip-forward-fill"), state.can_next),
+            ),
+            (
+                MenuAction::Previous,
+                item(t!(PrevTrack), Some("skip-back-fill"), state.can_previous),
+            ),
             (MenuAction::Quit, item(t!(TrayQuit), Some("x"), true)),
         ]
     }
@@ -293,9 +331,11 @@ impl TrayMenu {
     fn run(&mut self, action: MenuAction, cx: &mut Context<Self>) {
         self.close(cx);
         let _ = self.shell.update(cx, |shell, cx| match action {
-            MenuAction::Open => {
-                shell.desk.send(Op::Show { front: true, at: Instant::now(), why: "tepsi menüsü" })
-            }
+            MenuAction::Open => shell.desk.send(Op::Show {
+                front: true,
+                at: Instant::now(),
+                why: "tepsi menüsü",
+            }),
             MenuAction::TogglePlay => shell.toggle_play(cx),
             MenuAction::Next => shell.next(cx),
             MenuAction::Previous => shell.previous(cx),
@@ -346,8 +386,24 @@ impl Render for TrayMenu {
             .flex()
             .flex_col()
             // Uzun şarkı / sanatçı adı kısalırsa tamamı ipucunda.
-            .child(div().flex().type_role(T_BODY).text_color(text()).child(line_with_tip("tray-title", state.title.clone()).flex().min_w_0()))
-            .child(div().flex().type_role(T_SECONDARY).text_color(muted()).child(line_with_tip("tray-sub", state.subtitle.clone()).flex().min_w_0()));
+            .child(
+                div().flex().type_role(T_BODY).text_color(text()).child(
+                    line_with_tip("tray-title", state.title.clone())
+                        .flex()
+                        .min_w_0(),
+                ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .type_role(T_SECONDARY)
+                    .text_color(muted())
+                    .child(
+                        line_with_tip("tray-sub", state.subtitle.clone())
+                            .flex()
+                            .min_w_0(),
+                    ),
+            );
         let mut panel = components::menu_panel("tray-menu")
             .w(px(MENU_WIDTH))
             // Panelin içine tıklamak menüyü kapatmasın (dışı kapatır).
@@ -359,7 +415,11 @@ impl Render for TrayMenu {
                 panel = panel.child(components::menu_separator());
             }
             let enabled = item.look.enabled();
-            let look = if enabled && self.selected == Some(i) { Look::Focus } else { item.look };
+            let look = if enabled && self.selected == Some(i) {
+                Look::Focus
+            } else {
+                item.look
+            };
             let el = components::menu_item(i, item.look(look), state.accent);
             panel = panel.child(if enabled {
                 el.on_click(cx.listener(move |this, _, _, cx| this.run(action, cx)))
@@ -374,7 +434,10 @@ impl Render for TrayMenu {
             .text_color(text())
             .track_focus(&self.focus)
             .on_key_down(cx.listener(Self::on_key))
-            .on_mouse_down(MouseButton::Left, cx.listener(|this, _, _, cx| this.close(cx)))
+            .on_mouse_down(
+                MouseButton::Left,
+                cx.listener(|this, _, _, cx| this.close(cx)),
+            )
             .child(panel)
             .into_any_element()
     }
@@ -391,21 +454,31 @@ pub fn open_global_palette(shell: &WeakEntity<Shell>, at: Instant, cx: &mut Asyn
     // ekranında açılmasın.
     let main = shell.update(cx, |s, _| s.desk.hwnd).ok().flatten();
     let anchor = if system::test_mode() { main } else { previous };
-    let Some(monitor) = anchor.and_then(system::monitor_of).or_else(|| system::monitor_at(None)) else {
+    let Some(monitor) = anchor
+        .and_then(system::monitor_of)
+        .or_else(|| system::monitor_at(None))
+    else {
         return;
     };
     let s = monitor.scale;
     let (l, t, r, b) = monitor.work;
     let (work_x, work_y) = (l as f32 / s, t as f32 / s);
     let (work_w, work_h) = ((r - l) as f32 / s, (b - t) as f32 / s);
-    let (w, h) = (PANEL_WIDTH + 2. * SHADOW_ROOM, PANEL_MAX_HEIGHT + 2. * SHADOW_ROOM);
-    let top = (work_y + work_h * PALETTE_TOP - SHADOW_ROOM).min(work_y + work_h - h).max(work_y);
+    let (w, h) = (
+        PANEL_WIDTH + 2. * SHADOW_ROOM,
+        PANEL_MAX_HEIGHT + 2. * SHADOW_ROOM,
+    );
+    let top = (work_y + work_h * PALETTE_TOP - SHADOW_ROOM)
+        .min(work_y + work_h - h)
+        .max(work_y);
     let bounds = Bounds {
         origin: point(px(work_x + (work_w - w) / 2.), px(top)),
         size: size(px(w), px(h)),
     };
     let display = display_id(monitor.index, cx);
-    let Some(entity) = shell.upgrade() else { return };
+    let Some(entity) = shell.upgrade() else {
+        return;
+    };
     let ready = shell.update(cx, |shell, cx| {
         shell.open_palette(cx);
         shell.palette.detached = true;
@@ -415,7 +488,10 @@ pub fn open_global_palette(shell: &WeakEntity<Shell>, at: Instant, cx: &mut Asyn
     if ready.is_err() {
         return;
     }
-    let existing = shell.update(cx, |s, _| s.desk.palette_window).ok().flatten();
+    let existing = shell
+        .update(cx, |s, _| s.desk.palette_window)
+        .ok()
+        .flatten();
     let handle = reuse_or_open(
         existing,
         |palette: &mut QuickPalette, window, cx| palette.show(at, window, cx),
@@ -530,7 +606,11 @@ impl QuickPalette {
             shell.palette.detached = false;
             let back = shell.desk.return_focus.take();
             if wants_window {
-                shell.desk.send(Op::Show { front: true, at: Instant::now(), why: "palet" });
+                shell.desk.send(Op::Show {
+                    front: true,
+                    at: Instant::now(),
+                    why: "palet",
+                });
             } else if let (true, Some(hwnd)) = (active, back) {
                 shell.desk.send(Op::Focus(hwnd));
             }
@@ -541,7 +621,9 @@ impl QuickPalette {
 impl Render for QuickPalette {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let panel = if self.open {
-            self.shell.update(cx, |shell, cx| shell.render_palette_panel(cx)).ok()
+            self.shell
+                .update(cx, |shell, cx| shell.render_palette_panel(cx))
+                .ok()
         } else {
             None
         };

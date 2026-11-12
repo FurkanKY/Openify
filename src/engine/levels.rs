@@ -312,7 +312,11 @@ impl AudioLevels {
         if let Some((tl, vl)) = later {
             let gap = tl - te;
             if gap <= GAP_NS {
-                let f = if gap == 0 { 0.0 } else { (t - te) as f32 / gap as f32 };
+                let f = if gap == 0 {
+                    0.0
+                } else {
+                    (t - te) as f32 / gap as f32
+                };
                 return Some(std::array::from_fn(|k| ve[k] + (vl[k] - ve[k]) * f));
             }
         }
@@ -383,7 +387,10 @@ impl Coef {
     }
 
     fn pair(high: bool, fc: f64) -> [Coef; 2] {
-        [Coef::new(high, fc, BUTTER4_Q[0]), Coef::new(high, fc, BUTTER4_Q[1])]
+        [
+            Coef::new(high, fc, BUTTER4_Q[0]),
+            Coef::new(high, fc, BUTTER4_Q[1]),
+        ]
     }
 }
 
@@ -503,7 +510,11 @@ impl Analyzer {
             let db = 10.0 * p.max(1e-30).log10();
             let x = ((db - (TOP_DB[k] - RANGE_DB)) / RANGE_DB).clamp(0.0, 1.0) as f32;
             let target = x.powf(GAMMA);
-            let a = if target > self.smooth[k] { self.attack } else { self.release };
+            let a = if target > self.smooth[k] {
+                self.attack
+            } else {
+                self.release
+            };
             self.smooth[k] += (target - self.smooth[k]) * a;
             out[k] = self.smooth[k];
         }
@@ -561,7 +572,11 @@ impl Publisher {
         if let Some(w) = &mut self.trace {
             let unix = s.base_unix_ms + t as f64 / 1e6;
             let delay = s.delay_ns.load(Ordering::Relaxed) as f64 / 1e6;
-            let _ = writeln!(w, "{unix:.1},{:.4},{:.4},{:.4},{delay:.1}", v[0], v[1], v[2]);
+            let _ = writeln!(
+                w,
+                "{unix:.1},{:.4},{:.4},{:.4},{delay:.1}",
+                v[0], v[1], v[2]
+            );
             self.trace_rows += 1;
             if self.trace_rows % 64 == 0 {
                 let _ = w.flush();
@@ -768,7 +783,11 @@ mod tests {
     #[test]
     fn silence_is_floor() {
         let w = windows(&silence(1.0));
-        assert!(w.iter().all(|l| l.iter().all(|v| *v == 0.0)), "{:?}", last(&w));
+        assert!(
+            w.iter().all(|l| l.iter().all(|v| *v == 0.0)),
+            "{:?}",
+            last(&w)
+        );
         // Sınırlayıcının bıraktığı denormal artıklar da sessizlik sayılır.
         let tiny: Vec<f64> = (0..88200).map(|_| f64::MIN_POSITIVE).collect();
         let l = last(&windows(&tiny));
@@ -840,7 +859,10 @@ mod tests {
         let hold = levels.at(ms(155.0) as u64).unwrap();
         assert!((hold[0] - 0.5).abs() < 0.01, "tutma {hold:?}");
         let later = levels.at(ms(158.0 + 160.0) as u64).unwrap();
-        assert!(later[0] < 0.5 * 0.4 && later[0] > 0.5 * 0.3, "sönüm {later:?}");
+        assert!(
+            later[0] < 0.5 * 0.4 && later[0] > 0.5 * 0.3,
+            "sönüm {later:?}"
+        );
         assert_eq!(levels.at(ms(146.4 + 1500.0) as u64), None, "durulunca");
         // Boşluk: 1 sn sonraki girdiye enterpolasyon yok, sönüm var.
         p.push(ms(1146.4), [1.0, 1.0, 1.0], 0);
@@ -1035,7 +1057,13 @@ mod tests {
     /// (çalma sn, hata ms). `pauses`: çalma saniyeleri; orada çıkış susar
     /// (kuyruk korunur), 1,3 sn sonra devam eder. `D`: modelin aygıt
     /// gecikmesi (gerçeği `d_true_ms`).
-    fn simulate(secs: f64, drift: f64, d_true_ms: f64, d_model_ms: f64, pauses: &[f64]) -> Vec<(f64, f64)> {
+    fn simulate(
+        secs: f64,
+        drift: f64,
+        d_true_ms: f64,
+        d_model_ms: f64,
+        pauses: &[f64],
+    ) -> Vec<(f64, f64)> {
         let levels = AudioLevels::new();
         let mut tap = LevelTap::new(&levels, (d_model_ms * 1e6) as u64);
         let mut sim = Sim::new(drift, d_true_ms, 120.0);
@@ -1074,7 +1102,11 @@ mod tests {
     }
 
     fn stats(errs: &[(f64, f64)], from_s: f64) -> (f64, f64, f64) {
-        let v: Vec<f64> = errs.iter().filter(|(t, _)| *t >= from_s).map(|(_, e)| *e).collect();
+        let v: Vec<f64> = errs
+            .iter()
+            .filter(|(t, _)| *t >= from_s)
+            .map(|(_, e)| *e)
+            .collect();
         let max = v.iter().fold(0.0f64, |m, e| m.max(e.abs()));
         let mean = v.iter().sum::<f64>() / v.len() as f64;
         let sd = (v.iter().map(|e| (e - mean).powi(2)).sum::<f64>() / v.len() as f64).sqrt();
@@ -1085,7 +1117,10 @@ mod tests {
     fn timing_matches_true_playback_time() {
         let e = simulate(60.0, 0.0, 30.0, 30.0, &[]);
         let (mean, sd, max) = stats(&e, 0.0);
-        println!("D doğru: ort {mean:.3} ms, sd {sd:.3}, en çok {max:.3} ({} pencere)", e.len());
+        println!(
+            "D doğru: ort {mean:.3} ms, sd {sd:.3}, en çok {max:.3} ({} pencere)",
+            e.len()
+        );
         assert!(e.len() > 2500);
         assert!(max <= 0.5, "en çok {max}");
     }
@@ -1098,7 +1133,9 @@ mod tests {
             let e = simulate(600.0, drift, 30.0, 30.0, &[]);
             let (mean, sd, max) = stats(&e, 0.0);
             let (_, _, late) = stats(&e, 540.0);
-            println!("sürüklenme {drift:+e}: ort {mean:.3} ms, sd {sd:.3}, en çok {max:.3} (son dk {late:.3})");
+            println!(
+                "sürüklenme {drift:+e}: ort {mean:.3} ms, sd {sd:.3}, en çok {max:.3} (son dk {late:.3})"
+            );
             assert!(max <= 0.5, "drift {drift}: en çok {max}");
         }
     }
@@ -1145,7 +1182,10 @@ mod tests {
         levels.cut((end + 30) * 1_000_000);
         tap.hold();
         let soon = at(end + 30 + 100).unwrap();
-        assert!(soon[0] < playing[0] * 0.8 && soon[0] > 0.05, "sönüyor {soon:?}");
+        assert!(
+            soon[0] < playing[0] * 0.8 && soon[0] > 0.05,
+            "sönüyor {soon:?}"
+        );
         assert!(at(end + 30 + 800).is_none_or(|l| l[0] < 0.02), "durulmadı");
         assert_eq!(at(end + 2500), None);
         // 3 sn sonra devam: kuyruktaki 120 ms yeniden görünür.
@@ -1220,7 +1260,11 @@ mod tests {
             (FS * 2.0) as u64
         );
         if !cfg!(debug_assertions) {
-            assert!(per_sec < 0.003, "çıta: < %0,3; ölçülen %{}", per_sec * 100.0);
+            assert!(
+                per_sec < 0.003,
+                "çıta: < %0,3; ölçülen %{}",
+                per_sec * 100.0
+            );
         }
     }
 }

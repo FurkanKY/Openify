@@ -21,7 +21,12 @@
 //! çubuğu (sütunun bütün eni; 800 px'lik hapta ~280 px, en dar hapta
 //! ~250 px). Eskiden çubuk düğmelerin yanındaki artan yere sığıyordu: ~60 px.
 
-use std::{cell::Cell, rc::Rc, sync::Arc, time::{Duration, Instant}};
+use std::{
+    cell::Cell,
+    rc::Rc,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use gpui::{
     Animation, AnimationExt, AnyElement, App, Bounds, Context, Div, ElementId, FocusHandle,
@@ -97,11 +102,19 @@ pub(super) enum PillLeft {
         offline: bool,
     },
     /// Çal'a basıldı, şarkı yükleniyor.
-    Pending { name: String, image: String, notice: Option<player::Notice> },
+    Pending {
+        name: String,
+        image: String,
+        notice: Option<player::Notice>,
+    },
     /// Çalan bir şey yokken bildirim.
     Notice(player::Notice),
     /// Çalan bir şey yok ve Spotify'a ulaşılamıyor / ses çıkışı yok.
-    Offline { icon: &'static str, title: &'static str, detail: &'static str },
+    Offline {
+        icon: &'static str,
+        title: &'static str,
+        detail: &'static str,
+    },
     /// Hiçbir şey çalmıyor.
     Idle,
 }
@@ -135,7 +148,8 @@ pub(super) struct PillModel {
 fn look_online() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| {
-        let test_run = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some() || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
+        let test_run = std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
+            || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some();
         test_run && std::env::var_os("OPENIFY_TEST_LOOK_ONLINE").is_some()
     })
 }
@@ -145,7 +159,11 @@ impl Shell {
     pub(super) fn pill_model(&self, now: Instant) -> PillModel {
         let notice = self.state.visible_notice(now).cloned();
         let left = if let Some(p) = &self.state.pending {
-            PillLeft::Pending { name: p.name.clone(), image: p.image.clone(), notice }
+            PillLeft::Pending {
+                name: p.name.clone(),
+                image: p.image.clone(),
+                notice,
+            }
         } else if let Some(t) = &self.state.track {
             PillLeft::Track {
                 uri: t.uri.clone(),
@@ -164,23 +182,29 @@ impl Shell {
                     title: t!(PillNoAudioTitle),
                     detail: t!(PillNoAudioDetail),
                 },
-                Connection::Failed(_) if matches!(self.library.library, Loadable::Loaded(_)) => PillLeft::Offline {
-                    icon: "wifi-off",
-                    title: t!(Offline),
-                    detail: t!(OfflineLibrary),
-                },
+                Connection::Failed(_) if matches!(self.library.library, Loadable::Loaded(_)) => {
+                    PillLeft::Offline {
+                        icon: "wifi-off",
+                        title: t!(Offline),
+                        detail: t!(OfflineLibrary),
+                    }
+                }
                 Connection::Failed(_) => PillLeft::Offline {
                     icon: "wifi-off",
                     title: t!(Offline),
                     detail: t!(OfflineWaiting),
                 },
                 // Adım 17: giriş / Premium / motor durumları (yazılar `crate::msg`).
-                Connection::NeedsLogin => {
-                    PillLeft::Offline { icon: "user", title: t!(PillNeedsLoginTitle), detail: t!(PillNeedsLoginDetail) }
-                }
-                Connection::LoggingIn => {
-                    PillLeft::Offline { icon: "user", title: t!(PillLoggingInTitle), detail: t!(PillLoggingInDetail) }
-                }
+                Connection::NeedsLogin => PillLeft::Offline {
+                    icon: "user",
+                    title: t!(PillNeedsLoginTitle),
+                    detail: t!(PillNeedsLoginDetail),
+                },
+                Connection::LoggingIn => PillLeft::Offline {
+                    icon: "user",
+                    title: t!(PillLoggingInTitle),
+                    detail: t!(PillLoggingInDetail),
+                },
                 Connection::LoginFailed(_) => PillLeft::Offline {
                     icon: "circle-alert",
                     title: t!(PillLoginFailedTitle),
@@ -228,7 +252,12 @@ impl Shell {
     }
 
     /// Hap; `m.live` kapalıysa (vitrin) odak, dinleyici ve ölçü olmadan.
-    pub(super) fn pill(&self, m: &PillModel, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+    pub(super) fn pill(
+        &self,
+        m: &PillModel,
+        window: &Window,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         // Vurgu hapın kapak ışığının üstünde de okunur (bkz. `pill_accent`).
         let accent = pill_accent(self.accent().text);
         let nav = &self.nav;
@@ -271,26 +300,76 @@ impl Shell {
         };
         let play = play_button("play", m.playing, look(&nav.play, can_play), accent)
             .when(live && can_play, |el| {
-                el.track_focus(&nav.play).on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx)))
+                el.track_focus(&nav.play)
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_play(cx)))
             })
             .tooltip(Tooltip::text(play_tip, Some(t!(KeySpace))));
-        let prev = icon_button("prev", "skip-back-fill", look(&nav.prev, m.has_track), accent)
-            .when(live && m.has_track, |el| el.track_focus(&nav.prev).on_click(cx.listener(|this, _, _, cx| this.previous(cx))))
-            .tooltip(Tooltip::text(t!(PrevTrack), Some("Ctrl ←")));
-        let next = icon_button("next", "skip-forward-fill", look(&nav.next, m.has_next), accent)
-            .when(live && m.has_next, |el| el.track_focus(&nav.next).on_click(cx.listener(|this, _, _, cx| this.next(cx))))
-            .tooltip(Tooltip::text(t!(NextTrack), Some("Ctrl →")));
+        let prev = icon_button(
+            "prev",
+            "skip-back-fill",
+            look(&nav.prev, m.has_track),
+            accent,
+        )
+        .when(live && m.has_track, |el| {
+            el.track_focus(&nav.prev)
+                .on_click(cx.listener(|this, _, _, cx| this.previous(cx)))
+        })
+        .tooltip(Tooltip::text(t!(PrevTrack), Some("Ctrl ←")));
+        let next = icon_button(
+            "next",
+            "skip-forward-fill",
+            look(&nav.next, m.has_next),
+            accent,
+        )
+        .when(live && m.has_next, |el| {
+            el.track_focus(&nav.next)
+                .on_click(cx.listener(|this, _, _, cx| this.next(cx)))
+        })
+        .tooltip(Tooltip::text(t!(NextTrack), Some("Ctrl →")));
         // Karıştır ve tekrar: önceki / sonraki'nin iki yanında (Spotify'daki
         // yerleri), açıkken kapak ışığı renginde.
         let stops = &self.now.stops;
-        let (shuffle_on, repeat) = if live { (self.now.queue.shuffle, self.now.queue.repeat) } else { (false, RepeatMode::Off) };
-        let shuffle = toggle_button("shuffle", "shuffle", shuffle_on, look(&stops.shuffle, true), accent)
-            .when(live, |el| el.track_focus(&stops.shuffle).on_click(cx.listener(|this, _, _, cx| this.toggle_shuffle(cx))))
-            .tooltip(Tooltip::text(if shuffle_on { t!(ShuffleOff) } else { t!(ShuffleOn) }, Some("Alt S")));
-        let repeat_icon = if repeat == RepeatMode::One { "repeat-1" } else { "repeat" };
-        let repeat_button = toggle_button("repeat", repeat_icon, repeat != RepeatMode::Off, look(&stops.repeat, true), accent)
-            .when(live, |el| el.track_focus(&stops.repeat).on_click(cx.listener(|this, _, _, cx| this.cycle_repeat(cx))))
-            .tooltip(Tooltip::text(repeat_tip(repeat), Some("Alt R")));
+        let (shuffle_on, repeat) = if live {
+            (self.now.queue.shuffle, self.now.queue.repeat)
+        } else {
+            (false, RepeatMode::Off)
+        };
+        let shuffle = toggle_button(
+            "shuffle",
+            "shuffle",
+            shuffle_on,
+            look(&stops.shuffle, true),
+            accent,
+        )
+        .when(live, |el| {
+            el.track_focus(&stops.shuffle)
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_shuffle(cx)))
+        })
+        .tooltip(Tooltip::text(
+            if shuffle_on {
+                t!(ShuffleOff)
+            } else {
+                t!(ShuffleOn)
+            },
+            Some("Alt S"),
+        ));
+        let repeat_icon = if repeat == RepeatMode::One {
+            "repeat-1"
+        } else {
+            "repeat"
+        };
+        let repeat_button = toggle_button(
+            "repeat",
+            repeat_icon,
+            repeat != RepeatMode::Off,
+            look(&stops.repeat, true),
+            accent,
+        )
+        .when(live, |el| {
+            el.track_focus(&stops.repeat)
+                .on_click(cx.listener(|this, _, _, cx| this.cycle_repeat(cx)))
+        })
+        .tooltip(Tooltip::text(repeat_tip(repeat), Some("Alt R")));
         let controls = div()
             .flex_shrink_0()
             // Düğmelerin arası hapın "boş yeri" sayılmaz (bkz. hapın on_click).
@@ -314,7 +393,10 @@ impl Shell {
                 m.progress,
                 accent,
                 m.has_track,
-                Some((nav.progress.clone(), look(&nav.progress, true) == Look::Focus)),
+                Some((
+                    nav.progress.clone(),
+                    look(&nav.progress, true) == Look::Focus,
+                )),
                 self.progress_bounds.clone(),
                 Some(Box::new(cx.listener(|this, ev: &MouseDownEvent, _, cx| {
                     if let Some(f) = fraction(&this.progress_bounds, ev.position) {
@@ -325,7 +407,16 @@ impl Shell {
                 PROGRESS_ROW,
             )
         } else {
-            slider_hit("progress", m.progress, accent, m.has_track, None, Rc::default(), None, PROGRESS_ROW)
+            slider_hit(
+                "progress",
+                m.progress,
+                accent,
+                m.has_track,
+                None,
+                Rc::default(),
+                None,
+                PROGRESS_ROW,
+            )
         };
         // Dar hap (pencere 824 px'ten dar): ses çubuğu çekilir (sessize al
         // kalır); ilerleme satırı yine tam: 696 px'lik hapta bile sütun
@@ -343,9 +434,20 @@ impl Shell {
             .type_role(T_LABEL)
             .tabular()
             .text_color(muted())
-            .child(div().w(px(TIME_WIDTH)).flex_none().text_right().child(fmt_time(m.position_ms)))
+            .child(
+                div()
+                    .w(px(TIME_WIDTH))
+                    .flex_none()
+                    .text_right()
+                    .child(fmt_time(m.position_ms)),
+            )
             .child(progress_slider)
-            .child(div().w(px(TIME_WIDTH)).flex_none().child(fmt_time(m.duration_ms)));
+            .child(
+                div()
+                    .w(px(TIME_WIDTH))
+                    .flex_none()
+                    .child(fmt_time(m.duration_ms)),
+            );
         // Orta sütun: üstte karıştır / önceki / çal / sonraki / tekrar, altında
         // ilerleme. Solda bildirim ya da çevrimdışı durumu varken ilerleme
         // yok ama satırı yerinde (düğmeler iki durum arasında kaymasın).
@@ -357,7 +459,11 @@ impl Shell {
             .flex_col()
             .items_center()
             .child(controls)
-            .child(if wide_left { div().h(px(PROGRESS_ROW)).into_any_element() } else { progress.into_any_element() });
+            .child(if wide_left {
+                div().h(px(PROGRESS_ROW)).into_any_element()
+            } else {
+                progress.into_any_element()
+            });
 
         // Sağ: ses. Sessizken çubuk boşalmaz: önceki düzey soluk görünür,
         // sesi açınca nereye döneceği belli.
@@ -384,12 +490,27 @@ impl Shell {
                 }))),
             )
         } else {
-            slider("volume", m.volume_shown, volume_fill, true, None, Rc::default(), None)
+            slider(
+                "volume",
+                m.volume_shown,
+                volume_fill,
+                true,
+                None,
+                Rc::default(),
+                None,
+            )
         };
         let mute = icon_button("mute", volume_icon, look(&nav.mute, true), accent)
-            .when(live, |el| el.track_focus(&nav.mute).on_click(cx.listener(|this, _, _, cx| this.toggle_mute(cx))))
+            .when(live, |el| {
+                el.track_focus(&nav.mute)
+                    .on_click(cx.listener(|this, _, _, cx| this.toggle_mute(cx)))
+            })
             .tooltip(Tooltip::text(
-                if m.volume == 0.0 { t!(Unmute) } else { t!(Mute) },
+                if m.volume == 0.0 {
+                    t!(Unmute)
+                } else {
+                    t!(Mute)
+                },
                 Some("Ctrl Shift ↓"),
             ));
         // Dar hapta ses çubuğu yok: sessize al düğmesinin üstünde tekerlek
@@ -408,12 +529,30 @@ impl Shell {
         });
         // Sıra ve sözler paneli.
         let panel = if live { self.now.panel } else { None };
-        let queue = toggle_button("queue", "list-music", panel == Some(Panel::Queue), look(&stops.queue, true), accent)
-            .when(live, |el| el.track_focus(&stops.queue).on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Queue, cx))))
-            .tooltip(Tooltip::text(t!(QueueTip), Some("Alt Shift Q")));
-        let lyrics = toggle_button("lyrics", "mic-vocal", panel == Some(Panel::Lyrics), look(&stops.lyrics, true), accent)
-            .when(live, |el| el.track_focus(&stops.lyrics).on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Lyrics, cx))))
-            .tooltip(Tooltip::text(t!(Lyrics), Some("Alt Shift L")));
+        let queue = toggle_button(
+            "queue",
+            "list-music",
+            panel == Some(Panel::Queue),
+            look(&stops.queue, true),
+            accent,
+        )
+        .when(live, |el| {
+            el.track_focus(&stops.queue)
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Queue, cx)))
+        })
+        .tooltip(Tooltip::text(t!(QueueTip), Some("Alt Shift Q")));
+        let lyrics = toggle_button(
+            "lyrics",
+            "mic-vocal",
+            panel == Some(Panel::Lyrics),
+            look(&stops.lyrics, true),
+            accent,
+        )
+        .when(live, |el| {
+            el.track_focus(&stops.lyrics)
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Lyrics, cx)))
+        })
+        .tooltip(Tooltip::text(t!(Lyrics), Some("Alt Shift L")));
         let volume = div()
             // Düğmeler ve ses çubuğu hapın boş yeri sayılmaz.
             .block_mouse_except_scroll()
@@ -424,23 +563,32 @@ impl Shell {
             .child(lyrics)
             .child(mute)
             .when(wide, |el| {
-                el.child(div().w(px(VOLUME_WIDTH)).flex_shrink().min_w(px(VOLUME_MIN)).child(volume_slider))
+                el.child(
+                    div()
+                        .w(px(VOLUME_WIDTH))
+                        .flex_shrink()
+                        .min_w(px(VOLUME_MIN))
+                        .child(volume_slider),
+                )
             });
 
         // Çalarken gelen bilgi / sorun bildirimi hapın içine sığmaz (şarkı
         // bilgisinin ~130 px'lik alanı): hapın üstünde şerit olarak çıkar.
         let toast = match &m.left {
-            PillLeft::Track { notice: Some(n), .. } | PillLeft::Pending { notice: Some(n), .. }
-                if n.kind != engine::NoticeKind::Working =>
-            {
-                Some(self.notice_toast(n, cx))
+            PillLeft::Track {
+                notice: Some(n), ..
             }
+            | PillLeft::Pending {
+                notice: Some(n), ..
+            } if n.kind != engine::NoticeKind::Working => Some(self.notice_toast(n, cx)),
             _ => None,
         };
         // Başka bir aygıtta çalıyorsa (Spotify Connect): hapın üstünde sakin
         // bir şerit, "Buraya aktar" ile. Bildirim şeridi varsa o önce görünür.
         let remote = match (&self.now.connect.remote, toast.is_some()) {
-            (Some(remote), false) if live => Some(self.remote_strip(&remote.device_name, window, cx)),
+            (Some(remote), false) if live => {
+                Some(self.remote_strip(&remote.device_name, window, cx))
+            }
             _ => None,
         };
 
@@ -471,17 +619,18 @@ impl Shell {
             // satırı seçmesin, üzerine gelmek onu boyamasın. (Tekerlek yine
             // listeyi kaydırır.) Kök örtülü kaldığı için odak burada
             // bırakılır (bkz. `Shell::render`).
-            el.block_mouse_except_scroll().on_any_mouse_down(cx.listener(|this, _, window, cx| {
-                window.focus(&this.focus);
-                if std::mem::take(&mut this.keyboard_focus) {
-                    cx.notify();
-                }
-            }))
-            // Boş yere tıklamak "Şimdi çalıyor" panelini açar / kapatır
-            // (bkz. `now_panel`). Düğmeler, kapak, ilerleme, ses, kalp ve
-            // sanatçı adları kendi tıklamalarını alır: kapları
-            // `block_mouse_except_scroll` ile hapın tıklamasını örter.
-            .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Now, cx)))
+            el.block_mouse_except_scroll()
+                .on_any_mouse_down(cx.listener(|this, _, window, cx| {
+                    window.focus(&this.focus);
+                    if std::mem::take(&mut this.keyboard_focus) {
+                        cx.notify();
+                    }
+                }))
+                // Boş yere tıklamak "Şimdi çalıyor" panelini açar / kapatır
+                // (bkz. `now_panel`). Düğmeler, kapak, ilerleme, ses, kalp ve
+                // sanatçı adları kendi tıklamalarını alır: kapları
+                // `block_mouse_except_scroll` ile hapın tıklamasını örter.
+                .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Now, cx)))
         })
         .child(left)
         .child(center)
@@ -496,13 +645,22 @@ impl Shell {
     /// çalmayı bu bilgisayara alan düğme. Uzak aygıta başka komut gitmez.
     fn remote_strip(&self, device: &str, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = pill_accent(self.accent().text);
-        let (stop, look) = self.stop_look("remote-transfer", super::tab::HEART - 1, true, window, cx);
-        let transfer = secondary_button("remote-transfer", "arrow-left", t!(ConnectTransferHere), look, accent)
-            .when_some(stop, |el, handle| el.track_focus(&handle))
-            .tooltip(Tooltip::text(t!(ConnectTransferHereTip), None))
-            .on_click(cx.listener(|this, _, _, _| {
-                this.engine.send(engine::Command::Connect(engine::ConnectCommand::TransferHere));
-            }));
+        let (stop, look) =
+            self.stop_look("remote-transfer", super::tab::HEART - 1, true, window, cx);
+        let transfer = secondary_button(
+            "remote-transfer",
+            "arrow-left",
+            t!(ConnectTransferHere),
+            look,
+            accent,
+        )
+        .when_some(stop, |el, handle| el.track_focus(&handle))
+        .tooltip(Tooltip::text(t!(ConnectTransferHereTip), None))
+        .on_click(cx.listener(|this, _, _, _| {
+            this.engine.send(engine::Command::Connect(
+                engine::ConnectCommand::TransferHere,
+            ));
+        }));
         div()
             .id("remote-strip")
             .absolute()
@@ -529,7 +687,10 @@ impl Shell {
                     .min_w_0()
                     .type_role(T_SECONDARY)
                     .text_color(soft())
-                    .child(line_with_tip("remote-device", tf!(ConnectPlayingOn, device))),
+                    .child(line_with_tip(
+                        "remote-device",
+                        tf!(ConnectPlayingOn, device),
+                    )),
             )
             .child(transfer)
             .into_any_element()
@@ -557,7 +718,14 @@ impl Shell {
         };
         let row = || div().flex().items_center().gap(px(S3));
         match &m.left {
-            PillLeft::Track { uri, name, artists, cover, notice, offline } => {
+            PillLeft::Track {
+                uri,
+                name,
+                artists,
+                cover,
+                notice,
+                offline,
+            } => {
                 let art = match cover.clone() {
                     // Köşe resmin kendisinde: kabın `overflow_hidden`'ı
                     // resmi kırpmıyor (kapak hapta kare çiziliyordu).
@@ -589,7 +757,9 @@ impl Shell {
                     .tooltip(Tooltip::text(t!(FullScreen), Some("F11")))
                     // Kapak tam ekranı açar, paneli değil (hapın on_click'i).
                     .block_mouse_except_scroll()
-                    .on_click(cx.listener(|this, _, window, cx| this.toggle_fullscreen(window, cx)));
+                    .on_click(
+                        cx.listener(|this, _, window, cx| this.toggle_fullscreen(window, cx)),
+                    );
                 let second = match notice {
                     Some(n) if n.kind == engine::NoticeKind::Working => self.notice_line(n, cx),
                     // Çevrimdışı: Çal'a basmadan da belli (7 Kasım kararı).
@@ -604,9 +774,18 @@ impl Shell {
                 };
                 row()
                     .child(art)
-                    .child(two_lines(title(text::line_with_tip("np-name", name.clone()).into_any_element()), second))
+                    .child(two_lines(
+                        title(text::line_with_tip("np-name", name.clone()).into_any_element()),
+                        second,
+                    ))
                     // Beğen (Adım 13, `manage::pill_heart`).
-                    .children(self.pill_heart(uri, name, artists, m.live.then_some(("pill-heart", super::tab::HEART, window)), cx))
+                    .children(self.pill_heart(
+                        uri,
+                        name,
+                        artists,
+                        m.live.then_some(("pill-heart", super::tab::HEART, window)),
+                        cx,
+                    ))
                     // Şarkı değişince belirerek gelir.
                     .with_animation(
                         ElementId::Name(format!("np-{uri}").into()),
@@ -615,7 +794,11 @@ impl Shell {
                     )
                     .into_any_element()
             }
-            PillLeft::Pending { name, image, notice } => {
+            PillLeft::Pending {
+                name,
+                image,
+                notice,
+            } => {
                 let second = match notice {
                     Some(n) if n.kind == engine::NoticeKind::Working => self.notice_line(n, cx),
                     _ => div()
@@ -625,8 +808,18 @@ impl Shell {
                         .into_any_element(),
                 };
                 row()
-                    .child(cover_image(&self.images, image, name, PILL_COVER, PILL_COVER / 2., "music"))
-                    .child(two_lines(title(text::line_with_tip("np-pending", name.clone()).into_any_element()), second))
+                    .child(cover_image(
+                        &self.images,
+                        image,
+                        name,
+                        PILL_COVER,
+                        PILL_COVER / 2.,
+                        "music",
+                    ))
+                    .child(two_lines(
+                        title(text::line_with_tip("np-pending", name.clone()).into_any_element()),
+                        second,
+                    ))
                     .into_any_element()
             }
             PillLeft::Notice(notice) => {
@@ -644,11 +837,21 @@ impl Shell {
                     .children(self.notice_dismiss(notice, cx))
                     .into_any_element()
             }
-            PillLeft::Offline { icon: icon_name, title: heading, detail } => {
+            PillLeft::Offline {
+                icon: icon_name,
+                title: heading,
+                detail,
+            } => {
                 let look = offline_look(&self.state.connection);
-                let tile_color: Hsla = if look.danger_icon { rgb(DANGER_TEXT).into() } else { label().into() };
+                let tile_color: Hsla = if look.danger_icon {
+                    rgb(DANGER_TEXT).into()
+                } else {
+                    label().into()
+                };
                 let content = row()
-                    .child(round_tile(icon(icon_name, 20., tile_color).into_any_element()))
+                    .child(round_tile(
+                        icon(icon_name, 20., tile_color).into_any_element(),
+                    ))
                     .child(two_lines(
                         // Dar hapta (bilgi 112 px'e iner) kısalabilir: tamamı ipucunda.
                         title(text::line_with_tip("np-off-title", *heading).into_any_element()),
@@ -657,7 +860,8 @@ impl Shell {
                         div()
                             .type_role(T_SECONDARY)
                             .when(look.accent_detail, |d| {
-                                d.text_color(rgb(pill_accent(self.accent().text))).font_weight(FontWeight::SEMIBOLD)
+                                d.text_color(rgb(pill_accent(self.accent().text)))
+                                    .font_weight(FontWeight::SEMIBOLD)
                             })
                             .when(!look.accent_detail, |d| d.text_color(muted()))
                             .child(line_with_tip("np-off-detail", *detail).flex().min_w_0())
@@ -667,7 +871,9 @@ impl Shell {
                 // tıklamak o adımı yapar (kütüphane önbellekten görünürken de
                 // çıkmaz sokak olmasın). Hapın "paneli aç" tıklamasına gitmez.
                 match self.state.connection {
-                    Connection::NeedsLogin | Connection::LoginFailed(_) | Connection::EngineStopped => content
+                    Connection::NeedsLogin
+                    | Connection::LoginFailed(_)
+                    | Connection::EngineStopped => content
                         .id("np-offline-action")
                         .cursor_pointer()
                         .block_mouse_except_scroll()
@@ -734,7 +940,11 @@ impl Shell {
         // Süren işin yazısı hapta etiket değil ikincil tonda: kapağın ışığı
         // bu satırın arkasında en parlak (bkz. `PILL_LIGHT_MAX_LUMINANCE`);
         // simge soluk kalır.
-        let color: Hsla = if notice.kind == engine::NoticeKind::Working { muted().into() } else { color };
+        let color: Hsla = if notice.kind == engine::NoticeKind::Working {
+            muted().into()
+        } else {
+            color
+        };
         div()
             .min_w_0()
             .flex()
@@ -743,13 +953,22 @@ impl Shell {
             .type_role(T_SECONDARY)
             .text_color(color)
             .child(Self::notice_icon(notice.kind, 14.))
-            .child(div().flex_1().min_w_0().child(text::line_with_tip("np-notice", notice.text.clone())))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .child(text::line_with_tip("np-notice", notice.text.clone())),
+            )
             .into_any_element()
     }
 
     /// Sorun bildirimi kendiliğinden kalkmaz: kapatma düğmesi (tıklama alanı
     /// 32 px). (Süren iş çözülünce, bilgi birkaç saniyede kalkar.)
-    fn notice_dismiss(&self, notice: &player::Notice, cx: &mut Context<Self>) -> Option<AnyElement> {
+    fn notice_dismiss(
+        &self,
+        notice: &player::Notice,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         if notice.kind != engine::NoticeKind::Problem {
             return None;
         }
@@ -769,7 +988,12 @@ impl Shell {
             .items_center()
             .justify_center()
             .cursor_pointer()
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., R_MD))
+            .child(super::tween::hover_fill(
+                veil(VEIL_HOVER),
+                veil(VEIL_PRESSED),
+                0.,
+                R_MD,
+            ))
             .tooltip(Tooltip::text(t!(Close), None))
             .on_click(cx.listener(|this, _, _, cx| {
                 this.state.notice = None;
@@ -806,7 +1030,14 @@ impl Shell {
             // Altındaki satırlar tıklanmasın, üzerine gelmek onları boyamasın.
             .block_mouse_except_scroll()
             .child(Self::notice_icon(notice.kind, 18.))
-            .child(div().flex_1().min_w_0().type_role(T_SECONDARY).text_color(soft()).child(notice.text.clone()))
+            .child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .type_role(T_SECONDARY)
+                    .text_color(soft())
+                    .child(notice.text.clone()),
+            )
             .child(self.dismiss_button(cx))
             .into_any_element()
     }
@@ -828,7 +1059,10 @@ fn offline_look(connection: &Connection) -> OfflineLook {
             connection,
             Connection::NeedsLogin | Connection::LoginFailed(_) | Connection::EngineStopped
         ),
-        danger_icon: matches!(connection, Connection::LoginFailed(_) | Connection::EngineStopped),
+        danger_icon: matches!(
+            connection,
+            Connection::LoginFailed(_) | Connection::EngineStopped
+        ),
     }
 }
 
@@ -843,7 +1077,12 @@ fn offline_line() -> AnyElement {
         .type_role(T_SECONDARY)
         .text_color(muted())
         .child(icon("wifi-off", 14., label()))
-        .child(div().flex_1().min_w_0().child(text::line_with_tip("np-offline", t!(OfflineFull))))
+        .child(
+            div()
+                .flex_1()
+                .min_w_0()
+                .child(text::line_with_tip("np-offline", t!(OfflineFull))),
+        )
         .into_any_element()
 }
 
@@ -882,7 +1121,11 @@ fn round_tile(content: AnyElement) -> AnyElement {
 
 /// Kaydırıcı tutamacının odak halkası: dolu kısmın renginden ayrışsın.
 fn fill_ring(fill: u32) -> u32 {
-    if fill == TEXT { DEFAULT_ACCENT.text } else { mix(fill, 0xFFFFFF, 0.5) }
+    if fill == TEXT {
+        DEFAULT_ACCENT.text
+    } else {
+        mix(fill, 0xFFFFFF, 0.5)
+    }
 }
 
 /// Açılıp kapanan simge düğmesi (karıştır, tekrar, sıra, sözler): 36 px
@@ -910,7 +1153,11 @@ pub(super) fn toggle_button(
         .justify_center()
         .rounded_full()
         .border_2()
-        .border_color(if look == Look::Focus { rgb(accent).into() } else { gpui::transparent_black() })
+        .border_color(if look == Look::Focus {
+            rgb(accent).into()
+        } else {
+            gpui::transparent_black()
+        })
         .children(super::components::veil_layer(look, super::components::FULL))
         .child(icon(icon_name, 20., color))
         .when(on, |el| {
@@ -979,7 +1226,9 @@ pub(super) fn slider_hit(
     div()
         .id(id)
         // Kullanılamayan çubuk Tab sırasına girmez.
-        .when_some(focus.filter(|_| enabled), |el, (handle, _)| el.track_focus(&handle))
+        .when_some(focus.filter(|_| enabled), |el, (handle, _)| {
+            el.track_focus(&handle)
+        })
         .group(group.clone())
         .flex_1()
         .h(px(hit))
@@ -987,7 +1236,8 @@ pub(super) fn slider_hit(
         .flex()
         .items_center()
         .when_some(on_down.filter(|_| enabled), |el, on_down| {
-            el.cursor_pointer().on_mouse_down(MouseButton::Left, on_down)
+            el.cursor_pointer()
+                .on_mouse_down(MouseButton::Left, on_down)
         })
         // Çubuğun ekrandaki yeri (tıklamayı orana çevirmek için).
         .child(
@@ -1007,7 +1257,9 @@ pub(super) fn slider_hit(
                         .w(gpui::relative(value))
                         .rounded(px(R_XS))
                         .bg(rgb(fill))
-                        .when(enabled, |el| el.group_hover(group.clone(), |s| s.bg(rgb(0xFFFFFF)))),
+                        .when(enabled, |el| {
+                            el.group_hover(group.clone(), |s| s.bg(rgb(0xFFFFFF)))
+                        }),
                 ),
         )
         .when(enabled, |el| {
@@ -1031,7 +1283,10 @@ pub(super) fn slider_hit(
 }
 
 /// Fare tıklamasının çubuk üzerindeki oranı (0.0–1.0).
-pub(super) fn fraction(bounds: &Rc<Cell<Option<Bounds<Pixels>>>>, position: Point<Pixels>) -> Option<f32> {
+pub(super) fn fraction(
+    bounds: &Rc<Cell<Option<Bounds<Pixels>>>>,
+    position: Point<Pixels>,
+) -> Option<f32> {
     let b = bounds.get()?;
     let x = (position.x - b.origin.x) / b.size.width;
     Some(x.clamp(0.0, 1.0))
@@ -1046,19 +1301,58 @@ mod tests {
         use crate::engine::LoginFailReason;
         let look = offline_look;
         // Giriş gerekli: eylem (vurgu + yarı kalın), simge sakin.
-        assert_eq!(look(&Connection::NeedsLogin), OfflineLook { accent_detail: true, danger_icon: false });
+        assert_eq!(
+            look(&Connection::NeedsLogin),
+            OfflineLook {
+                accent_detail: true,
+                danger_icon: false
+            }
+        );
         // Motor durdu / giriş başarısız: eylem ve simge kırmızı.
-        assert_eq!(look(&Connection::EngineStopped), OfflineLook { accent_detail: true, danger_icon: true });
+        assert_eq!(
+            look(&Connection::EngineStopped),
+            OfflineLook {
+                accent_detail: true,
+                danger_icon: true
+            }
+        );
         assert_eq!(
             look(&Connection::LoginFailed(LoginFailReason::Other)),
-            OfflineLook { accent_detail: true, danger_icon: true }
+            OfflineLook {
+                accent_detail: true,
+                danger_icon: true
+            }
         );
         // Premium gerekli: tıklanacak bir şey yok, görünüm değişmez.
-        assert_eq!(look(&Connection::NeedsPremium), OfflineLook { accent_detail: false, danger_icon: false });
+        assert_eq!(
+            look(&Connection::NeedsPremium),
+            OfflineLook {
+                accent_detail: false,
+                danger_icon: false
+            }
+        );
         // Çevrimdışı ve ses yok da değişmez.
-        assert_eq!(look(&Connection::Failed(String::new())), OfflineLook { accent_detail: false, danger_icon: false });
-        assert_eq!(look(&Connection::NoAudio), OfflineLook { accent_detail: false, danger_icon: false });
-        assert_eq!(look(&Connection::LoggingIn), OfflineLook { accent_detail: false, danger_icon: false });
+        assert_eq!(
+            look(&Connection::Failed(String::new())),
+            OfflineLook {
+                accent_detail: false,
+                danger_icon: false
+            }
+        );
+        assert_eq!(
+            look(&Connection::NoAudio),
+            OfflineLook {
+                accent_detail: false,
+                danger_icon: false
+            }
+        );
+        assert_eq!(
+            look(&Connection::LoggingIn),
+            OfflineLook {
+                accent_detail: false,
+                danger_icon: false
+            }
+        );
     }
 
     #[test]

@@ -18,7 +18,11 @@ use crate::engine::{OutputCtl, levels::AudioLevels};
 /// `FakePort`un kaydettiği çağrı.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(in crate::engine) enum Call {
-    Load { uri: String, play: bool, position_ms: u32 },
+    Load {
+        uri: String,
+        play: bool,
+        position_ms: u32,
+    },
     Preload(String),
     Play,
     Pause,
@@ -62,7 +66,11 @@ impl FakePort {
 
 impl PlayerPort for FakePort {
     fn load(&self, uri: SpotifyUri, play: bool, position_ms: u32) {
-        self.record(Call::Load { uri: uri.to_uri().unwrap_or_default(), play, position_ms });
+        self.record(Call::Load {
+            uri: uri.to_uri().unwrap_or_default(),
+            play,
+            position_ms,
+        });
     }
 
     fn preload(&self, uri: SpotifyUri) {
@@ -111,5 +119,9 @@ pub(in crate::engine) fn fake_deck_for(crossfade_ms: u32) -> (Deck, Spy, Arc<Out
     let (port, spy) = FakePort::new();
     let mixer = SoftMixer::open(MixerConfig::default()).expect("software mixer must open");
     let volume = mixer.get_soft_volume();
-    (Deck::new(Box::new(port), out.clone(), mixer, volume), spy, out)
+    (
+        Deck::new(Box::new(port), out.clone(), mixer, volume),
+        spy,
+        out,
+    )
 }

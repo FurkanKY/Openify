@@ -76,12 +76,16 @@ pub enum FriendsFailure {
 impl From<&PathfinderError> for FriendsFailure {
     fn from(e: &PathfinderError) -> Self {
         match e {
-            PathfinderError::RateLimited { .. } | PathfinderError::Blocked { .. } | PathfinderError::CircuitOpen => {
-                Self::RateLimited
-            }
+            PathfinderError::RateLimited { .. }
+            | PathfinderError::Blocked { .. }
+            | PathfinderError::CircuitOpen => Self::RateLimited,
             PathfinderError::Denied { .. } => Self::Denied,
-            PathfinderError::Http { status: 404 | 410 } | PathfinderError::InvalidResponse(_) => Self::Unavailable,
-            PathfinderError::Token(_) | PathfinderError::Transport(_) | PathfinderError::Http { .. } => Self::Offline,
+            PathfinderError::Http { status: 404 | 410 } | PathfinderError::InvalidResponse(_) => {
+                Self::Unavailable
+            }
+            PathfinderError::Token(_)
+            | PathfinderError::Transport(_)
+            | PathfinderError::Http { .. } => Self::Offline,
             // Hash'li işlemlere özgü hatalar bu uçta gelmez.
             _ => Self::Unavailable,
         }
@@ -122,18 +126,28 @@ fn parse_friend(v: &Value) -> Option<Friend> {
     // Sanatçı: tek nesne ya da liste (bilinmeyen biçime karşı ikisi de okunur).
     let mut artists: Vec<(String, String)> = Vec::new();
     if let Some(one) = track.get("artist").filter(|a| a.is_object()) {
-        artists.push((text(one.get("name")), uri_of(one.get("uri"), "spotify:artist:").unwrap_or_default()));
+        artists.push((
+            text(one.get("name")),
+            uri_of(one.get("uri"), "spotify:artist:").unwrap_or_default(),
+        ));
     }
     if artists.is_empty()
         && let Some(many) = track.get("artists").and_then(Value::as_array)
     {
-        artists.extend(
-            many.iter().map(|a| (text(a.get("name")), uri_of(a.get("uri"), "spotify:artist:").unwrap_or_default())),
-        );
+        artists.extend(many.iter().map(|a| {
+            (
+                text(a.get("name")),
+                uri_of(a.get("uri"), "spotify:artist:").unwrap_or_default(),
+            )
+        }));
     }
     artists.retain(|(n, _)| !n.is_empty());
     let artist_uri = artists.first().map(|a| a.1.clone()).unwrap_or_default();
-    let artist = artists.iter().map(|a| a.0.as_str()).collect::<Vec<_>>().join(", ");
+    let artist = artists
+        .iter()
+        .map(|a| a.0.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
 
     let album = track.get("album");
     let album_name = text(album.and_then(|a| a.get("name")));
@@ -144,7 +158,10 @@ fn parse_friend(v: &Value) -> Option<Friend> {
     let context_name = Some(text(context.and_then(|c| c.get("name")))).filter(|n| !n.is_empty());
     let context_index = context
         .and_then(|c| c.get("index"))
-        .and_then(|i| i.as_u64().or_else(|| i.as_str().and_then(|s| s.trim().parse().ok())))
+        .and_then(|i| {
+            i.as_u64()
+                .or_else(|| i.as_str().and_then(|s| s.trim().parse().ok()))
+        })
         .and_then(|i| u32::try_from(i).ok());
 
     Some(Friend {
@@ -168,20 +185,29 @@ fn parse_friend(v: &Value) -> Option<Friend> {
 /// Düzgün biçimli bir Spotify adresi (`prefix` ile başlayan, kimliği olan).
 fn uri_of(v: Option<&Value>, prefix: &str) -> Option<String> {
     let s = v?.as_str()?.trim();
-    (s.starts_with(prefix) && s.len() > prefix.len() && !s.chars().any(char::is_control)).then(|| s.to_string())
+    (s.starts_with(prefix) && s.len() > prefix.len() && !s.chars().any(char::is_control))
+        .then(|| s.to_string())
 }
 
 /// Görünecek yazı: kırpılmış, denetim karakterleri atılmış, en çok `TEXT_MAX` harf.
 fn text(v: Option<&Value>) -> String {
     let s = v.and_then(Value::as_str).unwrap_or_default();
-    s.chars().filter(|c| !c.is_control()).take(TEXT_MAX).collect::<String>().trim().to_string()
+    s.chars()
+        .filter(|c| !c.is_control())
+        .take(TEXT_MAX)
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 /// Profil resmi ve şarkı kapağı: yalnız https (http'ye https'e çevrilir);
 /// `spotify:image:<kimlik>` Spotify'ın resim sunucusuna çevrilir; başka şema atılır.
 fn image_url(v: Option<&Value>) -> String {
     let s = v.and_then(Value::as_str).unwrap_or_default().trim();
-    if let Some(id) = s.strip_prefix("spotify:image:").filter(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric())) {
+    if let Some(id) = s
+        .strip_prefix("spotify:image:")
+        .filter(|id| !id.is_empty() && id.bytes().all(|b| b.is_ascii_alphanumeric()))
+    {
         format!("https://i.scdn.co/image/{id}")
     } else if s.starts_with("https://") {
         s.to_string()
@@ -200,15 +226,25 @@ fn timestamp_ms(v: Option<&Value>) -> i64 {
         _ => None,
     }
     .unwrap_or(0);
-    if n > 0 && n < 100_000_000_000 { n * 1000 } else { n.max(0) }
+    if n > 0 && n < 100_000_000_000 {
+        n * 1000
+    } else {
+        n.max(0)
+    }
 }
 
 // ── Alma ────────────────────────────────────────────────────────────────
 
 /// Arkadaş listesini alır (kapı, token yenileme, yeniden deneme ortak
 /// istemciden).
-pub async fn load_with(pf: &Pathfinder, transport: &dyn Transport) -> Result<Vec<Friend>, FriendsFailure> {
-    match pf.get_json(transport, "buddylist", BUDDYLIST_URL, Priority::Background).await {
+pub async fn load_with(
+    pf: &Pathfinder,
+    transport: &dyn Transport,
+) -> Result<Vec<Friend>, FriendsFailure> {
+    match pf
+        .get_json(transport, "buddylist", BUDDYLIST_URL, Priority::Background)
+        .await
+    {
         Ok(value) => Ok(parse(&value)),
         Err(e) => {
             log::info!("arkadaş etkinliği alınamadı: {e}");
@@ -229,14 +265,20 @@ pub async fn load(session: &Session) -> Result<Vec<Friend>, FriendsFailure> {
 pub enum PlayPlan {
     /// Bağlamın şarkıları, bu şarkıdan başlayarak (`hint`: şarkının bağlamdaki
     /// sırası, birden çok yerde geçiyorsa en yakını seçmek için).
-    Context { uri: String, track: String, hint: Option<usize> },
+    Context {
+        uri: String,
+        track: String,
+        hint: Option<usize>,
+    },
     /// Yalnız şarkı (bağlam yok ya da çözülemeyen türde: koleksiyon, radyo …).
     Track(String),
 }
 
 pub fn play_plan(f: &Friend) -> PlayPlan {
     let playable = |uri: &str| {
-        ["spotify:playlist:", "spotify:album:", "spotify:artist:"].iter().any(|p| uri.starts_with(p))
+        ["spotify:playlist:", "spotify:album:", "spotify:artist:"]
+            .iter()
+            .any(|p| uri.starts_with(p))
     };
     match &f.context_uri {
         Some(uri) if playable(uri) => PlayPlan::Context {
@@ -252,10 +294,19 @@ pub fn play_plan(f: &Friend) -> PlayPlan {
 /// yerde geçiyorsa ipucuna en yakını. Şarkı bağlamda yoksa `None` (yanlış
 /// şarkıdan başlamak yerine şarkı tek başına çalınır).
 pub fn start_position(uris: &[String], track: &str, hint: Option<usize>) -> Option<usize> {
-    let mut found = uris.iter().enumerate().filter(|(_, u)| u.as_str() == track).map(|(i, _)| i);
+    let mut found = uris
+        .iter()
+        .enumerate()
+        .filter(|(_, u)| u.as_str() == track)
+        .map(|(i, _)| i);
     let first = found.next()?;
     match hint {
-        Some(h) => Some(std::iter::once(first).chain(found).min_by_key(|i| i.abs_diff(h)).unwrap_or(first)),
+        Some(h) => Some(
+            std::iter::once(first)
+                .chain(found)
+                .min_by_key(|i| i.abs_diff(h))
+                .unwrap_or(first),
+        ),
         None => Some(first),
     }
 }
@@ -264,7 +315,10 @@ pub fn start_position(uris: &[String], track: &str, hint: Option<usize>) -> Opti
 mod tests {
     use std::{
         collections::VecDeque,
-        sync::{Mutex, atomic::{AtomicUsize, Ordering}},
+        sync::{
+            Mutex,
+            atomic::{AtomicUsize, Ordering},
+        },
         time::Duration,
     };
 
@@ -293,11 +347,23 @@ mod tests {
         assert_eq!(a.user_uri, "spotify:user:aylin");
         assert_eq!(a.image, "https://i.scdn.co/image/ab6775700000ee85aylin");
         // Şarkı kapağı (http → https).
-        assert_eq!(a.track_image, "https://i.scdn.co/image/ab67616d000048510001");
+        assert_eq!(
+            a.track_image,
+            "https://i.scdn.co/image/ab67616d000048510001"
+        );
         assert_eq!(a.timestamp_ms, 1762880000000);
-        assert_eq!((a.track_uri.as_str(), a.track.as_str()), ("spotify:track:t01", "Gece Yolcusu"));
-        assert_eq!((a.artist.as_str(), a.artist_uri.as_str()), ("Dalga Boyu", "spotify:artist:r01"));
-        assert_eq!((a.album.as_str(), a.album_uri.as_str()), ("Karanlik Oda", "spotify:album:a01"));
+        assert_eq!(
+            (a.track_uri.as_str(), a.track.as_str()),
+            ("spotify:track:t01", "Gece Yolcusu")
+        );
+        assert_eq!(
+            (a.artist.as_str(), a.artist_uri.as_str()),
+            ("Dalga Boyu", "spotify:artist:r01")
+        );
+        assert_eq!(
+            (a.album.as_str(), a.album_uri.as_str()),
+            ("Karanlik Oda", "spotify:album:a01")
+        );
         assert_eq!(a.context_uri.as_deref(), Some("spotify:playlist:p01"));
         assert_eq!(a.context_name.as_deref(), Some("Gece Surusu"));
         assert_eq!(a.context_index, Some(4));
@@ -311,18 +377,33 @@ mod tests {
         // Sayı yazısı olan zaman, sanatçı listesi (adlar birleşir, ilk adres).
         let cem = &friends[2];
         assert_eq!(cem.timestamp_ms, 1762878000000);
-        assert_eq!((cem.artist.as_str(), cem.artist_uri.as_str()), ("Deniz, Orman", "spotify:artist:r03"));
-        assert_eq!((cem.album.as_str(), cem.context_uri.clone()), ("Kisa Hikaye", None));
+        assert_eq!(
+            (cem.artist.as_str(), cem.artist_uri.as_str()),
+            ("Deniz, Orman", "spotify:artist:r03")
+        );
+        assert_eq!(
+            (cem.album.as_str(), cem.context_uri.clone()),
+            ("Kisa Hikaye", None)
+        );
         // Adı yok: kimliğin sonu; tehlikeli resim adresi atılır; sanatçı adresi yok.
         let anon = &friends[3];
         assert_eq!(anon.name, "12345678abc");
         assert_eq!(anon.image, "");
         assert_eq!(anon.track_image, "");
         // `spotify:image:<kimlik>` resim sunucusuna çevrilir; bozuk kimlik atılır.
-        assert_eq!(image_url(Some(&serde_json::json!("spotify:image:ab67616d00001e02"))), "https://i.scdn.co/image/ab67616d00001e02");
+        assert_eq!(
+            image_url(Some(&serde_json::json!("spotify:image:ab67616d00001e02"))),
+            "https://i.scdn.co/image/ab67616d00001e02"
+        );
         assert_eq!(image_url(Some(&serde_json::json!("spotify:image:"))), "");
-        assert_eq!(image_url(Some(&serde_json::json!("spotify:image:a/../b"))), "");
-        assert_eq!((anon.artist.as_str(), anon.artist_uri.as_str()), ("Bilinmeyen", ""));
+        assert_eq!(
+            image_url(Some(&serde_json::json!("spotify:image:a/../b"))),
+            ""
+        );
+        assert_eq!(
+            (anon.artist.as_str(), anon.artist_uri.as_str()),
+            ("Bilinmeyen", "")
+        );
         assert_eq!(anon.album, "");
         // Zamanı olmayan arkadaş atılmaz, 0 olur.
         assert_eq!(friends[4].timestamp_ms, 0);
@@ -330,8 +411,18 @@ mod tests {
 
     #[test]
     fn empty_or_unexpected_bodies_give_no_friends() {
-        for body in ["{}", r#"{"friends":[]}"#, r#"{"friends":"x"}"#, "[]", "null", r#"{"friends":[1,null,{}]}"#] {
-            assert!(parse(&serde_json::from_str(body).unwrap()).is_empty(), "{body}");
+        for body in [
+            "{}",
+            r#"{"friends":[]}"#,
+            r#"{"friends":"x"}"#,
+            "[]",
+            "null",
+            r#"{"friends":[1,null,{}]}"#,
+        ] {
+            assert!(
+                parse(&serde_json::from_str(body).unwrap()).is_empty(),
+                "{body}"
+            );
         }
     }
 
@@ -354,7 +445,11 @@ mod tests {
             .collect();
         let friends = parse(&serde_json::json!({ "friends": many }));
         assert_eq!(friends.len(), MAX_FRIENDS);
-        assert_eq!(friends[0].name, format!("U{}", MAX_FRIENDS + 24), "en yeni önde");
+        assert_eq!(
+            friends[0].name,
+            format!("U{}", MAX_FRIENDS + 24),
+            "en yeni önde"
+        );
     }
 
     #[test]
@@ -370,23 +465,50 @@ mod tests {
         let friends = fixture();
         assert_eq!(
             play_plan(&friends[0]),
-            PlayPlan::Context { uri: "spotify:playlist:p01".into(), track: "spotify:track:t01".into(), hint: Some(4) }
+            PlayPlan::Context {
+                uri: "spotify:playlist:p01".into(),
+                track: "spotify:track:t01".into(),
+                hint: Some(4)
+            }
         );
         // Albüm bağlamı çalınabilir.
-        assert!(matches!(play_plan(&friends[1]), PlayPlan::Context { ref uri, hint: Some(1), .. } if uri == "spotify:album:a02"));
+        assert!(
+            matches!(play_plan(&friends[1]), PlayPlan::Context { ref uri, hint: Some(1), .. } if uri == "spotify:album:a02")
+        );
         // Bağlamı olmayan ve koleksiyon bağlamı: yalnız şarkı.
-        assert_eq!(play_plan(&friends[2]), PlayPlan::Track("spotify:track:t03".into()));
-        assert_eq!(play_plan(&friends[3]), PlayPlan::Track("spotify:track:t04".into()));
+        assert_eq!(
+            play_plan(&friends[2]),
+            PlayPlan::Track("spotify:track:t03".into())
+        );
+        assert_eq!(
+            play_plan(&friends[3]),
+            PlayPlan::Track("spotify:track:t04".into())
+        );
     }
 
     #[test]
     fn start_position_prefers_the_track_and_the_closest_repeat() {
-        let uris: Vec<String> = ["a", "b", "c", "b", "d"].iter().map(|s| s.to_string()).collect();
+        let uris: Vec<String> = ["a", "b", "c", "b", "d"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
         assert_eq!(start_position(&uris, "c", None), Some(2));
-        assert_eq!(start_position(&uris, "b", None), Some(1), "ipucu yoksa ilk geçtiği yer");
-        assert_eq!(start_position(&uris, "b", Some(3)), Some(3), "ipucuna yakın olan");
+        assert_eq!(
+            start_position(&uris, "b", None),
+            Some(1),
+            "ipucu yoksa ilk geçtiği yer"
+        );
+        assert_eq!(
+            start_position(&uris, "b", Some(3)),
+            Some(3),
+            "ipucuna yakın olan"
+        );
         assert_eq!(start_position(&uris, "b", Some(0)), Some(1));
-        assert_eq!(start_position(&uris, "z", Some(2)), None, "bağlamda yok: yanlış şarkıdan başlanmaz");
+        assert_eq!(
+            start_position(&uris, "z", Some(2)),
+            None,
+            "bağlamda yok: yanlış şarkıdan başlanmaz"
+        );
         assert_eq!(start_position(&[], "a", None), None);
     }
 
@@ -400,7 +522,11 @@ mod tests {
     }
 
     fn reply(status: u16, body: &str) -> Result<Response, TransportError> {
-        Ok(Response { status, retry_after: None, body: Bytes::from(body.to_string()) })
+        Ok(Response {
+            status,
+            retry_after: None,
+            body: Bytes::from(body.to_string()),
+        })
     }
 
     impl Transport for FakeNet {
@@ -410,7 +536,11 @@ mod tests {
         fn get<'a>(&'a self, url: &'a str) -> BoxFuture<'a, Result<Response, TransportError>> {
             Box::pin(async move {
                 self.urls.lock().unwrap().push(url.to_string());
-                self.responses.lock().unwrap().pop_front().expect("beklenmeyen istek")
+                self.responses
+                    .lock()
+                    .unwrap()
+                    .pop_front()
+                    .expect("beklenmeyen istek")
             })
         }
         fn refresh_token<'a>(&'a self) -> BoxFuture<'a, Result<(), TransportError>> {
@@ -419,13 +549,21 @@ mod tests {
                 Ok(())
             })
         }
-        fn discover<'a>(&'a self, _: &'a str, _: &'a str) -> BoxFuture<'a, Result<String, DiscoverError>> {
+        fn discover<'a>(
+            &'a self,
+            _: &'a str,
+            _: &'a str,
+        ) -> BoxFuture<'a, Result<String, DiscoverError>> {
             Box::pin(async { panic!("buddylist hash aramaz") })
         }
     }
 
     fn fast() -> Pathfinder {
-        Pathfinder::new(Config { interval: Duration::ZERO, server_retries: 1, backoff_base: Duration::from_millis(1) })
+        Pathfinder::new(Config {
+            interval: Duration::ZERO,
+            server_retries: 1,
+            backoff_base: Duration::from_millis(1),
+        })
     }
 
     #[tokio::test]
@@ -440,7 +578,10 @@ mod tests {
     #[tokio::test]
     async fn a_401_refreshes_the_token_once_then_succeeds() {
         let net = FakeNet::default();
-        net.responses.lock().unwrap().extend([reply(401, ""), reply(200, r#"{"friends":[]}"#)]);
+        net.responses
+            .lock()
+            .unwrap()
+            .extend([reply(401, ""), reply(200, r#"{"friends":[]}"#)]);
         assert!(load_with(&fast(), &net).await.unwrap().is_empty());
         assert_eq!(net.refreshes.load(Ordering::SeqCst), 1);
         assert_eq!(net.urls.lock().unwrap().len(), 2);
@@ -453,14 +594,35 @@ mod tests {
             net.responses.lock().unwrap().extend(responses);
             load_with(&fast(), &net).await.unwrap_err()
         };
-        assert_eq!(code(vec![reply(401, ""), reply(403, "")]).await, FriendsFailure::Denied);
+        assert_eq!(
+            code(vec![reply(401, ""), reply(403, "")]).await,
+            FriendsFailure::Denied
+        );
         assert_eq!(code(vec![reply(403, "")]).await, FriendsFailure::Denied);
-        assert_eq!(code(vec![reply(429, "")]).await, FriendsFailure::RateLimited);
-        assert_eq!(code(vec![reply(404, "")]).await, FriendsFailure::Unavailable);
-        assert_eq!(code(vec![reply(200, "not json")]).await, FriendsFailure::Unavailable);
-        assert_eq!(code(vec![reply(500, ""), reply(502, "")]).await, FriendsFailure::Offline);
-        assert_eq!(code(vec![Err(TransportError::Network("down".into()))]).await, FriendsFailure::Offline);
-        assert_eq!(code(vec![Err(TransportError::Token("none".into()))]).await, FriendsFailure::Offline);
+        assert_eq!(
+            code(vec![reply(429, "")]).await,
+            FriendsFailure::RateLimited
+        );
+        assert_eq!(
+            code(vec![reply(404, "")]).await,
+            FriendsFailure::Unavailable
+        );
+        assert_eq!(
+            code(vec![reply(200, "not json")]).await,
+            FriendsFailure::Unavailable
+        );
+        assert_eq!(
+            code(vec![reply(500, ""), reply(502, "")]).await,
+            FriendsFailure::Offline
+        );
+        assert_eq!(
+            code(vec![Err(TransportError::Network("down".into()))]).await,
+            FriendsFailure::Offline
+        );
+        assert_eq!(
+            code(vec![Err(TransportError::Token("none".into()))]).await,
+            FriendsFailure::Offline
+        );
     }
 
     #[tokio::test]
@@ -472,9 +634,15 @@ mod tests {
             retry_after: Some(Duration::from_secs(120)),
             body: Bytes::new(),
         }));
-        assert_eq!(load_with(&pf, &net).await.unwrap_err(), FriendsFailure::RateLimited);
+        assert_eq!(
+            load_with(&pf, &net).await.unwrap_err(),
+            FriendsFailure::RateLimited
+        );
         // Retry-After süresince ikinci istek ağa hiç çıkmaz.
-        assert_eq!(load_with(&pf, &net).await.unwrap_err(), FriendsFailure::RateLimited);
+        assert_eq!(
+            load_with(&pf, &net).await.unwrap_err(),
+            FriendsFailure::RateLimited
+        );
         assert_eq!(net.urls.lock().unwrap().len(), 1);
     }
 
@@ -498,7 +666,10 @@ mod tests {
             .expect("Kayitli Spotify girisi yok");
         let credentials: Credentials = serde_json::from_str(&json).expect("kayitli giris bozuk");
         let session = Session::new(SessionConfig::default(), None);
-        session.connect(credentials, false).await.expect("Spotify'a baglanilamadi");
+        session
+            .connect(credentials, false)
+            .await
+            .expect("Spotify'a baglanilamadi");
 
         match load(&session).await {
             Ok(friends) => {
@@ -517,7 +688,10 @@ mod tests {
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.as_millis() as i64)
                         .unwrap_or(0);
-                    println!("  en yeni dinleme {} sn once", (now - newest.timestamp_ms) / 1000);
+                    println!(
+                        "  en yeni dinleme {} sn once",
+                        (now - newest.timestamp_ms) / 1000
+                    );
                 }
             }
             Err(e) => println!("buddylist alinamadi: {e:?}"),

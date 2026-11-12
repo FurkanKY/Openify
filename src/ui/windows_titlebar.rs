@@ -7,14 +7,13 @@
 
 use gpui::Window;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-use windows::core::BOOL;
 use windows::Win32::{
     Foundation::{COLORREF, HWND},
     Graphics::Dwm::{
-        DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR, DWMWA_USE_IMMERSIVE_DARK_MODE,
-        DwmSetWindowAttribute,
+        DWMWA_CAPTION_COLOR, DWMWA_TEXT_COLOR, DWMWA_USE_IMMERSIVE_DARK_MODE, DwmSetWindowAttribute,
     },
 };
+use windows::core::BOOL;
 
 use super::theme::{BG, TEXT};
 

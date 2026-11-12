@@ -17,7 +17,9 @@ use windows::{
         Foundation::{
             CloseHandle, ERROR_ALREADY_EXISTS, GetLastError, HANDLE, HWND, LPARAM, LRESULT, WPARAM,
         },
-        System::{DataExchange::COPYDATASTRUCT, LibraryLoader::GetModuleHandleW, Threading::CreateMutexW},
+        System::{
+            DataExchange::COPYDATASTRUCT, LibraryLoader::GetModuleHandleW, Threading::CreateMutexW,
+        },
         UI::WindowsAndMessaging::{
             AllowSetForegroundWindow, ChangeWindowMessageFilterEx, CreateWindowExW, DefWindowProcW,
             FindWindowExW, GetWindowThreadProcessId, HWND_MESSAGE, MSGFLT_ALLOW, RegisterClassW,
@@ -51,7 +53,9 @@ pub enum Launch {
 pub struct Guard(#[allow(dead_code)] HANDLE);
 
 fn instance_id() -> Option<String> {
-    std::env::var("OPENIFY_INSTANCE_ID").ok().filter(|s| !s.trim().is_empty())
+    std::env::var("OPENIFY_INSTANCE_ID")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
 }
 
 /// Bu kopyanın ileti penceresinin başlığı: ikinci açılış pencereyi bununla
@@ -81,7 +85,10 @@ pub fn acquire(quiet: bool) -> Launch {
         let exists = unsafe { GetLastError() } == ERROR_ALREADY_EXISTS;
         match handle {
             Ok(h) if !exists => {
-                log::info!("sistem: tek kopya kilidi {:.2} ms", started.elapsed().as_secs_f64() * 1000.);
+                log::info!(
+                    "sistem: tek kopya kilidi {:.2} ms",
+                    started.elapsed().as_secs_f64() * 1000.
+                );
                 return Launch::Primary(Guard(h));
             }
             Ok(h) => unsafe {
@@ -115,7 +122,9 @@ pub fn acquire(quiet: bool) -> Launch {
 /// İlk kopyanın ileti penceresine "göster" der. Pencere yoksa `false`.
 fn forward_show() -> bool {
     let title = HSTRING::from(ipc_title());
-    let Ok(target) = (unsafe { FindWindowExW(Some(HWND_MESSAGE), None, w!("Openify.Ipc"), &title) }) else {
+    let Ok(target) =
+        (unsafe { FindWindowExW(Some(HWND_MESSAGE), None, w!("Openify.Ipc"), &title) })
+    else {
         return false;
     };
     unsafe {
@@ -175,12 +184,20 @@ pub fn create_ipc_window() -> Option<HWND> {
         .inspect_err(|e| log::warn!("Tek kopya ileti penceresi açılamadı: {e}"))
         .ok()?;
         let _ = ChangeWindowMessageFilterEx(hwnd, WM_COPYDATA, MSGFLT_ALLOW, None);
-        log::info!("sistem: ileti penceresi {:.2} ms", t.elapsed().as_secs_f64() * 1000.);
+        log::info!(
+            "sistem: ileti penceresi {:.2} ms",
+            t.elapsed().as_secs_f64() * 1000.
+        );
         Some(hwnd)
     }
 }
 
-unsafe extern "system" fn ipc_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+unsafe extern "system" fn ipc_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
     if msg == WM_COPYDATA && lparam.0 != 0 {
         let data = unsafe { &*(lparam.0 as *const COPYDATASTRUCT) };
         if data.dwData == COPYDATA_SHOW {

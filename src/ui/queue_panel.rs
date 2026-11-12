@@ -26,7 +26,7 @@ use super::{
     cover_image,
     library::ROW_HEIGHT,
     now_playing::{ANIM_FPS, Panel, drop_target},
-    pill::{PILL_CLEARANCE, PILL_BOTTOM, pill_width},
+    pill::{PILL_BOTTOM, PILL_CLEARANCE, pill_width},
     player::fmt_time,
     text::line_with_tip,
     theme::*,
@@ -71,7 +71,10 @@ pub(super) struct DragGhost {
 impl Render for DragGhost {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         // İmlecin sağ altında: bırakılacak yerin çizgisi altında kalmasın.
-        div().pl(px(S6)).pt(px(S5)).child(drag_ghost(&self.name, &self.artists))
+        div()
+            .pl(px(S6))
+            .pt(px(S5))
+            .child(drag_ghost(&self.name, &self.artists))
     }
 }
 
@@ -97,8 +100,19 @@ pub(super) fn drag_ghost(name: &str, artists: &str) -> gpui::Div {
                 .min_w_0()
                 .flex()
                 .flex_col()
-                .child(div().type_role(T_BODY).font_weight(FontWeight::MEDIUM).text_color(text()).child(super::text::line(name.to_string())))
-                .child(div().type_role(T_SECONDARY).text_color(muted()).child(super::text::line(artists.to_string()))),
+                .child(
+                    div()
+                        .type_role(T_BODY)
+                        .font_weight(FontWeight::MEDIUM)
+                        .text_color(text())
+                        .child(super::text::line(name.to_string())),
+                )
+                .child(
+                    div()
+                        .type_role(T_SECONDARY)
+                        .text_color(muted())
+                        .child(super::text::line(artists.to_string())),
+                ),
         )
 }
 
@@ -117,18 +131,30 @@ impl Shell {
         // Arkadaş paneli (yerleşikken de) hapın üstünde biter ve hapı daraltmaz.
         let friends = self.now.shown_panel() == Some(Panel::Friends);
         let beside = !friends && (self.now.dock.visual_docked || pill_right + S5 <= panel_left);
-        let bottom = if beside { PILL_BOTTOM } else { PILL_CLEARANCE + S5 };
+        let bottom = if beside {
+            PILL_BOTTOM
+        } else {
+            PILL_CLEARANCE + S5
+        };
         let room = (viewport_h - top - bottom).max(ROW_HEIGHT * 2.);
         // Arkadaş paneli içerik kadar uzun (uzunsa kendi kaydırması): altında
         // büyük boş kart yok.
-        (top, if friends { self.friends_panel_height(room) } else { room })
+        (
+            top,
+            if friends {
+                self.friends_panel_height(room)
+            } else {
+                room
+            },
+        )
     }
 
     /// Kök için: panel açıksa yerini tutan önbellekli görünüm.
     pub(super) fn side_panel_layer(&self, window: &Window) -> Option<AnyElement> {
         self.now.shown_panel()?;
         let viewport = window.viewport_size();
-        let (top, height) = self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
+        let (top, height) =
+            self.side_panel_frame(f32::from(viewport.width), f32::from(viewport.height));
         // Yerleşik panel 400 px, yüzen panel 360; ikisi de sağda 16 px
         // içeride (bkz. `now_panel::dock_layout`).
         let (width, right) = self.now.dock.panel_box;
@@ -147,7 +173,11 @@ impl Shell {
     }
 
     /// Panelin kendisi (`SideView`). Hareket sürüyorsa `true`.
-    pub(super) fn render_side_panel(&mut self, window: &mut Window, cx: &mut Context<Self>) -> (AnyElement, bool) {
+    pub(super) fn render_side_panel(
+        &mut self,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (AnyElement, bool) {
         let Some(panel) = self.now.shown_panel() else {
             return (div().into_any_element(), false);
         };
@@ -160,16 +190,18 @@ impl Shell {
 
         let tab = |id: &'static str, label: &'static str, which: Panel, cx: &mut Context<Self>| {
             let (stop, look) = self.stop_look(id, super::tab::PANEL, true, window, cx);
-            chip(id, label, panel == which, look, accent).when_some(stop, |el, h| el.track_focus(&h)).on_click(
-                cx.listener(move |this, _, _, cx| {
+            chip(id, label, panel == which, look, accent)
+                .when_some(stop, |el, h| el.track_focus(&h))
+                .on_click(cx.listener(move |this, _, _, cx| {
                     if this.now.panel != Some(which) {
                         this.toggle_panel(which, cx);
                     }
-                }),
-            )
+                }))
         };
-        let (full_stop, full_look) = self.stop_look("panel-full", super::tab::PANEL, true, window, cx);
-        let (close_stop, close_look) = self.stop_look("panel-close", super::tab::PANEL, true, window, cx);
+        let (full_stop, full_look) =
+            self.stop_look("panel-full", super::tab::PANEL, true, window, cx);
+        let (close_stop, close_look) =
+            self.stop_look("panel-close", super::tab::PANEL, true, window, cx);
         let header = div()
             .h(px(ROW_HEIGHT))
             .flex_shrink_0()
@@ -186,13 +218,18 @@ impl Shell {
                 icon_button("panel-full", "maximize-2", full_look, accent)
                     .when_some(full_stop, |el, h| el.track_focus(&h))
                     .tooltip(Tooltip::text(t!(FullScreen), Some("F11")))
-                    .on_click(cx.listener(|this, _, window, cx| this.toggle_fullscreen(window, cx))),
+                    .on_click(
+                        cx.listener(|this, _, window, cx| this.toggle_fullscreen(window, cx)),
+                    ),
             )
             .child(
                 // Yerleşik panel Esc ile kapanmaz (bkz. `now_key`).
                 icon_button("panel-close", "x", close_look, accent)
                     .when_some(close_stop, |el, h| el.track_focus(&h))
-                    .tooltip(Tooltip::text(t!(Close), (!self.now.docked()).then_some("Esc")))
+                    .tooltip(Tooltip::text(
+                        t!(Close),
+                        (!self.now.docked()).then_some("Esc"),
+                    ))
                     .on_click(cx.listener(|this, _, window, cx| {
                         this.close_panel(cx);
                         window.focus(&this.focus);
@@ -208,7 +245,8 @@ impl Shell {
             Panel::Queue => self.render_queue_body(window, cx),
             Panel::Friends => self.render_friends_body(window, cx),
             Panel::Lyrics => {
-                let (body, moving) = self.render_lyrics(super::lyrics_view::Place::Panel, window, cx);
+                let (body, moving) =
+                    self.render_lyrics(super::lyrics_view::Place::Panel, window, cx);
                 animating |= moving;
                 body
             }
@@ -244,10 +282,18 @@ impl Shell {
             // listenin yanında, aynı düzlemde: daha sakin gölge (bkz.
             // `dock_shadow`). (Eski "iki kenarda şeffaf delik" ekran görüntüsü
             // betiğinin GDI+ yolundandı, ekranda yoktu; 7 Kasım.)
-            .shadow(if self.now.dock.visual_docked { dock_shadow() } else { float_shadow() })
+            .shadow(if self.now.dock.visual_docked {
+                dock_shadow()
+            } else {
+                float_shadow()
+            })
             .overflow_hidden()
             .opacity(e)
-            .ml(px(if self.now.dock.visual_docked { 0. } else { S5 * (1. - e) }))
+            .ml(px(if self.now.dock.visual_docked {
+                0.
+            } else {
+                S5 * (1. - e)
+            }))
             .track_focus(&self.now.focus)
             // Panel altındaki içeriği örter; tıklayınca klavye paneldedir
             // (kök odağı görünmez öğeye geri vermesin).
@@ -257,7 +303,11 @@ impl Shell {
                 this.keyboard_focus = false;
                 cx.stop_propagation();
             }))
-            .child(if panel == Panel::Friends { self.friends_header(window, cx) } else { header.into_any_element() })
+            .child(if panel == Panel::Friends {
+                self.friends_header(window, cx)
+            } else {
+                header.into_any_element()
+            })
             .child(div().flex_1().min_h_0().relative().child(body))
             .into_any_element();
         (element, animating)
@@ -293,7 +343,11 @@ impl Shell {
                 .items_center()
                 .justify_center()
                 .px(px(S5))
-                .child(state_view("list-music", t!(QueueEmptyTitle), t!(QueueEmptyBody)))
+                .child(state_view(
+                    "list-music",
+                    t!(QueueEmptyTitle),
+                    t!(QueueEmptyBody),
+                ))
                 .into_any_element();
         }
         if !cx.has_active_drag() {
@@ -303,14 +357,16 @@ impl Shell {
         let list = uniform_list(
             "queue",
             count,
-            cx.processor(move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
-                let items = this.queue_items();
-                let rows = range
-                    .filter_map(|ix| items.get(ix).map(|item| this.queue_item(ix, *item, cx)))
-                    .collect::<Vec<_>>();
-                this.flush_image_requests(cx);
-                rows
-            }),
+            cx.processor(
+                move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
+                    let items = this.queue_items();
+                    let rows = range
+                        .filter_map(|ix| items.get(ix).map(|item| this.queue_item(ix, *item, cx)))
+                        .collect::<Vec<_>>();
+                    this.flush_image_requests(cx);
+                    rows
+                },
+            ),
         )
         .track_scroll(self.now.list.clone())
         .with_sizing_behavior(ListSizingBehavior::Auto)
@@ -326,7 +382,12 @@ impl Shell {
             let ix = items
                 .iter()
                 .position(|i| *i == QItem::Row(before))
-                .or_else(|| items.iter().rposition(|i| matches!(i, QItem::Row(_))).map(|i| i + 1))?;
+                .or_else(|| {
+                    items
+                        .iter()
+                        .rposition(|i| matches!(i, QItem::Row(_)))
+                        .map(|i| i + 1)
+                })?;
             let y = ix as f32 * ROW_HEIGHT + offset;
             Some(
                 div()
@@ -341,11 +402,21 @@ impl Shell {
         });
 
         // İz: bırakmadan sıranın yeni hâlinin boyanmasına geçen süre.
-        let dropped = self.now.dropped_at.take().filter(|_| super::now_playing::trace::enabled());
+        let dropped = self
+            .now
+            .dropped_at
+            .take()
+            .filter(|_| super::now_playing::trace::enabled());
         let drop_probe = dropped.map(|t| {
-            gpui::canvas(|_, _, _| {}, move |_, _, _, _| {
-                super::now_playing::trace::event("queue-drop", t.elapsed().as_secs_f32() * 1000.)
-            })
+            gpui::canvas(
+                |_, _, _| {},
+                move |_, _, _, _| {
+                    super::now_playing::trace::event(
+                        "queue-drop",
+                        t.elapsed().as_secs_f32() * 1000.,
+                    )
+                },
+            )
             .absolute()
             .size_0()
         });
@@ -418,7 +489,9 @@ impl Shell {
         cx.spawn(async move |this, cx| {
             loop {
                 cx.background_executor().timer(frame).await;
-                let go = this.update(cx, |shell, cx| shell.autoscroll_step(cx)).unwrap_or(false);
+                let go = this
+                    .update(cx, |shell, cx| shell.autoscroll_step(cx))
+                    .unwrap_or(false);
                 if !go {
                     break;
                 }
@@ -428,7 +501,10 @@ impl Shell {
     }
 
     fn autoscroll_step(&mut self, cx: &mut Context<Self>) -> bool {
-        if !cx.has_active_drag() || self.now.autoscroll == 0. || self.now.panel != Some(Panel::Queue) {
+        if !cx.has_active_drag()
+            || self.now.autoscroll == 0.
+            || self.now.panel != Some(Panel::Queue)
+        {
             self.now.autoscrolling = false;
             self.now.autoscroll = 0.;
             return false;
@@ -451,7 +527,9 @@ impl Shell {
     /// Klavyeyle seçilen satır görünsün: zaten görünüyorsa liste kıpırdamaz,
     /// değilse en az kayarak kenara gelir.
     pub(super) fn reveal_queue_row(&self, v: usize) {
-        let Some(ix) = self.queue_items().iter().position(|i| *i == QItem::Row(v)) else { return };
+        let Some(ix) = self.queue_items().iter().position(|i| *i == QItem::Row(v)) else {
+            return;
+        };
         let state = self.now.list.0.borrow();
         let viewport = f32::from(state.base_handle.bounds().size.height);
         let offset = state.base_handle.offset();
@@ -464,7 +542,9 @@ impl Shell {
         } else {
             return;
         };
-        state.base_handle.set_offset(gpui::point(offset.x, px(-y.max(0.))));
+        state
+            .base_handle
+            .set_offset(gpui::point(offset.x, px(-y.max(0.))));
     }
 
     fn queue_item(&self, ix: usize, item: QItem, cx: &mut Context<Self>) -> AnyElement {
@@ -493,7 +573,13 @@ impl Shell {
 
     /// Bölüm başlığı: satır boyunda, yazı alt kenarda (ayrı gruplar büyük
     /// boşlukla ayrılır). Kullanıcı sırasında "Temizle".
-    fn queue_head(&self, ix: usize, title: String, clear: bool, cx: &mut Context<Self>) -> AnyElement {
+    fn queue_head(
+        &self,
+        ix: usize,
+        title: String,
+        clear: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
         let shuffle = !clear && title != t!(NowPlaying) && self.now.queue.shuffle;
         div()
             .id(("q-head", ix))
@@ -519,7 +605,12 @@ impl Shell {
                             .child(line_with_tip(("q-head-t", ix), title).flex().min_w_0()),
                     )
                     .when(shuffle, |el| {
-                        el.child(div().type_role(T_LABEL).text_color(label()).child(t!(QueueShuffled)))
+                        el.child(
+                            div()
+                                .type_role(T_LABEL)
+                                .text_color(label())
+                                .child(t!(QueueShuffled)),
+                        )
                     })
                     .when(clear, |el| {
                         el.child(
@@ -557,14 +648,34 @@ impl Shell {
         let current = v.is_none();
         let selected = v.is_some() && v == self.now.cursor;
         let (name, artists, image, album, duration) = match &entry.track {
-            Some(t) => (t.name.clone(), t.artists.clone(), t.image.clone(), t.album.clone(), Some(t.duration_ms)),
-            None => (t!(QueueInfoLoading).to_string(), String::new(), String::new(), String::new(), None),
+            Some(t) => (
+                t.name.clone(),
+                t.artists.clone(),
+                t.image.clone(),
+                t.album.clone(),
+                Some(t.duration_ms),
+            ),
+            None => (
+                t!(QueueInfoLoading).to_string(),
+                String::new(),
+                String::new(),
+                String::new(),
+                None,
+            ),
         };
         let group = "q-row";
         let (rest, hover, pressed) = if current {
-            (Some(accent_veil(accent, ACCENT_PLAYING)), accent_veil(accent, ACCENT_PLAYING_HOVER), accent_veil(accent, ACCENT_PLAYING_PRESSED))
+            (
+                Some(accent_veil(accent, ACCENT_PLAYING)),
+                accent_veil(accent, ACCENT_PLAYING_HOVER),
+                accent_veil(accent, ACCENT_PLAYING_PRESSED),
+            )
         } else if selected {
-            (Some(veil(VEIL_SELECTED)), veil(VEIL_SELECTED), veil(VEIL_PRESSED))
+            (
+                Some(veil(VEIL_SELECTED)),
+                veil(VEIL_SELECTED),
+                veil(VEIL_PRESSED),
+            )
         } else {
             (None, veil(VEIL_HOVER), veil(VEIL_PRESSED))
         };
@@ -583,7 +694,10 @@ impl Shell {
             Look::Hover => row.bg(hover),
             Look::Pressed => row.bg(pressed),
             Look::Disabled => row,
-            Look::Live | Look::Focus => row.cursor_pointer().hover(move |s| s.bg(hover)).active(move |s| s.bg(pressed)),
+            Look::Live | Look::Focus => row
+                .cursor_pointer()
+                .hover(move |s| s.bg(hover))
+                .active(move |s| s.bg(pressed)),
         };
         let live = look == Look::Live;
         let row = match v {
@@ -598,8 +712,17 @@ impl Shell {
                     }
                 }))
                 .on_drag(
-                    QueueDrag { from: v, name: name.clone(), artists: artists.clone() },
-                    |drag, _, _, cx| cx.new(|_| DragGhost { name: drag.name.clone(), artists: drag.artists.clone() }),
+                    QueueDrag {
+                        from: v,
+                        name: name.clone(),
+                        artists: artists.clone(),
+                    },
+                    |drag, _, _, cx| {
+                        cx.new(|_| DragGhost {
+                            name: drag.name.clone(),
+                            artists: drag.artists.clone(),
+                        })
+                    },
                 ),
             _ => row,
         };
@@ -608,7 +731,14 @@ impl Shell {
         let cover = div()
             .relative()
             .flex_none()
-            .child(cover_image(&self.images, &image, &album, THUMB, R_SM, "music"))
+            .child(cover_image(
+                &self.images,
+                &image,
+                &album,
+                THUMB,
+                R_SM,
+                "music",
+            ))
             .when_some(v.filter(|_| live), |el, v| {
                 el.child(
                     div()
@@ -696,7 +826,12 @@ impl Shell {
                         .justify_center()
                         .opacity(if hover_look { 1. } else { 0. })
                         .group_hover(group, |s| s.opacity(1.))
-            .child(super::tween::hover_fill(veil(VEIL_HOVER), veil(VEIL_PRESSED), 0., super::tween::FULL))
+                        .child(super::tween::hover_fill(
+                            veil(VEIL_HOVER),
+                            veil(VEIL_PRESSED),
+                            0.,
+                            super::tween::FULL,
+                        ))
                         .tooltip(Tooltip::text(t!(QueueRemoveTip), Some("Del")))
                         .when(live, |el| {
                             el.on_click(cx.listener(move |this, _, _, cx| {
@@ -708,7 +843,10 @@ impl Shell {
                 )
             });
 
-        row.child(cover).child(titles).child(right).into_any_element()
+        row.child(cover)
+            .child(titles)
+            .child(right)
+            .into_any_element()
     }
 }
 
@@ -722,7 +860,13 @@ impl Shell {
     pub(super) fn now_playing_gallery(&self, cx: &mut Context<Self>) -> AnyElement {
         use super::pill::toggle_button;
         let accent = self.accent().text;
-        let caption = |name: &'static str| div().w(px(160.)).type_role(T_SECONDARY).text_color(muted()).child(name);
+        let caption = |name: &'static str| {
+            div()
+                .w(px(160.))
+                .type_role(T_SECONDARY)
+                .text_color(muted())
+                .child(name)
+        };
         let looks = |name: &'static str, make: &dyn Fn(Look) -> AnyElement| {
             let mut row = div().flex().items_center().gap(px(S5)).child(caption(name));
             for look in Look::ALL {
@@ -735,16 +879,34 @@ impl Shell {
             .flex_col()
             .gap(px(S4))
             .child(looks("Açılır düğme, kapalı", &|look| {
-                toggle_button(("g-toggle-off", look as usize), "shuffle", false, look, accent).into_any_element()
+                toggle_button(
+                    ("g-toggle-off", look as usize),
+                    "shuffle",
+                    false,
+                    look,
+                    accent,
+                )
+                .into_any_element()
             }))
             .child(looks("Açılır düğme, açık", &|look| {
-                toggle_button(("g-toggle-on", look as usize), "repeat-1", true, look, accent).into_any_element()
+                toggle_button(
+                    ("g-toggle-on", look as usize),
+                    "repeat-1",
+                    true,
+                    look,
+                    accent,
+                )
+                .into_any_element()
             }));
 
         let sample = |n: usize, source: crate::engine::QueueSource| {
             let (name, artists, album) = [
                 ("Sür Eve", "Güneş", "Sür Eve"),
-                ("Kışın arabada sohbet gibisi yok, hele radyoda eski bir şarkı varsa", "Uzun Ad Denemesi", "Uzun"),
+                (
+                    "Kışın arabada sohbet gibisi yok, hele radyoda eski bir şarkı varsa",
+                    "Uzun Ad Denemesi",
+                    "Uzun",
+                ),
                 ("Dal", "Adamlar", "Harekete kimse mâni olamaz."),
                 ("Melekler Ölmez", "mor ve ötesi", "Melekler Ölmez"),
             ][n % 4];
@@ -763,18 +925,41 @@ impl Shell {
         };
         use crate::engine::QueueSource::{Context as Ctx, User};
         let row = |name: &'static str, el: AnyElement| {
-            div().flex().items_center().gap(px(S5)).child(caption(name)).child(div().w(px(PANEL_WIDTH - S4)).child(el))
+            div()
+                .flex()
+                .items_center()
+                .gap(px(S5))
+                .child(caption(name))
+                .child(div().w(px(PANEL_WIDTH - S4)).child(el))
         };
         let rows = div()
             .flex()
             .flex_col()
             .gap(px(S1))
-            .child(row("Bölüm başlığı", self.queue_head(9000, "Sıradaki: Beğenilenler".into(), false, cx)))
-            .child(row("Kullanıcı sırası", self.queue_head(9001, "Sıradaki".into(), true, cx)))
-            .child(row("Çalan", self.queue_row(9002, None, &sample(0, Ctx), Look::Live, cx)))
-            .child(row("Normal", self.queue_row(9003, Some(900), &sample(1, User), Look::Disabled, cx)))
-            .child(row("Üzerine gelme", self.queue_row(9004, Some(901), &sample(2, Ctx), Look::Hover, cx)))
-            .child(row("Basma", self.queue_row(9005, Some(902), &sample(3, Ctx), Look::Pressed, cx)))
+            .child(row(
+                "Bölüm başlığı",
+                self.queue_head(9000, "Sıradaki: Beğenilenler".into(), false, cx),
+            ))
+            .child(row(
+                "Kullanıcı sırası",
+                self.queue_head(9001, "Sıradaki".into(), true, cx),
+            ))
+            .child(row(
+                "Çalan",
+                self.queue_row(9002, None, &sample(0, Ctx), Look::Live, cx),
+            ))
+            .child(row(
+                "Normal",
+                self.queue_row(9003, Some(900), &sample(1, User), Look::Disabled, cx),
+            ))
+            .child(row(
+                "Üzerine gelme",
+                self.queue_row(9004, Some(901), &sample(2, Ctx), Look::Hover, cx),
+            ))
+            .child(row(
+                "Basma",
+                self.queue_row(9005, Some(902), &sample(3, Ctx), Look::Pressed, cx),
+            ))
             .child(row(
                 "Bırakılacak yer",
                 div()
@@ -792,7 +977,10 @@ impl Shell {
                     )
                     .into_any_element(),
             ))
-            .child(row("Sürüklenen satır", drag_ghost("Dal", "Adamlar").into_any_element()));
+            .child(row(
+                "Sürüklenen satır",
+                drag_ghost("Dal", "Adamlar").into_any_element(),
+            ));
 
         let lyric = |text_: &'static str, active: bool| {
             div()
@@ -804,7 +992,16 @@ impl Shell {
                 .text_color(if active { text() } else { muted() })
                 .child(text_)
                 .when(active, |el| {
-                    el.child(div().absolute().left_0().top(px(S1)).bottom(px(S1)).w(px(S0)).rounded(px(R_XS)).bg(rgb(accent)))
+                    el.child(
+                        div()
+                            .absolute()
+                            .left_0()
+                            .top(px(S1))
+                            .bottom(px(S1))
+                            .w(px(S0))
+                            .rounded(px(R_XS))
+                            .bg(rgb(accent)),
+                    )
                 })
         };
         let lyrics = div()
@@ -824,16 +1021,31 @@ impl Shell {
                 .flex()
                 .flex_col()
                 .gap(px(S3))
-                .child(div().type_role(T_LABEL).font_weight(FontWeight::SEMIBOLD).text_color(label()).child(title))
+                .child(
+                    div()
+                        .type_role(T_LABEL)
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(label())
+                        .child(title),
+                )
                 .child(body)
         };
         div()
             .flex()
             .flex_col()
             .gap(px(S7))
-            .child(section("Şimdi çalıyor: açılır düğmeler (karıştır, tekrar, sıra, sözler)", toggles.into_any_element()))
-            .child(section("Sıra paneli: başlık, satırlar, sürükle bırak", rows.into_any_element()))
-            .child(section("Sözler: okunan satır ve sessiz satırlar", lyrics.into_any_element()))
+            .child(section(
+                "Şimdi çalıyor: açılır düğmeler (karıştır, tekrar, sıra, sözler)",
+                toggles.into_any_element(),
+            ))
+            .child(section(
+                "Sıra paneli: başlık, satırlar, sürükle bırak",
+                rows.into_any_element(),
+            ))
+            .child(section(
+                "Sözler: okunan satır ve sessiz satırlar",
+                lyrics.into_any_element(),
+            ))
             .into_any_element()
     }
     // i18n-skip-end: geliştirme vitrini (OPENIFY_GALLERY), kullanıcıya görünmez

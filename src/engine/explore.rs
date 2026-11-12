@@ -136,7 +136,10 @@ impl Feed {
     /// ülke listesi de içeriyor; öne çıkan bölüm hep en kısa olan (tek
     /// kartlıklar, ör. müzik videosu listesi, sayılmaz).
     pub fn featured(&self) -> Option<&ExploreSection> {
-        self.sections.iter().filter(|s| s.cards.len() >= 2).min_by_key(|s| s.cards.len())
+        self.sections
+            .iter()
+            .filter(|s| s.cards.len() >= 2)
+            .min_by_key(|s| s.cards.len())
     }
 
     /// Keşfet'in "Yeni çıkanlar" satırı: sayfadaki bütün kartlar (editörün
@@ -201,7 +204,12 @@ pub fn cached(cache: &PageCache, key: &ExploreKey) -> Option<(ExploreData, Fresh
     cached_at(cache, key, now_ms(), i18n::lang())
 }
 
-fn cached_at(cache: &PageCache, key: &ExploreKey, now: i64, lang: Lang) -> Option<(ExploreData, Freshness)> {
+fn cached_at(
+    cache: &PageCache,
+    key: &ExploreKey,
+    now: i64,
+    lang: Lang,
+) -> Option<(ExploreData, Freshness)> {
     let ck = key.cache_key(lang);
     let (data, age) = if matches!(key, ExploreKey::Categories) {
         let hit = cache.get::<CategoryList>(Kind::Explore, &ck, now).ok()??;
@@ -253,7 +261,12 @@ pub fn plain_text(html: &str) -> String {
 fn artist_names(artists: &Value) -> String {
     artists["items"]
         .as_array()
-        .map(|a| a.iter().filter_map(|x| x["profile"]["name"].as_str()).collect::<Vec<_>>().join(", "))
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x["profile"]["name"].as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        })
         .unwrap_or_default()
 }
 
@@ -322,7 +335,8 @@ fn graphql_error(value: &Value) -> Option<String> {
 /// biçimine göre (başlıklar İngilizce / Türkçe gelebilir, biçim değişmez).
 fn home_group(format: &str) -> Option<usize> {
     match format {
-        "daily-mix" | "discover-weekly" | "release-radar" | "on-repeat" | "repeat-rewind" | "daylist" => Some(0),
+        "daily-mix" | "discover-weekly" | "release-radar" | "on-repeat" | "repeat-rewind"
+        | "daylist" => Some(0),
         "topic-mix" | "artist-mix-reader" | "descripto" | "genre-mix" => Some(1),
         "inspiredby-mix" => Some(2),
         _ => None,
@@ -350,14 +364,25 @@ fn home_rank(format: &str) -> u8 {
 pub fn parse_home(value: &Value) -> Result<Feed> {
     let root = &value["data"]["home"];
     let Some(sections) = root["sectionContainer"]["sections"]["items"].as_array() else {
-        bail!("{}", graphql_error(value).unwrap_or_else(|| "ana sayfa akışı boş".into()));
+        bail!(
+            "{}",
+            graphql_error(value).unwrap_or_else(|| "ana sayfa akışı boş".into())
+        );
     };
     let mut groups: [Vec<ExploreCard>; 3] = Default::default();
     let mut seen = HashSet::new();
     for section in sections {
-        for item in section["sectionItems"]["items"].as_array().into_iter().flatten() {
-            let Some(card) = parse_card(&item["content"]) else { continue };
-            let Some(group) = home_group(&card.format) else { continue };
+        for item in section["sectionItems"]["items"]
+            .as_array()
+            .into_iter()
+            .flatten()
+        {
+            let Some(card) = parse_card(&item["content"]) else {
+                continue;
+            };
+            let Some(group) = home_group(&card.format) else {
+                continue;
+            };
             if seen.insert(card.uri.clone()) {
                 groups[group].push(card);
             }
@@ -370,13 +395,20 @@ pub fn parse_home(value: &Value) -> Result<Feed> {
         .filter(|(cards, _)| !cards.is_empty())
         .map(|(mut cards, title)| {
             cards.truncate(MAX_CARDS);
-            ExploreSection { title: title.into(), cards }
+            ExploreSection {
+                title: title.into(),
+                cards,
+            }
         })
         .collect();
     if sections.is_empty() {
         bail!("ana sayfa akışında sana özel liste yok");
     }
-    Ok(Feed { title: String::new(), color: String::new(), sections })
+    Ok(Feed {
+        title: String::new(),
+        color: String::new(),
+        sections,
+    })
 }
 
 /// Karo olarak gösterilmeyen sayfalar: müzik dışı olanlar ve Keşfet'te
@@ -398,7 +430,10 @@ const HIDDEN_PAGES: &[&str] = &[
 /// Sayfa olmayanlar (xlink özellik kartları) ve gizlenenler atlanır.
 pub fn parse_categories(value: &Value) -> Result<CategoryList> {
     let Some(sections) = value["data"]["browseStart"]["sections"]["items"].as_array() else {
-        bail!("{}", graphql_error(value).unwrap_or_else(|| "tür listesi boş".into()));
+        bail!(
+            "{}",
+            graphql_error(value).unwrap_or_else(|| "tür listesi boş".into())
+        );
     };
     let mut seen = HashSet::new();
     let items: Vec<Category> = sections
@@ -411,11 +446,17 @@ pub fn parse_categories(value: &Value) -> Result<CategoryList> {
                 return None;
             }
             let card = &item["content"]["data"]["data"]["cardRepresentation"];
-            let name = str_of(&card["title"]["transformedLabel"]).trim().to_string();
+            let name = str_of(&card["title"]["transformedLabel"])
+                .trim()
+                .to_string();
             if name.is_empty() {
                 return None;
             }
-            Some(Category { uri: uri.to_string(), name, color: valid_color(card["backgroundColor"]["hex"].as_str()) })
+            Some(Category {
+                uri: uri.to_string(),
+                name,
+                color: valid_color(card["backgroundColor"]["hex"].as_str()),
+            })
         })
         .collect();
     if items.is_empty() {
@@ -427,7 +468,13 @@ pub fn parse_categories(value: &Value) -> Result<CategoryList> {
 /// `#rrggbb` ise aynısı, değilse boş.
 fn valid_color(hex: Option<&str>) -> String {
     match hex {
-        Some(h) if h.len() == 7 && h.starts_with('#') && h[1..].chars().all(|c| c.is_ascii_hexdigit()) => h.to_lowercase(),
+        Some(h)
+            if h.len() == 7
+                && h.starts_with('#')
+                && h[1..].chars().all(|c| c.is_ascii_hexdigit()) =>
+        {
+            h.to_lowercase()
+        }
         _ => String::new(),
     }
 }
@@ -437,7 +484,10 @@ fn valid_color(hex: Option<&str>) -> String {
 pub fn parse_browse(value: &Value) -> Result<Feed> {
     let b = &value["data"]["browse"];
     if b["__typename"].as_str() != Some("BrowseSectionContainer") {
-        bail!("{}", graphql_error(value).unwrap_or_else(|| "sayfa bulunamadı".into()));
+        bail!(
+            "{}",
+            graphql_error(value).unwrap_or_else(|| "sayfa bulunamadı".into())
+        );
     }
     let sections: Vec<ExploreSection> = b["sections"]["items"]
         .as_array()
@@ -445,7 +495,9 @@ pub fn parse_browse(value: &Value) -> Result<Feed> {
         .flatten()
         .filter_map(|s| {
             let cards = section_cards(s);
-            let title = str_of(&s["data"]["title"]["transformedLabel"]).trim().to_string();
+            let title = str_of(&s["data"]["title"]["transformedLabel"])
+                .trim()
+                .to_string();
             (!cards.is_empty()).then_some(ExploreSection { title, cards })
         })
         .collect();
@@ -453,7 +505,9 @@ pub fn parse_browse(value: &Value) -> Result<Feed> {
         bail!("sayfada gösterilecek bir şey yok");
     }
     Ok(Feed {
-        title: str_of(&b["header"]["title"]["transformedLabel"]).trim().to_string(),
+        title: str_of(&b["header"]["title"]["transformedLabel"])
+            .trim()
+            .to_string(),
         color: valid_color(b["header"]["color"]["hex"].as_str()),
         sections,
     })
@@ -493,12 +547,22 @@ fn categories_variables() -> Value {
 
 /// Bir sorguyu pathfinder istemcisinden geçirip gönderir (kapı, eski hash'te
 /// web player'dan yenisi, yeniden deneme orada). Hata önbelleğe yazılmaz.
-async fn fetch(session: &Session, db: Option<&Db>, op: &pathfinder::Operation, variables: Value) -> Result<Value> {
+async fn fetch(
+    session: &Session,
+    db: Option<&Db>,
+    op: &pathfinder::Operation,
+    variables: Value,
+) -> Result<Value> {
     Ok(pathfinder::query(session, db, op, variables, Priority::Background).await?)
 }
 
 /// Veriyi indirir ve önbelleğe yazar. Hata önbelleğe yazılmaz.
-pub async fn load(session: &Session, db: Option<&Db>, cache: &PageCache, key: &ExploreKey) -> Result<ExploreData> {
+pub async fn load(
+    session: &Session,
+    db: Option<&Db>,
+    cache: &PageCache,
+    key: &ExploreKey,
+) -> Result<ExploreData> {
     let started = std::time::Instant::now();
     // İstek başlarken etkin dil: yanıt bu dilde istenir ve bu dilin anahtarına yazılır.
     let lang = i18n::lang();
@@ -512,7 +576,13 @@ pub async fn load(session: &Session, db: Option<&Db>, cache: &PageCache, key: &E
             ExploreData::Categories(Arc::new(parse_categories(&v)?))
         }
         ExploreKey::NewReleases => {
-            let v = fetch(session, db, &BROWSE_PAGE, browse_variables(NEW_RELEASES_PAGE)).await?;
+            let v = fetch(
+                session,
+                db,
+                &BROWSE_PAGE,
+                browse_variables(NEW_RELEASES_PAGE),
+            )
+            .await?;
             ExploreData::Feed(Arc::new(parse_browse(&v)?))
         }
         ExploreKey::Charts => {
@@ -563,22 +633,38 @@ mod tests {
         assert_eq!(titles[0], "Sana özel");
         let first = &feed.sections[0].cards;
         // Günlük karışımlar önde, sonra Discover Weekly, sonra Radar.
-        assert!(first.first().is_some_and(|c| c.format == "daily-mix"), "{first:?}");
+        assert!(
+            first.first().is_some_and(|c| c.format == "daily-mix"),
+            "{first:?}"
+        );
         let ranks: Vec<u8> = first.iter().map(|c| home_rank(&c.format)).collect();
         assert!(ranks.windows(2).all(|w| w[0] <= w[1]), "{ranks:?}");
-        let mut all: Vec<&str> = feed.sections.iter().flat_map(|s| s.cards.iter().map(|c| c.uri.as_str())).collect();
+        let mut all: Vec<&str> = feed
+            .sections
+            .iter()
+            .flat_map(|s| s.cards.iter().map(|c| c.uri.as_str()))
+            .collect();
         let n = all.len();
         all.sort_unstable();
         all.dedup();
         assert_eq!(all.len(), n, "aynı liste iki kez");
-        assert!(feed.sections.iter().flat_map(|s| &s.cards).all(|c| c.kind == CardKind::Playlist));
+        assert!(
+            feed.sections
+                .iter()
+                .flat_map(|s| &s.cards)
+                .all(|c| c.kind == CardKind::Playlist)
+        );
     }
 
     #[test]
     fn home_cards_have_clean_text_and_no_username() {
         let feed = parse_home(&home()).unwrap();
         for c in feed.sections.iter().flat_map(|s| &s.cards) {
-            assert!(!c.subtitle.contains('<') && !c.subtitle.contains("&#"), "{}", c.subtitle);
+            assert!(
+                !c.subtitle.contains('<') && !c.subtitle.contains("&#"),
+                "{}",
+                c.subtitle
+            );
             assert!(!c.name.is_empty());
         }
         assert!(!serde_json::to_string(&feed).unwrap().contains("furkan"));
@@ -586,23 +672,43 @@ mod tests {
 
     #[test]
     fn home_without_personal_lists_is_an_error() {
-        let v = json!({ "data": { "home": { "sectionContainer": { "sections": { "items": [] } } } } });
+        let v =
+            json!({ "data": { "home": { "sectionContainer": { "sections": { "items": [] } } } } });
         assert!(parse_home(&v).is_err());
-        assert!(parse_home(&json!({ "errors": [ { "message": "boom" } ] })).unwrap_err().to_string().contains("boom"));
+        assert!(
+            parse_home(&json!({ "errors": [ { "message": "boom" } ] }))
+                .unwrap_err()
+                .to_string()
+                .contains("boom")
+        );
     }
 
     #[test]
     fn categories_keep_colors_and_drop_non_music() {
         let list = parse_categories(&categories()).unwrap();
         let names: Vec<&str> = list.items.iter().map(|c| c.name.as_str()).collect();
-        assert!(names.contains(&"Hip Hop") && names.contains(&"Rock"), "{names:?}");
-        for hidden in ["Podcast'ler", "Sesli kitaplar", "Müzik", "Yeni Çıkanlar", "Listeler", "Komedi"] {
+        assert!(
+            names.contains(&"Hip Hop") && names.contains(&"Rock"),
+            "{names:?}"
+        );
+        for hidden in [
+            "Podcast'ler",
+            "Sesli kitaplar",
+            "Müzik",
+            "Yeni Çıkanlar",
+            "Listeler",
+            "Komedi",
+        ] {
             assert!(!names.contains(&hidden), "{hidden} gizlenmeliydi");
         }
         let hiphop = list.items.iter().find(|c| c.name == "Hip Hop").unwrap();
         assert_eq!(hiphop.color, "#2d46b9");
         assert_eq!(hiphop.uri, "spotify:page:0JQ5DAqbMKFQ00XGBls6ym");
-        assert!(list.items.iter().all(|c| c.uri.starts_with("spotify:page:") && c.color.len() == 7));
+        assert!(
+            list.items
+                .iter()
+                .all(|c| c.uri.starts_with("spotify:page:") && c.color.len() == 7)
+        );
     }
 
     #[test]
@@ -613,19 +719,48 @@ mod tests {
         assert!(feed.sections.len() >= 3);
         let first = &feed.sections[0];
         // Fixture: 5 öğenin 4.sü "NotFound": kart olmamalı (4 kart kalır).
-        assert_eq!(first.cards.len(), 4, "{:?}", first.cards.iter().map(|c| &c.name).collect::<Vec<_>>());
-        assert!(feed.sections.iter().flat_map(|s| &s.cards).all(|c| c.uri.starts_with("spotify:")));
+        assert_eq!(
+            first.cards.len(),
+            4,
+            "{:?}",
+            first.cards.iter().map(|c| &c.name).collect::<Vec<_>>()
+        );
+        assert!(
+            feed.sections
+                .iter()
+                .flat_map(|s| &s.cards)
+                .all(|c| c.uri.starts_with("spotify:"))
+        );
         // Albüm bölümü: sanatçı adı alt başlıkta.
-        let albums = feed.sections.iter().find(|s| s.cards[0].kind == CardKind::Album).unwrap();
-        assert!(!albums.cards[0].subtitle.is_empty() || albums.cards[0].image.starts_with("https://"));
+        let albums = feed
+            .sections
+            .iter()
+            .find(|s| s.cards[0].kind == CardKind::Album)
+            .unwrap();
+        assert!(
+            !albums.cards[0].subtitle.is_empty() || albums.cards[0].image.starts_with("https://")
+        );
     }
 
     #[test]
     fn charts_have_a_featured_row_with_top_50_turkey() {
         let feed = parse_browse(&charts()).unwrap();
-        let featured = feed.sections.iter().find(|s| s.title == "Öne Çıkan Listeler").expect("öne çıkan listeler");
-        assert!(featured.cards.iter().any(|c| c.name.contains("Türkiye")), "{:?}", featured.cards);
-        assert!(featured.cards.iter().all(|c| c.format == "chart" && c.image.starts_with("https://")));
+        let featured = feed
+            .sections
+            .iter()
+            .find(|s| s.title == "Öne Çıkan Listeler")
+            .expect("öne çıkan listeler");
+        assert!(
+            featured.cards.iter().any(|c| c.name.contains("Türkiye")),
+            "{:?}",
+            featured.cards
+        );
+        assert!(
+            featured
+                .cards
+                .iter()
+                .all(|c| c.format == "chart" && c.image.starts_with("https://"))
+        );
     }
 
     #[test]
@@ -637,30 +772,57 @@ mod tests {
         let fresh = parse_browse(&new_releases()).unwrap();
         let cards = fresh.new_releases();
         assert!(cards.iter().all(|c| c.format != "release-radar"));
-        assert_eq!(cards.first().map(|c| c.kind), Some(CardKind::Playlist), "editörün listesi önde");
+        assert_eq!(
+            cards.first().map(|c| c.kind),
+            Some(CardKind::Playlist),
+            "editörün listesi önde"
+        );
         assert!(cards.iter().filter(|c| c.kind == CardKind::Album).count() >= 8);
     }
 
     #[test]
     fn new_releases_hold_albums_with_artist_names() {
-
         let feed = parse_browse(&new_releases()).unwrap();
-        let albums: Vec<&ExploreCard> = feed.sections.iter().flat_map(|s| &s.cards).filter(|c| c.kind == CardKind::Album).collect();
+        let albums: Vec<&ExploreCard> = feed
+            .sections
+            .iter()
+            .flat_map(|s| &s.cards)
+            .filter(|c| c.kind == CardKind::Album)
+            .collect();
         assert!(albums.len() >= 8);
-        assert!(albums.iter().all(|a| !a.subtitle.is_empty() && a.image.starts_with("https://i.scdn.co/")));
+        assert!(
+            albums
+                .iter()
+                .all(|a| !a.subtitle.is_empty() && a.image.starts_with("https://i.scdn.co/"))
+        );
         // Albüm kapağı ~300 px'lik olanı seçilir (640 değil).
-        assert!(albums[0].image.ends_with("1e02ae49c87dcf0b8e27f27303c5") || albums[0].image.contains("00001e02"), "{}", albums[0].image);
+        assert!(
+            albums[0].image.ends_with("1e02ae49c87dcf0b8e27f27303c5")
+                || albums[0].image.contains("00001e02"),
+            "{}",
+            albums[0].image
+        );
     }
 
     #[test]
     fn browse_errors_are_errors_not_empty_pages() {
-        assert!(parse_browse(&json!({ "data": { "browse": { "__typename": "NotFound" } } })).is_err());
-        assert!(parse_browse(&json!({ "errors": [ { "message": "PersistedQueryNotFound" } ] })).is_err());
+        assert!(
+            parse_browse(&json!({ "data": { "browse": { "__typename": "NotFound" } } })).is_err()
+        );
+        assert!(
+            parse_browse(&json!({ "errors": [ { "message": "PersistedQueryNotFound" } ] }))
+                .is_err()
+        );
     }
 
     #[test]
     fn plain_text_strips_tags_and_entities() {
-        assert_eq!(plain_text("Quiet music for you. Also try <a href=\"spotify:playlist:x\">Quiet Mix</a>"), "Quiet music for you. Also try Quiet Mix");
+        assert_eq!(
+            plain_text(
+                "Quiet music for you. Also try <a href=\"spotify:playlist:x\">Quiet Mix</a>"
+            ),
+            "Quiet music for you. Also try Quiet Mix"
+        );
         assert_eq!(plain_text("Here&#x27;s  a &amp; b"), "Here's a & b");
     }
 
@@ -671,22 +833,50 @@ mod tests {
         assert_eq!(freshness(&ExploreKey::Home, h(7)), Freshness::Stale);
         assert_eq!(freshness(&ExploreKey::Categories, h(20)), Freshness::Fresh);
         assert_eq!(freshness(&ExploreKey::Categories, h(25)), Freshness::Stale);
-        assert_eq!(freshness(&ExploreKey::Category("spotify:page:x".into()), h(23)), Freshness::Fresh);
-        assert_eq!(freshness(&ExploreKey::NewReleases, 6 * DAY_MS), Freshness::Stale);
-        assert_eq!(freshness(&ExploreKey::Charts, 8 * DAY_MS), Freshness::Expired);
+        assert_eq!(
+            freshness(&ExploreKey::Category("spotify:page:x".into()), h(23)),
+            Freshness::Fresh
+        );
+        assert_eq!(
+            freshness(&ExploreKey::NewReleases, 6 * DAY_MS),
+            Freshness::Stale
+        );
+        assert_eq!(
+            freshness(&ExploreKey::Charts, 8 * DAY_MS),
+            Freshness::Expired
+        );
     }
 
     #[test]
     fn cache_round_trip_uses_per_key_type() {
         let cache = PageCache::open_in_memory().unwrap();
         let feed = Arc::new(parse_browse(&charts()).unwrap());
-        store(&cache, &ExploreKey::Charts, &ExploreData::Feed(feed.clone()), Lang::Tr).unwrap();
+        store(
+            &cache,
+            &ExploreKey::Charts,
+            &ExploreData::Feed(feed.clone()),
+            Lang::Tr,
+        )
+        .unwrap();
         let list = Arc::new(parse_categories(&categories()).unwrap());
-        store(&cache, &ExploreKey::Categories, &ExploreData::Categories(list.clone()), Lang::Tr).unwrap();
-        let (data, state) = cached_at(&cache, &ExploreKey::Charts, now_ms() + HOUR_MS, Lang::Tr).unwrap();
+        store(
+            &cache,
+            &ExploreKey::Categories,
+            &ExploreData::Categories(list.clone()),
+            Lang::Tr,
+        )
+        .unwrap();
+        let (data, state) =
+            cached_at(&cache, &ExploreKey::Charts, now_ms() + HOUR_MS, Lang::Tr).unwrap();
         assert_eq!(state, Freshness::Fresh);
         assert!(matches!(data, ExploreData::Feed(f) if *f == *feed));
-        let (data, _) = cached_at(&cache, &ExploreKey::Categories, now_ms() + 30 * HOUR_MS, Lang::Tr).unwrap();
+        let (data, _) = cached_at(
+            &cache,
+            &ExploreKey::Categories,
+            now_ms() + 30 * HOUR_MS,
+            Lang::Tr,
+        )
+        .unwrap();
         assert!(matches!(data, ExploreData::Categories(c) if *c == *list));
         // 7 günden eski: gösterilmez.
         assert!(cached_at(&cache, &ExploreKey::Charts, now_ms() + 8 * DAY_MS, Lang::Tr).is_none());
@@ -698,12 +888,21 @@ mod tests {
     fn cache_is_separate_per_interface_language() {
         let cache = PageCache::open_in_memory().unwrap();
         let feed = Arc::new(parse_browse(&charts()).unwrap());
-        store(&cache, &ExploreKey::Charts, &ExploreData::Feed(feed), Lang::Tr).unwrap();
+        store(
+            &cache,
+            &ExploreKey::Charts,
+            &ExploreData::Feed(feed),
+            Lang::Tr,
+        )
+        .unwrap();
         let now = now_ms() + HOUR_MS;
         assert!(cached_at(&cache, &ExploreKey::Charts, now, Lang::Tr).is_some());
         // Dil değişince Türkçe sayfa İngilizce arayüzde gösterilmez.
         assert!(cached_at(&cache, &ExploreKey::Charts, now, Lang::En).is_none());
-        assert_ne!(ExploreKey::Home.cache_key(Lang::En), ExploreKey::Home.cache_key(Lang::Tr));
+        assert_ne!(
+            ExploreKey::Home.cache_key(Lang::En),
+            ExploreKey::Home.cache_key(Lang::Tr)
+        );
         assert_ne!(
             ExploreKey::Category("spotify:page:x".into()).cache_key(Lang::En),
             ExploreKey::Category("spotify:page:x".into()).cache_key(Lang::Tr)
