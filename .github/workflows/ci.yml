@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test, lint (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The crate uses edition 2024 (Rust 1.85+). There is no rust-toolchain
+      # file, so CI tracks stable.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # No .env or secrets are needed: the Spotify client id is a public
+      # constant in src/auth.rs, and the only env!/option_env! uses are
+      # CARGO_PKG_VERSION and CARGO_MANIFEST_DIR.
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Test
+        run: cargo test --release --locked
+
+      # TODO: make this blocking (remove continue-on-error) once the existing
+      # clippy warnings are fixed.
+      - name: Clippy (non-blocking for now)
+        continue-on-error: true
+        run: cargo clippy --release --locked -- -D warnings
+
+  deny:
+    name: cargo-deny (licenses, bans, advisories, sources)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Licenses, bans, sources
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources
+      # 11 Nov 2026: the RUSTSEC findings were reviewed (librespot-core ones fixed,
+      # the rest ignored with reasons in deny.toml); `cargo deny check advisories`
+      # now passes locally. TODO: make blocking (drop continue-on-error) once this
+      # has stayed green in CI for a while; new advisories then fail the build.
+      - name: Advisories (non-blocking for now)
+        continue-on-error: true
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
+
+  vendor-drift:
+    name: Vendor drift report
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Diff vendored crates against crates.io
+        shell: pwsh
+        run: ./scripts/vendor-diff.ps1 -Summary

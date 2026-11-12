@@ -1,0 +1,19 @@
+target/
+# Ölçüm derlemeleri (çalışan exe target'ı kilitlerken)
+target-olcum/
+.env
+# Denemeler (karar verilince silinir, commit edilmez)
+prototypes/
+# Yerel araçlar (vpk: scripts/surum-hazirla.ps1)
+.tools/
+
+# İç çalışma notları (yerelde kalır, herkese açık depoda yok)
+CLAUDE.md
+BEKLEYEN-KARARLAR.md
+ROADMAP.md
+MIMARI-INCELEME.md
+OZELLIK-KARSILASTIRMA.md
+design/
+.impeccable/
+olcumler/
+.claude/

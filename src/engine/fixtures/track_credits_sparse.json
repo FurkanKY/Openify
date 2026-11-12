@@ -1,0 +1,16 @@
+{
+  "roleCredits": [
+    { "artists": [ { "name": "Basliksiz Rol" } ] },
+    { "roleTitle": "Performed By", "artists": [
+        { "name": "Yalniz Ad", "uri": "spotify:album:yanlis" },
+        { "uri": "spotify:artist:adsiz" },
+        "Duz Yazi",
+        42,
+        { "name": "   " }
+    ] },
+    { "roleTitle": "Mastering Engineer", "artists": [] },
+    { "roleTitle": "Producer", "people": [ { "name": "Yapimci Bir" } ] },
+    { "roleTitle": "Remixer" }
+  ],
+  "sourceNames": "Tek Kaynak"
+}

@@ -1,0 +1,41 @@
+{
+  "trackUri": "spotify:track:t01",
+  "trackTitle": "Gece Yolcusu",
+  "roleCredits": [
+    {
+      "roleTitle": "Produced By",
+      "artists": [
+        { "name": "Mert Kaya", "uri": "spotify:artist:p01", "imageUri": "spotify:image:ab6761610000f178p01", "subroles": ["producer"], "weight": 0.4 }
+      ]
+    },
+    {
+      "roleTitle": "Performed By",
+      "artists": [
+        { "name": "Dalga Boyu", "uri": "spotify:artist:r01", "imageUri": "spotify:image:ab6761610000f178r01", "subroles": ["main artist"], "weight": 0.9 },
+        { "name": "Kuzey Isigi", "uri": "spotify:artist:r02", "subroles": ["featured artist"], "weight": 0.5 }
+      ]
+    },
+    {
+      "roleTitle": "Written By",
+      "artists": [
+        { "name": "Deniz Aksu", "uri": "spotify:artist:w01", "subroles": ["lyricist"], "weight": 0.7 },
+        { "name": "Mert Kaya", "subroles": [], "weight": 0.3 }
+      ]
+    },
+    {
+      "roleTitle": "Mixing Engineer",
+      "artists": [
+        { "name": "Selin Arda", "subroles": [], "weight": 0.1 }
+      ]
+    },
+    {
+      "roleTitle": "Composer",
+      "artists": [
+        { "name": "Deniz Aksu", "uri": "spotify:artist:w01" },
+        { "name": "Ece Tan" }
+      ]
+    }
+  ],
+  "extendedCredits": [],
+  "sourceNames": ["Karanlik Oda Plaklari", "Dagitim A.S.", "Karanlik Oda Plaklari"]
+}

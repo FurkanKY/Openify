@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+<!-- openify.svg'nin 24 px'e (görev çubuğu, %100) elle oturtulmuş hâli: karo 1..23,
+     halka merkez (12,12) dış 7 / iç 4, nokta merkez (16,8) yarıçap 2 (14..18, 6..10). -->
+<defs>
+  <mask id="notch" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+    <rect width="24" height="24" fill="#fff"/><circle cx="16" cy="8" r="3.25" fill="#000"/>
+  </mask>
+</defs>
+<rect x="1" y="1" width="22" height="22" rx="5.5" fill="#2A2A30"/>
+<rect x="2" y="2" width="20" height="20" rx="4.5" fill="#121215"/>
+<circle cx="12" cy="12" r="5.5" fill="none" stroke="#F4F4F5" stroke-width="3" mask="url(#notch)"/>
+<circle cx="16" cy="8" r="2" fill="#F4F4F5"/>
+</svg>

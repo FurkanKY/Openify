@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+<!-- tray-dark.svg'nin 16 px'e elle oturtulmuş hâli: halka merkez (8,8) dış 7 / iç 4,
+     nokta merkez (12,4) yarıçap 2, çentik 3,5. -->
+<defs>
+  <mask id="notch" maskUnits="userSpaceOnUse" x="0" y="0" width="16" height="16">
+    <rect width="16" height="16" fill="#fff"/><circle cx="12" cy="4" r="3.5" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="8" cy="8" r="5.5" fill="none" stroke="#0E0E10" stroke-width="3" mask="url(#notch)"/>
+<circle cx="12" cy="4" r="2" fill="#0E0E10"/>
+</svg>

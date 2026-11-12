@@ -1,0 +1,15 @@
+OPRA (Open Product Registry & Analysis) - headphone EQ profiles
+
+Source:   https://github.com/opra-project/OPRA
+Started by Roon Labs and maintained with community contributors.
+
+Manufacturer, product and EQ data: CC BY-SA 4.0
+https://creativecommons.org/licenses/by-sa/4.0/legalcode.en
+(the OPRA repository's own code is MIT)
+
+Openify does not ship this data. When you search for a headphone profile for
+the first time, the OPRA database file is downloaded to the cache folder and
+refreshed from there. Each selected profile is credited to its creator in the
+equalizer settings ("Measurement: <creator> - OPRA (CC BY-SA 4.0)"). Openify
+fits the profile to its own 10-band equalizer, so the bands you get are an
+adaptation of the original curve; you can change them at will.

@@ -1,0 +1,70 @@
+{
+  "friends": [
+    {
+      "timestamp": 1762880000000,
+      "user": { "uri": "spotify:user:aylin", "name": "Aylin", "imageUrl": "https://i.scdn.co/image/ab6775700000ee85aylin" },
+      "track": {
+        "uri": "spotify:track:t01",
+        "name": "Gece Yolcusu",
+        "imageUrl": "http://i.scdn.co/image/ab67616d000048510001",
+        "album": { "uri": "spotify:album:a01", "name": "Karanlik Oda" },
+        "artist": { "uri": "spotify:artist:r01", "name": "Dalga Boyu" },
+        "context": { "uri": "spotify:playlist:p01", "name": "Gece Surusu", "index": 4 }
+      }
+    },
+    {
+      "timestamp": 1762879000000,
+      "user": { "uri": "spotify:user:berk", "name": "Berk", "imageUrl": "http://profile.example/berk.jpg" },
+      "track": {
+        "uri": "spotify:track:t02",
+        "name": "Sessiz Harf",
+        "album": { "uri": "spotify:album:a02", "name": "Aralik" },
+        "artist": { "uri": "spotify:artist:r02", "name": "Kuzey Isigi" },
+        "context": { "uri": "spotify:album:a02", "name": "Aralik", "index": 1 }
+      }
+    },
+    {
+      "timestamp": "1762878000000",
+      "user": { "uri": "spotify:user:cem", "name": "Cem" },
+      "track": {
+        "uri": "spotify:track:t03",
+        "name": "Iki Satir",
+        "album": { "uri": "spotify:album:a03", "name": "Kisa Hikaye" },
+        "artists": [ { "uri": "spotify:artist:r03", "name": "Deniz" }, { "uri": "spotify:artist:r04", "name": "Orman" } ]
+      }
+    },
+    {
+      "timestamp": 1762877000000,
+      "user": { "uri": "spotify:user:12345678abc", "imageUrl": "javascript:alert(1)" },
+      "track": {
+        "uri": "spotify:track:t04",
+        "name": "Adsiz",
+        "artist": { "name": "Bilinmeyen" },
+        "context": { "uri": "spotify:user:12345678abc:collection", "name": "Begenilenler" }
+      }
+    },
+    {
+      "timestamp": 1762876000000,
+      "user": { "uri": "spotify:user:dilara", "name": "Dilara" },
+      "track": { "name": "Uri Yok", "artist": { "name": "Kayip" } }
+    },
+    {
+      "timestamp": 1762875000000,
+      "user": { "uri": "spotify:user:emre", "name": "Emre" }
+    },
+    {
+      "timestamp": 1762874000000,
+      "user": { "uri": "evil:user:fatma", "name": "Fatma" },
+      "track": { "uri": "spotify:track:t05", "name": "Yanlis Kullanici", "artist": { "name": "X" } }
+    },
+    {
+      "timestamp": 1762870000000,
+      "user": { "uri": "spotify:user:aylin", "name": "Aylin" },
+      "track": { "uri": "spotify:track:t06", "name": "Eski Kayit", "artist": { "name": "Eski" } }
+    },
+    {
+      "user": { "uri": "spotify:user:gizem", "name": "Gizem" },
+      "track": { "uri": "spotify:track:t07", "name": "Zamansiz", "artist": { "name": "Sessiz" } }
+    }
+  ]
+}

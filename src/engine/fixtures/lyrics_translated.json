@@ -1,0 +1,60 @@
+{
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      { "startTimeMs": "4000",  "endTimeMs": "7200",  "words": "La noche es larga y la ciudad en silencio", "syllables": [] },
+      { "startTimeMs": "7200",  "endTimeMs": "10400", "words": "Una canción suena en la radio de ayer", "syllables": [] },
+      { "startTimeMs": "10400", "endTimeMs": "13500", "words": "Las palabras van pasando línea a línea", "syllables": [] },
+      { "startTimeMs": "13500", "endTimeMs": "17000", "words": "", "syllables": [] },
+      { "startTimeMs": "17000", "endTimeMs": "20400", "words": "La portada es la única luz de la sala", "syllables": [] },
+      { "startTimeMs": "20400", "endTimeMs": "24000", "words": "Y empiezo otra vez, escuchando despacio", "syllables": [] },
+      { "startTimeMs": "24000", "endTimeMs": "28000", "words": "Cada voz me trae de vuelta a casa", "syllables": [] },
+      { "startTimeMs": "28000", "endTimeMs": "32000", "words": "Quédate conmigo hasta que amanezca", "syllables": [] },
+      { "startTimeMs": "32000", "endTimeMs": "36000", "words": "Que el tiempo se detenga en este cuarto", "syllables": [] },
+      { "startTimeMs": "36000", "endTimeMs": "40000", "words": "Y todo lo demás pueda esperar", "syllables": [] }
+    ],
+    "provider": "MusixMatch",
+    "providerLyricsId": "1000001",
+    "providerDisplayName": "Musixmatch",
+    "syncLyricsUri": "",
+    "isDenseTypeface": false,
+    "alternatives": [
+      {
+        "language": "en",
+        "lines": [
+          "The night is long and the city is silent",
+          "A song plays on yesterday's radio",
+          "The words pass by line after line",
+          "",
+          "The cover is the only light in the room",
+          "And I start over, listening slowly",
+          "Every voice brings me back home",
+          "Stay with me until the dawn",
+          "Let time stop in this room",
+          "And let everything else wait"
+        ]
+      },
+      {
+        "language": "tr",
+        "lines": [
+          "Gece uzun, şehir sessiz",
+          "Dünkü radyoda bir şarkı çalıyor",
+          "Sözler satır satır geçip gidiyor",
+          "",
+          "Kapak, odadaki tek ışık",
+          "Ve yeniden başlıyorum, yavaşça dinleyerek",
+          "Her ses beni eve geri getiriyor",
+          "Sabaha kadar benimle kal",
+          "Zaman bu odada dursun",
+          "Ve geri kalan her şey beklesin"
+        ]
+      }
+    ],
+    "language": "es",
+    "isRtlLanguage": false,
+    "fullscreenAction": "FULLSCREEN_LYRICS",
+    "showUpsell": false
+  },
+  "colors": { "background": -12427381, "text": -16777216, "highlightText": -1 },
+  "hasVocalRemoval": false
+}

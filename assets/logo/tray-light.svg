@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<!-- Tepsi işareti (karosuz "çentikte nokta"), açık görev çubuğu için siyah (#0E0E10).
+     Halka dış yarıçap 108, kalınlık 48; nokta halkanın yolunda 45° sağ üstte
+     (yarıçap 29, çentik 44). Uygulama simgeyi yalnız saydamlık olarak okur ve
+     temanın rengiyle boyar (src/system/icons.rs). -->
+<defs>
+  <mask id="notch" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+    <rect width="256" height="256" fill="#fff"/><circle cx="187.4" cy="68.6" r="44" fill="#000"/>
+  </mask>
+</defs>
+<circle cx="128" cy="128" r="84" fill="none" stroke="#0E0E10" stroke-width="48" mask="url(#notch)"/>
+<circle cx="187.4" cy="68.6" r="29" fill="#0E0E10"/>
+</svg>

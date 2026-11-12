@@ -1,0 +1,51 @@
+name: Bug report
+description: Something in Openify does not work as expected
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Openify version
+      description: The release or installer you downloaded (or the commit, if built from source).
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: "Run `winver`, for example Windows 11 24H2 (build 26100)."
+    validations:
+      required: true
+  - type: input
+    id: scale
+    attributes:
+      label: Display scale and resolution
+      description: "Settings, System, Display. For example 150% on 2560x1440. Mention multiple monitors if relevant."
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Steps to reproduce help the most.
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log file
+      description: |
+        Attach `openify.log` (and any `crash-*.txt`) from `%LOCALAPPDATA%\Openify`
+        (paste that path into the Explorer address bar), by dragging the files into this box.
+        Skim the log before posting.
+    validations:
+      required: true
+  - type: dropdown
+    id: account
+    attributes:
+      label: Spotify account type
+      options:
+        - Premium
+        - Free
+        - Not signed in

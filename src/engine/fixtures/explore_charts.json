@@ -1,0 +1,859 @@
+{
+ "data": {
+  "browse": {
+   "__typename": "BrowseSectionContainer",
+   "header": {
+    "backgroundImage": null,
+    "color": {
+     "hex": "#4b917d"
+    },
+    "subtitle": null,
+    "title": {
+     "transformedLabel": "Listeler"
+    }
+   },
+   "sections": {
+    "items": [
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Şimdi kullanılabilir"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:38:24Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "unknown"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "11"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            },
+            {
+             "key": "is_video_first",
+             "value": "true"
+            },
+            {
+             "key": "show_unavailable_items",
+             "value": "true"
+            }
+           ],
+           "description": "Şu anda en çok çalınan müzik videoları için günlük güncellemen - Global.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_tr/musicvideo/daily/region_global_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Müzik Videosu Listeleri - Global",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbBp04WrWQudL"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbBp04WrWQudL"
+        }
+       ],
+       "totalCount": 1
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5DAzQHECxDlYNI6xD1x"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Öne Çıkan Listeler"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:34Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "7"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Global.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_global_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Global",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbNG2KDcFcKOF"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbNG2KDcFcKOF"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:35Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "6"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Türkiye.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_tr_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Türkiye",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbJARRcHjHcAr"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbJARRcHjHcAr"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:46:55Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "3"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Global.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_global_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Global",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:47:08Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "5"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Türkiye.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_tr_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Türkiye",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbIVYVBNw9D5K"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbIVYVBNw9D5K"
+        }
+       ],
+       "totalCount": 4
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5DAzQHECxDlYNI6xD1g"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Haftalık Şarkı Listeleri"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:34Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "7"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Global.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_global_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Global",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbNG2KDcFcKOF"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbNG2KDcFcKOF"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:34Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "9"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Almanya.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_de_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Almanya",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbK8BKKMArIyl"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbK8BKKMArIyl"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:31Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "10"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Amerika Birleşik Devletleri.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_us_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Amerika Birleşik Devletleri",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbLp5XoPON0wI"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbLp5XoPON0wI"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:30Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "7"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Arjantin.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_ar_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Arjantin",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbKPTKrnFPD0G"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbKPTKrnFPD0G"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-06T13:52:36Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "4"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için haftalık güncellemen - Avustralya.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets_generated/locale_tr/regional/weekly/region_au_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En Çok Dinlenen Şarkılar - Avustralya",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbK4fwx2r07XW"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbK4fwx2r07XW"
+        }
+       ],
+       "totalCount": 74
+      },
+      "targetLocation": "spotify:genre:0JQ5DAudkNjCgYMM0TZXDt",
+      "uri": "spotify:section:0JQ5DAzQHECxDlYNI6xD1h"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Günlük Şarkı Listeleri"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:46:55Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "3"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Global.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_global_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Global",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:47:09Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "9"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Almanya.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_de_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Almanya",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbJiZcmkrIHGU"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbJiZcmkrIHGU"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:46:57Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "4"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Amerika Birleşik Devletleri.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_us_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Amerika Birleşik Devletleri",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbLRQDuF5jeBp"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbLRQDuF5jeBp"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:47:06Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "4"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Arjantin.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_ar_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Arjantin",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbMMy2roB9myp"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbMMy2roB9myp"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "last_updated",
+             "value": "2026-11-07T13:47:05Z"
+            },
+            {
+             "key": "rank_type",
+             "value": "plays"
+            },
+            {
+             "key": "new_entries_count",
+             "value": "3"
+            },
+            {
+             "key": "chart_entity_type",
+             "value": "track"
+            }
+           ],
+           "description": "Şu anda en çok çalınan parçalar için günlük güncellemen - Avustralya.",
+           "format": "chart",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/daily/region_au_default.jpg",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "En İyi 50 - Avustralya",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbJPcfkRz0wJ0"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbJPcfkRz0wJ0"
+        }
+       ],
+       "totalCount": 73
+      },
+      "targetLocation": "spotify:genre:0JQ5DAudkNjCgYMM0TZXDs",
+      "uri": "spotify:section:0JQ5DAzQHECxDlYNI6xD1i"
+     }
+    ],
+    "pagingInfo": {
+     "nextOffset": null
+    },
+    "totalCount": 6
+   },
+   "uri": "spotify:page:0JQ5DAudkNjCgYMM0TZXDw"
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/browse": {
+    "continuum": "2f0b5480-1bda-612f-7041-57adb2d77c73"
+   }
+  }
+ }
+}

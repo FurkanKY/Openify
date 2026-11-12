@@ -1,0 +1,20 @@
+{
+  "lyrics": {
+    "syncType": "LINE_SYNCED",
+    "lines": [
+      { "startTimeMs": "4000",  "endTimeMs": "7200",  "words": "Gece uzun, şehir sessiz, ışıklar uzakta", "syllables": [] },
+      { "startTimeMs": "7200",  "endTimeMs": "10400", "words": "Bir şarkı çalıyor eski bir radyoda", "syllables": [] },
+      { "startTimeMs": "10400", "endTimeMs": "13500", "words": "Sözler akıyor satır satır, yavaşça", "syllables": [] },
+      { "startTimeMs": "13500", "endTimeMs": "17000", "words": "", "syllables": [] },
+      { "startTimeMs": "17000", "endTimeMs": "20400", "words": "Kapak tek ışık, oda karanlıkta", "syllables": [] },
+      { "startTimeMs": "20400", "endTimeMs": "24000", "words": "Duyduğun an ile yazı aynı yerde", "syllables": [] },
+      { "startTimeMs": "24000", "endTimeMs": "28000", "words": "Ve yeniden başa, dinlerken derinden", "syllables": [] }
+    ],
+    "provider": "MusixMatch",
+    "providerDisplayName": "Musixmatch",
+    "alternatives": [],
+    "language": "tr"
+  },
+  "colors": { "background": -12427381, "text": -16777216, "highlightText": -1 },
+  "hasVocalRemoval": false
+}

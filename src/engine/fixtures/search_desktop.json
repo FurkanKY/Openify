@@ -1,0 +1,103 @@
+{
+  "data": {
+    "searchV2": {
+      "tracksV2": {
+        "totalCount": 3,
+        "items": [
+          { "matchedFields": [], "item": { "data": {
+            "__typename": "Track",
+            "uri": "spotify:track:0000000000000000000t01",
+            "name": "Gece Yarısı",
+            "artists": { "items": [ { "profile": { "name": "Mavi Orman" } } ] },
+            "albumOfTrack": { "name": "Uzun Yol", "coverArt": { "sources": [
+              { "url": "https://i.scdn.co/image/ab67616d00004851t01", "width": 64, "height": 64 },
+              { "url": "https://i.scdn.co/image/ab67616d00001e02t01", "width": 300, "height": 300 } ] } },
+            "duration": { "totalMilliseconds": 214000 } } } },
+          { "matchedFields": [], "item": { "data": {
+            "__typename": "Track",
+            "uri": "spotify:track:0000000000000000000t02",
+            "name": "Night Drive",
+            "artists": { "items": [ { "profile": { "name": "Mavi Orman" } }, { "profile": { "name": "Kuzey" } } ] },
+            "albumOfTrack": { "name": "Uzun Yol" },
+            "duration": { "totalMilliseconds": 187500 } } } },
+          { "matchedFields": [], "item": { "data": { "__typename": "Track", "name": "Adresi olmayan satır atlanır" } } }
+        ]
+      },
+      "artists": {
+        "totalCount": 2,
+        "items": [
+          { "data": { "__typename": "Artist", "uri": "spotify:artist:00000000000000000a01",
+            "profile": { "name": "Mavi Orman" },
+            "visuals": { "avatarImage": { "sources": [
+              { "url": "https://i.scdn.co/image/ab6761610000e5eba01", "width": 640, "height": 640 },
+              { "url": "https://i.scdn.co/image/ab6761610000f178a01", "width": 160, "height": 160 } ] } } } },
+          { "data": { "__typename": "Artist", "uri": "spotify:artist:00000000000000000a02",
+            "profile": { "name": "Kuzey" }, "visuals": { "avatarImage": null } } }
+        ]
+      },
+      "albumsV2": {
+        "totalCount": 2,
+        "items": [
+          { "data": { "__typename": "Album", "uri": "spotify:album:000000000000000000b01", "name": "Uzun Yol",
+            "artists": { "items": [ { "profile": { "name": "Mavi Orman" } } ] },
+            "date": { "year": 2021 },
+            "coverArt": { "sources": [ { "url": "https://i.scdn.co/image/ab67616d0000b273b01", "width": 640, "height": 640 } ] } } },
+          { "data": { "__typename": "Album", "uri": "spotify:album:000000000000000000b02", "name": "Kuzey Işıkları (Deluxe)",
+            "artists": { "items": [ { "profile": { "name": "Kuzey" } } ] }, "date": {} } }
+        ]
+      },
+      "playlists": {
+        "totalCount": 2,
+        "items": [
+          { "data": { "__typename": "Playlist", "uri": "spotify:playlist:000000000000000p01", "name": "Gece sürüşü",
+            "ownerV2": { "data": { "name": "Openify Test" } },
+            "images": { "items": [ { "sources": [ { "url": "https://i.scdn.co/image/ab67706c0000da84p01", "width": 300, "height": 300 } ] } ] } } },
+          { "data": { "__typename": "Playlist", "uri": "spotify:playlist:000000000000000p02", "name": "Yol şarkıları" } }
+        ]
+      },
+      "podcasts": {
+        "totalCount": 3,
+        "items": [
+          { "data": { "__typename": "Podcast", "uri": "spotify:show:00000000000000000000s1", "name": "Yavaş Sabah",
+            "publisher": { "name": "Sakin Yayınlar" }, "mediaType": "AUDIO", "topics": { "items": [] },
+            "coverArt": { "sources": [
+              { "url": "https://i.scdn.co/image/ab6765630000ba8as1", "width": 64, "height": 64 },
+              { "url": "https://i.scdn.co/image/ab6765630000f68ds1", "width": 300, "height": 300 } ] } } },
+          { "data": { "__typename": "Podcast", "uri": "spotify:show:00000000000000000000s2",
+            "name": "Müzik Üzerine Konuşmalar: Yedinci Sezon, Uzun Bir Başlık Taşıyan Program",
+            "publisher": { "name": "" }, "coverArt": null } },
+          { "data": { "__typename": "Podcast", "name": "Adresi olmayan podcast atlanır" } }
+        ]
+      },
+      "episodes": {
+        "totalCount": 3,
+        "items": [
+          { "data": { "__typename": "Episode", "uri": "spotify:episode:000000000000000000e1",
+            "name": "Sessizliğin müziği", "duration": { "totalMilliseconds": 1860000 },
+            "releaseDate": { "isoString": "2024-03-14T04:00:00Z" },
+            "contentRating": { "label": "NONE" },
+            "coverArt": { "sources": [ { "url": "https://i.scdn.co/image/ab6765630000ba8ae1", "width": 300, "height": 300 } ] },
+            "podcastV2": { "data": { "__typename": "Podcast", "name": "Yavaş Sabah",
+              "coverArt": { "sources": [ { "url": "https://i.scdn.co/image/ab6765630000ba8as1", "width": 300, "height": 300 } ] } } } } },
+          { "data": { "__typename": "Episode", "uri": "spotify:episode:000000000000000000e2",
+            "name": "Bir albümün hikâyesi", "releaseDate": { "isoString": "bozuk" },
+            "podcastV2": { "data": { "name": "Yavaş Sabah",
+              "coverArt": { "sources": [ { "url": "https://i.scdn.co/image/ab6765630000ba8as1", "width": 300, "height": 300 } ] } } } } },
+          { "data": { "__typename": "Episode", "name": "Adresi olmayan bölüm atlanır" } }
+        ]
+      },
+      "users": {
+        "totalCount": 3,
+        "items": [
+          { "data": { "__typename": "User", "uri": "spotify:user:selin.k", "id": "selin.k", "username": "selin.k",
+            "displayName": "Selin K.",
+            "avatar": { "sources": [ { "url": "https://i.scdn.co/image/ab6775700000ee85u1", "width": 64, "height": 64 },
+                                     { "url": "https://i.scdn.co/image/ab67757000003b82u1", "width": 300, "height": 300 } ] } } },
+          { "data": { "__typename": "User", "uri": "spotify:user:12345678", "id": "12345678", "username": "12345678", "avatar": null } },
+          { "data": { "__typename": "User", "id": "adressiz" } }
+        ]
+      },
+      "genres": { "totalCount": 1, "items": [ { "data": { "__typename": "Genre", "uri": "spotify:genre:rock", "name": "Rock" } } ] }
+    }
+  }
+}

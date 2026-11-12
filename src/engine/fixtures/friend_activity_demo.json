@@ -1,0 +1,89 @@
+{
+  "friends": [
+    {
+      "ageSeconds": 25,
+      "user": { "uri": "spotify:user:elif", "name": "Elif Yildiz" },
+      "track": {
+        "uri": "spotify:track:d01", "name": "Gece Yolcusu",
+        "album": { "uri": "spotify:album:da1", "name": "Karanlik Oda" },
+        "artist": { "uri": "spotify:artist:dr1", "name": "Dalga Boyu" },
+        "context": { "uri": "spotify:playlist:dp1", "name": "Gece Surusu", "index": 4 }
+      }
+    },
+    {
+      "ageSeconds": 140,
+      "user": { "uri": "spotify:user:mert", "name": "Mert" },
+      "track": {
+        "uri": "spotify:track:d02", "name": "Sessiz Harf",
+        "album": { "uri": "spotify:album:da2", "name": "Aralik" },
+        "artist": { "uri": "spotify:artist:dr2", "name": "Kuzey Isigi" },
+        "context": { "uri": "spotify:album:da2", "name": "Aralik", "index": 1 }
+      }
+    },
+    {
+      "ageSeconds": 420,
+      "user": { "uri": "spotify:user:zeynep", "name": "Zeynep Arslanoglu-Karakaya" },
+      "track": {
+        "uri": "spotify:track:d03", "name": "Hicbir Seyin Uzerine Konusmak Istemiyorum Bu Aksam",
+        "album": { "uri": "spotify:album:da3", "name": "Uzun Adli Bir Album" },
+        "artist": { "uri": "spotify:artist:dr3", "name": "Cok Uzun Bir Sanatci Adi Ve Konuk Sanatcilar" }
+      }
+    },
+    {
+      "ageSeconds": 1500,
+      "user": { "uri": "spotify:user:can", "name": "Can" },
+      "track": {
+        "uri": "spotify:track:d04", "name": "Dal",
+        "album": { "uri": "spotify:album:da4", "name": "Meyve" },
+        "artist": { "uri": "spotify:artist:dr4", "name": "Adamlar" }
+      }
+    },
+    {
+      "ageSeconds": 2900,
+      "user": { "uri": "spotify:user:deniz", "name": "Deniz" },
+      "track": {
+        "uri": "spotify:track:d05", "name": "Kis Uykusu",
+        "album": { "uri": "spotify:album:da5", "name": "Kar" },
+        "artist": { "uri": "spotify:artist:dr5", "name": "Mavi Saat" },
+        "context": { "uri": "spotify:artist:dr5", "name": "Mavi Saat" }
+      }
+    },
+    {
+      "ageSeconds": 7800,
+      "user": { "uri": "spotify:user:ece", "name": "Ece" },
+      "track": {
+        "uri": "spotify:track:d06", "name": "Yaz Sonu",
+        "album": { "uri": "spotify:album:da6", "name": "Eylul" },
+        "artist": { "uri": "spotify:artist:dr6", "name": "Sicak Ruzgar" }
+      }
+    },
+    {
+      "ageSeconds": 19000,
+      "user": { "uri": "spotify:user:burak", "name": "Burak" },
+      "track": {
+        "uri": "spotify:track:d07", "name": "Liman",
+        "album": { "uri": "spotify:album:da7", "name": "Gemi" },
+        "artist": { "uri": "spotify:artist:dr7", "name": "Tuz" },
+        "context": { "uri": "spotify:playlist:dp7", "name": "Sabah", "index": 12 }
+      }
+    },
+    {
+      "ageSeconds": 93000,
+      "user": { "uri": "spotify:user:selin", "name": "Selin" },
+      "track": {
+        "uri": "spotify:track:d08", "name": "Ince Ayrinti",
+        "album": { "uri": "spotify:album:da8", "name": "Detay" },
+        "artist": { "uri": "spotify:artist:dr8", "name": "Pencere" }
+      }
+    },
+    {
+      "ageSeconds": 260000,
+      "user": { "uri": "spotify:user:tolga", "name": "Tolga" },
+      "track": {
+        "uri": "spotify:track:d09", "name": "Pazar",
+        "album": { "uri": "spotify:album:da9", "name": "Hafta" },
+        "artist": { "uri": "spotify:artist:dr9", "name": "Sakin" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,607 @@
+{
+ "data": {
+  "browse": {
+   "__typename": "BrowseSectionContainer",
+   "header": {
+    "backgroundImage": null,
+    "color": {
+     "hex": "#006450"
+    },
+    "subtitle": null,
+    "title": {
+     "transformedLabel": "Yeni Çıkanlar"
+    }
+   },
+   "sections": {
+    "items": [
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Yeni çıkanlardan en iyiler"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DXd8Yptw1g5FC"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "editorial.series",
+             "value": "nmf"
+            },
+            {
+             "key": "primary_color",
+             "value": "#A0C3D2"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:5M1xHbIWiKoI6sZpCmeFHq,spotify:artist:5wyWp867LWGjFmYZXVSFnZ,spotify:artist:6CtMmrX12kYA3O4kINuWjZ,spotify:artist:2a2YSCx78HHWVOsCuMpeXz,spotify:artist:6bGOmNBU1AOgttgOjh0ldf"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:6Ja7hSn9S6V3OuCPjcldPu"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe89d1ce5bc36f1218b93e1ccb6d"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0057afdfc5587bcd2302ddff1"
+            },
+            {
+             "key": "episode_description",
+             "value": "Sena Gül ve haftanın en iyi çıkışları!"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb106e3caded7e97e0a786c801cd61f1e"
+            }
+           ],
+           "description": "Sena Gül ve haftanın en iyi çıkışları!",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002156162df36649d8fc62d5b3e",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "New Music Friday Türkiye",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DXd8Yptw1g5FC"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXd8Yptw1g5FC"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "request_id",
+             "value": "ssp~065fb106e573bc87cad1dc56ba27d3a8bd4b"
+            },
+            {
+             "key": "madeFor.username",
+             "value": "testuser"
+            },
+            {
+             "key": "madeFor.displayed",
+             "value": "1"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/release-radar-header/desktop"
+            },
+            {
+             "key": "image_url",
+             "value": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/release-radar-header/mobile"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb106e573bc87cad1dc56ba27d3a8bd4b"
+            }
+           ],
+           "description": "Catch all the latest music from artists you follow, plus new singles picked for you. Updates every Friday.",
+           "format": "release-radar",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000bada/dt/v1/img/release-radar-v4/5aIqB5nVVvmFsvSdExz408/en",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Release Radar",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZEVXbuD1Vvi3HLKB"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZEVXbuD1Vvi3HLKB"
+        }
+       ],
+       "totalCount": 2
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLAWEq6iGFi0w"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Özenle seçtiğimiz yeni çıkanlar"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "LISA"
+              },
+              "uri": "spotify:artist:5L1lO4eRHmJ7a0Q6csE5cT"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02ae49c87dcf0b8e27f27303c5",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851ae49c87dcf0b8e27f27303c5",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273ae49c87dcf0b8e27f27303c5",
+              "width": 640
+             }
+            ]
+           },
+           "name": "PRESS PLAY",
+           "uri": "spotify:album:7H0c8sfmrbAbrMjYuEvWQk"
+          }
+         },
+         "uri": "spotify:album:7H0c8sfmrbAbrMjYuEvWQk"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Umur Doma"
+              },
+              "uri": "spotify:artist:2kv6srmlOrk6584oHo4XGj"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0229df8856b17848382d08f5a8",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485129df8856b17848382d08f5a8",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27329df8856b17848382d08f5a8",
+              "width": 640
+             }
+            ]
+           },
+           "name": "ARDINDAN",
+           "uri": "spotify:album:1gUr5muWOSPPtRoJiF050v"
+          }
+         },
+         "uri": "spotify:album:1gUr5muWOSPPtRoJiF050v"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "UZI"
+              },
+              "uri": "spotify:artist:51DevdOxIJin6DB1FXJpD1"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0232c7d367a48e3147a0b899a9",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485132c7d367a48e3147a0b899a9",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27332c7d367a48e3147a0b899a9",
+              "width": 640
+             }
+            ]
+           },
+           "name": "Kan II",
+           "uri": "spotify:album:1kdUoniEe1g2Fwgyt614Hn"
+          }
+         },
+         "uri": "spotify:album:1kdUoniEe1g2Fwgyt614Hn"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Tuğçe Şenoğul"
+              },
+              "uri": "spotify:artist:0BSQ8y2wIx6pK8bjisf30l"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02ba1d78bd4f357249a6ca4424",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851ba1d78bd4f357249a6ca4424",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273ba1d78bd4f357249a6ca4424",
+              "width": 640
+             }
+            ]
+           },
+           "name": "ATLAS",
+           "uri": "spotify:album:37RKttRaxVEJwpVfUeA1C8"
+          }
+         },
+         "uri": "spotify:album:37RKttRaxVEJwpVfUeA1C8"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Funda Arar"
+              },
+              "uri": "spotify:artist:6g7GF7BLC41JTHJwgB4wQW"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e025ee73fd6730b51de3ef1a553",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d000048515ee73fd6730b51de3ef1a553",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b2735ee73fd6730b51de3ef1a553",
+              "width": 640
+             }
+            ]
+           },
+           "name": "Tüm Şehir Duydu",
+           "uri": "spotify:album:5bQd5d1PlCbqQi109imPDQ"
+          }
+         },
+         "uri": "spotify:album:5bQd5d1PlCbqQi109imPDQ"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Emir Can İğrek"
+              },
+              "uri": "spotify:artist:4XP7cGw4t8BqZ8Du5q3bHg"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0215a59c405a9978b7883f225c",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485115a59c405a9978b7883f225c",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27315a59c405a9978b7883f225c",
+              "width": 640
+             }
+            ]
+           },
+           "name": "FİYAKALI",
+           "uri": "spotify:album:7p1KPXeC70hSD9c5der0a3"
+          }
+         },
+         "uri": "spotify:album:7p1KPXeC70hSD9c5der0a3"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Motive"
+              },
+              "uri": "spotify:artist:6sBSLIunx1Je0Y2T77wpkP"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02d55cc116abf2fe8ab2e0d227",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851d55cc116abf2fe8ab2e0d227",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273d55cc116abf2fe8ab2e0d227",
+              "width": 640
+             }
+            ]
+           },
+           "name": "PASAJ",
+           "uri": "spotify:album:1Z8g0yHfmg7xlXtHVtZw1M"
+          }
+         },
+         "uri": "spotify:album:1Z8g0yHfmg7xlXtHVtZw1M"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Drake"
+              },
+              "uri": "spotify:artist:3TVXtAsR1Inumwj472S9r4"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02fe9d3ab9adb1d3b59835b81c",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851fe9d3ab9adb1d3b59835b81c",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273fe9d3ab9adb1d3b59835b81c",
+              "width": 640
+             }
+            ]
+           },
+           "name": "ICEMAN",
+           "uri": "spotify:album:0OAv7DCME2AV4q1KPO95HY"
+          }
+         },
+         "uri": "spotify:album:0OAv7DCME2AV4q1KPO95HY"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Drake"
+              },
+              "uri": "spotify:artist:3TVXtAsR1Inumwj472S9r4"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02b92879e45761d711016476df",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851b92879e45761d711016476df",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273b92879e45761d711016476df",
+              "width": 640
+             }
+            ]
+           },
+           "name": "HABIBTI",
+           "uri": "spotify:album:0P6B5R3yRSkhkmequL5Yno"
+          }
+         },
+         "uri": "spotify:album:0P6B5R3yRSkhkmequL5Yno"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Göksel"
+              },
+              "uri": "spotify:artist:4i4ALRtQQmFxn3BCIB6iC0"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0250474f6c25e57b78dfa6ab84",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485150474f6c25e57b78dfa6ab84",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27350474f6c25e57b78dfa6ab84",
+              "width": 640
+             }
+            ]
+           },
+           "name": "Rüyaların İşi",
+           "uri": "spotify:album:4qctMT6jf347dtrz0ZodKd"
+          }
+         },
+         "uri": "spotify:album:4qctMT6jf347dtrz0ZodKd"
+        }
+       ],
+       "totalCount": 1000
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLAlPhkJ41ypw"
+     }
+    ],
+    "pagingInfo": {
+     "nextOffset": null
+    },
+    "totalCount": 3
+   },
+   "uri": "spotify:page:0JQ5DAqbMKFz6FAsUtgAab"
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/browse": {
+    "continuum": "89754210-e351-01c1-205e-1053a88b3e5f"
+   }
+  }
+ }
+}

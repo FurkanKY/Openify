@@ -1,0 +1,1164 @@
+{
+ "data": {
+  "browseStart": {
+   "__typename": "BrowseSectionContainer",
+   "sections": {
+    "items": [
+     {
+      "data": {
+       "__typename": "BrowseGridSectionData",
+       "title": {
+        "transformedLabel": "Hepsine göz at"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf474a477debc822a3a45c5acb",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#dc148c"
+             },
+             "title": {
+              "transformedLabel": "Müzik"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFSi39LMRT0Cy"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6765630000ba8a81f07e1ead0317ee3c285bfa",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#006450"
+             },
+             "title": {
+              "transformedLabel": "Podcast'ler"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DArNBzkmxXHCqFLx2J"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafd7d76fc8a9096042a317ddb7",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#283ea3"
+             },
+             "title": {
+              "transformedLabel": "Sesli kitaplar"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFETqK4t8f1n3"
+        },
+        {
+         "content": {
+          "__typename": "BrowseXlinkResponseWrapper",
+          "data": {
+           "__typename": "BrowseClientFeature",
+           "artwork": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://concerts.spotifycdn.com/images/live-events_category-image.jpg",
+              "width": 300
+             }
+            ]
+           },
+           "backgroundColor": {
+            "hex": "#8400e7"
+           },
+           "featureUri": "spotify:concerts",
+           "iconOverlay": {
+            "sources": [
+             {
+              "height": 274,
+              "url": "https://t.scdn.co/images/728ed47fc1674feb95f7ac20236eb6d7.jpeg",
+              "width": 274
+             }
+            ]
+           },
+           "title": {
+            "transformedLabel": "Canlı Etkinlikler"
+           }
+          }
+         },
+         "uri": "spotify:xlink:0JQ5DAozXW0GUBAKjHsifL"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caff92b0d36e2f78ca70440b10f",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#777777"
+             },
+             "title": {
+              "transformedLabel": "Fitness"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFJ6dHNHTv6Mx"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/pop/1McMsnEElThX1knmY4oliG/en",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#1e3264"
+             },
+             "title": {
+              "transformedLabel": "Senin için Hazırlandı"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAt0tbjZptfcdMSKl3"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf5adc25e926a7090b200966ca",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#1e3264"
+             },
+             "title": {
+              "transformedLabel": "Yeni Çıkanlar"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFz6FAsUtgAab"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab676d630000e1f007138ff8ac2ac3697e43ddf8",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e61e32"
+             },
+             "title": {
+              "transformedLabel": "Türkçe"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFCsfq2JeFgB0"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf9aeabf571cbaab8d01eb1766",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e61e32"
+             },
+             "title": {
+              "transformedLabel": "ICON Türkiye"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFMkH5JojKnRn"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf3f3de915ef4a9f3eaf242f02",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8c1932"
+             },
+             "title": {
+              "transformedLabel": "Pop"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFEC4WFtoNRpw"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf8e97784ff1e12e67ae922715",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#b02897"
+             },
+             "title": {
+              "transformedLabel": "Popüler"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFQIL0AXnG5AK"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://charts-images.scdn.co/assets/locale_en/regional/weekly/region_global_default.jpg",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8d67ab"
+             },
+             "title": {
+              "transformedLabel": "Listeler"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAudkNjCgYMM0TZXDw"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67656300005f1fd464f18a416c86ede3a235a7",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#477d95"
+             },
+             "title": {
+              "transformedLabel": "Eğitim"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5IMCbQBLl5gxKLgufp8"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6765630000ba8a2f514cde3ee9501e7ada4cf4",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#503750"
+             },
+             "title": {
+              "transformedLabel": "Belgesel"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5IMCbQBLjfX9OdDrA5X"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab6765630000ba8a77d267a5accb8911a92668e1",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#af2896"
+             },
+             "title": {
+              "transformedLabel": "Komedi"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5IMCbQBLyUJhSxhaPc6"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafe542e9b59b1d2ae04b46b91c",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e1118c"
+             },
+             "title": {
+              "transformedLabel": "Ruh Hali"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFzHmL4tf05da"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafac18c3ed09198b35d792fc31",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#006450"
+             },
+             "title": {
+              "transformedLabel": "Dans ve Elektronik"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFHOzuVTgTizF"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafda4c849095796a9e5d2c4ddb",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#006450"
+             },
+             "title": {
+              "transformedLabel": "Rock"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFDXXwE9BDJAr"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caff721caeca8f71491473b9e5b",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#2d46b9"
+             },
+             "title": {
+              "transformedLabel": "Hip Hop"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFQ00XGBls6ym"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/dw/cover/en",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8d67ab"
+             },
+             "title": {
+              "transformedLabel": "Keşfet"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAtOnAEpjOgUKwXyxj"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafa7dcd2588b0d6a1b0a817b20",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#dc148c"
+             },
+             "title": {
+              "transformedLabel": "Fresh Finds"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFImHYGo3eTSg"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafa1a252e3a815b65778d8c2aa",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e91429"
+             },
+             "title": {
+              "transformedLabel": "Indie"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFCWjUTdzaG0e"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf2ff978556297e08632d6c03c",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#d84000"
+             },
+             "title": {
+              "transformedLabel": "Country"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFKLfwjuJMoNC"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafc34474c1aa9a2cbe5e6ae5ac",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#777777"
+             },
+             "title": {
+              "transformedLabel": "Fitness Müzikleri"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFAXlCG6QvYQ4"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caff4e38be86ca48a3b10884ae3",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#ba5d07"
+             },
+             "title": {
+              "transformedLabel": "RnB"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFEZPnFQSFB1T"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf4b42030ee01cf793663dbb73",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e61e32"
+             },
+             "title": {
+              "transformedLabel": "K-pop"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFGvOw3O4nLAf"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf330ca3a3bfaf8b18407fb33e",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#b06239"
+             },
+             "title": {
+              "transformedLabel": "Chill"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFFzDl7qN9Apr"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf1cef0cee1e498abb8e74955f",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#1e3264"
+             },
+             "title": {
+              "transformedLabel": "Uyku"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFCuoRTxhYWow"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf0b0d0bfac454671832311615",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8d67ab"
+             },
+             "title": {
+              "transformedLabel": "Parti"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFA6SOHvT3gck"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf60ad5f3ea4988eff993d5e1a",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#5179a1"
+             },
+             "title": {
+              "transformedLabel": "Evde"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFx0uLQR2okcc"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf7b8912c0d7c471a2ae604989",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#148a08"
+             },
+             "title": {
+              "transformedLabel": "EQUAL"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFPw634sFwguI"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafb7e805033eb938aa75d09336",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#a56752"
+             },
+             "title": {
+              "transformedLabel": "Dönem müzikleri"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFIVNxQgRNSg0"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf05d6334a4491fc581558cb7c",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#dc148c"
+             },
+             "title": {
+              "transformedLabel": "Aşk"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFAUsdyVjCQuL"
+        },
+        {
+         "content": {
+          "__typename": "BrowseXlinkResponseWrapper",
+          "data": {
+           "__typename": "BrowseClientFeature",
+           "artwork": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67fb8200005caf1c7c6d665492ac5c59bae276",
+              "width": 300
+             }
+            ]
+           },
+           "backgroundColor": {
+            "hex": "#503750"
+           },
+           "featureUri": "spotify:cultural-moment:hub:0JQ5DAxsx8375MG8A1uYuO",
+           "iconOverlay": {
+            "sources": [
+             {
+              "height": 274,
+              "url": "https://t.scdn.co/images/728ed47fc1674feb95f7ac20236eb6d7.jpeg",
+              "width": 274
+             }
+            ]
+           },
+           "title": {
+            "transformedLabel": "Hometown"
+           }
+          }
+         },
+         "uri": "spotify:xlink:0JQ5DAozXW0IW2igQ6L1aE"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafefa737b67ec51ec989f5a51d",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#e91429"
+             },
+             "title": {
+              "transformedLabel": "Metal"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFDkd668ypn6O"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafa1bb187ec2f4606aa7101bad",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8d67ab"
+             },
+             "title": {
+              "transformedLabel": "Caz"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFAJ5xb0fwo9m"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005cafef78c123c1bf7d58c6708e89",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#0d73ec"
+             },
+             "title": {
+              "transformedLabel": "Anime"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFziKOShCi009"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf3a44e7ae3d808c220898185c",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#0d73ec"
+             },
+             "title": {
+              "transformedLabel": "Latin"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFxXaXKP7zcDp"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf4597370d1058e1ec3c1a56fa",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#7d4b32"
+             },
+             "title": {
+              "transformedLabel": "Klasik"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFPrEiAOxgac3"
+        },
+        {
+         "content": {
+          "__typename": "BrowseSectionContainerWrapper",
+          "data": {
+           "__typename": "BrowseSectionContainer",
+           "data": {
+            "cardRepresentation": {
+             "artwork": {
+              "sources": [
+               {
+                "height": 300,
+                "url": "https://i.scdn.co/image/ab67fb8200005caf7abb0d4c5de8c614af5cfecf",
+                "width": 300
+               }
+              ]
+             },
+             "backgroundColor": {
+              "hex": "#8c1932"
+             },
+             "title": {
+              "transformedLabel": "Folk ve Akustik"
+             }
+            }
+           }
+          }
+         },
+         "uri": "spotify:page:0JQ5DAqbMKFy78wprEpAjl"
+        }
+       ]
+      },
+      "uri": "spotify:section:0JQ5DAwD41j2mAgQ1AtEZl"
+     }
+    ]
+   },
+   "uri": "spotify:page:0JQ5DArNBzkmxXHCBROWSE"
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/browseStart": {
+    "continuum": "d44715ec-d346-296f-2061-9767180e8230"
+   }
+  }
+ }
+}

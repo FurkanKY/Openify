@@ -1,0 +1,71 @@
+# cargo-deny configuration. Run: cargo deny check
+# Openify is GPL-3.0-or-later; every dependency license must be compatible
+# with GPLv3 (permissive licenses and MPL-2.0 are; Apache-2.0 is compatible
+# with GPLv3 but not GPLv2, which is why the crate is GPL-3.0-or-later and not
+# "GPL-2.0-or-later").
+
+[graph]
+targets = [{ triple = "x86_64-pc-windows-msvc" }]
+
+[licenses]
+confidence-threshold = 0.8
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MPL-2.0",
+    "Zlib",
+    "0BSD",
+    "Unlicense",
+    "CC0-1.0",
+    "BSL-1.0",
+    "Unicode-3.0",
+    "CDLA-Permissive-2.0", # webpki-roots (CA certificate data)
+    "GPL-3.0-or-later",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+
+[advisories]
+version = 2
+yanked = "warn"
+# Add RUSTSEC ids here, with a reason, only after reviewing the advisory.
+# 11 Nov 2026: the advisories that came from vendor/librespot-core were fixed by
+# upgrading, not ignored (rustls 0.22 / rustls-webpki 0.102 via hyper-proxy2,
+# quick-xml 0.38, rsa 0.9 / Marvin RUSTSEC-2023-0071; see
+# vendor/librespot-core/OPENIFY.md). What is left is below.
+ignore = [
+    # zip 8.6.0 via velopack (updater). All four concern the `ZipArchive::extract()` /
+    # `ZipStreamReader::extract()` helpers (symlink / SUID handling when unpacking an
+    # archive to disk). velopack 1.2.161 never calls them: it opens the package with
+    # `ZipArchive::new` and copies single entries by index to explicit paths
+    # (velopack/src/bundle.rs `extract_zip_idx_to_path_with_progress`), and Openify does
+    # not use `zip` directly. The fix (zip >= 9) needs a velopack release that depends on
+    # zip 9; velopack is pinned (`=1.2.161`). Revisit when bumping velopack.
+    { id = "RUSTSEC-2026-0367", reason = "zip extract() SUID bits; velopack does not call extract()" },
+    { id = "RUSTSEC-2026-0368", reason = "zip extract() symlink permissions; velopack does not call extract()" },
+    { id = "RUSTSEC-2026-0369", reason = "ZipStreamReader::extract() symlinks; velopack does not call extract()" },
+    { id = "RUSTSEC-2026-0429", reason = "zip extract() symlink size; velopack does not call extract()" },
+
+    # "Unmaintained" notices (no vulnerability, no fixed release exists), all transitive
+    # through vendored / pinned parents we do not control.
+    { id = "RUSTSEC-2025-0052", reason = "async-std: unmaintained; via gpui_http_client -> zed-async-tar (gpui)" },
+    { id = "RUSTSEC-2026-0441", reason = "pin-utils: unmaintained; via async-std (gpui)" },
+    { id = "RUSTSEC-2025-0134", reason = "rustls-pemfile: unmaintained; via zed-reqwest (gpui_http_client)" },
+    { id = "RUSTSEC-2026-0173", reason = "proc-macro-error2: unmaintained; build-time proc macro via stacksafe (gpui)" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz: unmaintained; via usvg (resvg / gpui)" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser: unmaintained; via fontdb / rustybuzz (usvg)" },
+    { id = "RUSTSEC-2024-0388", reason = "derivative: unmaintained; via velopack" },
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained; build-time macro via pulp / rav1e (image)" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

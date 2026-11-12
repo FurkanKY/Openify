@@ -1,0 +1,635 @@
+{
+ "data": {
+  "artistUnion": {
+   "__typename": "Artist",
+   "id": "1g4J8P1JWwanNyyXckRX5W",
+   "profile": {
+    "name": "Adamlar"
+   },
+   "relatedContent": {
+    "relatedArtists": {
+     "items": [
+      {
+       "id": "6RTC1abMgBC7Krg6qJQHJh",
+       "profile": {
+        "name": "Duman"
+       },
+       "uri": "spotify:artist:6RTC1abMgBC7Krg6qJQHJh",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb5eedfda3da66eb4591be4fa7",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1785eedfda3da66eb4591be4fa7",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051745eedfda3da66eb4591be4fa7",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "5ixQSDvAMa5O758xG8MWXT",
+       "profile": {
+        "name": "mor ve ötesi"
+       },
+       "uri": "spotify:artist:5ixQSDvAMa5O758xG8MWXT",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb32c198a198e8efe489b8948a",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f17832c198a198e8efe489b8948a",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab6761610000517432c198a198e8efe489b8948a",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "3SrFQDUN5DXQDZc3kygriW",
+       "profile": {
+        "name": "Yüksek Sadakat"
+       },
+       "uri": "spotify:artist:3SrFQDUN5DXQDZc3kygriW",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebb19fee222d98095186b96242",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178b19fee222d98095186b96242",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174b19fee222d98095186b96242",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "0PhqM7UAxtvWYi5j4MwxSl",
+       "profile": {
+        "name": "Dolu Kadehi Ters Tut"
+       },
+       "uri": "spotify:artist:0PhqM7UAxtvWYi5j4MwxSl",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb7e6b6acd16941485ede2b690",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1787e6b6acd16941485ede2b690",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051747e6b6acd16941485ede2b690",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "4q2SZIdLq6YTc9cZLCclWc",
+       "profile": {
+        "name": "Son Feci Bisiklet"
+       },
+       "uri": "spotify:artist:4q2SZIdLq6YTc9cZLCclWc",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebce96d730d30fb4df897c8198",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178ce96d730d30fb4df897c8198",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174ce96d730d30fb4df897c8198",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "4Bdqzh78prwuqwInMb555P",
+       "profile": {
+        "name": "Pinhani"
+       },
+       "uri": "spotify:artist:4Bdqzh78prwuqwInMb555P",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb4ddd595c78914a1e09ff6688",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1784ddd595c78914a1e09ff6688",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051744ddd595c78914a1e09ff6688",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "40KlwpvpKEQtZTJgbml8lT",
+       "profile": {
+        "name": "Teoman"
+       },
+       "uri": "spotify:artist:40KlwpvpKEQtZTJgbml8lT",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb29dd9e6f9584afd24a3c05be",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f17829dd9e6f9584afd24a3c05be",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab6761610000517429dd9e6f9584afd24a3c05be",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "4Vr0nv4nM4aqWfj76zDTTp",
+       "profile": {
+        "name": "Yaşlı Amca"
+       },
+       "uri": "spotify:artist:4Vr0nv4nM4aqWfj76zDTTp",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb0dd79c2292d8c097e36c489f",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1780dd79c2292d8c097e36c489f",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051740dd79c2292d8c097e36c489f",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "3vJJGsSAF5zQegZo5sJEh6",
+       "profile": {
+        "name": "Can Bonomo"
+       },
+       "uri": "spotify:artist:3vJJGsSAF5zQegZo5sJEh6",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb4fd5481eb27c34c7b195b6d6",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1784fd5481eb27c34c7b195b6d6",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051744fd5481eb27c34c7b195b6d6",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "7gobcoscOfsY0nOeqqFzvU",
+       "profile": {
+        "name": "Yüzyüzeyken Konuşuruz"
+       },
+       "uri": "spotify:artist:7gobcoscOfsY0nOeqqFzvU",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb245d6eec4e995c39cc7c482d",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178245d6eec4e995c39cc7c482d",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174245d6eec4e995c39cc7c482d",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "63RFns47gk00mnHIQ8zTR1",
+       "profile": {
+        "name": "Pilli Bebek"
+       },
+       "uri": "spotify:artist:63RFns47gk00mnHIQ8zTR1",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebb60e05d1e9033f89abb5a2f2",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178b60e05d1e9033f89abb5a2f2",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174b60e05d1e9033f89abb5a2f2",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "1dvuibBCx9TnbCKIdOEF4l",
+       "profile": {
+        "name": "Sedef Sebüktekin"
+       },
+       "uri": "spotify:artist:1dvuibBCx9TnbCKIdOEF4l",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb79358b0930416adeec57e642",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f17879358b0930416adeec57e642",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab6761610000517479358b0930416adeec57e642",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "03cvjFEHz8eGwYHq1L0Pp2",
+       "profile": {
+        "name": "Kaan Boşnak"
+       },
+       "uri": "spotify:artist:03cvjFEHz8eGwYHq1L0Pp2",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eba032b32976dab48e38e9ee12",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178a032b32976dab48e38e9ee12",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174a032b32976dab48e38e9ee12",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "7rEIUw67hRTgievwuKQGSj",
+       "profile": {
+        "name": "maNga"
+       },
+       "uri": "spotify:artist:7rEIUw67hRTgievwuKQGSj",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb8cceee3942367e3490b1eb2f",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1788cceee3942367e3490b1eb2f",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051748cceee3942367e3490b1eb2f",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "3Z814BstLaKbLqKHXsht8O",
+       "profile": {
+        "name": "Gripin"
+       },
+       "uri": "spotify:artist:3Z814BstLaKbLqKHXsht8O",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebd1c4b79b643abd465764f7e4",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178d1c4b79b643abd465764f7e4",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174d1c4b79b643abd465764f7e4",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "0yXr7HHsbJlVaU8kBhRcny",
+       "profile": {
+        "name": "Umut Kaya"
+       },
+       "uri": "spotify:artist:0yXr7HHsbJlVaU8kBhRcny",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebf2c9a09743d5c9b3038932a4",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178f2c9a09743d5c9b3038932a4",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174f2c9a09743d5c9b3038932a4",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "4EJYpvhyY4gO4rjEeitXLa",
+       "profile": {
+        "name": "TNK"
+       },
+       "uri": "spotify:artist:4EJYpvhyY4gO4rjEeitXLa",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb9f4cee5a75266d73a5ea5e93",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1789f4cee5a75266d73a5ea5e93",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051749f4cee5a75266d73a5ea5e93",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "1Hy8tdpH9ygqoohumHZqVl",
+       "profile": {
+        "name": "Athena"
+       },
+       "uri": "spotify:artist:1Hy8tdpH9ygqoohumHZqVl",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb0c10dd4d5318adea5a1d694d",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1780c10dd4d5318adea5a1d694d",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051740c10dd4d5318adea5a1d694d",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "23xJQJM7peht77DF6YNEoq",
+       "profile": {
+        "name": "Model"
+       },
+       "uri": "spotify:artist:23xJQJM7peht77DF6YNEoq",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb3670f10bb0563bd9ce13b424",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1783670f10bb0563bd9ce13b424",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051743670f10bb0563bd9ce13b424",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "2aZlYOswKNlrwqpuTsckKd",
+       "profile": {
+        "name": "Madrigal"
+       },
+       "uri": "spotify:artist:2aZlYOswKNlrwqpuTsckKd",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebebe3f35d8a4d060b3da361ce",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178ebe3f35d8a4d060b3da361ce",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174ebe3f35d8a4d060b3da361ce",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "1hWfWJvstJQPgjZ2vDFY0P",
+       "profile": {
+        "name": "Sufle"
+       },
+       "uri": "spotify:artist:1hWfWJvstJQPgjZ2vDFY0P",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5ebbc977e0d545d09a96df4cac2",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f178bc977e0d545d09a96df4cac2",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab67616100005174bc977e0d545d09a96df4cac2",
+           "width": 320
+          }
+         ]
+        }
+       }
+      },
+      {
+       "id": "4MUb8ilmrxyePXwSkG31lC",
+       "profile": {
+        "name": "Canozan"
+       },
+       "uri": "spotify:artist:4MUb8ilmrxyePXwSkG31lC",
+       "visuals": {
+        "avatarImage": {
+         "sources": [
+          {
+           "height": 640,
+           "url": "https://i.scdn.co/image/ab6761610000e5eb3ca091dd9cf352780423ead3",
+           "width": 640
+          },
+          {
+           "height": 160,
+           "url": "https://i.scdn.co/image/ab6761610000f1783ca091dd9cf352780423ead3",
+           "width": 160
+          },
+          {
+           "height": 320,
+           "url": "https://i.scdn.co/image/ab676161000051743ca091dd9cf352780423ead3",
+           "width": 320
+          }
+         ]
+        }
+       }
+      }
+     ],
+     "totalCount": 40
+    }
+   },
+   "uri": "spotify:artist:1g4J8P1JWwanNyyXckRX5W"
+  }
+ }
+}

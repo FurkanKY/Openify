@@ -1,0 +1,19 @@
+{
+ "id": 4364687661,
+ "isrc": "TRA162600260",
+ "title": "N'aptın Kendinle",
+ "duration": 174,
+ "artist": {
+  "id": 6696895,
+  "name": "Adamlar",
+  "type": "artist"
+ },
+ "contributors": [
+  {
+   "id": 6696895,
+   "name": "Adamlar",
+   "type": "artist",
+   "role": "Main"
+  }
+ ]
+}

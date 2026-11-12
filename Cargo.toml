@@ -1,0 +1,109 @@
+[package]
+name = "openify"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+
+[features]
+# Kapalı varsayılan. Açıkken System ayırıcısı sayaçlı bir sarmalayıcıyla
+# değiştirilir ve OPENIFY_MEM_STATS=<csv> ile bellek dökümü yazılır
+# (bkz. src/mem_stats.rs).
+mem-stats = []
+# Kapalı varsayılan. `openify connect-spike`: sahibinin gerçek hesap + telefonla koşturduğu Spotify
+# Connect (Spirc) denemesi (src/connect_spike.rs, CONNECT-DENEME.md). Varsayılan derleme bu kodu
+# hiç içermez. `cargo build --release --features connect-spike --target-dir target/spike`.
+connect-spike = []
+
+[dependencies]
+anyhow = "1.0.104"
+async-channel = "2.5.0"
+bytes = "1"
+# Kendi ses çıkışımız (src/engine/output.rs); librespot'un kullandığı
+# sürümler ve özellikler, yeni indirme yok.
+cpal = "0.16"
+dirs = "7"
+env_logger = "0.11.11"
+futures = "0.3"
+gpui = "0.2.2"
+http = "1"
+# Benzer sanatçılar (src/engine/related.rs): yanıt gövdesini 429 yinelemesi olmadan
+# okumak için; librespot'un kullandığı sürüm, yeni indirme yok.
+http-body-util = "0.1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+keyring = "4"
+librespot = { version = "0.8.0", default-features = false, features = ["rodio-backend", "rustls-tls-native-roots"] }
+log = "0.4.35"
+nucleo-matcher = "0.3"
+protobuf = "3"
+raw-window-handle = "0.6"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-native-roots", "gzip"] }
+# Görev çubuğu ve tepsi simgelerini kendi SVG'lerimizden çizmek için (Adım 10);
+# gpui'nin kullandığı sürüm, yeni indirme yok.
+resvg = { version = "0.45", default-features = false }
+rodio = { version = "0.21", default-features = false, features = ["playback"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+# Sürüm karşılaştırması (src/update/health.rs); velopack zaten kullanıyor, yeni indirme yok.
+semver = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+# Kalıcı Spotify aygıt kimliği (src/settings.rs, Connect 7.1); librespot-core zaten kullanıyor, yeni indirme yok.
+uuid = { version = "1", default-features = false, features = ["v4"] }
+# Adım 16 (paketleme): kurulum / kaldırma kancaları ve otomatik güncelleme (bkz. src/update.rs).
+velopack = "=1.2.161"
+
+[target."cfg(windows)".dependencies]
+# `#[implement]` (ses aygıtı bildirimi, src/engine/output.rs) `windows_core`'u
+# doğrudan arar; windows 0.61'in kullandığı sürüm, yeni indirme yok.
+windows-core = "0.61"
+# Adım 10 (sistemle bütünleşme): Windows medya kontrolü (Media, Storage_Streams,
+# WinRT), görev çubuğu düğmeleri ve tepsi (Shell, Com, Gdi), tek kopya
+# (DataExchange), her yerden kısayol (KeyboardAndMouse), tema (Registry).
+windows = { version = "0.61", features = [
+    "Foundation",
+    "Media",
+    "Storage_Streams",
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    # Ses çıkışı: varsayılan aygıt değişimi bildirimi (IMMNotificationClient).
+    "Win32_Media_Audio",
+    "Win32_System_Com",
+    "Win32_System_Console",
+    "Win32_System_DataExchange",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Memory",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_WinRT",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_Shell",
+    # Yedek dosyası için "Farklı kaydet" iletişim kutusu (COMDLG_FILTERSPEC).
+    "Win32_UI_Shell_Common",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[build-dependencies]
+# Uygulama simgesini exe'ye gömmek için (build.rs, assets/logo/openify.rc);
+# gpui'nin kullandığı sürüm, yeni indirme yok.
+embed-resource = "3.0"
+
+# librespot-core'un kendi kopyamız: şarkı anahtarı istekleri yeniden deneniyor,
+# daha uzun bekleniyor ve alınan anahtar hatırlanıyor (bkz.
+# vendor/librespot-core/OPENIFY.md).
+# gpui'nin kendi kopyamız: görünür pencere yokken ekran yenilemesi iş parçacığı
+# uyuyor, gizli pencerenin çizim yüzeyleri bırakılıyor (bkz.
+# vendor/gpui/OPENIFY.md).
+[patch.crates-io]
+librespot-core = { path = "vendor/librespot-core" }
+# librespot-playback'in kendi kopyamız: ses kalitesi ve ses düzeyi eşitleme çalışırken
+# değişebiliyor (bkz. vendor/librespot-playback/OPENIFY.md).
+librespot-playback = { path = "vendor/librespot-playback" }
+gpui = { path = "vendor/gpui" }
+# librespot-connect'in kendi kopyamız (Spotify Connect, Spirc): bağlı oturumla kurulum,
+# ana uygulama sürerken çalar olaylarını yok sayma, durum bildirimi, sıraya ekleme
+# (bkz. vendor/librespot-connect/OPENIFY.md).
+librespot-connect = { path = "vendor/librespot-connect" }

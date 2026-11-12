@@ -1,0 +1,1574 @@
+{
+ "data": {
+  "browse": {
+   "__typename": "BrowseSectionContainer",
+   "header": {
+    "backgroundImage": null,
+    "color": {
+     "hex": "#8D67AB"
+    },
+    "subtitle": null,
+    "title": {
+     "transformedLabel": "Hip Hop"
+    }
+   },
+   "sections": {
+    "items": [
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "%100 Türkçe rap"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#FFFFFF"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:747jtvVsxwzOLCJeOOz3oT,spotify:artist:6CPZWzcKiOKkHn4L2XI4i2,spotify:artist:5chlGLYjNChbXjDbojObt5,spotify:artist:6sBSLIunx1Je0Y2T77wpkP,spotify:artist:1EPZusBDP8yewhsaKtwktz"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:5rwkmcw5tPCSQMb3c8TIXh"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe8928068b8a21e5b1193f35eb63"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0e7493be2f702e9ee57b0c622"
+            },
+            {
+             "key": "episode_description",
+             "value": "Türkçe rap'in hit şarkıları ve zirveye oynayanlar. Kapak: Wegh"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb106e3caded7e97e0a786c801cd61f1e"
+            }
+           ],
+           "description": "Türkçe rap'in hit şarkıları ve zirveye oynayanlar. Kapak: Wegh",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000203ee9a9f27507eeb8d9012ef",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "NKVT",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:5UqZ7BXoccyvTHyXLk1Pk3,spotify:artist:6bGOmNBU1AOgttgOjh0ldf,spotify:artist:5aHrVKNpTVFWiaGKGaBagi,spotify:artist:4rdvHU6ccREPfA1aS66pdg,spotify:artist:5wyWp867LWGjFmYZXVSFnZ"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWYsGVucq3DsE"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:2lz6ot6QcjBsagJxZENK6p"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "En yeni yerli hip hop çıkışları. Kapak: Kayra",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002e1b973bb8d61d4c84ef12b89",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Türkçe Rap: Yeni Çıkanlar",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWZtvoWbR6kBf"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:0V2oXYR7DtrZAEFeILRW2r,spotify:artist:6bGOmNBU1AOgttgOjh0ldf,spotify:artist:24OGdBr3r58ksMLJkMXZZY,spotify:artist:4UW9Hdsrx9kX2HdJ90jRKM,spotify:artist:2sQAXdjNpwvs57LUxYzFdA"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:4UzAPluTbjdlyyhfE00REO"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Müdavimiyiz 🔊",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000236cad8a63e8e078a8c0480fc",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Mekan",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWZtvoWbR6kBf"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWZtvoWbR6kBf"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "NotFound"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXciCKvzkUxfS"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "true"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:4HcS33qrufPKoj9qw2FtA8"
+            },
+            {
+             "key": "madeFor.username",
+             "value": "testuser"
+            },
+            {
+             "key": "madeFor.displayed",
+             "value": "1"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Türkçe rap'in sevilen isimleri. Kapak: EGE!",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f000000025c3b2c2c21923bedd3ec6419",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Rap Radyo",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+        }
+       ],
+       "totalCount": 11
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLmG95NjH8b7Y"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Ana vatanından hip hop"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX0XUsuxWHRQd"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "editorial_profile",
+             "value": "true"
+            },
+            {
+             "key": "primary_color",
+             "value": "#F49B23"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:5f7VJjfbwm532GiveGC0ZK,spotify:artist:0VRj0yCOv2FXJNP47XQnx5,spotify:artist:2hlmm7s2ICUX0LVIhVFlZQ,spotify:artist:6qxpnaukVayrQn6ViNvu9I,spotify:artist:4LLpKhyESsyAXpc4laK94U"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWY4xHQp97fN6"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:76jR5C9oKb1DJR3rab6dGV"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe89972526d2aa4b6f9a4cf735ff"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae05e53ca5003a367197bf39e0b"
+            },
+            {
+             "key": "episode_description",
+             "value": "New music from Lil Baby, GloRilla and Jack Harlow."
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "New music from Lil Baby, GloRilla and Jack Harlow.",
+           "format": "format-shows",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002bc625e1e16425bc7d8e049e5",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "RapCaviar",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWY4xHQp97fN6"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#F49B23"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:2hlmm7s2ICUX0LVIhVFlZQ,spotify:artist:7oHPIc7BYAIUhYFF6hSggI,spotify:artist:5f7VJjfbwm532GiveGC0ZK,spotify:artist:3TVXtAsR1Inumwj472S9r4,spotify:artist:1RyvyyTE3xzB2ZywiAwp0i"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWSUur0QPPsOn"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:76jR5C9oKb1DJR3rab6dGV"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe8995b446d0da2a8396f257dcd1"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae05f42cb181f19add36ff17699"
+            },
+            {
+             "key": "episode_description",
+             "value": "Mood: Turnt Cover: Gunna"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Mood: Turnt Cover: Gunna",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000200779c9028ddb11644b76255",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Get Turnt",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWY4xHQp97fN6"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWY4xHQp97fN6"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX48TTZL62Yht"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "true"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWY6tYEFs22tT"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:3B4cjvGlPvyBLNG3AzEgkZ"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe892a2413a2b414ee57d7ecb96b"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0030126d7085105af483fbc78"
+            },
+            {
+             "key": "episode_description",
+             "value": "The tracks you just keep pulling up. Cover: Don Toliver"
+            },
+            {
+             "key": "madeFor.username",
+             "value": "testuser"
+            },
+            {
+             "key": "madeFor.displayed",
+             "value": "1"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "The tracks you just keep pulling up. Cover: Don Toliver",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002b43d6ec0dc9631e211d2250e",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Hip-Hop Favourites",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX48TTZL62Yht"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX48TTZL62Yht"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX2RxBh64BHjQ"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#F49B23"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:0LGKNkqCNnflIi35z00rGu,spotify:artist:6qxpnaukVayrQn6ViNvu9I,spotify:artist:7oHPIc7BYAIUhYFF6hSggI,spotify:artist:7a8ZndeHGrkS7xIM8060Xw,spotify:artist:4jBs7FxsV98Kz0Qgk1H6Au"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:2hKgDLF3MSsZQ081R0NObj"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe898cd159d3f441ca39b65d6d3e"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0091c1627199b7cd1cfb7033e"
+            },
+            {
+             "key": "episode_description",
+             "value": "The official voice of the next generation. Cover: <a href=\"spotify:artist:7a8ZndeHGrkS7xIM8060Xw\">PayGotti</a> "
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "The official voice of the next generation. Cover: <a href=\"spotify:artist:7a8ZndeHGrkS7xIM8060Xw\">PayGotti</a> ",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f000000029324c6f307fd8c6601937783",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Most Necessary",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX2RxBh64BHjQ"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX2RxBh64BHjQ"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWSvKsRPPnv5o"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#FFFFFF"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:6fqjJNsLs7g6F3PXy01Xnw,spotify:artist:0NbfKEOTQCcwd6o7wSDOHI,spotify:artist:3jK9MiCrA42lLAdMGUZpwa,spotify:artist:0LGKNkqCNnflIi35z00rGu,spotify:artist:3qiHUAX7zY4Qnjx8TNUzVx"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:0YZkkvAyPLdpNLB8Uj07XE"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Holdin' it down for the westside. Cover: Anderson .Paak and Cordae",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002bff1efb748b14100b20eb8aa",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Westside",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWSvKsRPPnv5o"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWSvKsRPPnv5o"
+        }
+       ],
+       "totalCount": 10
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLvv3TJrwtvsK"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Popüler Hip Hop çalma listeleri"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX0FGW2dUyDef"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#FFFFFF"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:1dpqJqIuNqideTvmxBsSku,spotify:artist:2WjzL05RyqIk5n53sZc9nf,spotify:artist:522C8COCHkV0bFW4FPSvWh,spotify:artist:1GMwSpFzrLd12jUX15bHB6,spotify:artist:0W0qg2fjQVk63h44Zdn4hI"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DX9ASuQophyb3"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:14xSndBPmB5bsYmKbwkhnB"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe8972062997111c1d7edceb9dd4"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0e9dae35ded91a91f720e9f1a"
+            },
+            {
+             "key": "episode_description",
+             "value": "Dinlemekten vazgeçemediklerin ve en yeni hitler.  Kapak: Aykut Aksöz"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb0da35a7e1325264d638bacac77dcfb2"
+            }
+           ],
+           "description": "Dinlemekten vazgeçemediklerin ve en yeni hitler.  Kapak: Aykut Aksöz",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002ab398f7026ff152243468da5",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Hot Hits Türkiye",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX0FGW2dUyDef"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX0FGW2dUyDef"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWZJK5zKU2L45"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:2WjzL05RyqIk5n53sZc9nf,spotify:artist:3vv9Y0XUMGmPUfIj8KB7Oo,spotify:artist:6NDMASsBLAUDX3QsJvki3r,spotify:artist:2JEo6ivzJS4vQbHZycSsS6,spotify:artist:4P4eANB9QIIM1hFAlG5mPt"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:6hPPwiXH4Y4kmc121v9Fdg"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Yeni nesil TR-Pop merkez üssü. Kapak: KARM6",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000249f1a283a3900debf7211d70",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "TR-Pop",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWZJK5zKU2L45"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWZJK5zKU2L45"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#FFFFFF"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:747jtvVsxwzOLCJeOOz3oT,spotify:artist:6CPZWzcKiOKkHn4L2XI4i2,spotify:artist:5chlGLYjNChbXjDbojObt5,spotify:artist:6sBSLIunx1Je0Y2T77wpkP,spotify:artist:1EPZusBDP8yewhsaKtwktz"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:5rwkmcw5tPCSQMb3c8TIXh"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe8928068b8a21e5b1193f35eb63"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0e7493be2f702e9ee57b0c622"
+            },
+            {
+             "key": "episode_description",
+             "value": "Türkçe rap'in hit şarkıları ve zirveye oynayanlar. Kapak: Wegh"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb106e3caded7e97e0a786c801cd61f1e"
+            }
+           ],
+           "description": "Türkçe rap'in hit şarkıları ve zirveye oynayanlar. Kapak: Wegh",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f0000000203ee9a9f27507eeb8d9012ef",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "NKVT",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXdnOj1VEuhgb"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "true"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:4HcS33qrufPKoj9qw2FtA8"
+            },
+            {
+             "key": "madeFor.username",
+             "value": "testuser"
+            },
+            {
+             "key": "madeFor.displayed",
+             "value": "1"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Türkçe rap'in sevilen isimleri. Kapak: EGE!",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f000000025c3b2c2c21923bedd3ec6419",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Rap Radyo",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXbmGpLaycvhr"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:5UqZ7BXoccyvTHyXLk1Pk3,spotify:artist:6bGOmNBU1AOgttgOjh0ldf,spotify:artist:5aHrVKNpTVFWiaGKGaBagi,spotify:artist:4rdvHU6ccREPfA1aS66pdg,spotify:artist:5wyWp867LWGjFmYZXVSFnZ"
+            },
+            {
+             "key": "autoplay",
+             "value": "spotify:playlist:37i9dQZF1DWYsGVucq3DsE"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:2lz6ot6QcjBsagJxZENK6p"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "En yeni yerli hip hop çıkışları. Kapak: Kayra",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002e1b973bb8d61d4c84ef12b89",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "Türkçe Rap: Yeni Çıkanlar",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DWW5N73hRn6CE"
+        }
+       ],
+       "totalCount": 84
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLnjETREflcqJ"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Hip Hop Yeni Çıkanlar"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "千葉雄喜"
+              },
+              "uri": "spotify:artist:6Qhgat07PNOdnJSnCXJigu"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0209d7403341c9caf180637fe0",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485109d7403341c9caf180637fe0",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27309d7403341c9caf180637fe0",
+              "width": 640
+             }
+            ]
+           },
+           "name": "◯",
+           "uri": "spotify:album:1blLsuMvpgsXDBy3xNOsZq"
+          }
+         },
+         "uri": "spotify:album:1blLsuMvpgsXDBy3xNOsZq"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "ACE COOL"
+              },
+              "uri": "spotify:artist:10a2cJsUTQchTROyBwH14G"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e026530434d492e4acfa3e47c14",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d000048516530434d492e4acfa3e47c14",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b2736530434d492e4acfa3e47c14",
+              "width": 640
+             }
+            ]
+           },
+           "name": "Haigamine",
+           "uri": "spotify:album:780viuvxOK8LJCRad69eAc"
+          }
+         },
+         "uri": "spotify:album:780viuvxOK8LJCRad69eAc"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "OZworld"
+              },
+              "uri": "spotify:artist:34tJ8UnaAbWcrug3Nym7ZO"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0226b72d7925ed7e6eac3e2bc7",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485126b72d7925ed7e6eac3e2bc7",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27326b72d7925ed7e6eac3e2bc7",
+              "width": 640
+             }
+            ]
+           },
+           "name": "おくまれお",
+           "uri": "spotify:album:6s9RQHJPijVoYbzLPXvcp7"
+          }
+         },
+         "uri": "spotify:album:6s9RQHJPijVoYbzLPXvcp7"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "JUMADIBA"
+              },
+              "uri": "spotify:artist:1a6hwHX0XKVKDpicEmwzCj"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e02ec7fd8895372b94144ab1fe6",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d00004851ec7fd8895372b94144ab1fe6",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b273ec7fd8895372b94144ab1fe6",
+              "width": 640
+             }
+            ]
+           },
+           "name": "Kibarashi",
+           "uri": "spotify:album:3qQTlfhM6yeAZ5zCFu9ii5"
+          }
+         },
+         "uri": "spotify:album:3qQTlfhM6yeAZ5zCFu9ii5"
+        },
+        {
+         "content": {
+          "__typename": "AlbumResponseWrapper",
+          "data": {
+           "__typename": "Album",
+           "artists": {
+            "items": [
+             {
+              "profile": {
+               "name": "Peterparker69"
+              },
+              "uri": "spotify:artist:1tgZVOBOut0nS8CJ5SIBh5"
+             },
+             {
+              "profile": {
+               "name": "Jeter"
+              },
+              "uri": "spotify:artist:6zqtOVeP8C8LOClejH6BDm"
+             },
+             {
+              "profile": {
+               "name": "Y ohtrixpointnever"
+              },
+              "uri": "spotify:artist:4zba7coFdHgCPeGTxZn1LQ"
+             }
+            ]
+           },
+           "coverArt": {
+            "sources": [
+             {
+              "height": 300,
+              "url": "https://i.scdn.co/image/ab67616d00001e0201908a9e68db2f0da138e288",
+              "width": 300
+             },
+             {
+              "height": 64,
+              "url": "https://i.scdn.co/image/ab67616d0000485101908a9e68db2f0da138e288",
+              "width": 64
+             },
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab67616d0000b27301908a9e68db2f0da138e288",
+              "width": 640
+             }
+            ]
+           },
+           "name": "outernet 開く",
+           "uri": "spotify:album:7LRnYt4Cc4SeXoTNCn62vg"
+          }
+         },
+         "uri": "spotify:album:7LRnYt4Cc4SeXoTNCn62vg"
+        }
+       ],
+       "totalCount": 862
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLtddeKTXyX4J"
+     },
+     {
+      "__typename": "BrowseSection",
+      "data": {
+       "__typename": "BrowseGenericSectionData",
+       "subtitle": null,
+       "title": {
+        "transformedLabel": "Hip Hop Yıldızları"
+       }
+      },
+      "sectionItems": {
+       "items": [
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX7QOv5kjbU68"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "artistGid",
+             "value": "8036938ad6c24879a29b93dd10a704c2"
+            },
+            {
+             "key": "editorial.series",
+             "value": "this-is"
+            },
+            {
+             "key": "primary_color",
+             "value": "#ffffff"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:3TVXtAsR1Inumwj472S9r4,spotify:artist:2HPaUgqeutzr3jx5a9WyDV,spotify:artist:6jeg7JBX9J9097esK752iR,spotify:artist:4Ge9GwmWnOQsohwPTrXyHc,spotify:artist:5fi7lIgJGH3RgUpJYcffQ7"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:514joG57v4yKTsfQmz7stz"
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "Hear all of Drake's biggest and best hits in one playlist. Thank us later.",
+           "format": "editorial",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f00000002e47c587e5107b565327a2172",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "This Is Drake",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX7QOv5kjbU68"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX7QOv5kjbU68"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "NotFound"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX1clOuib1KtQ"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "NotFound"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX5EkyRFIV92g"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "NotFound"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DXcGnc6d1f20P"
+        },
+        {
+         "content": {
+          "__typename": "PlaylistResponseWrapper",
+          "data": {
+           "__typename": "Playlist",
+           "attributes": [
+            {
+             "key": "uri",
+             "value": "spotify:user:spotify:playlist:37i9dQZF1DX6bnzK9KPvrz"
+            },
+            {
+             "key": "status",
+             "value": "PUBLISHED"
+            },
+            {
+             "key": "isAlgotorial",
+             "value": "false"
+            },
+            {
+             "key": "editorial.series",
+             "value": "this-is"
+            },
+            {
+             "key": "primary_color",
+             "value": "#FFFFFF"
+            },
+            {
+             "key": "recs.hasArtists",
+             "value": "spotify:artist:1Xyo4u8uXC1ZmMpatF05PJ,spotify:artist:1h6Cn3P4NGzXbaXidqURXs,spotify:artist:0iEtIxbK0KxaSlF7G42ZOp,spotify:artist:1RyvyyTE3xzB2ZywiAwp0i,spotify:artist:0Y5tJX1MQlPlqiwlOH1tJY"
+            },
+            {
+             "key": "decorationUri",
+             "value": "spotify:track:7kJyHFVVZMv1wQYRU9de9d"
+            },
+            {
+             "key": "header_image_url_desktop",
+             "value": "https://i.scdn.co/image/ab6768640000fe89878bb334a1d391d47f802388"
+            },
+            {
+             "key": "image_url",
+             "value": "https://i.scdn.co/image/ab67686d00003ae0918dc1fbf3f8cee34399055c"
+            },
+            {
+             "key": "episode_description",
+             "value": "The essential tracks from The Weeknd."
+            },
+            {
+             "key": "is_video_first",
+             "value": "false"
+            },
+            {
+             "key": "correlation-id",
+             "value": "ssp~065fb10fe435a8c9f1aeb6bdbd6e7eb7430c"
+            }
+           ],
+           "description": "The essential tracks from The Weeknd.",
+           "format": "format-shows-shuffle",
+           "images": {
+            "items": [
+             {
+              "sources": [
+               {
+                "height": null,
+                "url": "https://i.scdn.co/image/ab67706f000000022e4d94d607aceaee7ffa6b3d",
+                "width": null
+               }
+              ]
+             }
+            ]
+           },
+           "name": "This Is The Weeknd",
+           "ownerV2": {
+            "data": {
+             "__typename": "User",
+             "name": "Spotify"
+            }
+           },
+           "uri": "spotify:playlist:37i9dQZF1DX6bnzK9KPvrz"
+          }
+         },
+         "uri": "spotify:playlist:37i9dQZF1DX6bnzK9KPvrz"
+        }
+       ],
+       "totalCount": 18
+      },
+      "targetLocation": "",
+      "uri": "spotify:section:0JQ5IMCbQBLltp9IPmMNXT"
+     }
+    ],
+    "pagingInfo": {
+     "nextOffset": 10
+    },
+    "totalCount": 12
+   },
+   "uri": "spotify:page:0JQ5DAqbMKFQ00XGBls6ym"
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/browse": {
+    "continuum": "d72ca5af-9823-e4d1-d93f-f2f9d3b5e8e3"
+   }
+  }
+ }
+}

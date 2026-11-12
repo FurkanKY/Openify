@@ -1,0 +1,81 @@
+{
+  "friends": [
+    {
+      "ageSeconds": 25,
+      "user": { "uri": "spotify:user:maya", "name": "Maya", "imageUrl": "https://demo.invalid/covers/artist-0" },
+      "track": {
+        "uri": "spotify:track:f01", "name": "Harbor Lights", "imageUrl": "https://demo.invalid/covers/album-0",
+        "album": { "uri": "spotify:album:fa1", "name": "Glass Hours" },
+        "artist": { "uri": "spotify:artist:fr1", "name": "Night Harbor" },
+        "context": { "uri": "spotify:playlist:fp1", "name": "Late Night Loop", "index": 4 }
+      }
+    },
+    {
+      "ageSeconds": 140,
+      "user": { "uri": "spotify:user:leo", "name": "Leo", "imageUrl": "https://demo.invalid/covers/artist-1" },
+      "track": {
+        "uri": "spotify:track:f02", "name": "Salt Air", "imageUrl": "https://demo.invalid/covers/album-6",
+        "album": { "uri": "spotify:album:fa2", "name": "Tidelines" },
+        "artist": { "uri": "spotify:artist:fr2", "name": "Low Tide Club" },
+        "context": { "uri": "spotify:album:fa2", "name": "Tidelines", "index": 3 }
+      }
+    },
+    {
+      "ageSeconds": 420,
+      "user": { "uri": "spotify:user:ivy", "name": "Ivy Okafor", "imageUrl": "https://demo.invalid/covers/artist-2" },
+      "track": {
+        "uri": "spotify:track:f03", "name": "Dear September", "imageUrl": "https://demo.invalid/covers/album-3",
+        "album": { "uri": "spotify:album:fa3", "name": "Orchard Letters" },
+        "artist": { "uri": "spotify:artist:fr3", "name": "Velvet Orchard" },
+        "context": { "uri": "spotify:playlist:fp2", "name": "Autumn Walks", "index": 12 }
+      }
+    },
+    {
+      "ageSeconds": 1500,
+      "user": { "uri": "spotify:user:noah", "name": "Noah" },
+      "track": {
+        "uri": "spotify:track:f04", "name": "Electric Tide", "imageUrl": "https://demo.invalid/covers/album-1",
+        "album": { "uri": "spotify:album:fa4", "name": "Salt & Neon" },
+        "artist": { "uri": "spotify:artist:fr4", "name": "Cobalt Static" }
+      }
+    },
+    {
+      "ageSeconds": 3300,
+      "user": { "uri": "spotify:user:priya", "name": "Priya Raghunathan-Whitfield", "imageUrl": "https://demo.invalid/covers/artist-4" },
+      "track": {
+        "uri": "spotify:track:f08", "name": "Everything I Never Said Out Loud", "imageUrl": "https://demo.invalid/covers/album-4",
+        "album": { "uri": "spotify:album:fa8", "name": "Lantern Season" },
+        "artist": { "uri": "spotify:artist:fr8", "name": "Paper Lanterns" },
+        "context": { "uri": "spotify:playlist:fp3", "name": "Sunday Slow Mornings & Coffee Shop Songs", "index": 7 }
+      }
+    },
+    {
+      "ageSeconds": 5400,
+      "user": { "uri": "spotify:user:sofia", "name": "Sofia", "imageUrl": "https://demo.invalid/covers/artist-5" },
+      "track": {
+        "uri": "spotify:track:f05", "name": "Northbound", "imageUrl": "https://demo.invalid/covers/album-5",
+        "album": { "uri": "spotify:album:fa5", "name": "Hollow Roads" },
+        "artist": { "uri": "spotify:artist:fr5", "name": "Juniper Hollow" },
+        "context": { "uri": "spotify:album:fa5", "name": "Hollow Roads", "index": 2 }
+      }
+    },
+    {
+      "ageSeconds": 21600,
+      "user": { "uri": "spotify:user:arlo", "name": "Arlo" },
+      "track": {
+        "uri": "spotify:track:f06", "name": "Paper Crown", "imageUrl": "https://demo.invalid/covers/album-7",
+        "album": { "uri": "spotify:album:fa6", "name": "Parade of One" },
+        "artist": { "uri": "spotify:artist:fr6", "name": "The Quiet Parade" }
+      }
+    },
+    {
+      "ageSeconds": 90000,
+      "user": { "uri": "spotify:user:june", "name": "June", "imageUrl": "https://demo.invalid/covers/artist-6" },
+      "track": {
+        "uri": "spotify:track:f07", "name": "Cinder Road", "imageUrl": "https://demo.invalid/covers/album-2",
+        "album": { "uri": "spotify:album:fa7", "name": "Slow Fires" },
+        "artist": { "uri": "spotify:artist:fr7", "name": "Ember & Ash" }
+      }
+    }
+  ]
+}

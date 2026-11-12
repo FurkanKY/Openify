@@ -1,0 +1,22 @@
+{
+  "uri": "spotify:station:track:0000000000000000seed01",
+  "title": "Gece Yolcusu Radyosu",
+  "seeds": [ { "uri": "spotify:track:0000000000000000seed01" } ],
+  "tracks": [
+    { "uri": "spotify:track:0000000000000000radio1", "original_gid": "6f1c0a9e", "name": "Sessiz Harf", "artists": [ { "name": "Kuzey Isigi" } ], "album": "Aralik", "duration_ms": 212000 },
+    { "uri": "spotify:track:0000000000000000radio2", "original_gid": "6f1c0aa1", "name": "Kuzey Yildizi", "artists": [ { "name": "Dalga Boyu" }, { "name": "Ece Tan" } ], "album": "Karanlik Oda", "duration_ms": 187000 },
+    { "uri": "spotify:track:0000000000000000radio3", "name": "Gece Treni", "artists": "Mert Kaya", "album": "Son Vagon", "durationMs": 243000 },
+    { "uri": "spotify:track:0000000000000000radio4", "name": "Dal", "artists": [ { "name": "Deniz Aksu" } ], "album": "Meyve Bahcesi", "duration_ms": 176000 },
+    { "uri": "spotify:track:0000000000000000radio5", "name": "Kis Uykusu", "artists": [ "Kuzey Isigi" ], "album": "Aralik", "duration_ms": 201000 },
+    { "uri": "spotify:track:0000000000000000radio6", "name": "Hicbir Seyin Uzerine Konusmak Istemiyorum Bu Aksam", "artists": [ { "name": "Cok Uzun Bir Sanatci Adi" } ], "album": "Uzun Adli Bir Album", "duration_ms": 268000 },
+    { "uri": "spotify:track:0000000000000000radio7" },
+    { "uri": "spotify:track:0000000000000000radio7" },
+    { "uri": "spotify:episode:0000000000000000radio8", "name": "Bir Bolum" },
+    { "uri": "spotify:track:bozuk/adres", "name": "Bozuk" },
+    { "uri": "spotify:track:0000000000000000radio9", "name": "Ruzgar Gulu", "artists": [ { "name": "Dalga Boyu" } ], "album": "Karanlik Oda", "duration_ms": 195000 },
+    { "uri": "spotify:track:0000000000000000radio10", "name": "Ikinci Perde", "artists": [ { "name": "Ece Tan" } ], "album": "Perde", "duration_ms": 233000 },
+    { "uri": "spotify:track:0000000000000000radio11", "name": "Liman", "artists": [ { "name": "Mert Kaya" } ], "album": "Son Vagon", "duration_ms": 207000 },
+    { "uri": "spotify:track:0000000000000000radio12", "name": "Sabah Sisi", "artists": [ { "name": "Deniz Aksu" } ], "album": "Meyve Bahcesi", "duration_ms": 181000 }
+  ],
+  "next_page_url": "hm://radio-apollo/v3/tracks/spotify:station:track:0000000000000000seed01?autoplay=true"
+}

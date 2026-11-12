@@ -1,0 +1,1471 @@
+{
+ "data": {
+  "home": {
+   "__typename": "HomeResponsePayload",
+   "greeting": {
+    "transformedLabel": "Good evening",
+    "translatedBaseText": "Good evening"
+   },
+   "sectionContainer": {
+    "sections": {
+     "items": [
+      {
+       "data": {
+        "__typename": "HomeShortsSectionData"
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "UnknownType",
+           "uri": "spotify:user:@:collection"
+          },
+          "data": null,
+          "uri": "spotify:user:@:collection"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 30
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "on-repeat",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#202870",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/repeat/or/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "On Repeat",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest001"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest001"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#068299",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/twenty_twenties/4otJVkrLLqDF8OxFJOigme/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 2 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest003"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest003"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daylist",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A46A2A",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://daylist.spotifycdn.com/playlist-covers-mix/en/evening_default.jpg",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "daylist",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest004"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest004"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "inspiredby-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#B06412",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/track/3NeOkckhX7W58TJAMh5jeG/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 5 Radyosu",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest006"
+           }
+          },
+          "data": {
+           "__typename": "HomeRecsItemData"
+          },
+          "uri": "spotify:playlist:37i9dQZF1Etest006"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": 10
+        },
+        "totalCount": 16
+       },
+       "uri": "spotify:section:0JQ5DAIiKWzVFULQfUm85Y"
+      },
+      {
+       "data": {
+        "__typename": "HomeSpotlightSectionData",
+        "headerEntity": {
+         "__typename": "ArtistResponseWrapper",
+         "_uri": "spotify:artist:6bGOmNBU1AOgttgOjh0ldf",
+         "data": {
+          "__typename": "Artist",
+          "profile": {
+           "name": "Ati242"
+          },
+          "uri": "spotify:artist:6bGOmNBU1AOgttgOjh0ldf",
+          "visuals": {
+           "avatarImage": {
+            "extractedColors": {
+             "colorDark": {
+              "hex": "#902010",
+              "isFallback": false
+             }
+            },
+            "sources": [
+             {
+              "height": 640,
+              "url": "https://i.scdn.co/image/ab6761610000e5eb6dd48a76cd3d480a2e48ec27",
+              "width": 640
+             },
+             {
+              "height": 160,
+              "url": "https://i.scdn.co/image/ab6761610000f1786dd48a76cd3d480a2e48ec27",
+              "width": 160
+             },
+             {
+              "height": 320,
+              "url": "https://i.scdn.co/image/ab676161000051746dd48a76cd3d480a2e48ec27",
+              "width": 320
+             }
+            ]
+           }
+          }
+         }
+        },
+        "subtitle": {
+         "transformedLabel": "",
+         "translatedBaseText": null
+        },
+        "title": {
+         "transformedLabel": "New release from Ati242",
+         "translatedBaseText": "New release from {0}"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "AlbumResponseWrapper",
+           "data": {
+            "__typename": "Album",
+            "artists": {
+             "items": [
+              {
+               "profile": {
+                "name": "Ati242"
+               },
+               "uri": "spotify:artist:6bGOmNBU1AOgttgOjh0ldf"
+              }
+             ]
+            },
+            "coverArt": {
+             "extractedColors": {
+              "colorDark": {
+               "hex": "#535353",
+               "isFallback": true
+              }
+             },
+             "sources": [
+              {
+               "height": 300,
+               "url": "https://i.scdn.co/image/ab67616d00001e02bdd16e7cf4a22c9234d89048",
+               "width": 300
+              },
+              {
+               "height": 64,
+               "url": "https://i.scdn.co/image/ab67616d00004851bdd16e7cf4a22c9234d89048",
+               "width": 64
+              },
+              {
+               "height": 640,
+               "url": "https://i.scdn.co/image/ab67616d0000b273bdd16e7cf4a22c9234d89048",
+               "width": 640
+              }
+             ]
+            },
+            "isPreRelease": false,
+            "name": "Babyglock",
+            "playability": {
+             "playable": true,
+             "reason": "PLAYABLE"
+            },
+            "preReleaseEndDateTime": null,
+            "albumType": "SINGLE",
+            "uri": "spotify:album:3pafEft2xzM7iLUKYLATHL"
+           }
+          },
+          "data": null,
+          "uri": "spotify:album:3pafEft2xzM7iLUKYLATHL"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5DAKjx0PtyWwzEGt6uI"
+      },
+      {
+       "data": {
+        "__typename": "HomeGenericSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "subtitle": {
+         "transformedLabel": "",
+         "translatedBaseText": null
+        },
+        "title": {
+         "transformedLabel": "Made For testuser",
+         "translatedBaseText": "Made For {0}"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#008585",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/1/ab6761610000e5eb6dd48a76cd3d480a2e48ec27/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Daily Mix 1",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest007"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest007"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#D93F2A",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/3/ab6761610000e5eb145f766083fc566e994d739a/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Daily Mix 3",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest008"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest008"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A16387",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/4/ab6761610000e5eb255fc5aa8ee8170cff4ab47e/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Daily Mix 4",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest009"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest009"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#6376A8",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/5/ab6761610000e5eb2feda16424a5c5ba32a31cf5/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Daily Mix 5",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest010"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest010"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daily-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#887260",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/6/ab6761610000e5ebe3c728daf2ff8af8a518239b/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Daily Mix 6",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest011"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest011"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 9
+       },
+       "uri": "spotify:section:0JQ5DAUnp4wcj0bCb3wh3S"
+      },
+      {
+       "data": {
+        "__typename": "HomeGenericSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "subtitle": {
+         "transformedLabel": "",
+         "translatedBaseText": null
+        },
+        "title": {
+         "transformedLabel": "Recently played",
+         "translatedBaseText": "Recently played"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 0
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "liked-songs",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#5028F0",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://misc.scdn.co/liked-songs/liked-songs-300.png",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Liked Songs",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "testuser",
+              "uri": "spotify:user:testuser"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1F5p3rmiWPIYgZ"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1F5p3rmiWPIYgZ"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#068299",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/twenty_twenties/4otJVkrLLqDF8OxFJOigme/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 12 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest003"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest003"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 30
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "on-repeat",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#202870",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/repeat/or/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "On Repeat",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest001"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest001"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "inspiredby-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#B06412",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/track/3NeOkckhX7W58TJAMh5jeG/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 13 Radyosu",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest006"
+           }
+          },
+          "data": {
+           "__typename": "HomeRecsItemData"
+          },
+          "uri": "spotify:playlist:37i9dQZF1Etest006"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "daylist",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A46A2A",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://daylist.spotifycdn.com/playlist-covers-mix/en/evening_default.jpg",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "daylist",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest004"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest004"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": 10
+        },
+        "totalCount": 15
+       },
+       "uri": "spotify:section:0JQ5DAob0KZzPQKc9YbqhR"
+      },
+      {
+       "data": {
+        "__typename": "HomeGenericSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "subtitle": {
+         "transformedLabel": "",
+         "translatedBaseText": null
+        },
+        "title": {
+         "transformedLabel": "Your top mixes",
+         "translatedBaseText": "Your top mixes"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#B23BE6",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/alternative_rock/1lMEWvvUlwzQ5OKB4w1HTn/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 14 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest015"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest015"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#508162",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/rock/7Ln80lUS6He07XvHI8qqHH/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 16 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest017"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest017"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A66661",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/pop/67hb7towEyKvt5Z8Bx306c/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 18 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest019"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest019"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "topic-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#6F6FC0",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/topic/trap/0iEtIxbK0KxaSlF7G42ZOp/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 20 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest021"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest021"
+         },
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "artist-mix-reader",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A16B36",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/artistmix/747jtvVsxwzOLCJeOOz3oT/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 22 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest023"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest023"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": 10
+        },
+        "totalCount": 13
+       },
+       "uri": "spotify:section:0JQ5DAnM3wGh0gz1MXnu89"
+      },
+      {
+       "data": {
+        "__typename": "HomeFeedBaselineSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "iconName": "",
+        "title": {
+         "transformedLabel": "Made for you",
+         "translatedBaseText": "Made for you"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "inspiredby-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#857827",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/track/64ZWtdLrzvY6KnIEYuQqr5/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 24 Radyosu",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest025"
+           }
+          },
+          "data": {
+           "__typename": "HomeRecsItemData"
+          },
+          "uri": "spotify:playlist:37i9dQZF1Etest025"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5KskvsLe3uTeisPkjK4"
+      },
+      {
+       "data": {
+        "__typename": "HomeFeedBaselineSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "iconName": "",
+        "title": {
+         "transformedLabel": "Made for you",
+         "translatedBaseText": "Made for you"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "inspiredby-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A16387",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/track/0vWZMqZ3paygOjEScBOkJM/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 26 Radyosu",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest027"
+           }
+          },
+          "data": {
+           "__typename": "HomeRecsItemData"
+          },
+          "uri": "spotify:playlist:37i9dQZF1Etest027"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5KskvsLe3uTeisPkjK2"
+      },
+      {
+       "data": {
+        "__typename": "HomeFeedBaselineSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "iconName": "",
+        "title": {
+         "transformedLabel": "Made for you",
+         "translatedBaseText": "Made for you"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Sanatçı A, Sanatçı B ve daha fazlası",
+            "format": "inspiredby-mix",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#A16387",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/radio/track/0o16NrUwcH3U0fEEPD79VB/en",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 28 Radyosu",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest029"
+           }
+          },
+          "data": {
+           "__typename": "HomeRecsItemData"
+          },
+          "uri": "spotify:playlist:37i9dQZF1Etest029"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5KskvsLe3uTeisPkjK6"
+      },
+      {
+       "data": {
+        "__typename": "HomeFeedBaselineSectionData",
+        "headerEntity": {
+         "__typename": "UnknownType"
+        },
+        "iconName": "",
+        "title": {
+         "transformedLabel": "Made for you",
+         "translatedBaseText": "Made for you"
+        }
+       },
+       "sectionItems": {
+        "items": [
+         {
+          "content": {
+           "__typename": "PlaylistResponseWrapper",
+           "data": {
+            "__typename": "Playlist",
+            "attributes": [
+             {
+              "key": "madeFor.username",
+              "value": "testuser"
+             }
+            ],
+            "content": {
+             "__typename": "PlaylistItemsPage",
+             "totalCount": 50
+            },
+            "description": "Mix for you. Also try <a href=\"spotify:playlist:37i9dQZF1Etest999\">other mix</a>",
+            "format": "artist-mix-reader",
+            "images": {
+             "items": [
+              {
+               "extractedColors": {
+                "colorDark": {
+                 "hex": "#697F37",
+                 "isFallback": false
+                }
+               },
+               "sources": [
+                {
+                 "height": null,
+                 "url": "https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/artistmix/4EJYpvhyY4gO4rjEeitXLa/tr",
+                 "width": null
+                }
+               ]
+              }
+             ]
+            },
+            "name": "Sanatçı 30 Mix",
+            "ownerV2": {
+             "data": {
+              "__typename": "User",
+              "name": "Spotify",
+              "uri": "spotify:user:spotify"
+             }
+            },
+            "uri": "spotify:playlist:37i9dQZF1Etest031"
+           }
+          },
+          "data": null,
+          "uri": "spotify:playlist:37i9dQZF1Etest031"
+         }
+        ],
+        "pagingInfo": {
+         "nextOffset": null
+        },
+        "totalCount": 1
+       },
+       "uri": "spotify:section:0JQ5KskvsLe3uTeisPkjKg"
+      }
+     ],
+     "totalCount": 31
+    },
+    "uri": "spotify:page:0JQ5DAozXW0GUBAKjHsifH"
+   },
+   "homeChips": []
+  }
+ },
+ "extensions": {
+  "responseIds": {
+   "/home": {
+    "continuum": "ba367e74-f1f6-c3f7-a7e0-abbea60ff53b"
+   }
+  }
+ }
+}

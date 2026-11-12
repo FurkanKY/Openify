@@ -1,0 +1,5 @@
+// Openify'ın Windows kaynakları (build.rs, embed-resource ile derlenir).
+// Simge kimliği 1: gpui pencere sınıfının simgesini bu kimlikle yükler
+// (vendor/gpui platform.rs load_icon), Explorer / Başlat menüsü kısayolu da
+// exe'nin ilk simgesini kullanır. Yol paket köküne göre.
+1 ICON "assets/logo/openify.ico"

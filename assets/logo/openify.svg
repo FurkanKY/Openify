@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<!-- Openify uygulama simgesi ("çentikte nokta", karolu). Gece odası karosu
+     (quiet-edge #1C1C21 -> night-room #0E0E10), ön plan rengi #F4F4F5 işaret:
+     O halkası (dış yarıçap 76, kalınlık 32) ve halkanın yolunda, 45° sağ üstte
+     açılan çentikteki ışık noktası (yarıçap 21, çentik 34). Bkz. DESIGN.md "Logo". -->
+<defs>
+  <linearGradient id="tile" x1="0" y1="16" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1C1C21"/><stop offset="1" stop-color="#0E0E10"/>
+  </linearGradient>
+  <linearGradient id="rim" x1="0" y1="16" x2="0" y2="240" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#FFF" stop-opacity="0.16"/><stop offset="0.5" stop-color="#FFF" stop-opacity="0.05"/><stop offset="1" stop-color="#FFF" stop-opacity="0.03"/>
+  </linearGradient>
+  <mask id="notch" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+    <rect width="256" height="256" fill="#fff"/><circle cx="170.43" cy="85.57" r="34" fill="#000"/>
+  </mask>
+</defs>
+<rect x="16" y="16" width="224" height="224" rx="56" fill="url(#tile)"/>
+<circle cx="128" cy="128" r="60" fill="none" stroke="#F4F4F5" stroke-width="32" mask="url(#notch)"/>
+<circle cx="170.43" cy="85.57" r="21" fill="#F4F4F5"/>
+<rect x="17" y="17" width="222" height="222" rx="55" fill="none" stroke="url(#rim)" stroke-width="2"/>
+</svg>
