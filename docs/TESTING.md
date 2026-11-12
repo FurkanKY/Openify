@@ -1,7 +1,7 @@
 # Openify: testing and development hooks
 
 This page is in Turkish (the project's working language). It lists the checks
-a change must pass, the measurement scripts in `scripts/`, the environment
+a change must pass, the environment
 variables that drive test runs, and gpui 0.2.2 pitfalls. A test run never
 touches your real settings, cache or account unless you ask for it with
 `OPENIFY_TEST_ONLINE=1`.
@@ -10,10 +10,6 @@ touches your real settings, cache or account unless you ask for it with
 
 - `cargo build --release` ve `cargo test --release` uyarısız geçmeli (yalnız `vendor/librespot-core` ve `proc-macro-error2` uyarıları eski, kabul).
 - `src/ui/design_rules.rs` testleri: boşluk / köşe / yazı boyu / gölge / renk yalnız `theme.rs`'teki değişkenlerden; her `icon_button("…")` ardından `.tooltip(`.
-- Görsel: `scripts/ekran-sinama.ps1` (2. monitör, sessiz, kopya exe; `-Size`, `-Wait`, `-Out`, `-Hover` eylemleri; görüntüler `%TEMP%\openify-ekran`), yakından bakmak için `scripts/kirp.ps1`. Başlık düğmeleri: `scripts/baslik-isabet.ps1` (sürükle 2, küçült 8, büyüt 9, kapat 20 dönmeli).
-- Kare süresi: `scripts/kare-olcumu.ps1` (`-Scenario wheel|play|idle`, `-WheelX 140` kenar çubuğu, `-Env "K=V"`), özet `python -I scripts/kare_ozeti.py <csv> --start 5.5 --skip 0.5`, dönüşümlü A/B `scripts/kare-ab.ps1` (süreç işlemci % ve kare/sn de; iki exe karşılaştırması `"once:EXE=yol","sonra:"`). Makine iki hız durumu arasında gidip geliyor: tek koşuları karşılaştırma, dönüşümlü tur ortancasına bak.
-- Bellek: `scripts/bellek-olcumu.ps1`. Gizliyken bellek (tepsi): `scripts/gizli-olcum.ps1 -Exe <kopya> -Calma -KareYok [-Agir] [-AcTekrar N] [-Detay]` (`-Agir`: palette arama + menü kullanıldıktan sonra gizle = en ağır durum; çıta < 75 MB, ölçülen 70,4–71,7; `-AcTekrar`: gizliyken palet / menüyü yeniden aç, ms). Çalma güvenilirliği (aralıklı, Spotify'ı boğmadan): `scripts/oynatma-olcumu.ps1`.
-- Sistemle bütünleşme (Adım 10): `scripts/sistem-sinama.ps1 -Adimlar palet,menu,smtc,gizle,ikinci` (her yerden palet, tepsi menüsü, Windows medya kontrolü, tepsiye gizleme işlemcisi, tek kopya), iş parçacığı başına işlemci `scripts/is-parcacigi-islemci.ps1`. Görüntü yalnız PrintWindow ile: ekrandan kesit (`CopyFromScreen`) 2. monitördeki kullanıcı pencerelerini de alıyor (bir kez aldı, silindi).
 
 - Canlı okuma sınamaları (`#[ignore]`, gerçek hesap; otomatik koşulmaz, yalnız hesap sahibi bilerek koşar): `cargo test --release live_buddylist -- --ignored --nocapture` (Arkadaş etkinliği: tek `buddylist` isteği, salt okuma; arkadaş adı / şarkısı yazdırılmaz, yalnız sayı ve alan doluluğu; `Denied` dönerse uç oturum token'ını kabul etmiyor demektir), `live_follow`, `live_write`, `live_credits` (Şarkı künyesi: tek istek, salt okuma; adlar yazdırılmaz, yalnız sayı ve alan doluluğu), `live_lyrics_translation` (Söz çevirisi: şarkı başına en çok üç salt okuma isteği; yalnız alan adları, dil etiketleri ve sayılar), `live_radio` (Radyo: bir istasyon isteği + bir devam isteği, salt okuma; yalnız sayılar ve alan doluluğu, ad yazdırılmaz; `OPENIFY_LIVE_SEED=spotify:artist:…` başka tohum; `radio-apollo` ucu oturum token'ını kabul etmezse `Denied`, tohumu tanımazsa `Unavailable` döner).
 

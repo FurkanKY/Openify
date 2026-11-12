@@ -20,7 +20,7 @@
   kod deposunun (FurkanKY/Openify) Releases sayfasında yeni bir sürüme (GitHub Release) yükle.
   Uygulama varsayılan olarak https://github.com/FurkanKY/Openify/releases/latest/download
   adresinden okur (OPENIFY_UPDATE_URL ile değişir). Bozuk sürümü kaynaktan geri almak
-  için (bkz. ARCHITECTURE.md, güncelleme geri alma) önceki sürümün *-full.nupkg dosyasını da
+  için (bkz. docs/ARCHITECTURE.md, güncelleme geri alma) önceki sürümün *-full.nupkg dosyasını da
   son Release'e ekle: "latest/download" yalnız son Release'in dosyalarını sunar.
 
 .PARAMETER PackId

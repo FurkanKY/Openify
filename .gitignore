@@ -17,3 +17,12 @@ design/
 .impeccable/
 olcumler/
 .claude/
+PLAN-MOTOR-CONNECT.md
+CONNECT-DENEME.md
+.env.example
+prototypes/
+# Ölçüm ve sınama betikleri yerelde; depoda yalnız paketleme, lisans ve CI betikleri
+scripts/*
+!scripts/surum-hazirla.ps1
+!scripts/third_party_licenses.py
+!scripts/vendor-diff.ps1

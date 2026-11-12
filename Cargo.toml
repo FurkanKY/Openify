@@ -10,7 +10,7 @@ license = "GPL-3.0-or-later"
 # (bkz. src/mem_stats.rs).
 mem-stats = []
 # Kapalı varsayılan. `openify connect-spike`: sahibinin gerçek hesap + telefonla koşturduğu Spotify
-# Connect (Spirc) denemesi (src/connect_spike.rs, CONNECT-DENEME.md). Varsayılan derleme bu kodu
+# Connect (Spirc) denemesi (src/connect_spike.rs). Varsayılan derleme bu kodu
 # hiç içermez. `cargo build --release --features connect-spike --target-dir target/spike`.
 connect-spike = []
 

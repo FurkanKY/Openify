@@ -12,7 +12,7 @@ Openify is a desktop player written in Rust. The interface is drawn with [gpui](
 
 ## Highlights
 
-- **Light and quick.** About 95 MB of memory while playing and about 70 MB when hidden in the tray, and a cold start of about half a second, measured on the author's machine (the measurement scripts are in [`scripts/`](scripts)). Pages you have opened before come from a local cache and appear within a frame.
+- **Light and quick.** About 95 MB of memory while playing and about 70 MB when hidden in the tray, and a cold start of about half a second, measured on the author's machine. Pages you have opened before come from a local cache and appear within a frame.
 - **Keyboard first.** `Ctrl+K` opens a command palette that searches your library and Spotify and runs commands. `Space`, `Ctrl+←/→`, `Ctrl+↑/↓` and friends control playback, `?` shows every shortcut. Media keys, the tray icon, the Windows media overlay and an optional global search hotkey work too.
 - **Gapless playback and crossfade.** Songs on the same album never get a gap. Optional crossfade between songs (2 to 12 seconds), volume normalization with three levels and quality up to 320 kbps. Playback recovers by itself when you unplug or switch an output device.
 - **Equalizer and headphone profiles.** A 10-band equalizer with presets and a preamp, and a headphone profile search backed by the open [OPRA](https://github.com/opra-project/OPRA) database: pick your model and get a ready-made correction curve fitted to the ten bands.
@@ -66,7 +66,7 @@ The first build compiles gpui and its dependencies and takes a while. No `.env` 
 cargo test --release
 ```
 
-Read [ARCHITECTURE.md](ARCHITECTURE.md) before a non-trivial change and [DESIGN.md](DESIGN.md) for the design system (some project notes are in Turkish; the identifiers are English). The screenshot and measurement tools are PowerShell scripts in [`scripts/`](scripts).
+Read [ARCHITECTURE.md](docs/ARCHITECTURE.md) before a non-trivial change and [DESIGN.md](docs/DESIGN.md) for the design system (some project notes are in Turkish; the identifiers are English). Test hooks and checks are in [TESTING.md](docs/TESTING.md).
 
 ## Privacy
 
@@ -86,7 +86,7 @@ Bug reports, ideas and pull requests are welcome. Please read [CONTRIBUTING.md](
 
 ## License
 
-Openify is licensed under the **GNU General Public License, version 3 or later**. See [LICENSE](LICENSE). Third-party components and their licenses (gpui, librespot, fonts, icons, the OPRA data and every Rust crate) are listed in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Openify is licensed under the **GNU General Public License, version 3 or later**. See [LICENSE](LICENSE). Third-party components and their licenses (gpui, librespot, fonts, icons, the OPRA data and every Rust crate) are listed in [THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
 
 ## Türkçe
 

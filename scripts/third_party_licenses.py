@@ -1,7 +1,7 @@
 """Generates THIRD_PARTY_LICENSES.md from Cargo metadata.
 
 Usage (from the repo root, after a `cargo fetch` / build so sources exist):
-    python -I scripts/third_party_licenses.py > THIRD_PARTY_LICENSES.md
+    python -I scripts/third_party_licenses.py > docs/THIRD_PARTY_LICENSES.md
 
 Lists every crate that is part of the Windows build (normal + build deps, no
 dev deps) with its SPDX license, then the license / notice files shipped by

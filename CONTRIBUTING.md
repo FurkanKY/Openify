@@ -2,7 +2,7 @@
 
 Thanks for helping. Openify is a native Windows Spotify client written in Rust
 (gpui for the UI, librespot for playback), licensed GPL-3.0-or-later. Read
-[ARCHITECTURE.md](ARCHITECTURE.md) before a non-trivial change.
+[ARCHITECTURE.md](docs/ARCHITECTURE.md) before a non-trivial change.
 
 ## Issues
 
@@ -32,12 +32,12 @@ Thanks for helping. Openify is a native Windows Spotify client written in Rust
 
 4. Describe what changed and why, and how you verified it. UI changes: attach a
    screenshot. Performance-sensitive changes (render loop, audio path, memory):
-   include a measurement, see the scripts in `scripts/` and `docs/TESTING.md`.
+   include a measurement, see `docs/TESTING.md`.
 5. By contributing you agree your work is licensed under GPL-3.0-or-later.
 
 ## Conventions
 
-- **Architecture rules** (details in ARCHITECTURE.md):
+- **Architecture rules** (details in docs/ARCHITECTURE.md):
   - A new feature arrives as its own gpui `Entity`; do not add fields to `Shell`.
   - The engine never produces user-facing text. It sends typed codes
     (`Event` variants, notice kinds) and the UI turns them into words.

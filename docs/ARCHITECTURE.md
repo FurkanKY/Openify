@@ -91,8 +91,7 @@ The whole contract is in `src/engine/mod.rs`:
 
 ### Playback core (`engine/playback/`)
 
-Everything that decides what the player does lives here, behind a test seam
-(plan: `PLAN-MOTOR-CONNECT.md` §3, refactor #5):
+Everything that decides what the player does lives here, behind a test seam:
 
 ```text
 Engine ──with_pb(Cx)──▶ Playback ──▶ Driver::Local ──▶ Deck ──▶ PlayerPort ──▶ librespot Player
@@ -141,8 +140,7 @@ Engine ──with_pb(Cx)──▶ Playback ──▶ Driver::Local ──▶ Dec
 
 ### Session host (`engine/session.rs`)
 
-Everything about the Spotify session's life that is not playback (plan
-`PLAN-MOTOR-CONNECT.md` §5, 7.2). The fields moved out of `Engine` into one
+Everything about the Spotify session's life that is not playback. The fields moved out of `Engine` into one
 `SessionHost`: the connected session (`conn`), the link / login state
 (`link`, `login`, `new_session`), reconnect bookkeeping (`reconnecting`,
 `last_reconnect`, `reconnect_failures`, `reconnect_wanted`) and the late
@@ -175,7 +173,7 @@ Everything about the Spotify session's life that is not playback (plan
 
 ### Spotify Connect (`engine/connect.rs`, `playback/connect.rs`)
 
-Plan `PLAN-MOTOR-CONNECT.md` 7.4 - 7.6. **On by default** since 13 Nov (`Settings::connect_enabled`,
+**On by default** since 13 Nov (`Settings::connect_enabled`,
 Settings > Spotify Connect). Off means: no Spirc is built,
 sessions use a random device id, the UI sends no Connect command and receives no
 `PlaybackEvent::Connect`; unit tests pin this
@@ -214,7 +212,7 @@ sessions use a random device id, the UI sends no Connect command and receives no
 - Tests: `connect/tests.rs` (lifecycle: disabled, once, replace, stale start),
   `playback/connect_tests.rs` (switching matrix, pause latency, transfer, local
   start leaves Spirc, remote, reconnect). The real Spirc is only exercised by
-  `openify connect-spike` and by hand (`CONNECT-DENEME.md`).
+  `openify connect-spike` and by hand.
 
 On the UI side `Shell` (`src/ui/mod.rs`) is the root view and still a large
 object. Cached child views (`src/ui/views.rs`, `AnyView::cached`) are rebuilt
@@ -620,7 +618,7 @@ re-apply the patches from the `OPENIFY:` markers and update the `OPENIFY.md`.
 | `crash.rs` | Panic hook, crash reports, log directory. |
 | `update.rs`, `autostart.rs`, `link.rs`, `cli.rs`, `mem_stats.rs` | Updates, Windows autostart, Spotify link parsing, terminal player, memory accounting (feature `mem-stats`). |
 | `engine/connect.rs` | Spotify Connect: UI contract, `ConnectPort` / `SpircLink` / `OutMixer`, Spirc lifecycle (`ConnectHost`). On by default. See section 3. |
-| `connect_spike.rs` | Feature `connect-spike` only: `openify connect-spike`, the interactive checklist (scenarios S1-S7) the owner runs with a real account and phone to prove the Spirc assumptions before Connect is wired in; see `CONNECT-DENEME.md`. Not in the default build. |
+| `connect_spike.rs` | Feature `connect-spike` only: `openify connect-spike`, the interactive checklist (scenarios S1-S7) the owner runs with a real account and phone to prove the Spirc assumptions before Connect was wired in. Not in the default build. |
 
 `src/engine/`:
 
@@ -685,7 +683,7 @@ cargo build --release --features connect-spike --target-dir target/spike
 ```
 
 It adds the `openify connect-spike` command (console app, real account and
-phone; steps in `CONNECT-DENEME.md`). It is never run by automated tests.
+phone; it prints its own steps). It is never run by automated tests.
 
 `cargo build --release` and `cargo test --release` are expected to be
 warning-free apart from known warnings in `vendor/librespot-core` and
@@ -705,12 +703,9 @@ must be followed by `.tooltip(`. A failing test means a raw value slipped in.
 
 ### Visual and performance checks
 
-PowerShell scripts in `scripts/` (written for this machine's workflow; read the
-header of each): `ekran-sinama.ps1` (screenshots on a second monitor, silent,
-no focus steal, uses a copy of the exe and `PrintWindow`), `kare-olcumu.ps1` /
-`kare-ab.ps1` (frame time), `bellek-olcumu.ps1` / `gizli-olcum.ps1` (memory),
-`sistem-sinama.ps1` (tray, SMTC, hotkey, single instance),
-`oynatma-olcumu.ps1` (playback reliability), `vendor-diff.ps1` (vendor drift).
+Screenshots, frame time, memory and playback reliability are measured with the
+test hooks below (second monitor, silent, no focus steal, a copy of the exe,
+`PrintWindow`). `scripts/vendor-diff.ps1` checks vendor drift.
 
 ### Test hooks (environment variables)
 
