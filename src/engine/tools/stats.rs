@@ -312,7 +312,6 @@ impl Db {
                  LEFT JOIN tracks t ON t.uri = ct.track_uri
                  WHERE ct.collection = 'liked'
                    AND NOT EXISTS (SELECT 1 FROM play_history h WHERE h.uri = ct.track_uri)
-                   AND (ct.added_at IS NULL OR ct.added_at <= ?1)
                  ORDER BY ct.added_at DESC, ct.position LIMIT -1",
             )?,
             SmartList::Forgotten => conn.prepare(
@@ -336,12 +335,13 @@ impl Db {
         };
         let rows = stmt
             .query_map(
-                [now_ms
-                    - if list == SmartList::Top30 {
-                        30 * DAY
-                    } else {
-                        60 * DAY
-                    }],
+                // Beğenip hiç çalmadıkların zamana bakmaz: yeni beğenilen şarkı da
+                // hemen girer. Öbürleri pencere başlangıcını alır.
+                rusqlite::params_from_iter(match list {
+                    SmartList::Top30 => vec![now_ms - 30 * DAY],
+                    SmartList::Forgotten => vec![now_ms - 60 * DAY],
+                    SmartList::Unplayed => Vec::new(),
+                }),
                 |r| {
                     Ok(SmartTrack {
                         track: TrackRow {
@@ -762,7 +762,8 @@ mod tests {
                 },
                 Entry {
                     track: rows[1].uri.clone(),
-                    added_at: Some(30),
+                    // Dün beğenildi: yeni beğeniler de hemen listeye girer.
+                    added_at: Some(now - 86_400_000),
                 },
                 Entry {
                     track: rows[2].uri.clone(),

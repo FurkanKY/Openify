@@ -1746,9 +1746,9 @@ impl Shell {
             CollectionId::Liked => liked_art(side, radius, self.accent().text),
             CollectionId::Smart(list) => {
                 let (glyph, tone, ink) = match list {
-                    SmartList::Top30 => ("history", palette().placeholder, self.accent().text),
+                    SmartList::Top30 => ("repeat-1", palette().placeholder, self.accent().text),
                     SmartList::Unplayed => ("heart", palette().bar, self.accent().text),
-                    SmartList::Forgotten => ("disc-3", palette().track, palette().text),
+                    SmartList::Forgotten => ("history", palette().placeholder, self.accent().text),
                 };
                 div()
                     .size(px(side))
