@@ -35,9 +35,9 @@ The screenshots show Spotify's own public playlists and albums with a sample pro
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Library tools](docs/screenshots/tools.png) |
 | Equalizer and headphone profile | Duplicate finder in the library tools |
 | ![Album](docs/screenshots/album.png) | ![Search](docs/screenshots/palette.png) |
-| An album page | Search (Ctrl+K) |
-| ![Now playing](docs/screenshots/now-playing.png) | |
-| Now playing panel | |
+| An album page | Search results (Ctrl+K) |
+| ![Now playing](docs/screenshots/now-playing.png) | ![Search suggestions](docs/screenshots/search.png) |
+| Now playing panel | Search suggestions before you type |
 
 ## Install
 
