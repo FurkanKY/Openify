@@ -320,3 +320,100 @@
     start();
   });
 })();
+
+// ---- Features: scroll tour for the features section -------------------------
+// One big window stays put; each step opens a panel where it lives in the app
+// and dims everything else. Wide screens only; narrow ones keep the cards.
+(function () {
+  var doc = document;
+  var sec = doc.getElementById("features");
+  if (!sec || !window.matchMedia || !matchMedia("(min-width: 1000px)").matches || !("IntersectionObserver" in window)) return;
+  var TR = (doc.documentElement.lang || "").indexOf("tr") === 0;
+  var A = (doc.querySelector('link[rel="stylesheet"][href*="site.css"]') || {}).getAttribute
+    ? doc.querySelector('link[rel="stylesheet"][href*="site.css"]').getAttribute("href").replace("assets/site.css", "") : "";
+  var IMG = A + "assets/img/";
+
+  // rect: left, top, width (percent of the window); panel images keep their aspect.
+  var STEPS = TR ? [
+    ["Ctrl K, yaz, çal.", "Kütüphanen ve Spotify tek bir arama kutusunda.", "palette", [30, 5.5, 40]],
+    ["Sözler şarkıyla akar.", "Yan panelde ya da tam ekranda, istersen çevirisiyle.", "lyrics", [62, 24, 34]],
+    ["Kulaklığına göre ses.", "On bant ekolayzer ve OPRA'dan düzeltme eğrileri.", "equalizer", [22.5, 36, 55]],
+    ["Kütüphaneni topla.", "Kopyaları bul, listeleri birleştir, yedekle. Hepsi geri alınabilir.", "tools", [41, 31, 52]],
+    ["Albümler boşluksuz.", "2–12 saniyelik geçiş ve üç düzey ses dengeleme.", null, [16.5, 88, 63, 10]],
+    ["Telefondan yönet.", "Spotify Connect ile telefonundaki Spotify'da bir cihaz olarak görünür.", null, [63.5, 88, 16, 10]]
+  ] : [
+    ["Ctrl K, type, play.", "Your library and Spotify in one search box.", "palette", [30, 5.5, 40]],
+    ["Lyrics keep time.", "In a side panel or full screen, with an optional translation.", "lyrics", [62, 24, 34]],
+    ["Sound tuned to your headphones.", "Ten-band equalizer with correction curves from OPRA.", "equalizer", [22.5, 36, 55]],
+    ["Tidy up your library.", "Find duplicates, merge playlists, back up. Every edit can be undone.", "tools", [41, 31, 52]],
+    ["Albums play gapless.", "Crossfade from 2 to 12 seconds and three levels of normalization.", null, [16.5, 88, 63, 10]],
+    ["Control it from your phone.", "Spotify Connect shows Openify as a device in the Spotify app.", null, [63.5, 88, 16, 10]]
+  ];
+  var ASPECT = { palette: 530 / 728, lyrics: 560 / 570, equalizer: 370 / 748, tools: 580 / 800 };
+  var WIN = 850 / 1360;
+
+  var head = sec.querySelector(".section-head");
+  var wrap = sec.querySelector(".wrap");
+  var bento = sec.querySelector(".bento"), pts = sec.querySelector(".points");
+  if (bento) { bento.hidden = true; bento.style.display = "none"; }
+  if (pts) pts.classList.add("tour-points");
+
+  var tour = doc.createElement("div");
+  tour.className = "tour";
+  var stepsHtml = STEPS.map(function (s, i) {
+    return '<li class="tour-step" data-i="' + i + '"><span class="tour-n">0' + (i + 1) + '</span><h3>' + s[0] + "</h3><p>" + s[1] + "</p></li>";
+  }).join("");
+  var panels = STEPS.map(function (s, i) {
+    if (!s[2]) return "";
+    var r = s[3], h = r[2] * ASPECT[s[2]] / WIN;
+    return '<img class="tour-panel" data-i="' + i + '" src="' + IMG + "feat-" + s[2] + '.webp" alt="" style="left:' + r[0] + "%;top:" + r[1] + "%;width:" + r[2] + "%;height:" + h.toFixed(2) + '%">';
+  }).join("");
+  tour.innerHTML =
+    '<ol class="tour-steps">' + stepsHtml + "</ol>" +
+    '<div class="tour-stage"><div class="tour-win"><div class="tour-cam">' +
+    '<img class="tour-base" src="' + IMG + 'library-2720.webp" alt="" width="1360" height="850">' +
+    panels + '<div class="tour-spot"></div></div></div>' +
+    '<div class="tour-dots">' + STEPS.map(function () { return "<i></i>"; }).join("") + "</div></div>";
+  wrap.insertBefore(tour, pts || null);
+
+  var spot = tour.querySelector(".tour-spot");
+  var cam = tour.querySelector(".tour-cam");
+  var rectOf = function (i) {
+    var s = STEPS[i], r = s[3];
+    var h = s[2] ? r[2] * ASPECT[s[2]] / WIN : r[3];
+    return [r[0] - 0.8, r[1] - 1.2, r[2] + 1.6, h + 2.4];
+  };
+  // Camera: zoom the window so the step's region fills the stage, without
+  // blowing the screenshot up much past its native pixels.
+  var win = tour.querySelector(".tour-win");
+  var NATIVE = { palette: 1456, lyrics: 1140, equalizer: 1496, tools: 1600 };
+  var cur = 0;
+  var zoomTo = function (i) {
+    var r = rectOf(i), st = STEPS[i];
+    var SW = win.clientWidth, SH = win.clientHeight, CH = SW * WIN;
+    var x = r[0] / 100 * SW, y = r[1] / 100 * CH, w = r[2] / 100 * SW, h = r[3] / 100 * CH;
+    var nat = st[2] ? NATIVE[st[2]] / (st[3][2] / 100 * SW) : 2720 / SW;
+    var s = Math.max(SH / CH, Math.min(nat * 1.1, 0.94 * SW / w, 0.9 * SH / h));
+    var tx = SW / 2 - s * (x + w / 2), ty = SH / 2 - s * (y + h / 2);
+    tx = Math.min(0, Math.max(SW - s * SW, tx));
+    ty = Math.min(0, Math.max(SH - s * CH, ty));
+    cam.style.transform = "translate(" + tx.toFixed(1) + "px," + ty.toFixed(1) + "px) scale(" + s.toFixed(3) + ")";
+  };
+  addEventListener("resize", function () { zoomTo(cur); });
+  var set = function (i) {
+    tour.querySelectorAll(".tour-step").forEach(function (el) { el.classList.toggle("on", +el.dataset.i === i); });
+    tour.querySelectorAll(".tour-panel").forEach(function (el) { el.classList.toggle("on", +el.dataset.i === i); });
+    tour.querySelectorAll(".tour-dots i").forEach(function (el, k) { el.classList.toggle("on", k === i); });
+    var r = rectOf(i);
+    spot.style.left = r[0] + "%"; spot.style.top = r[1] + "%";
+    spot.style.width = r[2] + "%"; spot.style.height = r[3] + "%";
+    cur = i; zoomTo(i);
+    tour.classList.add("lit");
+    tour.classList.toggle("panel-on", !!STEPS[i][2]);
+  };
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting) set(+e.target.dataset.i); });
+  }, { rootMargin: "-48% 0px -48% 0px" });
+  tour.querySelectorAll(".tour-step").forEach(function (el) { io.observe(el); });
+  set(0);
+})();
