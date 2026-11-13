@@ -42,7 +42,7 @@ The screenshots show Spotify's own public playlists and albums with a sample pro
 
 ## Install
 
-1. Download [Openify-win-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) from the [latest release](https://github.com/FurkanKY/Openify/releases/latest). From 0.1.2 on, Windows on ARM has its own installer there: `Openify-win-arm64-Setup.exe`.
+1. Download [Openify-win-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) from the [latest release](https://github.com/FurkanKY/Openify/releases/latest). On Windows on ARM, use [Openify-win-arm64-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe).
 2. Run it. Openify installs for your user only (no administrator rights) and opens.
 3. Sign in with your Spotify account in the browser window that opens.
 
@@ -52,7 +52,7 @@ Openify updates itself in the background and applies the update the next time yo
 
 To uninstall, use Windows Settings > Apps.
 
-Requirements: Windows 10 or 11 (x64; ARM64 from 0.1.2), a Spotify Premium account and a working audio output.
+Requirements: Windows 10 or 11 (x64 or ARM64), a Spotify Premium account and a working audio output.
 
 ## Build from source
 
@@ -76,7 +76,7 @@ Read [ARCHITECTURE.md](docs/ARCHITECTURE.md) before a non-trivial change and [DE
 ## Known limitations
 
 - **Screen readers are not supported yet.** The UI toolkit (gpui 0.2.2) has no accessibility support on Windows: it does not expose a UI Automation tree, so Narrator, NVDA and similar tools cannot read Openify's interface. Keyboard use is well covered (focus order, shortcuts, command palette), but that is not a substitute.
-- Windows only (Windows 10 or 11, 64-bit). There are no macOS or Linux builds.
+- Windows only (Windows 10 or 11, x64 or ARM64). There are no macOS or Linux builds.
 - Needs a Spotify Premium account.
 - Some features use endpoints Spotify does not document (friend activity, radio, track credits, lyrics translation) and may stop working without notice. See the disclaimer below.
 

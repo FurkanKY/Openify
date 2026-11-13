@@ -7,19 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-13
+
 ### Added
 
 - Light theme with warm off-white surfaces, readable cover accents and softer
   shadows. Settings offers Dark (the existing default), Light and System;
   System follows Windows app mode immediately, including the window title bar.
-- `OPENIFY_TEST_THEME=light|dark` for isolated visual test runs and contrast
-  checks for text and cover-tinted surfaces in both palettes.
-- Optional Discord Rich Presence over Windows named pipes: listening activity,
-  song, artist, cover and playback progress. Off by default; clears on pause,
-  stop, private session, disabling and quit. Settings stays hidden until a
-  Discord application ID is configured by the builder.
-- Windows ARM64 release installer on its own Velopack update channel, plus
-  winget manifests and a script to fill their published release hashes.
+- Windows on ARM: a native ARM64 installer (`Openify-win-arm64-Setup.exe`) on
+  its own update channel.
+- winget manifests and a script that fills their hashes from a release.
+- Optional Discord Rich Presence (song, artist, cover and progress). It stays
+  hidden until a Discord application ID is configured at build time.
+- `OPENIFY_TEST_THEME=light|dark` for isolated visual test runs.
+
+### Changed
+
+- Smoother motion: cover colours blend in a perceptual colour space instead of
+  turning muddy halfway, the current lyric line fades in instead of jumping,
+  and switches slide.
+- Settings and Tools center their column in wide windows instead of leaving
+  most of the page empty on the right.
+
+### Fixed
+
+- Searching while Spotify is unreachable no longer shows a loading skeleton
+  forever; after 10 seconds it says Spotify could not be reached.
 
 ## [0.1.1] - 2026-11-13
 

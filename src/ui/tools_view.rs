@@ -34,7 +34,7 @@ use crate::engine::{
 use crate::{t, tf, tp};
 
 /// İçerik sütununun en büyük eni.
-const TOOLS_WIDTH: f32 = 760.;
+pub(super) const TOOLS_WIDTH: f32 = 760.;
 /// Seçim kutusu ve sonuç tablosunun satır yüksekliği.
 const ROW_H: f32 = 40.;
 /// Ad alanının eni.

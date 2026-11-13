@@ -32,6 +32,8 @@ use crate::engine::{CollectionId, Command, SearchResults, TrackRow};
 use crate::{t, tf};
 
 const SPOTIFY_DELAY: Duration = Duration::from_millis(300);
+/// Spotify araması bu sürede cevap vermezse "ulaşılamadı" gösterilir.
+pub(super) const SPOTIFY_TIMEOUT: Duration = Duration::from_secs(10);
 /// Yüzeyin eni ve en büyük boyu (her yerden açılan palet penceresi de buna göre).
 pub const PANEL_WIDTH: f32 = 720.;
 pub const PANEL_MAX_HEIGHT: f32 = 700.;
@@ -696,7 +698,7 @@ impl Shell {
             self.palette.spotify = Spotify::Waiting;
             self.palette.debounce = Some(cx.spawn(async move |this, cx| {
                 cx.background_executor().timer(SPOTIFY_DELAY).await;
-                let _ = this.update(cx, |shell, cx| {
+                let armed = this.update(cx, |shell, cx| {
                     shell.palette.seq += 1;
                     shell.palette.spotify = Spotify::Loading;
                     // Ekran sınaması (`OPENIFY_TEST_SEARCH_JSON`): kayıtlı yanıt, Spotify'a gitmeden.
@@ -705,7 +707,10 @@ impl Shell {
                             shell.on_search_results(shell.palette.seq, Ok(Arc::new(saved)));
                         }
                         // İskelet / hata görüntüleri için: cevap hiç gelmez ya da hata gelir.
-                        crate::engine::TestSearch::Hold => {}
+                        crate::engine::TestSearch::Hold => {
+                            cx.notify();
+                            return None;
+                        }
                         crate::engine::TestSearch::Fail => {
                             shell.on_search_results(shell.palette.seq, Err("offline".to_string()))
                         }
@@ -717,6 +722,17 @@ impl Shell {
                         }
                     }
                     cx.notify();
+                    Some(shell.palette.seq)
+                });
+                // Bağlantı yokken (ya da kurulurken) istek motorda bekleyebilir;
+                // iskelet sonsuza dek dönmesin: süre dolunca "ulaşılamadı".
+                let Ok(Some(seq)) = armed else { return };
+                cx.background_executor().timer(SPOTIFY_TIMEOUT).await;
+                let _ = this.update(cx, |shell, cx| {
+                    if seq == shell.palette.seq && shell.palette.spotify.pending() {
+                        shell.on_search_results(shell.palette.seq, Err("timeout".to_string()));
+                        cx.notify();
+                    }
                 });
             }));
         }

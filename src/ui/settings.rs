@@ -41,7 +41,7 @@ use crate::{
 use crate::{t, tf};
 
 /// Sayfadaki içerik sütununun en büyük eni (satırlar geniş ekranda uzamasın).
-const SETTINGS_WIDTH: f32 = 720.;
+pub(super) const SETTINGS_WIDTH: f32 = 720.;
 const PROFILE_MENU_WIDTH: f32 = 272.;
 /// Başlıktaki profil hapı: avatar çapı, adın dışındaki payı (kenarlar, boşluklar,
 /// ok), ad alanının en çok / en az eni; sekmelerin (yaklaşık) toplam eni.

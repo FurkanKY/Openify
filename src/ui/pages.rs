@@ -314,6 +314,22 @@ pub(super) fn page_enter(id: ElementId, content: Div) -> AnyElement {
         .into_any_element()
 }
 
+/// Tek sütunlu sayfaların (Ayarlar, Araçlar) geniş penceredeki dengesi
+/// (13 Kasım): `CENTER_FROM`'dan itibaren sütun pencerenin ortasına kayar
+/// (başlık da onunla), `CENTER_RAMP` boyunca yumuşakça; altında öbür
+/// sayfalar gibi soldan `page_margin`. 1900 px'te sütun solda kalınca
+/// sayfanın %60'ı boş duruyordu.
+const CENTER_FROM: f32 = 1440.;
+const CENTER_RAMP: f32 = 160.;
+
+pub(super) fn column_margin(width: f32, column: Option<f32>) -> f32 {
+    let base = page_margin(width);
+    let Some(column) = column else { return base };
+    let centered = ((width - column) / 2.).max(base);
+    let t = ((width - CENTER_FROM) / CENTER_RAMP).clamp(0., 1.);
+    (base + (centered - base) * t).round()
+}
+
 pub(super) fn collection_card(i: &LibraryItem) -> CardSpec {
     let title = if i.id == CollectionId::Liked {
         t!(LikedSongs).to_string()
@@ -468,6 +484,23 @@ impl Shell {
                                 seq,
                                 query: query.clone(),
                             }));
+                        // Bağlantı kurulamıyorsa istek motorda bekleyebilir:
+                        // sayfa sonsuza dek yüklenmesin.
+                        cx.spawn(async move |this, cx| {
+                            cx.background_executor()
+                                .timer(super::palette::SPOTIFY_TIMEOUT)
+                                .await;
+                            let _ = this.update(cx, |shell, cx| {
+                                let waiting = shell.pages.search.as_ref().is_some_and(|s| {
+                                    s.seq == seq && matches!(s.results, PageLoad::Loading)
+                                });
+                                if waiting {
+                                    shell.on_page_search(seq, Err("timeout".to_string()));
+                                    cx.notify();
+                                }
+                            });
+                        })
+                        .detach();
                     }
                 }
             }
@@ -1050,7 +1083,12 @@ impl Shell {
     /// Sayfanın sol / sağ kenar boşluğu (liste satırları, raf ve başlıklarla
     /// aynı: `theme::page_margin`).
     pub(super) fn margin(&self) -> f32 {
-        page_margin(self.window_width)
+        let column = match self.pages.history.current() {
+            Route::Settings => Some(super::settings::SETTINGS_WIDTH),
+            Route::Tools => Some(super::tools_view::TOOLS_WIDTH),
+            _ => None,
+        };
+        column_margin(self.window_width, column)
     }
 
     pub(super) fn compact(&self) -> bool {
@@ -2322,6 +2360,24 @@ impl Shell {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn single_column_pages_center_only_on_wide_windows() {
+        // Altında öbür sayfalarla aynı kenar.
+        assert_eq!(column_margin(1180., Some(720.)), page_margin(1180.));
+        assert_eq!(column_margin(1440., Some(720.)), page_margin(1440.));
+        // Geniş pencerede tam ortada.
+        assert_eq!(column_margin(1900., Some(720.)), 590.);
+        // Rampa sürekli: eşik boyunca sıçrama yok.
+        let mut prev = column_margin(1400., Some(720.));
+        for w in (1401..1700).map(|w| w as f32) {
+            let m = column_margin(w, Some(720.));
+            assert!((m - prev).abs() <= 4., "{w}: {prev} -> {m}");
+            prev = m;
+        }
+        // Sütunsuz sayfalar etkilenmez.
+        assert_eq!(column_margin(2400., None), page_margin(2400.));
+    }
 
     /// Kapaksız iskeletin başlık çubuğu ile gerçek başlık aynı kutuda:
     /// üst boşluk, başlık satırı, aradaki boşluk, meta satırı.
