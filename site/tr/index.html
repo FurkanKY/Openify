@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Openify: Rust ile yazılmış yerel Windows Spotify istemcisi</title>
-<meta name="description" content="Openify, Spotify Premium hesabınla çalışan hızlı, yerel bir Windows çalar. gpui ve librespot ile Rust'ta yazıldı: yaklaşık 70 MB bellek, önce klavye, web görünümü yok. Ücretsiz ve açık kaynak (GPL-3.0).">
+<title>Openify: Rust ile yazılmış native bir Windows Spotify istemcisi</title>
+<meta name="description" content="Openify, Spotify Premium hesabın için hızlı ve native bir Windows çalar. gpui ve librespot ile Rust&#x27;ta yazıldı: yaklaşık 70 MB bellek, klavyeye göre tasarlandı, web görünümü yok. Ücretsiz ve açık kaynak (GPL-3.0).">
 <link rel="canonical" href="https://furkanky.github.io/Openify/tr/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/">
@@ -14,15 +14,13 @@
 <meta name="color-scheme" content="dark light">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
-<meta property="og:title" content="Openify: Rust ile yazılmış yerel Windows Spotify istemcisi">
-<meta property="og:description" content="Spotify Premium hesabın için hızlı, sessiz bir Windows çalar. Rust, gpui ve librespot. Web görünümü yok, Electron yok. Ücretsiz ve açık kaynak.">
+<meta property="og:title" content="Openify: Rust ile yazılmış native bir Windows Spotify istemcisi">
+<meta property="og:description" content="Openify, Spotify Premium hesabın için hızlı ve native bir Windows çalar. gpui ve librespot ile Rust&#x27;ta yazıldı: yaklaşık 70 MB bellek, klavyeye göre tasarlandı, web görünümü yok. Ücretsiz ve açık kaynak (GPL-3.0).">
 <meta property="og:url" content="https://furkanky.github.io/Openify/tr/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Openify'ın kütüphane sayfası ve yüzen çalar, yanında Openify logosu">
 <meta property="og:locale" content="tr_TR">
-<meta property="og:locale:alternate" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
 <link rel="preload" href="../assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
@@ -36,12 +34,20 @@
   "inLanguage": "tr",
   "operatingSystem": "Windows 10, Windows 11",
   "applicationCategory": "MultimediaApplication",
-  "description": "Spotify Premium için Rust ile yazılmış hızlı, yerel Windows istemcisi.",
+  "description": "Openify, Spotify Premium hesabın için hızlı ve native bir Windows çalar. gpui ve librespot ile Rust'ta yazıldı: yaklaşık 70 MB bellek, klavyeye göre tasarlandı, web görünümü yok. Ücretsiz ve açık kaynak (GPL-3.0).",
   "url": "https://furkanky.github.io/Openify/tr/",
   "downloadUrl": "https://github.com/FurkanKY/Openify/releases/latest",
   "license": "https://www.gnu.org/licenses/gpl-3.0.html",
-  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TRY" },
-  "author": { "@type": "Person", "name": "FurkanKY", "url": "https://github.com/FurkanKY" }
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TRY"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "FurkanKY",
+    "url": "https://github.com/FurkanKY"
+  }
 }
 </script>
 </head>
@@ -56,8 +62,8 @@
     </a>
     <nav class="nav" aria-label="Ana menü">
       <a class="hide-sm" href="#features">Özellikler</a>
-      <a class="hide-sm" href="#stack">Nasıl yapıldı</a>
       <a class="hide-sm" href="#install">Kurulum</a>
+      <a class="hide-sm" href="./docs/">Belgeler</a>
       <a class="gh" href="https://github.com/FurkanKY/Openify" aria-label="Openify GitHub'da">
         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
         <span class="label">GitHub</span>
@@ -76,8 +82,8 @@
     <div class="stage">
     <div class="wrap">
       <div class="hero-copy">
-        <h1>Yerel bir Spotify istemcisi, <span class="lit">Rust ile yazıldı.</span></h1>
-        <p class="lede">Openify, Spotify Premium hesabını librespot ile çalar ve her pikseli gpui ile çizer. Web görünümü yok, Electron yok, yaklaşık 70 MB bellek.</p>
+        <h1>Spotify için native bir istemci, <span class="lit">baştan sona Rust.</span></h1>
+        <p class="lede">Openify, Spotify Premium hesabını librespot ile çalar, arayüzün her pikselini gpui ile çizer. İçinde tarayıcı da yok, Electron da; açıkken yaklaşık 70 MB bellek kullanır.</p>
         <div class="get" data-arch-swap>
           <a class="btn btn-primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
@@ -85,7 +91,7 @@
           </a>
           <a class="btn btn-quiet" data-arch="arm64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
-            <span>ARM'li Windows<small>ARM64 kurulum dosyası</small></span>
+            <span>Windows on ARM<small>ARM64 kurulum dosyası</small></span>
           </a>
         </div>
         <p class="meta"><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a> · Windows 10 ve 11 · Spotify Premium gerekir</p>
@@ -93,7 +99,7 @@
       <div class="shot">
         <picture>
           <source media="(prefers-reduced-motion: reduce)" srcset="../assets/img/library-760.webp 760w, ../assets/img/library-1360.webp 1360w" sizes="(max-width: 1180px) 92vw, 1120px">
-          <img src="../assets/img/demo.webp" width="960" height="600" fetchpriority="high" alt="Openify'da kısa bir kayıt: arama yazılıyor, bir albüm açılıyor ve bir şarkı başlatılıyor">
+          <img src="../assets/img/demo.webp" width="960" height="600" fetchpriority="high" alt="Openify'dan kısa bir kayıt: arama yapılıyor, bir albüm açılıyor ve şarkı başlıyor">
         </picture>
       </div>
     </div>
@@ -103,70 +109,70 @@
   <section class="metrics" aria-label="Ölçülen değerler">
     <div class="wrap">
       <dl class="metrics-row reveal">
-        <div class="metric"><dt>70<em>MB</em></dt><dd>bellek, pencere açıkken (yaklaşık)</dd></div>
+        <div class="metric"><dt>70<em>MB</em></dt><dd>bellek, pencere açıkken (aşağı yukarı)</dd></div>
         <div class="metric"><dt>50–60<em>MB</em></dt><dd>bellek, tepsideyken</dd></div>
-        <div class="metric"><dt>0,5<em>sn</em></dt><dd>açılıştan ilk kareye (yaklaşık)</dd></div>
+        <div class="metric"><dt>0,5<em>sn</em></dt><dd>açılıştan ilk kareye (aşağı yukarı)</dd></div>
       </dl>
-      <p class="metrics-note">Yazarın bilgisayarında, küçük bir kütüphaneyle ölçüldü; senin değerlerin kütüphane büyüklüğüne ve donanıma göre değişir.</p>
+      <p class="metrics-note">Yazarın bilgisayarında, küçük bir kütüphaneyle ölçüldü. Kütüphanen büyüdükçe ya da donanımın farklıysa sayılar da değişir.</p>
     </div>
   </section>
 
   <section class="section" id="features" aria-labelledby="features-title">
     <div class="wrap">
       <div class="section-head">
-        <h2 id="features-title">Ne çalarsan çal, arada hiçbir şey yok.</h2>
-        <p>Ana sayfa, Keşfet, Kütüphane, sanatçılar ve albümler; odadaki tek renk çalan şarkının kapağından gelir.</p>
+        <h2 id="features-title">Müzik önde, arayüz geride.</h2>
+        <p>Ana sayfa, Keşfet, Kütüphane, sanatçılar, albümler. Ekrandaki tek renk, o an çalan şarkının kapağından geliyor.</p>
       </div>
       <div class="bento">
         <article class="card feat span-3 reveal">
-          <h3>Kütüphaneni tanıyan arama</h3>
-          <p>Kütüphanendeki ve Spotify'daki şarkılar, sanatçılar, albümler ve listeler için tek bir palet; adını yazdığında birkaç komut da.</p>
+          <h3>Kütüphaneni bilen arama</h3>
+          <p>Ctrl K'ya bas, yazmaya başla. Kütüphanendeki ve Spotify'daki şarkılar, sanatçılar, albümler, listeler tek yerde; birkaç komut da adını yazınca çıkıyor.</p>
           <div class="keys"><kbd>Ctrl</kbd><kbd>K</kbd></div>
-          <div class="frame"><img src="../assets/img/feat-palette.webp" width="728" height="530" decoding="async" alt="dua araması için en iyi sonucu, şarkıları ve albümleri gösteren arama paleti"></div>
+          <div class="frame"><img src="../assets/img/feat-palette.webp" width="728" height="530" decoding="async" alt="dua araması: en iyi sonuç, şarkılar ve albümler"></div>
         </article>
         <article class="card feat span-3 reveal">
           <h3>Kütüphane araçları</h3>
-          <p>Yinelenen şarkıları ve aynı şarkının diğer sürümlerini bul, listeleri birleştir ya da böl, bir listeyi kalıcı sırala, JSON'a yedekle ve kendi istatistiklerini gör. Düzenlemeler geri alınabilir.</p>
-          <div class="frame"><img src="../assets/img/feat-tools.webp" width="800" height="580" decoding="async" alt="Kütüphane araçlarındaki yinelenen bulucu ve denetlenecek listeler"></div>
+          <p>Aynı şarkının kopyalarını ve farklı sürümlerini bul, listeleri birleştir ya da böl, bir listeyi kalıcı olarak sırala, JSON'a yedekle, kendi istatistiklerine bak. Yaptığın her düzenlemeyi geri alabilirsin.</p>
+          <div class="frame"><img src="../assets/img/feat-tools.webp" width="800" height="580" decoding="async" alt="Kütüphane araçlarındaki kopya bulucu ve taranacak listeler"></div>
         </article>
         <article class="card feat span-2 reveal">
           <h3>Eşzamanlı sözler</h3>
-          <p>Yan panelde ya da tam ekranda; istersen her satırın altında çevirisiyle.</p>
-          <div class="frame"><img src="../assets/img/feat-lyrics.webp" width="570" height="560" decoding="async" alt="Her satırın altında Türkçe çevirisiyle eşzamanlı sözler"></div>
+          <p>Yan panelde ya da tam ekranda. İstersen her satırın altında çevirisi de çıkar.</p>
+          <div class="frame"><img src="../assets/img/feat-lyrics.webp" width="570" height="560" decoding="async" alt="Her satırın altında Türkçe çevirisi olan eşzamanlı sözler"></div>
         </article>
         <article class="card feat span-4 reveal">
-          <h3>Kulaklık profilli ekolayzer</h3>
-          <p>On bant, hazır ayarlar, ön kazanç ve açık <a class="text-link" href="https://github.com/opra-project/OPRA">OPRA</a> veritabanından düzeltme eğrileri.</p>
+          <h3>Kulaklığına göre ekolayzer</h3>
+          <p>On bant, hazır ayarlar ve ön kazanç. Kulaklığını açık <a class="text-link" href="https://github.com/opra-project/OPRA">OPRA</a> veritabanında bul, düzeltme eğrisi kendiliğinden gelsin.</p>
           <div class="frame"><img src="../assets/img/feat-equalizer.webp" width="748" height="370" decoding="async" alt="Düzeltme eğrisi uygulanmış on ekolayzer sürgüsü"></div>
         </article>
       </div>
       <div class="points">
         <div class="point reveal">
-          <h3>Boşluksuz çalma ve geçiş</h3>
-          <p>Albümler boşluksuz çalar. İsteğe bağlı 2 ile 12 saniye arası yumuşak geçiş ve üç düzeyli ses dengeleme.</p>
+          <h3>Boşluksuz çalma, yumuşak geçiş</h3>
+          <p>Albümler şarkı aralarında boşluk bırakmadan çalar. İstersen 2–12 saniyelik geçiş aç; ses dengelemenin de üç ayarı var.</p>
         </div>
         <div class="point reveal">
           <h3>Sıra kuralları</h3>
-          <p>Her şarkının tek sürümü, müstehcenleri atla, seçtiğin sanatçıyı hiç çalma ya da her şeyden radyo başlat.</p>
+          <p>Bir şarkının tek sürümü çalsın, müstehcen olanlar atlansın, sevmediğin sanatçı hiç gelmesin. Ya da herhangi bir şeyden radyo başlat.</p>
         </div>
         <div class="point reveal">
-          <h3>Koyu, Açık ya da Sistem</h3>
-          <p>Karanlık oda, sıcak bir açık palet ya da Windows uygulama modunu değiştikçe izle.</p>
+          <h3>Koyu, açık ya da sistem</h3>
+          <p>Karanlık bir oda, sıcak bir açık tema ya da Windows hangi moddaysa o.</p>
         </div>
         <div class="point reveal">
           <h3>Spotify Connect</h3>
-          <p>Telefonundaki Spotify uygulamasında bir aygıt olarak görünür. Ayarlar'dan adını değiştir ya da kapat.</p>
+          <p>Telefonundaki Spotify'da bir cihaz olarak görünür. Adını Ayarlar'dan değiştirebilir, istersen kapatabilirsin.</p>
         </div>
         <div class="point reveal">
-          <h3>Güvenceli güncellemeler</h3>
-          <p>Güncellemeler arkada kurulur. Yeni sürüm iki kez açılamazsa Openify kendiliğinden öncekine döner.</p>
+          <h3>Geri dönüşlü güncellemeler</h3>
+          <p>Güncellemeler arka planda iner. Yeni sürüm iki kez açılamazsa Openify bir öncekine kendisi döner.</p>
         </div>
         <div class="point reveal">
           <h3>Türkçe ve İngilizce</h3>
-          <p>Arayüzün tamamı iki dilde; medya tuşları, tepsi ve Windows medya kutusu da hazır.</p>
+          <p>Arayüzün tamamı iki dilde. Medya tuşları, sistem tepsisi ve Windows'un medya penceresi de çalışır.</p>
         </div>
       </div>
-      <p class="caption">Ekran görüntülerinde örnek bir profille Spotify'ın kendi herkese açık listeleri ve albümleri görünüyor.</p>
+      <p class="caption">Ekran görüntülerindeki listeler ve albümler Spotify'ın herkese açık içerikleri; profil örnek bir hesap.</p>
     </div>
   </section>
 
@@ -174,7 +180,7 @@
     <div class="wrap split">
       <div class="section-head">
         <h2 id="keys-title">Klavye kısayolları</h2>
-        <p>Her eylemin bir kısayolu var. Uygulamada <kbd>?</kbd> tuşuna basınca tam liste açılır; her gün kullanacakların bunlar.</p>
+        <p>Her şeyin bir kısayolu var. Tam liste için uygulamada <kbd>?</kbd> tuşuna bas; burada her gün kullanacakların var.</p>
       </div>
       <div class="card keymap reveal">
         <div class="keymap-group">
@@ -183,15 +189,15 @@
             <div class="row"><dt>Çal / duraklat</dt><dd><kbd>Boşluk</kbd></dd></div>
             <div class="row"><dt>Sonraki / önceki şarkı</dt><dd><kbd>Ctrl</kbd><kbd>→</kbd> <kbd>Ctrl</kbd><kbd>←</kbd></dd></div>
             <div class="row"><dt>5 sn ileri / geri sar</dt><dd><kbd>Shift</kbd><kbd>→</kbd> <kbd>Shift</kbd><kbd>←</kbd></dd></div>
-            <div class="row"><dt>Sesi artır / azalt</dt><dd><kbd>Ctrl</kbd><kbd>↑</kbd> <kbd>Ctrl</kbd><kbd>↓</kbd></dd></div>
-            <div class="row"><dt>Karıştır / tekrar</dt><dd><kbd>Alt</kbd><kbd>S</kbd> <kbd>Alt</kbd><kbd>R</kbd></dd></div>
+            <div class="row"><dt>Sesi aç / kıs</dt><dd><kbd>Ctrl</kbd><kbd>↑</kbd> <kbd>Ctrl</kbd><kbd>↓</kbd></dd></div>
+            <div class="row"><dt>Karıştır / tekrarla</dt><dd><kbd>Alt</kbd><kbd>S</kbd> <kbd>Alt</kbd><kbd>R</kbd></dd></div>
           </dl>
         </div>
         <div class="keymap-group">
           <h3>Ara ve git</h3>
           <dl>
-            <div class="row"><dt>Ara, komut çalıştır</dt><dd><kbd>Ctrl</kbd><kbd>K</kbd></dd></div>
-            <div class="row"><dt>Başka uygulamadayken de ara</dt><dd><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Boşluk</kbd></dd></div>
+            <div class="row"><dt>Ara ya da komut çalıştır</dt><dd><kbd>Ctrl</kbd><kbd>K</kbd></dd></div>
+            <div class="row"><dt>Başka bir uygulamadayken ara</dt><dd><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>Boşluk</kbd></dd></div>
             <div class="row"><dt>Panodaki Spotify bağlantısını çal</dt><dd><kbd>Ctrl</kbd><kbd>V</kbd></dd></div>
             <div class="row"><dt>Ana sayfa, Keşfet, Kütüphane</dt><dd><kbd>Ctrl</kbd><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dd></div>
           </dl>
@@ -200,7 +206,7 @@
           <h3>Paneller ve listeler</h3>
           <dl>
             <div class="row"><dt>Sıra / sözler paneli</dt><dd><kbd>Alt</kbd><kbd>Shift</kbd><kbd>Q</kbd> <kbd>L</kbd></dd></div>
-            <div class="row"><dt>Açık listede bul</dt><dd><kbd>Ctrl</kbd><kbd>F</kbd></dd></div>
+            <div class="row"><dt>Açık listede ara</dt><dd><kbd>Ctrl</kbd><kbd>F</kbd></dd></div>
             <div class="row"><dt>Son değişikliği geri al</dt><dd><kbd>Ctrl</kbd><kbd>Z</kbd></dd></div>
           </dl>
         </div>
@@ -213,8 +219,8 @@
       <h2 class="plain" id="stack-title">Nasıl yapıldı</h2>
       <div class="built">
         <div class="built-col reveal">
-          <h3>Baştan sona yerel</h3>
-          <p>Tek süreçte çalışan tek bir Rust programı. Arayüzü Zed editörünün GPU hızlandırmalı çatısı gpui çizer; librespot Premium hesabını Openify'ın kendi ses çıkışından çalar. SQLite kütüphane önbelleğini ve geçmişi bilgisayarında tutar, Velopack da kullanıcıya özel kurar ve günceller.</p>
+          <h3>Baştan sona native</h3>
+          <p>Tek bir Rust programı, tek bir süreç. Arayüzü Zed editörünün GPU ile çalışan UI çatısı gpui çiziyor. Premium hesabını librespot çalıyor; ses doğrudan Openify'ın kendi çıkışından geçiyor. Kütüphane önbelleği ve geçmiş SQLite'ta, senin bilgisayarında duruyor. Kurulumu ve güncellemeleri Velopack yönetiyor.</p>
           <div class="code">
             <div class="code-bar"><span>Cargo.toml</span></div>
 <pre><code><span class="k">[dependencies]</span>
@@ -223,24 +229,24 @@ librespot = { version = <span class="s">"0.8.0"</span>, default-features = <span
 rusqlite  = { version = <span class="s">"0.41.1"</span>, features = [<span class="s">"bundled"</span>] }
 tokio     = { version = <span class="s">"1"</span>, features = [<span class="s">"rt-multi-thread"</span>] }
 velopack  = <span class="s">"=1.2.161"</span>
-<span class="c"># bir kesit; dosyanın tamamı GitHub'da</span></code></pre>
+<span class="c"># kısaltılmış hâli; tamamı GitHub'da</span></code></pre>
           </div>
           <ul class="facts-list">
-          <li>Her çekme isteği Windows'ta derlenir ve test edilir; rustfmt ve Clippy de çalışır</li>
-          <li>ARM64 sürümü de CI'da derlenir</li>
-          <li>cargo-deny lisansları, yasakları ve güvenlik bildirimlerini denetler</li>
-          <li>Yayın sürümleri GitHub Actions'ta SHA-256 özetleriyle üretilir</li>
-          <li>Tasarım kuralları (yazı ölçeği, boşluk, kontrast) testlerle korunur</li>
+          <li>Her PR Windows'ta build alıp testlerden geçiyor; rustfmt ve Clippy de çalışıyor</li>
+          <li>ARM64 build'i de CI'da alınıyor</li>
+          <li>cargo-deny lisansları ve güvenlik uyarılarını denetliyor</li>
+          <li>Release'ler GitHub Actions'ta, SHA-256 özetleriyle çıkıyor</li>
+          <li>Tasarım kuralları (yazı ölçeği, boşluklar, kontrast) testlerle korunuyor</li>
           </ul>
         </div>
         <div class="built-col reveal" id="privacy">
-          <h3>Verilerin bilgisayarında kalır</h3>
-          <p>Openify'ın bir sunucusu yok; analiz ya da telemetri de yok.</p>
+          <h3>Verilerin sende kalır</h3>
+          <p>Openify'ın bir sunucusu yok. Analiz yok, telemetri yok.</p>
           <dl class="deflist">
-          <div class="row"><dt>Yerelde saklanır</dt><dd>Önbellek, geçmiş ve istatistikler kullanıcı klasöründe; Spotify oturumu Windows Kimlik Bilgisi Yöneticisi'nde.</dd></div>
-          <div class="row"><dt>Çaldıkların bildirilmez</dt><dd>Çaldığın şarkılar Spotify'ın Son çalınanlar listesinde, Wrapped'ında ya da sanatçıların dinlenme sayılarında görünmeyebilir.</dd></div>
-          <div class="row"><dt>Az dış bağlantı</dt><dd>Spotify dışında: sözler için LRCLIB, benzer sanatçılar için Deezer, kulaklıklar için OPRA ve güncelleme sunucusu.</dd></div>
-          <div class="row"><dt>Gizli oturum</dt><dd>Profil menüsündeki tek anahtar, o oturum boyunca son çalınanları ve istatistikleri kaydetmeyi durdurur.</dd></div>
+          <div class="row"><dt>Her şey bilgisayarında</dt><dd>Önbellek, geçmiş ve istatistikler kullanıcı klasöründe; Spotify oturumu Windows Kimlik Bilgisi Yöneticisi'nde.</dd></div>
+          <div class="row"><dt>Dinlediklerin Spotify'a bildirilmez</dt><dd>Openify'da çaldığın şarkılar Spotify'daki Son çalınanlar listende, Wrapped'ında ya da sanatçıların dinlenme sayılarında görünmeyebilir.</dd></div>
+          <div class="row"><dt>Az sayıda dış bağlantı</dt><dd>Spotify dışında yalnız şunlara bağlanır: sözler için LRCLIB, benzer sanatçılar için Deezer, kulaklık profilleri için OPRA ve güncelleme sunucusu.</dd></div>
+          <div class="row"><dt>Gizli oturum</dt><dd>Profil menüsündeki tek bir anahtarla o oturumda dinlediklerin geçmişe ve istatistiklere yazılmaz.</dd></div>
           </dl>
         </div>
       </div>
@@ -251,22 +257,22 @@ velopack  = <span class="s">"=1.2.161"</span>
     <div class="wrap">
       <div class="section-head">
         <h2 class="plain" id="install-title">Kurulum</h2>
-        <p>Kurulum dosyası, taşınabilir zip ya da doğrudan kaynak kodu. Openify yalnız senin kullanıcı hesabına kurulur, yönetici izni gerekmez.</p>
+        <p>Kurulum dosyası, taşınabilir zip ya da kaynak koddan build. Openify yalnız senin kullanıcı hesabına kurulur, yönetici izni istemez.</p>
       </div>
       <div class="install">
         <div class="card tabs reveal" data-tabs>
           <div class="tablist" role="tablist" aria-label="Kurulum yolları">
-            <button type="button" role="tab" id="tab-installer" aria-controls="panel-installer" aria-selected="true">Kurulum</button>
+            <button type="button" role="tab" id="tab-installer" aria-controls="panel-installer" aria-selected="true">Kurulum dosyası</button>
             <button type="button" role="tab" id="tab-portable" aria-controls="panel-portable" aria-selected="false" tabindex="-1">Taşınabilir</button>
             <button type="button" role="tab" id="tab-winget" aria-controls="panel-winget" aria-selected="false" tabindex="-1">winget <span class="badge">yakında</span></button>
-            <button type="button" role="tab" id="tab-source" aria-controls="panel-source" aria-selected="false" tabindex="-1">Kaynaktan</button>
+            <button type="button" role="tab" id="tab-source" aria-controls="panel-source" aria-selected="false" tabindex="-1">Kaynak koddan</button>
           </div>
 
           <div class="panel" role="tabpanel" id="panel-installer" aria-labelledby="tab-installer">
             <ol class="steps">
               <li>
                 <h3>İndir</h3>
-                <p>Çoğu bilgisayar x64'tür; Surface Pro X gibi Snapdragon dizüstüler ARM64'tür.</p>
+                <p>Çoğu bilgisayar x64. Surface Pro X gibi Snapdragon işlemcili dizüstüler ARM64.</p>
                 <div class="links" data-arch-swap>
                   <a class="chip primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">Openify-win-Setup.exe <small>x64</small></a>
                   <a class="chip" data-arch="arm64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe">Openify-win-arm64-Setup.exe <small>ARM64</small></a>
@@ -274,19 +280,19 @@ velopack  = <span class="s">"=1.2.161"</span>
               </li>
               <li>
                 <h3>Çalıştır</h3>
-                <p>Kurulum dosyası henüz imzalı değil, bu yüzden SmartScreen "Windows kişisel bilgisayarınızı korudu" diyebilir.</p>
-                <p class="note"><strong>Ek bilgi</strong>'ye, sonra <strong>Yine de çalıştır</strong>'a bas (İngilizce Windows'ta <strong>More info</strong> ve <strong>Run anyway</strong>). Her dosyanın özeti <a class="text-link" href="https://github.com/FurkanKY/Openify/releases/latest">sürüm sayfasındaki</a> SHA256SUMS.txt dosyasında.</p>
+                <p>Kurulum dosyası henüz imzalı değil. Bu yüzden SmartScreen "Windows kişisel bilgisayarınızı korudu" uyarısı gösterebilir.</p>
+                <p class="note"><strong>Ek bilgi</strong>'ye, sonra <strong>Yine de çalıştır</strong>'a tıkla (Windows İngilizceyse <strong>More info</strong> ve <strong>Run anyway</strong>). Dosyaların SHA-256 özetleri <a class="text-link" href="https://github.com/FurkanKY/Openify/releases/latest">release sayfasındaki</a> SHA256SUMS.txt dosyasında.</p>
               </li>
               <li>
                 <h3>Spotify ile giriş yap</h3>
-                <p>Giriş için bir tarayıcı penceresi açılır. Oturumun Windows Kimlik Bilgisi Yöneticisi'nde saklanır.</p>
+                <p>Giriş için tarayıcıda bir pencere açılır. Oturumun Windows Kimlik Bilgisi Yöneticisi'nde saklanır.</p>
               </li>
             </ol>
           </div>
 
           <div class="panel" role="tabpanel" id="panel-portable" aria-labelledby="tab-portable" hidden>
             <h3>Taşınabilir zip</h3>
-            <p>Kurmak istemiyor musun? Zip'i istediğin yere aç ve çalıştır.</p>
+            <p>Kurulum yapmak istemiyorsan zip'i istediğin klasöre aç ve çalıştır, o kadar.</p>
             <div class="links">
               <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Portable.zip">Openify-win-Portable.zip <small>x64</small></a>
               <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Portable.zip">Openify-win-arm64-Portable.zip <small>ARM64</small></a>
@@ -295,7 +301,7 @@ velopack  = <span class="s">"=1.2.161"</span>
 
           <div class="panel" role="tabpanel" id="panel-winget" aria-labelledby="tab-winget" hidden>
             <h3>Windows Paket Yöneticisi</h3>
-            <p>Paket winget deposunda incelemede. Kabul edilince:</p>
+            <p>Paket şu an winget deposunda incelemede. Onaylanınca tek komut yetecek:</p>
             <div class="code">
               <div class="code-bar"><span>PowerShell</span><button class="copy" type="button" data-copy="winget install FurkanKY.Openify" data-done="Kopyalandı">Kopyala</button></div>
               <pre><code><span class="p">&gt; </span>winget install FurkanKY.Openify</code></pre>
@@ -303,8 +309,8 @@ velopack  = <span class="s">"=1.2.161"</span>
           </div>
 
           <div class="panel" role="tabpanel" id="panel-source" aria-labelledby="tab-source" hidden>
-            <h3>Kaynaktan derle</h3>
-            <p>Windows 10 ya da 11, <a class="text-link" href="https://rustup.rs">Rust</a> (rustup sabitlenmiş sürümü kendisi kurar), MSVC derleme araçları ve Git gerekir. API anahtarı ya da <code>.env</code> dosyası gerekmez.</p>
+            <h3>Kaynak koddan build</h3>
+            <p>Windows 10 ya da 11, <a class="text-link" href="https://rustup.rs">Rust</a> (doğru sürümü rustup kendisi kuruyor), MSVC build araçları ve Git yeterli. API anahtarına ya da <code>.env</code> dosyasına gerek yok.</p>
             <div class="code">
               <div class="code-bar"><span>PowerShell</span><button class="copy" type="button" data-copy="git clone https://github.com/FurkanKY/Openify.git&#10;cd Openify&#10;cargo build --release&#10;.\target\release\openify.exe" data-done="Kopyalandı">Kopyala</button></div>
 <pre><code><span class="p">&gt; </span>git clone https://github.com/FurkanKY/Openify.git
@@ -312,25 +318,25 @@ velopack  = <span class="s">"=1.2.161"</span>
 <span class="p">&gt; </span>cargo build --release
 <span class="p">&gt; </span>.\target\release\openify.exe</code></pre>
             </div>
-            <p>İlk derleme gpui'yi de derlediği için biraz sürer. Testleri <code>cargo test --release</code> ile çalıştır.</p>
+            <p>İlk build gpui'yi de derlediği için biraz sürer. Testleri <code>cargo test --release</code> ile çalıştırabilirsin.</p>
           </div>
         </div>
 
         <div class="side">
           <div class="aside reveal">
-            <h3>Gereksinimler</h3>
+            <h3>Gerekenler</h3>
             <ul>
-            <li>Windows 10 ya da 11, x64 veya ARM64</li>
-            <li>Spotify Premium hesabı; ücretsiz hesaplar üçüncü taraf istemcilerle müzik çalamaz</li>
+            <li>Windows 10 ya da 11 (x64 veya ARM64)</li>
+            <li>Spotify Premium hesabı; ücretsiz hesaplar üçüncü taraf istemcilerden müzik çalamıyor</li>
             <li>Çalışan bir ses çıkışı</li>
             </ul>
           </div>
           <div class="aside reveal">
-            <h3>Bilmekte fayda var</h3>
+            <h3>Bilmen gerekenler</h3>
             <ul>
-            <li>Openify erken aşamada (0.1). Arkadaş etkinliği ve sanatçı takibi deneysel.</li>
-            <li>Ekran okuyucular henüz desteklenmiyor: gpui'nin Windows erişilebilirlik desteği yok. Klavye kullanımı ise iyi karşılanıyor.</li>
-            <li>Yalnız Windows; macOS ya da Linux sürümü yok.</li>
+            <li>Openify daha yolun başında (0.1). Arkadaş etkinliği ve sanatçı takibi deneysel.</li>
+            <li>Ekran okuyucular henüz desteklenmiyor, çünkü gpui'nin Windows'ta erişilebilirlik desteği yok. Klavyeyle kullanım ise sorunsuz.</li>
+            <li>Yalnız Windows. macOS ve Linux sürümü yok.</li>
             </ul>
           </div>
         </div>
@@ -343,8 +349,8 @@ velopack  = <span class="s">"=1.2.161"</span>
       <div class="card repo-card reveal">
         <div>
           <a class="repo-name" href="https://github.com/FurkanKY/Openify"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.71 1.71.75.75 0 0 1-1.07 1.05A2.5 2.5 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.71A2.5 2.5 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.09a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></svg> FurkanKY / <b>Openify</b></a>
-          <h2 id="repo-title">Açık kaynak, açıkta geliştiriliyor.</h2>
-          <p>Kodu oku, bir sorun bildir ya da çekme isteği gönder. CONTRIBUTING.md denetimleri ve kuralları anlatır.</p>
+          <h2 id="repo-title">Açık kaynak, herkesin gözü önünde.</h2>
+          <p>Kodu oku, bir issue aç ya da PR gönder. Kuralları ve kontrolleri Katkı sayfası anlatıyor.</p>
           <ul class="repo-stats">
             <li>Rust</li>
             <li>GPL-3.0-or-later</li>
@@ -353,8 +359,8 @@ velopack  = <span class="s">"=1.2.161"</span>
           </ul>
         </div>
         <div class="repo-actions">
-          <a class="btn btn-primary" href="https://github.com/FurkanKY/Openify"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.81 4.2.61a.75.75 0 0 1 .42 1.28l-3.04 2.96.72 4.19a.75.75 0 0 1-1.09.79L8 12.33l-3.76 1.98a.75.75 0 0 1-1.09-.79l.72-4.19L.83 6.37a.75.75 0 0 1 .42-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25"/></svg> GitHub'da yıldızla</a>
-          <p class="repo-links"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/CONTRIBUTING.md">Katkıda bulun</a><a class="text-link" href="https://github.com/FurkanKY/Openify/issues">Sorun bildir</a></p>
+          <a class="btn btn-primary" href="https://github.com/FurkanKY/Openify"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.81 4.2.61a.75.75 0 0 1 .42 1.28l-3.04 2.96.72 4.19a.75.75 0 0 1-1.09.79L8 12.33l-3.76 1.98a.75.75 0 0 1-1.09-.79l.72-4.19L.83 6.37a.75.75 0 0 1 .42-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25"/></svg> GitHub'da yıldız ver</a>
+          <p class="repo-links"><a class="text-link" href="docs/contribute/">Nasıl katkı verilir</a><a class="text-link" href="https://github.com/FurkanKY/Openify/issues">Sorun bildir</a></p>
         </div>
       </div>
     </div>
@@ -364,14 +370,16 @@ velopack  = <span class="s">"=1.2.161"</span>
 <footer class="foot">
   <div class="wrap">
     <nav class="foot-links" aria-label="Alt menü">
-      <a href="https://github.com/FurkanKY/Openify">Kaynak kodu</a>
-      <a href="https://github.com/FurkanKY/Openify/releases/latest">Sürüm notları</a>
-      <a href="https://github.com/FurkanKY/Openify/blob/master/CHANGELOG.md">Değişiklik günlüğü</a>
-      <a href="https://github.com/FurkanKY/Openify/blob/master/docs/ARCHITECTURE.md">Mimari</a>
-      <a href="https://github.com/FurkanKY/Openify/blob/master/LICENSE">Lisans</a>
+      <a href="./docs/how-it-works/">Nasıl çalışıyor</a>
+      <a href="./docs/changelog/">Sürüm notları</a>
+      <a href="./docs/privacy/">Gizlilik ve güvenlik</a>
+      <a href="./docs/contribute/">Katkı</a>
+      <a href="./docs/design/">Tasarım sistemi</a>
+      <a href="./docs/licenses/">Lisanslar</a>
+      <a href="https://github.com/FurkanKY/Openify">Kaynak kod</a>
       <a href="../" hreflang="en" lang="en">English</a>
     </nav>
-    <p>Openify, FurkanKY'nin bağımsız bir projesidir. Spotify AB ile bağlantısı yoktur; Spotify AB tarafından onaylanmamış ya da desteklenmemiştir. Spotify, Spotify AB'nin ticari markasıdır. Openify, Spotify'ın her an değiştirebileceği resmî olmayan arayüzleri kullanır ve üçüncü taraf bir istemci kullanmak Spotify'ın kullanım koşullarıyla çelişebilir. Müzik indirmez ya da kaydetmez, yalnız Premium hesaplarla çalar.</p>
+    <p>Openify, FurkanKY&#x27;nin bağımsız bir projesi. Spotify AB ile bir bağı yok; Spotify AB onaylamadı ya da desteklemedi. Spotify, Spotify AB&#x27;nin ticari markası. Openify, Spotify&#x27;ın her an değiştirebileceği resmî olmayan arayüzleri kullanıyor; üçüncü taraf bir istemci kullanmak Spotify&#x27;ın kullanım koşullarıyla çelişebilir. Müzik indirmez, kaydetmez; yalnız Premium hesaplarla çalışır.</p>
   </div>
 </footer>
 
