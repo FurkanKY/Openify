@@ -3385,7 +3385,7 @@ impl Shell {
     }
 
     /// Haptaki çalan şarkının satırı (bilinmiyorsa adıyla kurulur).
-    fn pill_row(&self, uri: &str, name: &str, artists: &str) -> TrackRow {
+    pub(super) fn pill_row(&self, uri: &str, name: &str, artists: &str) -> TrackRow {
         self.find_row(uri).unwrap_or_else(|| TrackRow {
             uri: uri.to_string(),
             name: name.to_string(),

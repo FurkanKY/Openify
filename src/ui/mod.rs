@@ -41,6 +41,7 @@ mod link_text;
 mod listening;
 mod lyrics_view;
 mod manage;
+mod mini;
 mod now_panel;
 mod now_playing;
 mod pages;
@@ -77,8 +78,8 @@ use gpui::{
     AnyElement, AnyView, Application, Bounds, Context, DispatchPhase, FocusHandle, KeyDownEvent,
     MouseButton, MouseDownEvent, MouseMoveEvent, MouseUpEvent, Pixels, SharedString,
     StyleRefinement, Subscription, Task, TitlebarOptions, UniformListScrollHandle, Window,
-    WindowBounds, WindowControlArea, WindowOptions, canvas, div, img, linear_color_stop,
-    linear_gradient, prelude::*, px, rgb, size,
+    WindowBounds, WindowControlArea, WindowHandle, WindowOptions, canvas, div, img,
+    linear_color_stop, linear_gradient, prelude::*, px, rgb, size,
 };
 use librespot::core::SpotifyUri;
 
@@ -308,6 +309,8 @@ struct Shell {
     tools: tools::ToolsUi,
     /// Gizlenen şarkılar ve gizli oturum (bkz. `listening`).
     listen: listening::ListeningUi,
+    /// Mini oynatıcı penceresi (bkz. `mini`): kapalıyken `None`, maliyet yok.
+    mini: Option<WindowHandle<mini::MiniView>>,
 }
 
 impl Shell {
@@ -492,6 +495,7 @@ impl Shell {
             friends: friends::FriendsUi::new(),
             tools: tools::ToolsUi::new(),
             listen: listening::ListeningUi::new(),
+            mini: None,
         };
         shell.apply_prefs(true);
         // Sınama kancası `OPENIFY_TEST_FRIENDS_JSON`: arkadaş listesi fikstürden.
@@ -561,6 +565,23 @@ impl Shell {
         // Ana sayfanın Spotify akışı (bağlantı yoksa bağlanınca sorulur).
         shell.ask_explore(&[engine::ExploreKey::Home]);
         shell.apply_test_view(window, cx);
+        // Mini oynatıcı: son oturumda açıksa (ya da `OPENIFY_TEST_VIEW=mini`)
+        // ilk kareden sonra açılır; ana pencerenin kurulumu bitmeden ikinci
+        // pencere yaratılmaz. `--tray` açılışında kendiliğinden açılmaz.
+        let mini_wanted =
+            (shell.prefs.mini_open && !start_hidden) || now_playing::test_view() == Some("mini");
+        if mini_wanted {
+            let screen = window.display(cx).map(|d| d.bounds());
+            cx.spawn(async move |this, cx| {
+                cx.background_executor()
+                    .timer(Duration::from_millis(80))
+                    .await;
+                let _ = this.update(cx, |shell, cx| {
+                    shell.open_mini_window(screen, cx);
+                });
+            })
+            .detach();
+        }
         shell
     }
 
@@ -1104,6 +1125,10 @@ impl Shell {
             (Some(Shortcut::Mute), _) => self.toggle_mute(cx),
             (Some(Shortcut::VolumeUp), _) => self.set_volume(self.state.volume + VOLUME_STEP, cx),
             (Some(Shortcut::VolumeDown), _) => self.set_volume(self.state.volume - VOLUME_STEP, cx),
+            (Some(Shortcut::MiniPlayer), _) => {
+                let screen = window.display(cx).map(|d| d.bounds());
+                self.toggle_mini(screen, cx);
+            }
             (Some(Shortcut::Help), _) => self.open_help(Some(window), cx),
             (_, "up") => self.move_row(-1, cx),
             (_, "down") => self.move_row(1, cx),
@@ -2234,10 +2259,12 @@ pub(super) mod tab {
     pub const NEXT: isize = 44;
     pub const REPEAT: isize = 45;
     pub const PROGRESS: isize = 46;
-    pub const QUEUE: isize = 47;
-    pub const LYRICS: isize = 48;
-    pub const MUTE: isize = 49;
-    pub const VOLUME: isize = 50;
+    /// Mini oynatıcı düğmesi (sıra ve sözlerin solunda).
+    pub const MINI: isize = 47;
+    pub const QUEUE: isize = 48;
+    pub const LYRICS: isize = 49;
+    pub const MUTE: isize = 50;
+    pub const VOLUME: isize = 51;
 
     /// Görsel sırayla (soldan sağa, yukarıdan aşağı) bütün duraklar.
     #[cfg(test)]
@@ -2264,6 +2291,7 @@ pub(super) mod tab {
         ("sonraki", NEXT),
         ("tekrar", REPEAT),
         ("ilerleme", PROGRESS),
+        ("mini oynatıcı", MINI),
         ("sıra", QUEUE),
         ("sözler", LYRICS),
         ("sessize al", MUTE),
