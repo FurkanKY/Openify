@@ -1,0 +1,11 @@
+﻿PackageIdentifier: FurkanKY.Openify
+PackageVersion: 0.1.1
+PackageLocale: en-US
+Publisher: FurkanKY
+PackageName: Openify
+License: GPL-3.0-or-later
+ShortDescription: Native Windows Spotify client for Premium accounts.
+Description: Openify is a native Windows Spotify client with local playback, library tools and keyboard controls.
+PackageUrl: https://github.com/FurkanKY/Openify
+ManifestType: defaultLocale
+ManifestVersion: 1.10.0

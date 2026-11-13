@@ -1,0 +1,13 @@
+PackageIdentifier: FurkanKY.Openify
+PackageVersion: 0.1.1
+InstallerType: exe
+Scope: user
+UpgradeBehavior: install
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/FurkanKY/Openify/releases/download/v0.1.1/Openify-win-Setup.exe
+    InstallerSha256: B87E7C81E42432282917330CA91132AD1543766D0511F57C6CF5FDD09B9E8456
+    InstallerSwitches:
+      Silent: --silent
+ManifestType: installer
+ManifestVersion: 1.10.0

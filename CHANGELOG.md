@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Windows ARM64 release installer on its own Velopack update channel, plus
+  winget manifests and a script to fill their published release hashes.
+
 ## [0.1.1] - 2026-11-13
 
 ### Changed

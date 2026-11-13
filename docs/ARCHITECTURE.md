@@ -13,6 +13,12 @@ Openify is a native Windows Spotify client: UI in [gpui](https://gpui.rs)
 tokio for async,
 SQLite (`rusqlite`, bundled) for caches and queues. Windows only.
 
+Release builds target x64 (`x86_64-pc-windows-msvc`) and ARM64
+(`aarch64-pc-windows-msvc`). The x64 Velopack feed keeps the `win` channel for
+existing installations; ARM64 uses the separate `win-arm64` channel. Both
+feeds and their previous full packages are attached to each draft release so
+update rollback can still resolve the matching architecture feed.
+
 ## 1. Big picture
 
 ```text

@@ -46,6 +46,19 @@ jobs:
       - name: Clippy
         run: cargo clippy --release --locked --all-targets -- -D warnings
 
+  arm64:
+    name: Build for Windows ARM64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: aarch64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+      # ring needs clang for aarch64; the Windows runner ships LLVM.
+      - name: Build (aarch64)
+        run: cargo build --release --locked --target aarch64-pc-windows-msvc
+
   deny:
     name: cargo-deny (licenses, bans, advisories, sources)
     runs-on: ubuntu-latest

@@ -40,6 +40,7 @@ param(
     [string]$Aumid,
     [string]$Shortcuts = "StartMenuRoot",
     [string]$Channel = "win",
+    [string]$Target = "x86_64-pc-windows-msvc",
     [string]$TargetDir = "target",
     [string]$Out = "target\velopack",
     [switch]$SkipBuild
@@ -75,10 +76,11 @@ $vpkVersion = (& $vpk --version 2>$null | Select-Object -First 1)
 Write-Host "vpk $vpkVersion (crate $velopackCrate), paket $PackId $Version"
 
 if (-not $SkipBuild) {
-    cargo build --release --target-dir $TargetDir
+    $env:CARGO_BUILD_JOBS = "4"
+    cargo build --release --target $Target --target-dir $TargetDir
     if ($LASTEXITCODE -ne 0) { throw "cargo build başarısız" }
 }
-$exe = Join-Path $root "$TargetDir\release\openify.exe"
+$exe = Join-Path $root "$TargetDir\$Target\release\openify.exe"
 if (-not (Test-Path $exe)) { throw "$exe yok" }
 
 # vpk klasörün tamamını paketler: yalnız exe'yi temiz bir hazırlık klasörüne koy.
