@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-13
+
+### Added
+
+- Mini player: a small always-on-top window with cover, title, controls,
+  progress and like. Open it from the now-playing pill, the Ctrl+K palette or
+  its keyboard shortcut; its position and open state are remembered.
+- Play counts: artist pages show monthly listeners, top listening cities and
+  a play count on every popular song; album pages show a play count per song.
+  The numbers load quietly in the background and are cached for a day.
+- Playlist editing: edit the description of your own playlists, turn
+  collaborative on or off, and create, rename and delete folders and move
+  playlists in and out of them. Every edit can be undone and waits safely
+  while offline.
+
+### Changed
+
+- Song lists on album, artist and search pages have the same column headers
+  as the library, and an album shows its artists either on every row or on
+  none.
+
 ## [0.1.2] - 2026-11-13
 
 ### Added
