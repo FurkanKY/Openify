@@ -1963,3 +1963,117 @@ h2.display,
 .spectrum {
   will-change: contents;
 }
+
+/* Callouts v3: annotations, not cards. A label in the margin and a hairline
+   that ends on the exact part of the window it describes. */
+.shot-wrap {
+  margin-top: clamp(84px, 9vw, 112px);
+  margin-bottom: 72px;
+}
+.callout,
+.js .callout {
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  animation: none;
+  will-change: auto;
+  color: var(--text);
+  white-space: nowrap;
+}
+.callout .txt {
+  display: grid;
+  gap: 3px;
+}
+.callout b {
+  font: 600 12.5px/1 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--accent-text);
+}
+.callout small {
+  font: 500 14px/1.25 var(--body);
+  color: var(--soft);
+}
+.callout::before,
+.callout::after {
+  content: "";
+  position: absolute;
+}
+/* the hairline */
+.callout::after {
+  background: var(--line-strong);
+}
+/* the end point: a small hollow ring */
+.callout::before {
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg);
+  box-shadow: none;
+}
+
+/* Ctrl K: above the window, dropping onto the search field */
+.c1 {
+  inset: auto auto calc(100% + 30px) 44%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.c1 .txt { justify-items: center; }
+.c1::after { left: 50%; top: calc(100% + 8px); width: 1px; height: 38px; }
+.c1::before { left: calc(50% - 3.5px); top: calc(100% + 44px); }
+
+/* librespot: below the window, rising to the player bar */
+.c3 {
+  inset: calc(100% + 30px) auto auto 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.c3 .txt { justify-items: center; }
+.c3::after { left: 50%; bottom: calc(100% + 8px); width: 1px; height: 64px; }
+.c3::before { left: calc(50% - 3.5px); bottom: calc(100% + 70px); }
+
+/* gpui: left margin, pointing at the window itself */
+.c2 {
+  inset: 46% calc(100% + 64px) auto auto;
+  text-align: right;
+}
+.c2 .txt { justify-items: end; }
+.c2::after { left: calc(100% + 10px); top: 50%; width: 54px; height: 1px; }
+.c2::before { left: calc(100% + 60px); top: calc(50% - 3px); }
+
+/* 70 MB: right margin, at the title bar */
+.c4 {
+  inset: 0.4% auto auto calc(100% + 64px);
+  text-align: left;
+}
+.c4::after { right: calc(100% + 10px); top: 50%; width: 74px; height: 1px; }
+.c4::before { right: calc(100% + 80px); top: calc(50% - 3px); }
+
+@media (max-width: 1480px) {
+  .c2, .c4 { display: none; }
+}
+@media (max-width: 1080px) {
+  .callouts { display: block; }
+  .c1, .c3 { display: none; }
+  .shot-wrap { margin-top: clamp(52px, 7vw, 88px); margin-bottom: 0; }
+}
+.c3::after, .c3::before { top: auto; }
+.c1::before, .c1::after { bottom: auto; }
+.c2::after, .c2::before { right: auto; }
+.c4::after, .c4::before { left: auto; }
+.callout::after { background: linear-gradient(var(--lead, 0deg), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.18)); }
+.c1::after { --lead: 180deg; }
+.c3::after { --lead: 0deg; }
+.c2::after { --lead: 90deg; }
+.c4::after { --lead: 270deg; }
+@media (prefers-color-scheme: light) {
+  .callout::after { background: linear-gradient(var(--lead, 0deg), rgba(36, 33, 31, 0.45), rgba(36, 33, 31, 0.15)); }
+}
+@media (max-width: 1540px) {
+  .c2, .c4 { display: none; }
+}
