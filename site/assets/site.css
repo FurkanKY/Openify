@@ -10,6 +10,12 @@
 }
 @font-face {
   font-family: "Figtree";
+  src: url("fonts/Figtree-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Figtree";
   src: url("fonts/Figtree-Bold.woff2") format("woff2");
   font-weight: 700;
   font-display: swap;
@@ -1435,13 +1441,13 @@ html:not(.js) .panel + .panel {
 }
 
 /* ------------------------------------------------------------------
-   Display layer: Segoe UI Variable Display for headlines (Windows'
-   own display face), Figtree as the fallback and for h3s.
+   Display layer: Figtree with weight contrast. The plain part of a
+   headline is set Regular, the accent phrase ExtraBold in the ember.
    ------------------------------------------------------------------ */
 
 
 :root {
-  --serif: "Segoe UI Variable Display", "Segoe UI Variable", "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --serif: "Figtree", "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, sans-serif;
   --chrome: linear-gradient(180deg, #ffffff 20%, rgba(244, 244, 245, 0.62) 100%);
   --ember: linear-gradient(100deg, #ffd9b8 0%, #f59e5b 45%, #e0703a 100%);
   --ember-glow: rgba(194, 65, 12, 0.32);
@@ -1461,8 +1467,7 @@ h2.display,
 .doc-hub-head h1,
 .prose h1 {
   font-family: var(--serif);
-  font-weight: 600;
-  font-variation-settings: "opsz" 36;
+  font-weight: 400;
 }
 .hero h1 em,
 .section-head h2 em,
@@ -1470,6 +1475,7 @@ h2.display em,
 .repo-card h2 em,
 .doc-hub-head h1 em {
   font-style: normal;
+  font-weight: 800;
   padding-right: 0.02em;
   background: var(--ember);
   -webkit-background-clip: text;
@@ -1498,8 +1504,8 @@ h2.display em,
 }
 .hero h1 {
   font-size: clamp(46px, 6.9vw, 96px);
-  line-height: 1;
-  letter-spacing: -0.04em;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
   background: var(--chrome);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1648,12 +1654,13 @@ h2.display em,
   border-left: 1px solid var(--line-strong);
 }
 .metric dt {
-  font: 300 clamp(56px, 6.4vw, 88px) / 1 var(--serif);
+  font: 800 clamp(48px, 5.4vw, 78px) / 1 var(--serif);
+  white-space: nowrap;
   letter-spacing: -0.04em;
 }
 .metric dt em {
   font-style: normal;
-  font-weight: 500;
+  font-weight: 400;
   font-size: 0.5em;
   letter-spacing: 0;
   margin-left: 6px;
