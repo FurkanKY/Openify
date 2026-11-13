@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gizlilik ve güvenlik · Openify</title>
+<meta name="description" content="Openify&#x27;ın yerel dosyaları, dış servisleri, oturum açma ve güncelleme akışı ile güvenlik açığı bildirimi.">
+<link rel="canonical" href="https://furkanky.github.io/Openify/tr/docs/privacy/">
+<link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/privacy/">
+<link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://furkanky.github.io/Openify/docs/privacy/">
+<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Openify">
+<meta property="og:title" content="Gizlilik ve güvenlik · Openify">
+<meta property="og:description" content="Openify&#x27;ın yerel dosyaları, dış servisleri, oturum açma ve güncelleme akışı ile güvenlik açığı bildirimi.">
+<meta property="og:url" content="https://furkanky.github.io/Openify/tr/docs/privacy/">
+<meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="tr_TR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="../../../assets/fonts/Figtree-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="../../../assets/site.css">
+<script>document.documentElement.classList.add("js")</script>
+</head>
+<body>
+<a class="skip" href="#main">İçeriğe geç</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="../../" aria-label="Openify ana sayfa">
+      <svg viewBox="16 16 224 224" aria-hidden="true"><defs><linearGradient id="t" x1="0" y1="16" x2="0" y2="240" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1C1C21"/><stop offset="1" stop-color="#0E0E10"/></linearGradient><mask id="n" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="#fff"/><circle cx="170.43" cy="85.57" r="34" fill="#000"/></mask></defs><rect x="16" y="16" width="224" height="224" rx="56" fill="url(#t)"/><circle cx="128" cy="128" r="60" fill="none" stroke="#F4F4F5" stroke-width="32" mask="url(#n)"/><circle cx="170.43" cy="85.57" r="21" fill="#F4F4F5"/></svg>
+      Openify
+    </a>
+    <nav class="nav" aria-label="Ana menü">
+      <a class="hide-sm" href="../../#features">Özellikler</a>
+      <a class="hide-sm" href="../../#install">Kurulum</a>
+      <a class="hide-sm" href="../../docs/" aria-current="page">Belgeler</a>
+      <a class="gh" href="https://github.com/FurkanKY/Openify" aria-label="Openify GitHub'da">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8"/></svg>
+        <span class="label">GitHub</span>
+        <span class="stars" data-gh="stars-wrap" hidden><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" width="12" height="12"><path d="M8 .25a.75.75 0 0 1 .67.42l1.88 3.81 4.2.61a.75.75 0 0 1 .42 1.28l-3.04 2.96.72 4.19a.75.75 0 0 1-1.09.79L8 12.33l-3.76 1.98a.75.75 0 0 1-1.09-.79l.72-4.19L.83 6.37a.75.75 0 0 1 .42-1.28l4.2-.61L7.33.67A.75.75 0 0 1 8 .25"/></svg><span data-gh="stars"></span></span>
+      </a>
+      <span class="lang">
+        <a href="../../../docs/privacy/" hreflang="en" lang="en">EN</a>
+        <a href="./" hreflang="tr" lang="tr" aria-current="true">TR</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="docs">
+  <div class="wrap doc-layout">
+    <nav class="doc-nav" aria-label="Belgeler">
+      <a class="doc-nav-home" href="../">Belgeler</a>
+      <ul>
+          <li><a href="../how-it-works/">Nasıl çalışıyor</a></li>
+          <li><a href="../changelog/">Sürüm notları</a></li>
+          <li><a href="../privacy/" aria-current="page">Gizlilik ve güvenlik</a></li>
+          <li><a href="../contribute/">Katkı</a></li>
+          <li><a href="../design/">Tasarım sistemi</a></li>
+          <li><a href="../licenses/">Lisanslar</a></li>
+      </ul>
+    </nav>
+    <article class="prose">
+<h1>Gizlilik ve güvenlik</h1>
+<p class="lede">Openify ayarları, cache'i ve dinleme geçmişini bilgisayarında tutar. Müzik çalmak ve aşağıdaki servisleri kullanmak için ağa bağlanır.</p>
+<h2 id="no-server">Sunucular ve telemetri</h2>
+<p>Openify'ın kendi sunucusu, analitik ya da telemetrisi yok. Müzik, metadata ve güncellemeler için <a href="#outside-services">dış servislere</a> bağlanır.</p>
+<h2 id="what-is-stored">Yerel dosyalar</h2>
+<p>Varsayılan konumlar Windows kullanıcı profilinin altındadır:</p>
+<div class="table"><table><thead><tr><th>Veri</th><th>Konum</th><th>Ayrıntı</th></tr></thead><tbody>
+<tr><td>Kütüphane, sözler, dinleme geçmişi ve gizlenen şarkılar</td><td><code>%LOCALAPPDATA%\Openify\library.db</code></td><td>SQLite; geçmiş ve gizlenen şarkılar yerelde kalır.</td></tr>
+<tr><td>Sayfa cache'i</td><td><code>%LOCALAPPDATA%\Openify\pages.db</code></td><td>Sanatçı, albüm, Ana sayfa ve Keşfet verileri.</td></tr>
+<tr><td>Kapaklar ve şifreli ses</td><td><code>%LOCALAPPDATA%\Openify\covers</code>, <code>audio</code></td><td>Sınırlar: 200 MiB ve 2 GiB.</td></tr>
+<tr><td>Kulaklık profilleri</td><td><code>%LOCALAPPDATA%\Openify\eq</code></td><td>OPRA veritabanı ve metadata.</td></tr>
+<tr><td>Loglar ve çökme raporları</td><td><code>%LOCALAPPDATA%\Openify\openify.log</code>, <code>crash-&lt;time&gt;.txt</code></td><td>Son beş rapor tutulur; otomatik yüklenmez.</td></tr>
+<tr><td>Ayarlar ve bekleyen kütüphane düzenlemeleri</td><td><code>%APPDATA%\Openify\settings.json</code>, <code>edits.db</code></td><td>Düzenlemeler Spotify'a gönderilmeden kaydedilir.</td></tr>
+<tr><td>Spotify oturumu</td><td>Windows Credential Manager</td><td><code>Openify</code> / <code>spotify-session</code>; kimlik bilgisi dosyası yok.</td></tr>
+</tbody></table></div>
+<p>Ayarlar'dan ses ve kapak cache'ini temizleyebilirsin. <code>library.db</code>'yi silersen yerel geçmişin ve gizlediğin şarkılar da silinir. Kayıtlı oturumu kaldırmak için çıkış yap veya Credential Manager kaydını sil.</p>
+<h2 id="sign-in">Oturum açma</h2>
+<p>Tarayıcıda Spotify'ın sayfasından giriş yaparsın. <code>127.0.0.1:8898/login</code> adresindeki geçici dinleyici yönlendirmeyi alır; Openify şifreni görmez. Oturum Credential Manager'a kaydedilir.</p>
+<p>Uygulama, Spotify'ın iç servislerinin istediği masaüstü client ID'sini kullanır. Bu değer kaynak kodda açıkça tanımlıdır; build için API anahtarı gerekmez.</p>
+<h2 id="outside-services">Dış servisler</h2>
+<div class="table"><table><thead><tr><th>Servis</th><th>Ne için, ne zaman</th></tr></thead><tbody>
+<tr><td>Spotify</td><td>Çevrimiçiyken giriş, müzik akışı, metadata, kütüphane düzenlemeleri, arama, Ana sayfa ve Keşfet.</td></tr>
+<tr><td>Görsel sunucuları</td><td>Cache'te olmayan kapak ve sanatçı görselleri; Spotify ve Deezer görselleri dahil.</td></tr>
+<tr><td><a href="https://lrclib.net">LRCLIB</a></td><td>Spotify'da söz yoksa veya yalnızca zamanlamasız söz varsa alternatif kaynak. Şarkı ve sanatçı adları, bazen albüm ve süre gönderilir.</td></tr>
+<tr><td>Deezer</td><td>Benzer sanatçılar; sanatçı adları gönderilir.</td></tr>
+<tr><td>OPRA</td><td>Profil aradığında <code>opra.roonlabs.net</code>'ten kulaklık veritabanı yüklenir.</td></tr>
+<tr><td>GitHub Releases</td><td>Açılıştan sonra, altı saatte bir veya elle başlattığında güncelleme kontrolü; güncelleme indirme.</td></tr>
+<tr><td>Spotify arkadaş akışı</td><td>Deneysel; varsayılan olarak kapalı. Açarsan panel açıkken istek gönderilir.</td></tr>
+<tr><td>Discord masaüstü uygulaması</td><td>Yerel IPC üzerinden isteğe bağlı <a href="#discord">Rich Presence</a>.</td></tr>
+</tbody></table></div>
+<p>Arkadaş etkinliği, radyo, şarkı künyesi ve söz çevirisi Spotify'ın belgelenmemiş endpoint'lerini kullanır; çalışmayı bırakabilir.</p>
+<h2 id="plays-not-reported">Dinleme bildirimi</h2>
+<p>Openify kendi çaldığı şarkılar için dinleme raporu veya scrobble göndermez. Bu yüzden Spotify'ın Son çalınanlar, Wrapped, dinlenme sayıları ve arkadaş etkinliğinde görünmeyebilirler. Spotify, başka cihazdan Connect ile aktardığın çalmayı sayabilir. Openify kendi geçmişini ve istatistiklerini yerelde hesaplar.</p>
+<h2 id="connect">Spotify Connect</h2>
+<p>Connect varsayılan olarak açık. Openify hesabına kalıcı bir cihaz kimliğiyle, <code>Openify (&lt;bilgisayar adı&gt;)</code> adıyla kaydolur. Ayarlar'dan adını değiştirebilir veya Connect'i kapatabilirsin; kapalıyken cihaz kaydı yapılmaz.</p>
+<h2 id="private-session">Gizli oturum</h2>
+<p>Profil menüsünden gizli oturumu açarsan o oturumda yerel geçmiş ve istatistik kaydı durur. Başlık çubuğundaki simge açık olduğunu gösterir.</p>
+<h2 id="discord">Discord Rich Presence</h2>
+<p>Kaynak koddaki <code>DISCORD_CLIENT_ID</code> boş; bu kaynaktan alınan build'lerde Discord worker'ı ve ayar bölümü yok. Kendi application ID'nle derlersen varsayılan olarak kapalı bir ayar görünür. Açtığında başlık, sanatçı, kapak bağlantısı ve ilerleme yerel named pipe üzerinden Discord'a gider. Gizli oturum, duraklatma, durdurma veya ayarı kapatma etkinliği temizler.</p>
+<h2 id="updates">Güncellemeler</h2>
+<p>Velopack güncellemeleri GitHub Releases'ten indirir, sonraki açılışta uygular. <code>OPENIFY_UPDATE_URL</code> değişkenine başka bir kaynak URL'si ya da kontrolleri kapatmak için <code>off</code> yazabilirsin.</p>
+<p>İki başarısız açılıştan sonra, çevrimdışıyken de yereldeki çalışan sürüme döner. Hatalı sürüm, daha yenisi çıkana kadar engellenir. Güncelleme durum kaydı ve geri dönüş paketi de yerel cache'te yer tutar.</p>
+<p class="note">Kurulum dosyası imzasız; SmartScreen uyarısı görebilirsin. <code>github.com/FurkanKY/Openify</code> adresinden indir. Uyarıyı geçmek için Ek bilgi → Yine de çalıştır yolunu kullan.</p>
+<h2 id="reporting">Güvenlik açığı bildirme</h2>
+<p>Özel bildirim için <a href="https://github.com/FurkanKY/Openify/security">Security → Report a vulnerability</a> yolunu kullan. Etkiyi, Openify ve Windows sürümlerini, yeniden üretme adımlarını yaz. Eklerden kimlik bilgilerini ve token'ları çıkar.</p>
+<p>Yalnızca son release güvenlik düzeltmesi alır. Politika birkaç gün içinde ilk yanıtı hedefler; düzeltmeler için kesin süre yoktur, rapor düzeltilmiş sürüme kadar gizli kalır. Openify kodu ve paketleme sorunlarını buraya, upstream sorunlarını kendi projelerine bildir. Openify'ı etkileyen bağımlılık açıklarını buraya da bildirebilirsin.</p>
+<h2 id="spotify-terms">Spotify'ın koşulları</h2>
+<p>Openify, Spotify AB'den bağımsızdır ve Premium gerektirir. Resmî olmayan, tersine mühendislikle çıkarılmış arayüzler kullanır; bu kullanım Spotify'ın koşullarıyla çelişebilir. Spotify adı ve logosu Spotify AB'ye aittir. Ses, çalma için cache'e alınır; uygulamada müzik dışa aktarma özelliği yoktur.</p>
+<p>Sınırlar için <a href="https://github.com/FurkanKY/Openify/blob/master/README.md">README</a>'ye, mimari için <a href="../how-it-works/">Nasıl çalışıyor</a> sayfasına bak.</p>
+      <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/SECURITY.md">Kaynak belgeyi GitHub'da gör</a></p>
+      <nav class="pager" aria-label="Önceki / Sonraki"><a class="pager-prev" href="../changelog/"><span>Önceki</span>Sürüm notları</a><a class="pager-next" href="../contribute/"><span>Sonraki</span>Katkı</a></nav>
+    </article>
+    <nav class="toc" aria-label="Bu sayfada">
+      <p class="toc-title">Bu sayfada</p>
+      <ol>
+          <li><a href="#no-server">Sunucular ve telemetri</a></li>
+          <li><a href="#what-is-stored">Yerel dosyalar</a></li>
+          <li><a href="#sign-in">Oturum açma</a></li>
+          <li><a href="#outside-services">Dış servisler</a></li>
+          <li><a href="#plays-not-reported">Dinleme bildirimi</a></li>
+          <li><a href="#connect">Spotify Connect</a></li>
+          <li><a href="#private-session">Gizli oturum</a></li>
+          <li><a href="#discord">Discord Rich Presence</a></li>
+          <li><a href="#updates">Güncellemeler</a></li>
+          <li><a href="#reporting">Güvenlik açığı bildirme</a></li>
+          <li><a href="#spotify-terms">Spotify'ın koşulları</a></li>
+      </ol>
+    </nav>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot-main">
+      <div class="foot-brand">
+        <a class="brand" href="../../" aria-label="Openify ana sayfa">
+          <svg viewBox="16 16 224 224" aria-hidden="true"><defs><linearGradient id="t" x1="0" y1="16" x2="0" y2="240" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1C1C21"/><stop offset="1" stop-color="#0E0E10"/></linearGradient><mask id="n" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="#fff"/><circle cx="170.43" cy="85.57" r="34" fill="#000"/></mask></defs><rect x="16" y="16" width="224" height="224" rx="56" fill="url(#t)"/><circle cx="128" cy="128" r="60" fill="none" stroke="#F4F4F5" stroke-width="32" mask="url(#n)"/><circle cx="170.43" cy="85.57" r="21" fill="#F4F4F5"/></svg>
+          Openify
+        </a>
+        <p>Rust ile yazılmış, Windows için native bir Spotify istemcisi.</p>
+        <a class="foot-dl" href="https://github.com/FurkanKY/Openify/releases/latest">Windows için indir</a>
+      </div>
+      <nav class="foot-cols" aria-label="Alt menü">
+        <div class="foot-col">
+          <b>Belgeler</b>
+          <a href="../../docs/how-it-works/">Nasıl çalışıyor</a>
+          <a href="../../docs/changelog/">Sürüm notları</a>
+          <a href="../../docs/privacy/">Gizlilik ve güvenlik</a>
+          <a href="../../docs/contribute/">Katkı</a>
+          <a href="../../docs/design/">Tasarım sistemi</a>
+          <a href="../../docs/licenses/">Lisanslar</a>
+        </div>
+        <div class="foot-col">
+          <b>Proje</b>
+          <a href="https://github.com/FurkanKY/Openify">Kaynak kod</a>
+          <a href="https://github.com/FurkanKY/Openify/releases">Sürümler</a>
+          <a href="https://github.com/FurkanKY/Openify/issues">Sorun bildir</a>
+          <a href="../../../docs/privacy/" hreflang="en" lang="en">English</a>
+        </div>
+      </nav>
+    </div>
+    <div class="foot-legal">
+      <p>Openify, FurkanKY&#x27;nin bağımsız bir projesi. Spotify AB ile bir bağı yok; Spotify AB onaylamadı ya da desteklemedi. Spotify, Spotify AB&#x27;nin ticari markası. Openify, Spotify&#x27;ın her an değiştirebileceği resmî olmayan arayüzleri kullanıyor; üçüncü taraf bir istemci kullanmak Spotify&#x27;ın kullanım koşullarıyla çelişebilir. Müzik indirmez, kaydetmez; yalnız Premium hesaplarla çalışır.</p>
+      <p class="foot-meta">© 2026 FurkanKY · GPL-3.0</p>
+    </div>
+  </div>
+</footer>
+
+<script src="../../../assets/site.js" defer></script>
+</body>
+</html>
