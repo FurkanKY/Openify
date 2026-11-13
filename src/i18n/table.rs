@@ -641,6 +641,42 @@ keys! {
     FolderUpTip { en: "Up one folder", tr: "Bir üst klasör" }
     FolderEmptyTitle { en: "This folder is empty", tr: "Bu klasör boş" }
     FolderEmptyBody { en: "Playlists you put in this folder in Spotify show up here.", tr: "Spotify'da bu klasöre koyduğun listeler burada görünür." }
+    // Liste açıklaması, ortak liste, klasör yazmaları.
+    MenuAddDescription { en: "Add a description", tr: "Açıklama ekle" }
+    MenuEditDescription { en: "Edit description", tr: "Açıklamayı düzenle" }
+    PromptDescriptionTitle { en: "Playlist description", tr: "Liste açıklaması" }
+    PromptDescriptionHint { en: "Say something about this playlist", tr: "Bu liste hakkında bir şey yaz" }
+    PromptChars { en: "{}/{}", tr: "{}/{}" }
+    ToastDescriptionSaved { en: "Description saved", tr: "Açıklama kaydedildi" }
+    MenuMakeCollaborative { en: "Make collaborative", tr: "Ortak listeye çevir" }
+    MenuMakePrivate { en: "Stop collaborating", tr: "Ortak listeyi kapat" }
+    SharedTip { en: "Collaborative playlist", tr: "Ortak liste" }
+    ToastCollaborativeOn { en: "Anyone with the link can add songs", tr: "Bağlantıya sahip olanlar şarkı ekleyebilir" }
+    ToastCollaborativeOff { en: "This playlist is private again", tr: "Liste yeniden özel" }
+    NewFolder { en: "New folder", tr: "Yeni klasör" }
+    PromptNewFolderTitle { en: "New folder", tr: "Yeni klasör" }
+    PromptRenameFolderTitle { en: "Rename folder", tr: "Klasörü yeniden adlandır" }
+    PromptFolderHint { en: "Folder name", tr: "Klasörün adı" }
+    MenuRenameFolder { en: "Rename folder", tr: "Klasörü yeniden adlandır" }
+    MenuDeleteFolder { en: "Delete folder", tr: "Klasörü sil" }
+    MenuMoveToFolder { en: "Move to folder", tr: "Klasöre taşı" }
+    MenuNewFolderDots { en: "New folder…", tr: "Yeni klasör…" }
+    MenuMoveToRoot { en: "Move out of folder", tr: "Klasörden çıkar" }
+    ToastFolderCreated { en: "Folder “{}” created", tr: "“{}” klasörü oluşturuldu" }
+    ToastFolderRenamed { en: "Folder renamed", tr: "Klasör yeniden adlandırıldı" }
+    ToastFolderDeleted { en: "Folder deleted, its playlists moved out", tr: "Klasör silindi, içindekiler dışarı çıktı" }
+    ToastMovedToFolder { en: "Moved to “{}”", tr: "“{}” klasörüne taşındı" }
+    ToastMovedToRoot { en: "Moved out of the folder", tr: "Klasörden çıkarıldı" }
+    FailMetaDenied { en: "Couldn't save this playlist's settings", tr: "Listenin ayarları kaydedilemedi" }
+    FailFolderDenied { en: "Couldn't save this folder change", tr: "Klasör değişikliği kaydedilemedi" }
+    FailGoneFolder { en: "That folder is no longer in your library", tr: "O klasör artık kütüphanende değil" }
+    FailedDescription { en: "Couldn't save the description of {}", tr: "{} listesinin açıklaması kaydedilemedi" }
+    FailedCollaborative { en: "Couldn't change who can add songs to {}", tr: "{} listesinin ortak ayarı değiştirilemedi" }
+    FailedFolderCreate { en: "Couldn't create the folder “{}”", tr: "“{}” klasörü oluşturulamadı" }
+    FailedFolderRestore { en: "Couldn't restore the folder “{}”", tr: "“{}” klasörü geri getirilemedi" }
+    FailedFolderRename { en: "Couldn't rename the folder to “{}”", tr: "Klasör “{}” olarak adlandırılamadı" }
+    FailedFolderDelete { en: "Couldn't delete the folder “{}”", tr: "“{}” klasörü silinemedi" }
+    FailedFolderMove { en: "Couldn't move {} into the folder", tr: "{} klasöre taşınamadı" }
     ColDateAdded { en: "Date added", tr: "Eklenme tarihi" }
     AddedNow { en: "Just now", tr: "Az önce" }
     AddedMinutes { en: "{} minute ago|{} minutes ago", tr: "{} dk önce" }

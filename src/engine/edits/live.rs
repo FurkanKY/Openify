@@ -44,6 +44,8 @@ const CANDIDATES: &[&str] = &[
 struct Left {
     playlist: Mutex<Option<String>>,
     liked: Mutex<Option<String>>,
+    /// Sınamanın açtığı klasörün kimliği (`start-group:<kimlik>`).
+    folder_id: Mutex<Option<String>>,
 }
 
 async fn connect() -> Session {
@@ -495,6 +497,11 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
 
 /// Hata ya da çökme olsa da çalışır: sınamanın hesapta bıraktıklarını geri alır.
 async fn cleanup(s: &Session, left: &Left) {
+    // Klasör işaretleri (varsa) önce kalkar: liste köke çıksın, silme temiz olsun.
+    if let Some(id) = left.folder_id.lock().unwrap().take() {
+        println!("TEMİZLİK: sınama klasörünün işaretleri kaldırılıyor ({id})");
+        remove_folder_markers(s, &id).await;
+    }
     let liked = left.liked.lock().unwrap().take();
     if let Some(uri) = liked {
         println!("TEMİZLİK: sınama şarkısının beğenisi kaldırılıyor ({uri})");
@@ -743,6 +750,270 @@ async fn live_follow() {
         sorted_after, sorted_before,
         "takip edilen sanatçılar değişmiş"
     );
+}
+
+/// Sınama klasörünün işaretlerini kök listeden çıkarır (kimlikle bulur;
+/// yinelenebilir, çökmeden sonra da çalışır).
+async fn remove_folder_markers(s: &Session, id: &str) {
+    let end = folder_end_marker(id);
+    for attempt in 1..=3 {
+        let Ok(st) = rootlist_state(s).await else {
+            return;
+        };
+        let mut rows: Vec<usize> = st
+            .uris
+            .iter()
+            .enumerate()
+            .filter(|(_, u)| folder_marker_id(u) == Some(id) || **u == end)
+            .map(|(i, _)| i)
+            .collect();
+        if rows.is_empty() {
+            return;
+        }
+        rows.sort_unstable();
+        let result = post_rootlist_plan(s, |st| {
+            let mut all = Vec::new();
+            for i in rows.iter().rev() {
+                all.extend(rootlist_remove_item(&st.revision, *i).deltas.remove(0).ops);
+            }
+            Ok(Some(changes(&st.revision, all)))
+        })
+        .await;
+        match result {
+            Ok(()) => return,
+            Err(e) => println!("    temizlik klasör denemesi {attempt} başarısız: {e:?}"),
+        }
+        pause().await;
+    }
+}
+
+/// CANLI liste ayarları (açıklama, ortak liste) ve klasör sınaması (yalnız
+/// elle, kullanıcının onayıyla, kendi hesabında):
+///
+///   cargo test --release live_list_meta -- --ignored --nocapture
+///
+/// Yalnız kendi açtığı geçici "Openify deneme" listesine ve kök listede kendi
+/// açtığı klasöre yazar; çökse bile temizlik ikisini de kaldırır. Sonunda kök
+/// liste sınama öncesi sırasıyla özdeş olmalı. İstekler seyrek.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "Spotify hesabına canlı yazar; yalnız elle: cargo test --release live_list_meta -- --ignored --nocapture"]
+async fn live_list_meta_and_folders() {
+    let s = connect().await;
+    println!("Bağlandı: kullanıcı {}", s.username());
+    let root_before = raw_rootlist_uris(&s).await.expect("kök liste");
+    println!("ÖNCE: kök liste {} öğe", root_before.len());
+    pause().await;
+
+    let left = Left::default();
+    let result = AssertUnwindSafe(async {
+        let pl = create_playlist(&s, TEST_NAME, &[])
+            .await
+            .expect("oluşturma");
+        *left.playlist.lock().unwrap() = Some(pl.clone());
+        post_rootlist_changes(&s, |rev| rootlist_add(rev, &pl))
+            .await
+            .expect("kök listeye ekleme");
+        println!("    deneme listesi: {pl}");
+        pause().await;
+
+        // 1. Açıklama.
+        let desc = "Openify canlı sınama açıklaması";
+        run(
+            &s,
+            &left,
+            "1a SetPlaylistDescription",
+            EditOp::SetPlaylistDescription {
+                playlist: pl.clone(),
+                description: desc.into(),
+                previous: Some(String::new()),
+            },
+        )
+        .await;
+        let st = read_list(&s, &pl).await;
+        println!("    açıklama okundu: {:?}", st.description);
+        assert_eq!(st.description, desc, "açıklama geri okunamadı");
+        run(
+            &s,
+            &left,
+            "1b SetPlaylistDescription (boşalt)",
+            EditOp::SetPlaylistDescription {
+                playlist: pl.clone(),
+                description: String::new(),
+                previous: Some(desc.into()),
+            },
+        )
+        .await;
+        let st = read_list(&s, &pl).await;
+        println!("    boşaltınca açıklama: {:?}", st.description);
+        assert!(st.description.is_empty(), "açıklama silinmedi");
+
+        // 2. Ortak liste.
+        for (label, on) in [
+            ("2a collaborative aç", true),
+            ("2b collaborative kapa", false),
+        ] {
+            run(
+                &s,
+                &left,
+                label,
+                EditOp::SetPlaylistCollaborative {
+                    playlist: pl.clone(),
+                    collaborative: on,
+                    previous: Some(!on),
+                },
+            )
+            .await;
+            let st = read_list(&s, &pl).await;
+            println!("    ortak mı: {}", st.collaborative);
+            assert_eq!(st.collaborative, on, "ortak liste bayrağı yazılmadı");
+        }
+
+        // 3. Klasör: aç, içine taşı, adlandır, sil, geri getir.
+        let id = new_folder_id();
+        let name = "Openify deneme klasörü";
+        let key = folder_start_marker(&id, name);
+        *left.folder_id.lock().unwrap() = Some(id.clone());
+        run(
+            &s,
+            &left,
+            "3a CreateFolder",
+            EditOp::CreateFolder {
+                key: key.clone(),
+                name: name.into(),
+            },
+        )
+        .await;
+        let root = raw_rootlist_uris(&s).await.unwrap();
+        println!(
+            "    kök listede klasör: başlangıç {}, bitiş {}",
+            root.contains(&key),
+            root.contains(&folder_end_marker(&id))
+        );
+        assert!(
+            root.contains(&key) && root.contains(&folder_end_marker(&id)),
+            "klasör işaretleri kök listede yok"
+        );
+
+        run(
+            &s,
+            &left,
+            "3b MovePlaylistToFolder",
+            EditOp::MovePlaylistToFolder {
+                playlist: pl.clone(),
+                folder: Some(key.clone()),
+                previous: None,
+            },
+        )
+        .await;
+        pause().await;
+        let root = raw_rootlist_uris(&s).await.unwrap();
+        let inside = folder_bounds(&root, &key).is_some_and(|(a, b)| {
+            root.iter()
+                .position(|u| *u == pl)
+                .is_some_and(|p| a < p && p < b)
+        });
+        println!("    liste klasörün içinde mi: {inside}");
+        assert!(inside, "liste klasöre taşınmadı");
+        assert_eq!(
+            parent_folder_at(&root, root.iter().position(|u| *u == pl).unwrap()).as_deref(),
+            Some(key.as_str())
+        );
+
+        let name2 = "Openify deneme klasörü 2";
+        let key2 = renamed_folder_key(&key, name2).expect("yeni işaret");
+        run(
+            &s,
+            &left,
+            "3c RenameFolder",
+            EditOp::RenameFolder {
+                folder: key.clone(),
+                name: name2.into(),
+                previous_name: Some(name.into()),
+            },
+        )
+        .await;
+        pause().await;
+        let root = raw_rootlist_uris(&s).await.unwrap();
+        let renamed = root.contains(&key2)
+            && !root.contains(&key)
+            && folder_bounds(&root, &key2).is_some_and(|(a, b)| {
+                root.iter()
+                    .position(|u| *u == pl)
+                    .is_some_and(|p| a < p && p < b)
+            });
+        println!("    yeni adla listede: {renamed}");
+        assert!(renamed, "klasör adlandırılamadı ya da liste düştü");
+
+        run(
+            &s,
+            &left,
+            "3d DeleteFolder",
+            EditOp::DeleteFolder {
+                folder: key2.clone(),
+                name: name2.into(),
+                before: None,
+                contents: vec![pl.clone()],
+            },
+        )
+        .await;
+        pause().await;
+        let root = raw_rootlist_uris(&s).await.unwrap();
+        let gone =
+            !root.contains(&key2) && !root.contains(&folder_end_marker(&id)) && root.contains(&pl);
+        println!("    silinince liste kökte mi: {gone}");
+        assert!(gone, "klasör silinince liste kayboldu ya da işaret kaldı");
+
+        run(
+            &s,
+            &left,
+            "3e RestoreFolder (geri al)",
+            EditOp::RestoreFolder {
+                folder: key2.clone(),
+                name: name2.into(),
+                before: None,
+                contents: vec![pl.clone()],
+            },
+        )
+        .await;
+        pause().await;
+        let root = raw_rootlist_uris(&s).await.unwrap();
+        let restored = folder_bounds(&root, &key2).is_some_and(|(a, b)| {
+            root.iter()
+                .position(|u| *u == pl)
+                .is_some_and(|p| a < p && p < b)
+        });
+        println!("    geri gelince liste klasörde mi: {restored}");
+        assert!(restored, "geri getirilen klasör listeyi içine almadı");
+
+        // Temizlik: klasörü yine sil (liste kökte kalır, aşağıda silinir).
+        run(
+            &s,
+            &left,
+            "3f DeleteFolder (temizlik)",
+            EditOp::DeleteFolder {
+                folder: key2.clone(),
+                name: name2.into(),
+                before: None,
+                contents: vec![pl.clone()],
+            },
+        )
+        .await;
+    })
+    .catch_unwind()
+    .await;
+
+    cleanup(&s, &left).await;
+    pause().await;
+    let root_after = raw_rootlist_uris(&s).await.expect("kök liste (sonra)");
+    println!("SONRA: kök liste {} öğe", root_after.len());
+    println!(
+        "KÖK LİSTE (sıra dahil) özdeş: {}",
+        root_after == root_before
+    );
+    if let Err(panic) = result {
+        resume_unwind(panic);
+    }
+    assert_eq!(root_after, root_before, "kök liste değişmiş");
 }
 
 async fn run_follow(s: &Session, label: &str, op: EditOp) {

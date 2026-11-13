@@ -152,6 +152,13 @@ mod demo {
                 (playlist_key(9), "furka".to_string()),
             ]
             .into(),
+            // Liste açıklaması ve ortak liste (ekranda görünsün diye).
+            descriptions: [(
+                playlist_key(1),
+                "Gece yolculukları için sakin, karanlık şarkılar.".to_string(),
+            )]
+            .into(),
+            collaborative: [playlist_key(3)].into(),
             pinned: Vec::new(),
         };
         let library = Library {

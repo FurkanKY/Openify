@@ -22,8 +22,8 @@ use rusqlite::{Connection, OptionalExtension, Transaction, params};
 use super::{
     conns::Conns,
     library::{
-        CollectionId, Entry, Folder, ItemKind, Library, LibraryItem, LibraryNode, TrackRow,
-        library_nodes,
+        CollectionId, Entry, Folder, ItemKind, Library, LibraryItem, LibraryMeta, LibraryNode,
+        TrackRow, library_nodes,
     },
     migrate::{self, Step},
     rules::Traits,
@@ -91,13 +91,18 @@ pub fn audio_dir() -> Option<PathBuf> {
 //        `track_analysis` (şarkı başına baş / son uç tempo, sessizlik, zarf).
 //        Yeni tablo; hiçbir mevcut satıra dokunulmaz. Çalarak yeniden
 //        hesaplanabilir (indirme gerekmez), hiçbir göç düşürmez.
+//  10    Liste açıklaması ve ortak liste işareti (kök listenin
+//        `ListAttributes`'ından): `library_list_info`. Yeni tablo; hiçbir
+//        mevcut satıra dokunulmaz. Yeniden indirilebilir (her tazelemede kök
+//        listeden gelir).
 //
 // Hangi tablo hangi tür veri:
-//   yeniden indirilebilir  meta, library_items, collections, collection_tracks, tracks
+//   yeniden indirilebilir  meta, library_items, library_list_info, collections,
+//                          collection_tracks, tracks
 //   yeniden indirilebilir ama pahalı (istek harcar) ve ASLA düşürülmez  lyrics
 //   kullanıcı durumu, ASLA düşürülmez  playback (kaldığı yer), library_pins (sabitleme),
 //                                      play_history (yerel çalma geçmişi), hidden_songs (gizlenen şarkılar)
-const MIGRATIONS: [Step; 7] = [
+const MIGRATIONS: [Step; 8] = [
     Step {
         to: 3,
         name: "baseline",
@@ -132,6 +137,11 @@ const MIGRATIONS: [Step; 7] = [
         to: 9,
         name: "track analysis",
         up: super::automix::track_analysis_step,
+    },
+    Step {
+        to: 10,
+        name: "playlist description and collaborative",
+        up: list_info,
     },
 ];
 
@@ -261,6 +271,19 @@ fn play_history(tx: &Transaction, _from: i64) -> rusqlite::Result<()> {
              listened_ms INTEGER NOT NULL
          );
          CREATE INDEX IF NOT EXISTS play_history_at ON play_history (played_at);",
+    )
+}
+
+/// 9 → 10: liste açıklaması ve ortak liste işareti (yeni tablo, veri kaybı yok).
+fn list_info(tx: &Transaction, _from: i64) -> rusqlite::Result<()> {
+    tx.execute_batch(
+        "-- Playlist description and collaborative flag, from the root list.
+         -- Rewritten on every library refresh (re-fetchable).
+         CREATE TABLE IF NOT EXISTS library_list_info (
+             id            TEXT PRIMARY KEY,
+             description   TEXT NOT NULL DEFAULT '',
+             collaborative INTEGER NOT NULL DEFAULT 0
+         );",
     )
 }
 
@@ -402,7 +425,53 @@ impl Db {
         }
         library.artists = Self::read_artists(&conn)?;
         library.meta.pinned = Self::read_pins(&conn)?;
+        Self::read_list_info(&conn, &mut library.meta)?;
         Ok(Some(library))
+    }
+
+    /// Liste açıklamaları ve ortak liste işaretleri (`library_list_info`).
+    fn read_list_info(conn: &Connection, meta: &mut LibraryMeta) -> Result<()> {
+        let mut stmt =
+            conn.prepare("SELECT id, description, collaborative FROM library_list_info")?;
+        let rows = stmt
+            .query_map([], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, i64>(2)? != 0,
+                ))
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        for (id, description, collaborative) in rows {
+            if !description.is_empty() {
+                meta.descriptions.insert(id.clone(), description);
+            }
+            if collaborative {
+                meta.collaborative.insert(id);
+            }
+        }
+        Ok(())
+    }
+
+    /// `read_list_info`in yazıcısı: tabloyu baştan yazar.
+    fn save_list_info(tx: &Transaction, meta: &LibraryMeta) -> Result<()> {
+        tx.execute("DELETE FROM library_list_info", [])?;
+        let mut insert = tx.prepare(
+            "INSERT INTO library_list_info (id, description, collaborative) VALUES (?1, ?2, ?3)",
+        )?;
+        for (id, description) in &meta.descriptions {
+            insert.execute(params![
+                id,
+                description,
+                meta.collaborative.contains(id) as i64
+            ])?;
+        }
+        for id in meta.collaborative.iter() {
+            if !meta.descriptions.contains_key(id) {
+                insert.execute(params![id, "", 1])?;
+            }
+        }
+        Ok(())
     }
 
     fn read_pins(conn: &Connection) -> Result<Vec<String>> {
@@ -455,6 +524,7 @@ impl Db {
         let mut conn = self.w();
         let tx = conn.transaction()?;
         Self::save_artists(&tx, &library.artists)?;
+        Self::save_list_info(&tx, &library.meta)?;
         tx.commit()?;
         Ok(())
     }
@@ -1480,7 +1550,7 @@ mod tests {
     fn every_older_version_reaches_the_latest_and_the_same_schema() {
         let dir = temp_dir("migrate-all");
         let fresh = Db::open(&dir.join("fresh.db")).unwrap();
-        assert_eq!(version(&fresh), 9);
+        assert_eq!(version(&fresh), 10);
         let want = migrate::schema_columns(&fresh.w());
         assert_eq!(
             want["library_items"],
@@ -1516,11 +1586,15 @@ mod tests {
             ["uri", "context", "name", "artists", "hidden_at"]
         );
         assert_eq!(want["track_analysis"][..3], ["uri", "algo", "flags"]);
+        assert_eq!(
+            want["library_list_info"],
+            ["id", "description", "collaborative"]
+        );
         for v in [1, 2, 3] {
             let path = dir.join(format!("v{v}.db"));
             legacy_file(&path, v);
             let db = Db::open(&path).unwrap();
-            assert_eq!(version(&db), 9, "sürüm {v}");
+            assert_eq!(version(&db), 10, "sürüm {v}");
             assert_eq!(
                 migrate::schema_columns(&db.w()),
                 want,
@@ -1570,7 +1644,7 @@ mod tests {
             // İkinci açılış hiçbir şeyi değiştirmez.
             drop(db);
             let again = Db::open(&path).unwrap();
-            assert_eq!(version(&again), 9);
+            assert_eq!(version(&again), 10);
             assert_eq!(again.load_playback().unwrap().unwrap().0, "durum");
         }
         let _ = fs::remove_dir_all(&dir);
@@ -1596,7 +1670,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 9);
+        assert_eq!(version(&db), 10);
         // Mevcut veri aynen: liste, sabitleme, eklenme anı, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -1632,7 +1706,7 @@ mod tests {
         db.save_library(&with_artists).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 9);
+        assert_eq!(version(&again), 10);
         assert_eq!(again.load_library().unwrap().unwrap().artists.len(), 1);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1644,13 +1718,13 @@ mod tests {
         legacy_file(&path, 3);
         Connection::open(&path)
             .unwrap()
-            .pragma_update(None, "user_version", 10)
+            .pragma_update(None, "user_version", 11)
             .unwrap();
         let err = Db::open(&path).err().expect("daha yeni sürüm açılmamalı");
-        assert!(format!("{err:#}").contains("version 10"), "{err:#}");
+        assert!(format!("{err:#}").contains("version 11"), "{err:#}");
         // Dosyaya dokunulmadı: sürüm ve veri aynı.
         let raw = Connection::open(&path).unwrap();
-        assert_eq!(migrate::user_version(&raw).unwrap(), 10);
+        assert_eq!(migrate::user_version(&raw).unwrap(), 11);
         let n: i64 = raw
             .query_row("SELECT COUNT(*) FROM collection_tracks", [], |r| r.get(0))
             .unwrap();
@@ -1835,6 +1909,12 @@ mod tests {
                 ]
                 .into(),
                 creators: [(pl(3).key().to_string(), "ayse".to_string())].into(),
+                descriptions: [
+                    (pl(2).key().to_string(), "Yaz akşamları".to_string()),
+                    (pl(5).key().to_string(), "İki satır\nve devamı".to_string()),
+                ]
+                .into(),
+                collaborative: [pl(4).key().to_string()].into(),
                 pinned: Vec::new(),
             },
             ..Default::default()
@@ -1883,7 +1963,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 9);
+        assert_eq!(version(&db), 10);
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
             (lib.playlists[0].name.as_str(), lib.artists.len()),
@@ -1919,7 +1999,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 9);
+        assert_eq!(version(&db), 10);
         // Mevcut veri aynen.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -1952,7 +2032,7 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 9);
+        assert_eq!(version(&again), 10);
         let n: i64 = again
             .r()
             .query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0))
@@ -1984,7 +2064,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 9);
+        assert_eq!(version(&db), 10);
         // Mevcut veri aynen: kütüphane, sabitleme, çalma geçmişi, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2017,7 +2097,7 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 9);
+        assert_eq!(version(&again), 10);
         let kept = again.hidden_songs().unwrap();
         assert_eq!(
             kept.len(),
@@ -2048,7 +2128,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 9);
+        assert_eq!(version(&db), 10);
         // Mevcut veri aynen: kütüphane, sabitleme, gizlenenler, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2073,11 +2153,66 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 9);
+        assert_eq!(version(&again), 10);
         assert_eq!(
             again.analysis("spotify:track:a").unwrap().unwrap().tail_ms,
             900
         );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// 9'daki bir dosya 10'a göçte hiçbir şey kaybetmez; liste açıklaması ve
+    /// ortak liste tablosu boş gelir, yazılıp okunur.
+    #[test]
+    fn version_9_file_gains_list_info_and_loses_nothing() {
+        let dir = temp_dir("migrate-v9-list-info");
+        let path = dir.join("library.db");
+        legacy_file(&path, 3);
+        {
+            let mut conn = Connection::open(&path).unwrap();
+            migrate::migrate(&mut conn, &MIGRATIONS[..7]).unwrap();
+            assert_eq!(migrate::user_version(&conn).unwrap(), 9);
+            assert!(!migrate::schema_columns(&conn).contains_key("library_list_info"));
+            conn.execute_batch(
+                "INSERT INTO library_pins (id, pinned_at) VALUES ('spotify:playlist:1', 77);
+                 INSERT INTO play_history (played_at, uri, name, artists, album, duration_ms, listened_ms)
+                     VALUES (5, 'spotify:track:a', 'A', 'X', 'Y', 1000, 500);",
+            )
+            .unwrap();
+        }
+        let db = Db::open(&path).unwrap();
+        assert_eq!(version(&db), 10);
+        // Mevcut veri aynen: kütüphane, sabitleme, çalma geçmişi, kaldığı yer, sözler.
+        let mut lib = db.load_library().unwrap().unwrap();
+        assert_eq!(
+            (lib.playlists[0].name.as_str(), lib.meta.pinned.clone()),
+            ("Eski", vec!["spotify:playlist:1".to_string()])
+        );
+        assert!(lib.meta.descriptions.is_empty() && lib.meta.collaborative.is_empty());
+        assert_eq!(db.load_playback().unwrap().unwrap().0, "durum");
+        assert!(
+            db.lyrics_row("spotify:track:a", "spotify")
+                .unwrap()
+                .is_some()
+        );
+        // Yeni tablo yazılıp okunur; boş açıklama / kapalı ortaklık yazılmaz.
+        lib.meta
+            .descriptions
+            .insert("spotify:playlist:1".into(), "Eski liste".into());
+        lib.meta.collaborative.insert("spotify:playlist:1".into());
+        db.save_library(&lib).unwrap();
+        drop(db);
+        let again = Db::open(&path).unwrap();
+        assert_eq!(version(&again), 10);
+        let back = again.load_library().unwrap().unwrap();
+        assert_eq!(
+            back.meta
+                .descriptions
+                .get("spotify:playlist:1")
+                .map(String::as_str),
+            Some("Eski liste")
+        );
+        assert!(back.meta.collaborative.contains("spotify:playlist:1"));
         let _ = fs::remove_dir_all(&dir);
     }
 

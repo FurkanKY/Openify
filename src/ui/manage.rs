@@ -38,8 +38,9 @@ use super::{
     theme::*,
 };
 use crate::engine::{
-    AddPosition, CollectionId, Command, EditOp, FailKind, FailedEdit, LibraryCommand, LibraryItem,
-    TrackRow, edit_failed_notice, new_temp_id, patch_library, patch_tracks, same_edit,
+    AddPosition, CollectionId, Command, DESCRIPTION_MAX, EditOp, FailKind, FailedEdit,
+    LibraryCommand, LibraryItem, TrackRow, edit_failed_notice, folder_contains,
+    folder_start_marker, new_folder_id, new_temp_id, patch_library, patch_tracks, same_edit,
     touched_collection,
 };
 use crate::{t, tf, tp};
@@ -134,6 +135,19 @@ pub enum PromptKind {
         playlist: String,
         previous: String,
     },
+    /// Liste açıklaması (çok satır, en çok `DESCRIPTION_MAX` karakter).
+    Description {
+        playlist: String,
+        previous: String,
+    },
+    /// Yeni klasör; `move`: oluşunca bu liste klasörün içine taşınır.
+    FolderCreate {
+        move_playlist: Option<(String, String)>,
+    },
+    FolderRename {
+        folder: String,
+        previous: String,
+    },
     /// Spotify Connect aygıt adı (bkz. `settings::connect_section`).
     DeviceName,
 }
@@ -187,6 +201,33 @@ pub enum Act {
     Rename {
         playlist: String,
         name: String,
+    },
+    /// Listenin açıklamasını düzenle (ad kutusu gibi, çok satır).
+    EditDescription {
+        playlist: String,
+    },
+    /// Ortak listeyi aç / kapa.
+    SetCollaborative {
+        playlist: String,
+        on: bool,
+    },
+    /// Yeni klasör; `move` verilmişse liste oluşan klasöre taşınır.
+    NewFolder {
+        move_playlist: Option<(String, String)>,
+    },
+    RenameFolder {
+        folder: String,
+        name: String,
+    },
+    DeleteFolder {
+        folder: String,
+    },
+    MoveToFolder {
+        playlist: String,
+        /// Hedef klasör; `None` köke (klasörden çıkar).
+        folder: Option<String>,
+        /// Eski klasör (geri alma için; `None` kökteydi).
+        previous: Option<String>,
     },
     Delete {
         playlist: String,
@@ -370,6 +411,10 @@ enum Subject {
     ListContent,
     Rename,
     Create,
+    /// Liste açıklaması / ortak liste (listenin kendi ayarları).
+    Meta,
+    /// Klasör işlemleri (kök liste).
+    Folder,
     /// Listeyi silme / geri getirme.
     Remove,
 }
@@ -386,6 +431,14 @@ fn subject_of(op: &EditOp) -> Subject {
         | EditOp::MovePlaylistItems { .. } => Subject::ListContent,
         EditOp::RenamePlaylist { .. } => Subject::Rename,
         EditOp::CreatePlaylist { .. } => Subject::Create,
+        EditOp::SetPlaylistDescription { .. } | EditOp::SetPlaylistCollaborative { .. } => {
+            Subject::Meta
+        }
+        EditOp::CreateFolder { .. }
+        | EditOp::RestoreFolder { .. }
+        | EditOp::RenameFolder { .. }
+        | EditOp::DeleteFolder { .. }
+        | EditOp::MovePlaylistToFolder { .. } => Subject::Folder,
         EditOp::DeletePlaylist { .. } | EditOp::RestorePlaylist { .. } => Subject::Remove,
     }
 }
@@ -396,6 +449,8 @@ fn playlist_of(op: &EditOp) -> Option<&str> {
         EditOp::AddToPlaylist { playlist, .. }
         | EditOp::RemoveFromPlaylist { playlist, .. }
         | EditOp::RenamePlaylist { playlist, .. }
+        | EditOp::SetPlaylistDescription { playlist, .. }
+        | EditOp::SetPlaylistCollaborative { playlist, .. }
         | EditOp::MovePlaylistItems { playlist, .. } => Some(playlist),
         _ => None,
     }
@@ -416,6 +471,8 @@ pub fn explain_edit_failure(op: &EditOp, kind: FailKind, foreign_list: bool) -> 
             (Subject::Rename, true) => t!(FailRenameNotYours),
             (Subject::Rename, false) => t!(FailRenameDenied),
             (Subject::Create, _) => t!(FailCreateDenied),
+            (Subject::Meta, _) => t!(FailMetaDenied),
+            (Subject::Folder, _) => t!(FailFolderDenied),
             (Subject::Remove, _) => t!(FailRemoveDenied),
         },
         FailKind::NotFound => match subject {
@@ -423,8 +480,9 @@ pub fn explain_edit_failure(op: &EditOp, kind: FailKind, foreign_list: bool) -> 
             Subject::Album => t!(FailGoneAlbum),
             Subject::Follow => t!(FailGoneArtist),
             Subject::ListContent => t!(FailGoneListOrSong),
-            Subject::Rename | Subject::Remove => t!(FailGoneList),
+            Subject::Rename | Subject::Remove | Subject::Meta => t!(FailGoneList),
             Subject::Create => t!(FailGoneCreate),
+            Subject::Folder => t!(FailGoneFolder),
         },
         FailKind::Offline => t!(FailOffline),
         FailKind::Expired => t!(FailExpired),
@@ -1284,6 +1342,163 @@ impl Shell {
         cx.notify();
     }
 
+    /// Liste açıklamasını düzenle (ad kutusu gibi; metin çok satırlı olabilir).
+    pub(super) fn ask_description(&mut self, playlist: String, cx: &mut Context<Self>) {
+        let id = CollectionId::Playlist(playlist.clone());
+        let previous = self.list_description(&id).unwrap_or_default().to_string();
+        self.manage.menu = None;
+        self.manage.prompt = Some(Prompt {
+            kind: PromptKind::Description {
+                playlist,
+                previous: previous.clone(),
+            },
+            text: previous,
+        });
+        self.refocus_anchor = true;
+        cx.notify();
+    }
+
+    /// Ortak listeyi aç / kapa (geri alınabilir).
+    pub(super) fn set_collaborative(&mut self, playlist: String, on: bool, cx: &mut Context<Self>) {
+        let id = CollectionId::Playlist(playlist.clone());
+        if self.list_is_collaborative(&id) == on {
+            return;
+        }
+        let op = EditOp::SetPlaylistCollaborative {
+            playlist,
+            collaborative: on,
+            previous: Some(!on),
+        };
+        let ops = vec![(op, Vec::new(), None)];
+        let undo = inverse_all(&ops);
+        let label = if on {
+            t!(ToastCollaborativeOn)
+        } else {
+            t!(ToastCollaborativeOff)
+        };
+        self.commit(ops, Some((label.into(), undo)), cx);
+    }
+
+    // ── Klasörler ───────────────────────────────────────────────────────
+
+    /// Yeni klasör adı sor (`move_playlist`: oluşunca bu liste içine taşınır).
+    pub(super) fn ask_new_folder(
+        &mut self,
+        move_playlist: Option<(String, String)>,
+        cx: &mut Context<Self>,
+    ) {
+        self.manage.menu = None;
+        self.manage.prompt = Some(Prompt {
+            kind: PromptKind::FolderCreate { move_playlist },
+            text: String::new(),
+        });
+        self.refocus_anchor = true;
+        cx.notify();
+    }
+
+    pub(super) fn ask_folder_rename(
+        &mut self,
+        folder: String,
+        previous: String,
+        cx: &mut Context<Self>,
+    ) {
+        self.manage.menu = None;
+        self.manage.prompt = Some(Prompt {
+            kind: PromptKind::FolderRename {
+                folder,
+                previous: previous.clone(),
+            },
+            text: previous,
+        });
+        self.refocus_anchor = true;
+        cx.notify();
+    }
+
+    /// Klasörü sil: iki işaret kalkar, içindekiler kök seviyeye çıkar. Geri
+    /// alma klasörü (listeleriyle) eski yerine koyar.
+    pub(super) fn delete_folder(&mut self, folder: String, cx: &mut Context<Self>) {
+        let (name, before, contents, parent) = match &self.library.library {
+            Loadable::Loaded(lib) => {
+                let Some(f) = lib.meta.folders.iter().find(|f| f.key == folder) else {
+                    return;
+                };
+                // İçindeki listeler (doğrudan çocuklar), kütüphane sırasıyla.
+                let contents: Vec<String> = lib
+                    .playlists
+                    .iter()
+                    .filter(|p| {
+                        lib.meta.parents.get(p.id.key()).map(String::as_str)
+                            == Some(folder.as_str())
+                    })
+                    .map(|p| p.id.key().to_string())
+                    .collect();
+                // Klasörden sonra gelen liste: geri alırken yerini bulmak için.
+                let inside = lib
+                    .playlists
+                    .iter()
+                    .filter(|p| folder_contains(&lib.meta, p.id.key(), &folder))
+                    .count();
+                let before = lib
+                    .playlists
+                    .get(f.at + inside)
+                    .map(|p| p.id.key().to_string());
+                (f.name.clone(), before, contents, f.parent.clone())
+            }
+            _ => return,
+        };
+        let op = EditOp::DeleteFolder {
+            folder: folder.clone(),
+            name: name.clone(),
+            before: before.clone(),
+            contents: contents.clone(),
+        };
+        let undo = vec![(
+            EditOp::RestoreFolder {
+                folder: folder.clone(),
+                name: name.clone(),
+                before,
+                contents,
+            },
+            Vec::new(),
+            None,
+        )];
+        // Açık klasör kapansın; ızgarada içindeysek bir üst klasöre çıkılır.
+        self.set_folder_open(&folder, false, cx);
+        if self.all.folder.as_deref() == Some(folder.as_str()) {
+            self.go_to_folder(parent, cx);
+        }
+        self.commit(
+            vec![(op, Vec::new(), None)],
+            Some((t!(ToastFolderDeleted).into(), undo)),
+            cx,
+        );
+    }
+
+    /// Listeyi bir klasöre taşı (`folder` boşsa köke çıkar).
+    pub(super) fn move_to_folder(
+        &mut self,
+        playlist: String,
+        folder: Option<String>,
+        previous: Option<String>,
+        cx: &mut Context<Self>,
+    ) {
+        if previous == folder {
+            return;
+        }
+        let op = EditOp::MovePlaylistToFolder {
+            playlist,
+            folder: folder.clone(),
+            previous,
+        };
+        let ops = vec![(op, Vec::new(), None)];
+        let undo = inverse_all(&ops);
+        let label = match folder.and_then(|key| self.folder_name(&key).map(str::to_string)) {
+            Some(name) => tf!(ToastMovedToFolder, name),
+            None => t!(ToastMovedToRoot).to_string(),
+        };
+        self.commit(ops, Some((label, undo)), cx);
+    }
+
     /// F2: açık kendi listeni yeniden adlandır.
     pub(super) fn rename_current(&mut self, cx: &mut Context<Self>) {
         let Some(id) = self.library.selected.clone().filter(|_| !self.page_open()) else {
@@ -1301,19 +1516,73 @@ impl Shell {
         let Some(prompt) = self.manage.prompt.take() else {
             return;
         };
-        let name = prompt.text.trim().to_string();
-        if name.is_empty() {
+        let description = matches!(&prompt.kind, PromptKind::Description { .. });
+        let text = prompt.text.trim().to_string();
+        // Açıklama boşaltılabilir; ötekilerde boş ad kabul edilmez.
+        if text.is_empty() && !description {
             self.manage.prompt = Some(prompt);
             return;
         }
         match prompt.kind {
+            PromptKind::Description { playlist, previous } => {
+                if text == previous {
+                    cx.notify();
+                    return;
+                }
+                let op = EditOp::SetPlaylistDescription {
+                    playlist,
+                    description: text,
+                    previous: Some(previous),
+                };
+                let ops = vec![(op, Vec::new(), None)];
+                let undo = inverse_all(&ops);
+                self.commit(ops, Some((t!(ToastDescriptionSaved).into(), undo)), cx);
+            }
+            PromptKind::FolderCreate { move_playlist } => {
+                let key = folder_start_marker(&new_folder_id(), &text);
+                let create = EditOp::CreateFolder {
+                    key: key.clone(),
+                    name: text.clone(),
+                };
+                let mut ops = vec![(create, Vec::new(), None)];
+                if let Some((playlist, _)) = move_playlist {
+                    let previous = self
+                        .folder_of(&CollectionId::Playlist(playlist.clone()))
+                        .map(str::to_string);
+                    ops.push((
+                        EditOp::MovePlaylistToFolder {
+                            playlist,
+                            folder: Some(key),
+                            previous,
+                        },
+                        Vec::new(),
+                        None,
+                    ));
+                }
+                let undo = inverse_all(&ops);
+                self.commit(ops, Some((tf!(ToastFolderCreated, text), undo)), cx);
+            }
+            PromptKind::FolderRename { folder, previous } => {
+                if text == previous {
+                    cx.notify();
+                    return;
+                }
+                let op = EditOp::RenameFolder {
+                    folder,
+                    name: text,
+                    previous_name: Some(previous),
+                };
+                let ops = vec![(op, Vec::new(), None)];
+                let undo = inverse_all(&ops);
+                self.commit(ops, Some((t!(ToastFolderRenamed).into(), undo)), cx);
+            }
             PromptKind::Create { rows, open } => {
                 let temp_id = new_temp_id();
                 let uris: Vec<String> = rows.iter().map(|r| r.uri.clone()).collect();
                 let n = rows.len();
                 let op = EditOp::CreatePlaylist {
                     temp_id: temp_id.clone(),
-                    name: name.clone(),
+                    name: text.clone(),
                     uris,
                     created: None,
                 };
@@ -1325,33 +1594,33 @@ impl Shell {
                     None,
                 )];
                 let label = match n {
-                    0 => tf!(ToastCreated, name),
-                    1 => tf!(ToastCreatedWith1, name),
-                    n => tf!(ToastCreatedWithN, name, n),
+                    0 => tf!(ToastCreated, text),
+                    1 => tf!(ToastCreatedWith1, text),
+                    n => tf!(ToastCreatedWithN, text, n),
                 };
                 self.commit(vec![(op, rows, None)], Some((label, undo)), cx);
                 if open {
                     self.library
                         .titles
-                        .insert(CollectionId::Playlist(temp_id.clone()), name);
+                        .insert(CollectionId::Playlist(temp_id.clone()), text);
                     self.select_collection(CollectionId::Playlist(temp_id), cx);
                 }
             }
             PromptKind::Rename { playlist, previous } => {
-                if name == previous {
+                if text == previous {
                     cx.notify();
                     return;
                 }
                 let op = EditOp::RenamePlaylist {
                     playlist,
-                    name,
+                    name: text,
                     previous_name: Some(previous),
                 };
                 let ops = vec![(op, Vec::new(), None)];
                 let undo = inverse_all(&ops);
                 self.commit(ops, Some((t!(ToastRenamed).into(), undo)), cx);
             }
-            PromptKind::DeviceName => self.set_device_name(name, cx),
+            PromptKind::DeviceName => self.set_device_name(text, cx),
         }
     }
 
@@ -1377,10 +1646,19 @@ impl Shell {
         let Some(prompt) = self.manage.prompt.as_mut() else {
             return;
         };
+        let description = matches!(&prompt.kind, PromptKind::Description { .. });
+        let limit = if description {
+            DESCRIPTION_MAX
+        } else {
+            NAME_MAX
+        };
         let ks = &event.keystroke;
         let ctrl = ks.modifiers.control;
         match ks.key.as_str() {
             "escape" => self.manage.prompt = None,
+            // Açıklamada Enter yeni satır açar; kaydetmek için Ctrl+Enter
+            // (öteki kutularda Enter kaydeder).
+            "enter" if description && !ctrl => prompt.text.push('\n'),
             "enter" => self.confirm_prompt(cx),
             "backspace" if ctrl => {
                 let trimmed = prompt.text.trim_end().len();
@@ -1392,9 +1670,15 @@ impl Shell {
             }
             "v" if ctrl => {
                 if let Some(text) = cx.read_from_clipboard().and_then(|i| i.text()) {
-                    prompt
-                        .text
-                        .push_str(text.lines().next().unwrap_or_default());
+                    if description {
+                        prompt
+                            .text
+                            .push_str(&text.replace("\r\n", "\n").replace('\r', "\n"));
+                    } else {
+                        prompt
+                            .text
+                            .push_str(text.lines().next().unwrap_or_default());
+                    }
                 }
             }
             "space" => prompt.text.push(' '),
@@ -1409,10 +1693,11 @@ impl Shell {
             }
             _ => {}
         }
+        // Yeni satır düz Enter ile gelir; kutu 300 karakterde kesilir.
         if let Some(p) = self.manage.prompt.as_mut()
-            && p.text.chars().count() > NAME_MAX
+            && p.text.chars().count() > limit
         {
-            p.text = p.text.chars().take(NAME_MAX).collect();
+            p.text = p.text.chars().take(limit).collect();
         }
         cx.notify();
     }
@@ -1691,6 +1976,77 @@ impl Shell {
                         }),
                         sub: Vec::new(),
                     });
+                    // Açıklama ve ortak liste: listenin kendi ayarları.
+                    let description = self.list_description(id).unwrap_or_default().to_string();
+                    entries.push(Entry::Item {
+                        icon: "pencil",
+                        label: if description.is_empty() {
+                            t!(MenuAddDescription).into()
+                        } else {
+                            t!(MenuEditDescription).into()
+                        },
+                        shortcut: None,
+                        danger: false,
+                        act: Some(Act::EditDescription {
+                            playlist: uri.clone(),
+                        }),
+                        sub: Vec::new(),
+                    });
+                    let shared = self.list_is_collaborative(id);
+                    entries.push(item(
+                        "users",
+                        if shared {
+                            t!(MenuMakePrivate).into()
+                        } else {
+                            t!(MenuMakeCollaborative).into()
+                        },
+                        Act::SetCollaborative {
+                            playlist: uri.clone(),
+                            on: !shared,
+                        },
+                    ));
+                }
+                // Klasör: yalnız kök listede gerçekten duran listeler (henüz
+                // oluşmakta olan geçici adresli liste kök listede yok).
+                if in_library && uri.starts_with("spotify:playlist:") {
+                    let current = self.folder_of(id).map(str::to_string);
+                    let mut folders: Vec<(String, Act)> = vec![(
+                        t!(MenuNewFolderDots).to_string(),
+                        Act::NewFolder {
+                            move_playlist: Some((uri.clone(), title.clone())),
+                        },
+                    )];
+                    if current.is_some() {
+                        folders.push((
+                            t!(MenuMoveToRoot).to_string(),
+                            Act::MoveToFolder {
+                                playlist: uri.clone(),
+                                folder: None,
+                                previous: current.clone(),
+                            },
+                        ));
+                    }
+                    for (key, name) in self.folder_choices() {
+                        if Some(&key) == current.as_ref() {
+                            continue;
+                        }
+                        folders.push((
+                            name,
+                            Act::MoveToFolder {
+                                playlist: uri.clone(),
+                                folder: Some(key),
+                                previous: current.clone(),
+                            },
+                        ));
+                    }
+                    entries.push(Entry::Item {
+                        icon: "folder",
+                        label: t!(MenuMoveToFolder).into(),
+                        shortcut: None,
+                        danger: false,
+                        act: None,
+                        sub: folders,
+                    });
                 }
                 if in_library {
                     entries.push(Entry::Separator);
@@ -1770,6 +2126,32 @@ impl Shell {
                         entries.push(Entry::Separator);
                     }
                     entries.extend(self.never_play_entries(&[artist.name.as_str()], uri, false));
+                }
+            }
+            CardTarget::Folder { key } => {
+                if let Some(name) = self.folder_name(key).map(str::to_string) {
+                    entries.push(Entry::Separator);
+                    entries.push(Entry::Item {
+                        icon: "pencil",
+                        label: t!(MenuRenameFolder).into(),
+                        shortcut: None,
+                        danger: false,
+                        act: Some(Act::RenameFolder {
+                            folder: key.clone(),
+                            name,
+                        }),
+                        sub: Vec::new(),
+                    });
+                    entries.push(Entry::Item {
+                        icon: "trash-2",
+                        label: t!(MenuDeleteFolder).into(),
+                        shortcut: None,
+                        danger: true,
+                        act: Some(Act::DeleteFolder {
+                            folder: key.clone(),
+                        }),
+                        sub: Vec::new(),
+                    });
                 }
             }
             _ => {}
@@ -1887,6 +2269,16 @@ impl Shell {
             Act::Open(target) => self.open_card(target, cx),
             Act::Play(target) => self.play_card(target, cx),
             Act::Rename { playlist, name } => self.ask_rename(playlist, name, cx),
+            Act::EditDescription { playlist } => self.ask_description(playlist, cx),
+            Act::SetCollaborative { playlist, on } => self.set_collaborative(playlist, on, cx),
+            Act::NewFolder { move_playlist } => self.ask_new_folder(move_playlist, cx),
+            Act::RenameFolder { folder, name } => self.ask_folder_rename(folder, name, cx),
+            Act::DeleteFolder { folder } => self.delete_folder(folder, cx),
+            Act::MoveToFolder {
+                playlist,
+                folder,
+                previous,
+            } => self.move_to_folder(playlist, folder, previous, cx),
             Act::Delete { playlist, own } => self.delete_playlist(playlist, own, cx),
             Act::SaveAlbum { uri, on, item } => self.set_album_saved(uri, on, item, cx),
             Act::FollowArtist { uri, on, item } => self.set_artist_followed(uri, on, item, cx),
@@ -2371,15 +2763,49 @@ impl Shell {
 
     fn render_prompt(&self, prompt: &Prompt, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
-        let (title, action) = match &prompt.kind {
-            PromptKind::Create { rows, .. } if rows.is_empty() => {
-                (t!(NewPlaylist).to_string(), t!(PromptCreate))
-            }
-            PromptKind::Create { rows, .. } => {
-                (tp!(PromptNewPlaylistSongs, rows.len()), t!(PromptCreate))
-            }
-            PromptKind::Rename { .. } => (t!(PromptRenameTitle).to_string(), t!(Save)),
-            PromptKind::DeviceName => (t!(PromptDeviceNameTitle).to_string(), t!(Save)),
+        let (title, action, hint, description) = match &prompt.kind {
+            PromptKind::Create { rows, .. } if rows.is_empty() => (
+                t!(NewPlaylist).to_string(),
+                t!(PromptCreate),
+                t!(PromptNameHint),
+                false,
+            ),
+            PromptKind::Create { rows, .. } => (
+                tp!(PromptNewPlaylistSongs, rows.len()),
+                t!(PromptCreate),
+                t!(PromptNameHint),
+                false,
+            ),
+            PromptKind::Rename { .. } => (
+                t!(PromptRenameTitle).to_string(),
+                t!(Save),
+                t!(PromptNameHint),
+                false,
+            ),
+            PromptKind::Description { .. } => (
+                t!(PromptDescriptionTitle).to_string(),
+                t!(Save),
+                t!(PromptDescriptionHint),
+                true,
+            ),
+            PromptKind::FolderCreate { .. } => (
+                t!(PromptNewFolderTitle).to_string(),
+                t!(PromptCreate),
+                t!(PromptFolderHint),
+                false,
+            ),
+            PromptKind::FolderRename { .. } => (
+                t!(PromptRenameFolderTitle).to_string(),
+                t!(Save),
+                t!(PromptFolderHint),
+                false,
+            ),
+            PromptKind::DeviceName => (
+                t!(PromptDeviceNameTitle).to_string(),
+                t!(Save),
+                t!(PromptNameHint),
+                false,
+            ),
         };
         let empty = prompt.text.is_empty();
         let caret = || {
@@ -2389,22 +2815,56 @@ impl Shell {
                 .flex_shrink_0()
                 .bg(rgb(accent))
         };
-        let field = div()
-            .h(px(40.))
-            .px(px(S3))
-            .rounded(px(R_LG))
-            .flex()
-            .items_center()
-            .bg(shade(SHADE_INPUT))
-            .border_1()
-            .border_color(rgb(accent))
-            .overflow_hidden()
-            .whitespace_nowrap()
-            .type_role(T_BODY)
-            .text_color(if empty { muted() } else { text() })
-            .when(empty, |el| el.child(caret()).child(t!(PromptNameHint)))
-            .when(!empty, |el| el.child(prompt.text.clone()).child(caret()));
-        let ok = !prompt.text.trim().is_empty();
+        // Açıklama kutusu çok satır: yazı sarar, kutu dört satırdan sonra keser.
+        let field = if description {
+            div()
+                .min_h(px(T_BODY.line * 4.))
+                .max_h(px(T_BODY.line * 4.))
+                .px(px(S3))
+                .py(px(S2))
+                .rounded(px(R_LG))
+                .flex()
+                .items_end()
+                .overflow_hidden()
+                .bg(shade(SHADE_INPUT))
+                .border_1()
+                .border_color(rgb(accent))
+                .type_role(T_BODY)
+                .text_color(if empty { muted() } else { text() })
+                .when(empty, |el| el.child(caret()).child(hint))
+                .when(!empty, |el| {
+                    el.child(div().flex_1().min_w_0().child(prompt.text.clone()))
+                        .child(caret())
+                })
+        } else {
+            div()
+                .h(px(40.))
+                .px(px(S3))
+                .rounded(px(R_LG))
+                .flex()
+                .items_center()
+                .bg(shade(SHADE_INPUT))
+                .border_1()
+                .border_color(rgb(accent))
+                .overflow_hidden()
+                .whitespace_nowrap()
+                .type_role(T_BODY)
+                .text_color(if empty { muted() } else { text() })
+                .when(empty, |el| el.child(caret()).child(hint))
+                .when(!empty, |el| el.child(prompt.text.clone()).child(caret()))
+        };
+        let ok = description || !prompt.text.trim().is_empty();
+        let counter = description.then(|| {
+            div()
+                .type_role(T_LABEL)
+                .tabular()
+                .text_color(label())
+                .child(tf!(
+                    PromptChars,
+                    prompt.text.chars().count(),
+                    crate::engine::DESCRIPTION_MAX
+                ))
+        });
         let panel = div()
             .id("prompt")
             .occlude()
@@ -2421,11 +2881,21 @@ impl Shell {
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
                 div()
-                    .font_family(font())
-                    .type_role(T_TITLE)
-                    .font_weight(FontWeight::EXTRA_BOLD)
-                    .text_color(text())
-                    .child(title),
+                    .flex()
+                    .items_center()
+                    .justify_between()
+                    .gap(px(S3))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .font_family(font())
+                            .type_role(T_TITLE)
+                            .font_weight(FontWeight::EXTRA_BOLD)
+                            .text_color(text())
+                            .child(title),
+                    )
+                    .children(counter),
             )
             .child(field)
             .child(
@@ -2744,6 +3214,19 @@ impl Shell {
             EditOp::DeletePlaylist { playlist } => tf!(FailedDelete, list(playlist)),
             EditOp::RestorePlaylist { playlist } => tf!(FailedRestore, list(playlist)),
             EditOp::MovePlaylistItems { playlist, .. } => tf!(FailedReorder, list(playlist)),
+            EditOp::SetPlaylistDescription { playlist, .. } => {
+                tf!(FailedDescription, list(playlist))
+            }
+            EditOp::SetPlaylistCollaborative { playlist, .. } => {
+                tf!(FailedCollaborative, list(playlist))
+            }
+            EditOp::CreateFolder { name, .. } => tf!(FailedFolderCreate, name),
+            EditOp::RestoreFolder { name, .. } => tf!(FailedFolderRestore, name),
+            EditOp::RenameFolder { name, .. } => tf!(FailedFolderRename, name),
+            EditOp::DeleteFolder { name, .. } => tf!(FailedFolderDelete, name),
+            EditOp::MovePlaylistToFolder { playlist, .. } => {
+                tf!(FailedFolderMove, list(playlist))
+            }
         }
     }
 
@@ -3106,6 +3589,9 @@ fn rewrite_playlist(op: &mut EditOp, temp: &str, real: &str) {
         | EditOp::RenamePlaylist { playlist, .. }
         | EditOp::DeletePlaylist { playlist }
         | EditOp::RestorePlaylist { playlist }
+        | EditOp::SetPlaylistDescription { playlist, .. }
+        | EditOp::SetPlaylistCollaborative { playlist, .. }
+        | EditOp::MovePlaylistToFolder { playlist, .. }
         | EditOp::MovePlaylistItems { playlist, .. }
             if playlist == temp =>
         {

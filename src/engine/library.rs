@@ -10,7 +10,11 @@
 //!   /collection/v2/paging       → beğenilen şarkılar + kaydedilen albümler
 //!   playlist / albüm / şarkı    → librespot'un metadata istekleri
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+    time::Duration,
+};
 
 use anyhow::{Context, Result};
 use futures::{StreamExt, stream};
@@ -264,6 +268,10 @@ pub struct LibraryMeta {
     pub added: HashMap<String, i64>,
     /// Listenin yaratıcısı (sahibinin kullanıcı adı; Spotify'ınkiler "spotify").
     pub creators: HashMap<String, String>,
+    /// Liste anahtarı → açıklaması (boş açıklamalar yok). Kök listeden gelir.
+    pub descriptions: HashMap<String, String>,
+    /// Ortak (collaborative) listelerin anahtarları.
+    pub collaborative: HashSet<String>,
     /// Sabitlenenlerin anahtarları (liste, albüm, sanatçı, "liked"),
     /// sabitlenme sırasıyla (en eski önce). Yerel: Spotify'a yazılmaz
     /// (`library_pins`).
@@ -284,6 +292,22 @@ pub fn folder_id(key: &str) -> &str {
     key.match_indices(':')
         .nth(2)
         .map_or(key, |(i, _)| &key[..i])
+}
+
+/// `key` (liste ya da klasör) `folder` klasörünün içinde mi (iç içe dahil)?
+pub fn folder_contains(meta: &LibraryMeta, key: &str, folder: &str) -> bool {
+    let mut current = meta.parents.get(key).map(String::as_str);
+    while let Some(parent) = current {
+        if parent == folder {
+            return true;
+        }
+        current = meta
+            .folders
+            .iter()
+            .find(|f| f.key == parent)
+            .and_then(|f| f.parent.as_deref());
+    }
+    false
 }
 
 /// Düz kütüphaneden (albümler + listeler) ağaç düğümleri, kenar çubuğu
@@ -466,6 +490,13 @@ pub async fn refresh_library(
         }
         if let Some(at) = entry.added_at {
             meta.added.insert(entry.uri.clone(), at);
+        }
+        if !entry.description.is_empty() {
+            meta.descriptions
+                .insert(entry.uri.clone(), entry.description.clone());
+        }
+        if entry.collaborative {
+            meta.collaborative.insert(entry.uri.clone());
         }
         let creator = if entry.owner.is_empty() {
             username.as_str()
@@ -896,6 +927,10 @@ struct RootEntry {
     added_at: Option<i64>,
     /// İçinde durduğu klasörün anahtarı; kökteyse `None`.
     parent: Option<String>,
+    /// Liste açıklaması (boş olabilir).
+    description: String,
+    /// Ortak liste mi (başkaları da şarkı ekleyebilir)?
+    collaborative: bool,
 }
 
 /// Kök listenin bir satırı, ağaç kurmak için: klasör başlıyor / bitiyor ya da
@@ -1039,6 +1074,8 @@ async fn rootlist(session: &Session) -> Result<Rootlist> {
             image: list_image(&meta.attributes),
             added_at: (item.attributes.timestamp() > 0).then(|| item.attributes.timestamp()),
             parent: None,
+            description: meta.attributes.description().to_string(),
+            collaborative: meta.attributes.collaborative(),
         });
     }
     let (folders, parents) = fold_tree(&tokens);

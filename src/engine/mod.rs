@@ -74,7 +74,8 @@ pub use connect::{
 use connect::{ConnectInternal, ConnectPort};
 pub use levels::AudioLevels;
 pub use library::{
-    CollectionId, Library, LibraryItem, LibraryMeta, TrackRow, artist_item, folder_id, mosaic_urls,
+    CollectionId, Library, LibraryItem, LibraryMeta, TrackRow, artist_item, folder_contains,
+    folder_id, mosaic_urls,
 };
 pub use output::{MAX_OVERLAP_MS, OutputCtl};
 pub use queue::{QueueEntry, QueueSource, QueueView, RepeatMode};
@@ -90,7 +91,10 @@ pub use search::{
     SearchHit, SearchResults, TestSearch, test_palette_search, test_results as test_search_results,
 };
 // Sayfalar ve kütüphane yazmaları (Adım 12–13, bkz. `wire.rs`).
-pub use edits::{AddPosition, EditOp, FailKind, new_temp_id, same_edit};
+pub use edits::{
+    AddPosition, DESCRIPTION_MAX, EditOp, FailKind, folder_start_marker, new_folder_id,
+    new_temp_id, same_edit,
+};
 pub use pages::{AlbumCard, AlbumPage, ArtistCard, ArtistPage, ReleaseKind, TrackLinks, home};
 pub use wire::{
     FailedEdit, LibraryCommand, LibraryEvent, cached_album, cached_artist, edit_failed_notice,

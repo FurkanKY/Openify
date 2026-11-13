@@ -20,9 +20,12 @@
 //!   listeye ekle,
 //!   çıkar, adlandır,
 //!   sırala           POST /playlist/v2/playlist/{id}/changes   (playlist4 ListChanges)
+//!   açıklama, ortak  aynı istek, `UPDATE_LIST_ATTRIBUTES` (description / collaborative)
 //!   liste oluştur    POST /playlist/v2/playlist                (ListUpdateRequest)
 //!                    + kök listeye ekleme: POST /playlist/v2/user/{kullanıcı}/rootlist/changes
 //!   liste sil        kök listeden çıkarma (aynı rootlist/changes, Rem işlemi)
+//!   klasörler        kök listede `spotify:start-group:<kimlik>:<ad>` /
+//!                    `spotify:end-group:<kimlik>` işaretleri (aynı rootlist/changes)
 //!
 //! CANLI DOĞRULANDI (7 Kasım, kullanıcının onayıyla, hesabında geçici "Openify
 //! deneme" listesiyle; `src/engine/edits/live.rs`, elle:
@@ -53,8 +56,9 @@ use anyhow::{Context, Result};
 use librespot::{
     core::{Error as SpotifyError, error::ErrorKind, session::Session},
     protocol::playlist4_external::{
-        Add, ChangeInfo, Delta, Item, ListAttributes, ListAttributesPartialState, ListChanges,
-        ListUpdateRequest, Mov, Op, Rem, SelectedListContent, UpdateListAttributes, op::Kind,
+        Add, ChangeInfo, Delta, Item, ListAttributeKind, ListAttributes,
+        ListAttributesPartialState, ListChanges, ListUpdateRequest, Mov, Op, Rem,
+        SelectedListContent, UpdateListAttributes, op::Kind,
     },
 };
 use protobuf::{CodedOutputStream, Message};
@@ -73,6 +77,14 @@ const CONFLICT_ATTEMPTS: u32 = 4;
 
 const COLLECTION_CONTENT_TYPE: &str = "application/vnd.collection-v2.spotify.proto";
 const PLAYLIST_PREFIX: &str = "spotify:playlist:";
+/// Kök listeye (klasörlerin yaşadığı liste) yazan işlemlerin hedefi: aynı
+/// anda tek bir kök liste yazması gitsin diye hepsi bu hedefte sıralanır.
+const ROOTLIST_TARGET: &str = "rootlist";
+/// Kök listedeki klasör işaretleri.
+const FOLDER_START: &str = "spotify:start-group:";
+const FOLDER_END: &str = "spotify:end-group:";
+/// Liste açıklamasının en çok uzunluğu (Spotify da 300 karakterde kesiyor).
+pub const DESCRIPTION_MAX: usize = 300;
 /// Koleksiyon servisinin kümeleri: şarkılar ve albümler "collection", takip
 /// edilen sanatçılar "artist" (okuma tarafı `library.rs`'te aynı adlarla).
 const COLLECTION_SET: &str = "collection";
@@ -399,6 +411,71 @@ pub enum EditOp {
         to_index: u32,
         uris: Vec<String>,
     },
+    /// Listenin açıklaması. Boş açıklama alanı siler (kök listede de boş görünür).
+    SetPlaylistDescription {
+        playlist: String,
+        description: String,
+        /// Geri alma için (biliniyorsa; boş metin "açıklama yok" demek).
+        #[serde(default)]
+        previous: Option<String>,
+    },
+    /// Ortak liste (başkaları da şarkı ekleyebilir) aç / kapa.
+    SetPlaylistCollaborative {
+        playlist: String,
+        collaborative: bool,
+        #[serde(default)]
+        previous: Option<bool>,
+    },
+    /// Kök listede boş bir klasör açar: `spotify:start-group:<kimlik>:<ad>` ve
+    /// `spotify:end-group:<kimlik>` çifti listenin sonuna eklenir. `key` tam
+    /// başlangıç işaretidir (kimlik + yüzde kodlu ad); yeniden denemede aynı
+    /// kimlik bulunursa yeniden açılmaz.
+    CreateFolder {
+        key: String,
+        name: String,
+    },
+    /// Silinen klasörü geri getirir: işaretleri eski yerine koyar ve doğrudan
+    /// içindeki listeleri sırayla geri taşır (`DeleteFolder`'ın tersi).
+    RestoreFolder {
+        folder: String,
+        name: String,
+        /// Klasörden sonra gelen liste (`None`: kök listenin sonu); yeri
+        /// bulmak için çapa.
+        #[serde(default)]
+        before: Option<String>,
+        /// Geri konacak doğrudan içerik (liste adresleri, sırayla).
+        #[serde(default)]
+        contents: Vec<String>,
+    },
+    /// Klasörü yeniden adlandırır: ad işaretin kendisinde durduğu için
+    /// işaret silinip aynı yere yenisi konur.
+    RenameFolder {
+        folder: String,
+        name: String,
+        #[serde(default)]
+        previous_name: Option<String>,
+    },
+    /// Klasörü siler: iki işaret kalkar, içindekiler yerinde kalır (kök
+    /// seviyeye çıkarlar; iç içe klasörler de yerinde kalır).
+    DeleteFolder {
+        folder: String,
+        name: String,
+        /// Geri getirirken klasörün yerini bulmak için: sonraki liste.
+        #[serde(default)]
+        before: Option<String>,
+        /// Geri getirince klasöre geri taşınacak doğrudan içerik.
+        #[serde(default)]
+        contents: Vec<String>,
+    },
+    /// Listeyi bir klasöre taşır, `folder` boşsa köke (kök listenin sonuna)
+    /// çıkarır.
+    MovePlaylistToFolder {
+        playlist: String,
+        folder: Option<String>,
+        /// Geri alma için eski klasör (`None`: kökteydi).
+        #[serde(default)]
+        previous: Option<String>,
+    },
 }
 
 impl EditOp {
@@ -414,7 +491,16 @@ impl EditOp {
             | Self::RenamePlaylist { playlist, .. }
             | Self::DeletePlaylist { playlist }
             | Self::RestorePlaylist { playlist }
+            | Self::SetPlaylistDescription { playlist, .. }
+            | Self::SetPlaylistCollaborative { playlist, .. }
             | Self::MovePlaylistItems { playlist, .. } => playlist.clone(),
+            // Kök liste yazmaları birbirini bekler: sıra önemli (klasör aç,
+            // içine taşı gibi).
+            Self::CreateFolder { .. }
+            | Self::RestoreFolder { .. }
+            | Self::RenameFolder { .. }
+            | Self::DeleteFolder { .. }
+            | Self::MovePlaylistToFolder { .. } => ROOTLIST_TARGET.into(),
         }
     }
 
@@ -475,6 +561,70 @@ impl EditOp {
                 to_index: *from_index,
                 uris: uris.clone(),
             },
+            Self::SetPlaylistDescription {
+                playlist,
+                description,
+                previous,
+            } => Self::SetPlaylistDescription {
+                playlist: playlist.clone(),
+                description: previous.clone()?,
+                previous: Some(description.clone()),
+            },
+            Self::SetPlaylistCollaborative {
+                playlist,
+                collaborative,
+                previous,
+            } => Self::SetPlaylistCollaborative {
+                playlist: playlist.clone(),
+                collaborative: (*previous)?,
+                previous: Some(*collaborative),
+            },
+            Self::CreateFolder { key, name } => Self::DeleteFolder {
+                folder: key.clone(),
+                name: name.clone(),
+                before: None,
+                contents: Vec::new(),
+            },
+            Self::RestoreFolder {
+                folder,
+                name,
+                before,
+                contents,
+            } => Self::DeleteFolder {
+                folder: folder.clone(),
+                name: name.clone(),
+                before: before.clone(),
+                contents: contents.clone(),
+            },
+            Self::DeleteFolder {
+                folder,
+                name,
+                before,
+                contents,
+            } => Self::RestoreFolder {
+                folder: folder.clone(),
+                name: name.clone(),
+                before: before.clone(),
+                contents: contents.clone(),
+            },
+            Self::RenameFolder {
+                folder,
+                name,
+                previous_name,
+            } => Self::RenameFolder {
+                folder: renamed_folder_key(folder, name)?,
+                name: previous_name.clone()?,
+                previous_name: Some(name.clone()),
+            },
+            Self::MovePlaylistToFolder {
+                playlist,
+                folder,
+                previous,
+            } => Self::MovePlaylistToFolder {
+                playlist: playlist.clone(),
+                folder: previous.clone(),
+                previous: folder.clone(),
+            },
             Self::CreatePlaylist { .. } => return None,
         })
     }
@@ -515,6 +665,53 @@ impl EditOp {
                     return bad("liste adı boş");
                 }
             }
+            Self::SetPlaylistDescription { description, .. } => {
+                if description.chars().count() > DESCRIPTION_MAX {
+                    return bad("liste açıklaması çok uzun");
+                }
+            }
+            Self::SetPlaylistCollaborative { .. } => {}
+            Self::CreateFolder { key, name } => {
+                if folder_marker_id(key).is_none() {
+                    return bad("klasör işareti geçersiz");
+                }
+                if name.trim().is_empty() {
+                    return bad("klasör adı boş");
+                }
+            }
+            Self::RestoreFolder { folder, name, .. } => {
+                if folder_marker_id(folder).is_none() {
+                    return bad("klasör işareti geçersiz");
+                }
+                if name.trim().is_empty() {
+                    return bad("klasör adı boş");
+                }
+            }
+            Self::RenameFolder { folder, name, .. } => {
+                if folder_marker_id(folder).is_none() {
+                    return bad("klasör işareti geçersiz");
+                }
+                if name.trim().is_empty() {
+                    return bad("klasör adı boş");
+                }
+            }
+            Self::DeleteFolder { folder, .. } => {
+                if folder_marker_id(folder).is_none() {
+                    return bad("klasör işareti geçersiz");
+                }
+            }
+            Self::MovePlaylistToFolder {
+                playlist, folder, ..
+            } => {
+                if playlist_id(playlist).is_err() {
+                    return bad("taşınacak liste geçersiz");
+                }
+                if let Some(folder) = folder
+                    && folder_marker_id(folder).is_none()
+                {
+                    return bad("hedef klasör geçersiz");
+                }
+            }
             Self::MovePlaylistItems {
                 length,
                 from_index,
@@ -541,6 +738,9 @@ impl EditOp {
             | Self::RenamePlaylist { playlist, .. }
             | Self::DeletePlaylist { playlist }
             | Self::RestorePlaylist { playlist }
+            | Self::SetPlaylistDescription { playlist, .. }
+            | Self::SetPlaylistCollaborative { playlist, .. }
+            | Self::MovePlaylistToFolder { playlist, .. }
             | Self::MovePlaylistItems { playlist, .. }
                 if playlist == temp =>
             {
@@ -570,6 +770,58 @@ pub fn is_artist(uri: &str) -> bool {
 
 pub fn is_temp_id(uri: &str) -> bool {
     uri.starts_with("local:playlist:")
+}
+
+// ── Klasörler (kök liste) ───────────────────────────────────────────────
+
+static FOLDER_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Yeni klasörün kalıcı kimliği: 16 onaltılık harf. Kimliği istemci üretiyor
+/// (resmî uygulama da öyle yapıyor); ad işaretin içinde durur.
+pub fn new_folder_id() -> String {
+    format!(
+        "{:012x}{:04x}",
+        (now_ms() as u64) & 0x0000_ffff_ffff_ffff,
+        FOLDER_COUNTER.fetch_add(1, Ordering::Relaxed) & 0xffff
+    )
+}
+
+/// Klasör adını işaretin içine yazılabilir hâle getirir: harf / rakam ve
+/// `-_.~` dışındaki her bayt `%XX` olur (okuma tarafı `library::parse_marker`
+/// çözüyor: `%XX` ve `+`).
+pub fn encode_folder_name(name: &str) -> String {
+    let mut out = String::with_capacity(name.len());
+    for b in name.bytes() {
+        if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// Yeni klasörün başlangıç işareti: `spotify:start-group:<kimlik>:<ad>`.
+pub fn folder_start_marker(id: &str, name: &str) -> String {
+    format!("{FOLDER_START}{id}:{}", encode_folder_name(name))
+}
+
+/// Aynı kimliğin bitiş işareti: `spotify:end-group:<kimlik>`.
+pub fn folder_end_marker(id: &str) -> String {
+    format!("{FOLDER_END}{id}")
+}
+
+/// Klasör işaretinin kimliği (`spotify:start-group:<kimlik>[:<ad>]`).
+pub fn folder_marker_id(key: &str) -> Option<&str> {
+    key.strip_prefix(FOLDER_START)?
+        .split(':')
+        .next()
+        .filter(|id| !id.is_empty())
+}
+
+/// Klasör yeniden adlandırılınca işaretin yeni hâli (kimlik aynı kalır).
+pub fn renamed_folder_key(key: &str, name: &str) -> Option<String> {
+    Some(folder_start_marker(folder_marker_id(key)?, name))
 }
 
 fn now_ms() -> i64 {
@@ -795,6 +1047,293 @@ pub fn changes_move(base: &[u8], from: u32, length: u32, to: u32) -> ListChanges
             ..Default::default()
         }],
     )
+}
+
+/// Liste açıklamasını yazar; boş açıklama alanı temizler (partial state
+/// `no_value` ile "bu alan yok" denir).
+pub fn changes_description(base: &[u8], description: &str) -> ListChanges {
+    let (values, no_value) = if description.is_empty() {
+        (
+            ListAttributes::default(),
+            vec![ListAttributeKind::LIST_DESCRIPTION.into()],
+        )
+    } else {
+        (
+            ListAttributes {
+                description: Some(description.to_string()),
+                ..Default::default()
+            },
+            Vec::new(),
+        )
+    };
+    changes_attributes(base, values, no_value)
+}
+
+/// Ortak liste bayrağını yazar (`false` de açıkça yazılır: alan "yok" değil,
+/// "kapalı" olur).
+pub fn changes_collaborative(base: &[u8], collaborative: bool) -> ListChanges {
+    changes_attributes(
+        base,
+        ListAttributes {
+            collaborative: Some(collaborative),
+            ..Default::default()
+        },
+        Vec::new(),
+    )
+}
+
+fn changes_attributes(
+    base: &[u8],
+    values: ListAttributes,
+    no_value: Vec<protobuf::EnumOrUnknown<ListAttributeKind>>,
+) -> ListChanges {
+    let update = UpdateListAttributes {
+        new_attributes: Some(ListAttributesPartialState {
+            values: Some(values).into(),
+            no_value,
+            ..Default::default()
+        })
+        .into(),
+        ..Default::default()
+    };
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::UPDATE_LIST_ATTRIBUTES.into()),
+            update_list_attributes: Some(update).into(),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Kök listeye öğe ekler: `at` verilmişse o sıranın önüne, yoksa sona.
+pub fn rootlist_add_items(base: &[u8], items: &[String], at: Option<usize>) -> ListChanges {
+    let add = Add {
+        items: items.iter().map(|u| item(u)).collect(),
+        add_last: at.is_none().then_some(true),
+        from_index: at.map(|i| i as i32),
+        ..Default::default()
+    };
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::ADD.into()),
+            add: Some(add).into(),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Kök listeden tek öğe çıkarır (sıra numarasıyla).
+pub fn rootlist_remove_item(base: &[u8], index: usize) -> ListChanges {
+    changes(
+        base,
+        vec![Op {
+            kind: Some(Kind::REM.into()),
+            rem: Some(Rem {
+                from_index: Some(index as i32),
+                length: Some(1),
+                ..Default::default()
+            })
+            .into(),
+            ..Default::default()
+        }],
+    )
+}
+
+/// Kök listede bir bloğu taşır (`changes_move` ile aynı tel anlamı).
+pub fn rootlist_move(base: &[u8], from: usize, length: usize, to: usize) -> ListChanges {
+    changes_move(base, from as u32, length as u32, to as u32)
+}
+
+// ── Klasör konumları (saf; testlenir) ───────────────────────────────────
+
+/// Klasörün kök listedeki sınırları: (başlangıç işareti, bitiş işareti).
+/// Kapanmamış klasörde bitiş = başlangıç (tek işaret).
+pub fn folder_bounds(uris: &[String], key: &str) -> Option<(usize, usize)> {
+    let start = uris.iter().position(|u| u == key)?;
+    let id = folder_marker_id(key)?;
+    let end_tag = folder_end_marker(id);
+    let end = uris[start + 1..]
+        .iter()
+        .position(|u| *u == end_tag)
+        .map(|i| start + 1 + i)
+        .unwrap_or(start);
+    Some((start, end))
+}
+
+/// `index` sırasındaki öğenin içinde durduğu klasörün anahtarı; kökteyse
+/// `None`. Açık klasörler yığınla izlenir (iç içe klasörler).
+pub fn parent_folder_at(uris: &[String], index: usize) -> Option<String> {
+    let mut open: Vec<(String, String)> = Vec::new(); // (kimlik, anahtar)
+    for uri in uris.iter().take(index) {
+        match super::library::parse_marker(uri) {
+            Some(super::library::Tok::Start { key, id, .. }) => open.push((id, key)),
+            Some(super::library::Tok::End { id }) => {
+                if let Some(depth) = open.iter().rposition(|(i, _)| *i == id) {
+                    open.truncate(depth);
+                }
+            }
+            _ => {}
+        }
+    }
+    open.last().map(|(_, key)| key.clone())
+}
+
+/// Bir listeyi klasörün içine sokacak son konum: çıkarmadan sonraki listede,
+/// bitiş işaretinin hemen önü. `end` bitiş işaretinin şu anki sırası.
+pub fn move_into_folder_target(playlist_index: usize, end: usize) -> usize {
+    if playlist_index < end { end - 1 } else { end }
+}
+
+// ── Klasör işlemlerinin saf planı (sonuç listesi + tel işlemleri) ────────
+//
+// Uygulama tarafı (`SpotifyBackend`) bu planları sürümle sarıp gönderir;
+// sınamalar planı doğrudan, ağ olmadan çalıştırır.
+
+/// Boş klasör aç (listenin sonuna). Zaten açılmışsa `None`.
+pub fn folder_create_ops(uris: &[String], key: &str) -> Option<(Vec<String>, Vec<Op>)> {
+    let id = folder_marker_id(key)?;
+    // Aynı kimlik zaten duruyorsa klasör açılmış (adı değişmiş olabilir).
+    if uris.iter().any(|u| folder_marker_id(u) == Some(id)) {
+        return None;
+    }
+    let end = folder_end_marker(id);
+    let mut next = uris.to_vec();
+    next.push(key.to_string());
+    next.push(end.clone());
+    let ops = rootlist_add_items(&[], &[key.to_string(), end], None)
+        .deltas
+        .remove(0)
+        .ops;
+    Some((next, ops))
+}
+
+/// Klasörün işaretlerini sil (içindekiler yerinde kalır). Yoksa `None`.
+pub fn folder_delete_ops(uris: &[String], folder: &str) -> Option<(Vec<String>, Vec<Op>)> {
+    let (start, end) = folder_bounds(uris, folder)?;
+    let mut next = uris.to_vec();
+    let mut ops = Vec::new();
+    if end > start {
+        ops.extend(rootlist_remove_item(&[], end).deltas.remove(0).ops);
+        next.remove(end);
+    }
+    ops.extend(rootlist_remove_item(&[], start).deltas.remove(0).ops);
+    next.remove(start);
+    Some((next, ops))
+}
+
+/// Klasörü yeniden adlandır: işaret aynı yerde yenisiyle değişir. Zaten yeni
+/// addaysa `None`; klasör yoksa `NotFound`.
+pub fn folder_rename_ops(
+    uris: &[String],
+    folder: &str,
+    name: &str,
+) -> Result<Option<(Vec<String>, Vec<Op>)>, EditError> {
+    let Some(new_key) = renamed_folder_key(folder, name) else {
+        return Err(EditError::Invalid("klasör işareti geçersiz".into()));
+    };
+    let Some((start, _)) = folder_bounds(uris, folder) else {
+        if uris.iter().any(|u| u == &new_key) {
+            return Ok(None);
+        }
+        return Err(EditError::NotFound("klasör kök listede yok".into()));
+    };
+    if uris[start] == new_key {
+        return Ok(None);
+    }
+    let mut next = uris.to_vec();
+    next[start] = new_key.clone();
+    let mut ops = rootlist_remove_item(&[], start).deltas.remove(0).ops;
+    ops.extend(
+        rootlist_add_items(&[], std::slice::from_ref(&new_key), Some(start))
+            .deltas
+            .remove(0)
+            .ops,
+    );
+    Ok(Some((next, ops)))
+}
+
+/// Silinmiş klasörü işaretleriyle ve doğrudan içeriğiyle geri getir.
+pub fn folder_restore_ops(
+    uris: &[String],
+    folder: &str,
+    before: Option<&str>,
+    contents: &[String],
+) -> Option<(Vec<String>, Vec<Op>)> {
+    let id = folder_marker_id(folder)?;
+    if uris.iter().any(|u| folder_marker_id(u) == Some(id)) {
+        return None;
+    }
+    let end = folder_end_marker(id);
+    let at = before.and_then(|b| uris.iter().position(|u| u == b));
+    let i = at.unwrap_or(uris.len());
+    let mut next = uris.to_vec();
+    next.insert(i, folder.to_string());
+    next.insert(i + 1, end.clone());
+    let mut ops = rootlist_add_items(
+        &[],
+        &[folder.to_string(), end.clone()],
+        (i < uris.len()).then_some(i),
+    )
+    .deltas
+    .remove(0)
+    .ops;
+    for child in contents {
+        let Some(j) = next.iter().position(|u| u == child) else {
+            continue;
+        };
+        let Some(e) = next.iter().position(|u| u == &end) else {
+            break;
+        };
+        let to = move_into_folder_target(j, e);
+        if j == to {
+            continue;
+        }
+        ops.extend(rootlist_move(&[], j, 1, to).deltas.remove(0).ops);
+        apply_move(&mut next, j, 1, to);
+    }
+    Some((next, ops))
+}
+
+/// Listeyi klasöre (`folder` boşsa köke) taşı. Zaten oradaysa `None`.
+pub fn playlist_move_ops(
+    uris: &[String],
+    playlist: &str,
+    folder: Option<&str>,
+) -> Result<Option<(Vec<String>, Vec<Op>)>, EditError> {
+    let Some(p) = uris.iter().position(|u| u == playlist) else {
+        return Err(EditError::NotFound(format!(
+            "liste kök listede yok: {playlist}"
+        )));
+    };
+    if parent_folder_at(uris, p).as_deref() == folder {
+        return Ok(None);
+    }
+    let to = match folder {
+        Some(key) => {
+            let Some((start, end)) = folder_bounds(uris, key) else {
+                return Err(EditError::NotFound(format!(
+                    "klasör kök listede yok: {key}"
+                )));
+            };
+            if end == start {
+                return Err(EditError::Invalid("klasör kapanmamış".into()));
+            }
+            move_into_folder_target(p, end)
+        }
+        // Kök: listenin sonu (bütün klasörlerin dışı).
+        None => uris.len().saturating_sub(1),
+    };
+    if to == p {
+        return Ok(None);
+    }
+    let mut next = uris.to_vec();
+    if !apply_move(&mut next, p, 1, to) {
+        return Err(EditError::Invalid("taşıma sınır dışı".into()));
+    }
+    let ops = rootlist_move(&[], p, 1, to).deltas.remove(0).ops;
+    Ok(Some((next, ops)))
 }
 
 /// Yeni liste isteği (adlı, isteğe bağlı başlangıç şarkılarıyla).
@@ -1039,6 +1578,67 @@ impl EditBackend for SpotifyBackend<'_> {
                     .await
                     .map(|()| EditOutcome::Done)
             }
+            EditOp::SetPlaylistDescription {
+                playlist,
+                description,
+                ..
+            } => {
+                // Zaten istenen açıklama yazılıysa istek atılmaz (belirsiz bir
+                // önceki denemenin yanıtı kaybolsa da zarar vermez).
+                post_playlist_changes(s, playlist, |st| {
+                    (st.description != *description)
+                        .then(|| changes_description(&st.revision, description))
+                })
+                .await
+            }
+            EditOp::SetPlaylistCollaborative {
+                playlist,
+                collaborative,
+                ..
+            } => {
+                post_playlist_changes(s, playlist, |st| {
+                    (st.collaborative != *collaborative)
+                        .then(|| changes_collaborative(&st.revision, *collaborative))
+                })
+                .await
+            }
+            EditOp::CreateFolder { key, .. } => post_rootlist_plan(s, |st| {
+                Ok(folder_create_ops(&st.uris, key).map(|(_, ops)| changes(&st.revision, ops)))
+            })
+            .await
+            .map(|()| EditOutcome::Done),
+            EditOp::RestoreFolder {
+                folder,
+                before,
+                contents,
+                ..
+            } => post_rootlist_plan(s, |st| {
+                Ok(
+                    folder_restore_ops(&st.uris, folder, before.as_deref(), contents)
+                        .map(|(_, ops)| changes(&st.revision, ops)),
+                )
+            })
+            .await
+            .map(|()| EditOutcome::Done),
+            EditOp::RenameFolder { folder, name, .. } => post_rootlist_plan(s, |st| {
+                Ok(folder_rename_ops(&st.uris, folder, name)?
+                    .map(|(_, ops)| changes(&st.revision, ops)))
+            })
+            .await
+            .map(|()| EditOutcome::Done),
+            EditOp::DeleteFolder { folder, .. } => post_rootlist_plan(s, |st| {
+                Ok(folder_delete_ops(&st.uris, folder).map(|(_, ops)| changes(&st.revision, ops)))
+            })
+            .await
+            .map(|()| EditOutcome::Done),
+            EditOp::MovePlaylistToFolder {
+                playlist, folder, ..
+            } => post_rootlist_plan(s, |st| {
+                Ok(playlist_move_ops(&st.uris, playlist, folder.as_deref())?
+                    .map(|(_, ops)| changes(&st.revision, ops)))
+            })
+            .await
+            .map(|()| EditOutcome::Done),
         }
     }
 }
@@ -1092,9 +1692,12 @@ async fn write_collection(
     Ok(())
 }
 
-/// Bir listenin sunucudaki hali: sürüm ve şarkı sırası.
+/// Bir listenin sunucudaki hali: sürüm, şarkı sırası ve yazma işlemlerinin
+/// denetlediği öznitelikler.
 pub(crate) struct PlaylistState {
     pub(crate) name: String,
+    pub(crate) description: String,
+    pub(crate) collaborative: bool,
     pub(crate) revision: Vec<u8>,
     pub(crate) uris: Vec<String>,
 }
@@ -1113,6 +1716,30 @@ pub(crate) async fn playlist_state(
         .map_err(|e| EditError::Server(format!("liste yanıtı çözülemedi: {e}")))?;
     Ok(PlaylistState {
         name: list.attributes.name().to_string(),
+        description: list.attributes.description().to_string(),
+        collaborative: list.attributes.collaborative(),
+        revision: list.revision().to_vec(),
+        uris: list
+            .contents
+            .items
+            .iter()
+            .map(|i| i.uri().to_string())
+            .collect(),
+    })
+}
+
+/// Kök listenin (kütüphane sırası) ham hâli: sürüm ve öğe adresleri (klasör
+/// işaretleri dahil).
+pub(crate) struct RootState {
+    pub(crate) revision: Vec<u8>,
+    pub(crate) uris: Vec<String>,
+}
+
+pub(crate) async fn rootlist_state(session: &Session) -> Result<RootState, EditError> {
+    let bytes = session.spclient().get_rootlist(0, Some(1000)).await?;
+    let list = SelectedListContent::parse_from_bytes(&bytes)
+        .map_err(|e| EditError::Server(format!("kök liste çözülemedi: {e}")))?;
+    Ok(RootState {
         revision: list.revision().to_vec(),
         uris: list
             .contents
@@ -1175,6 +1802,36 @@ async fn post_rootlist_changes(
             .revision()
             .to_vec();
         let body = build(&revision);
+        match session
+            .spclient()
+            .request_with_protobuf(&http::Method::POST, &endpoint, None, &body)
+            .await
+        {
+            Ok(_) => return Ok(()),
+            Err(e) => match EditError::from_spotify(&e) {
+                e @ EditError::Conflict(_) => last = Some(e),
+                e => return Err(e),
+            },
+        }
+    }
+    Err(last.unwrap_or_else(|| EditError::Conflict("kök liste sürüm çakışması".into())))
+}
+
+/// Kök listeyi okuyup planı uygular; `build` `None` derse yazılacak bir şey
+/// yok (işlem zaten olmuş). Sürüm çakışırsa bir kez daha dener (bkz.
+/// `post_playlist_changes`).
+async fn post_rootlist_plan(
+    session: &Session,
+    build: impl Fn(&RootState) -> Result<Option<ListChanges>, EditError>,
+) -> Result<(), EditError> {
+    let user = session.username();
+    let endpoint = format!("/playlist/v2/user/{user}/rootlist/changes");
+    let mut last = None;
+    for _ in 0..2 {
+        let state = rootlist_state(session).await?;
+        let Some(body) = build(&state)? else {
+            return Ok(());
+        };
         match session
             .spclient()
             .request_with_protobuf(&http::Method::POST, &endpoint, None, &body)
@@ -1887,6 +2544,252 @@ mod tests {
         assert!(playlist_id("spotify:album:abc").is_err());
         assert!(playlist_id("spotify:playlist:kisa").is_err());
         assert!(playlist_id(&new_temp_id()).is_err());
+    }
+
+    // ── Liste ayarları ve klasörler ─────────────────────────────────
+
+    #[test]
+    fn description_and_collaborative_changes() {
+        let c = roundtrip(&changes_description(b"r", "Gece için"));
+        let op = &c.deltas[0].ops[0];
+        assert_eq!(op.kind(), Kind::UPDATE_LIST_ATTRIBUTES);
+        let attrs = &op.update_list_attributes.new_attributes.values;
+        assert_eq!(attrs.description(), "Gece için");
+        assert!(op.update_list_attributes.new_attributes.no_value.is_empty());
+        // Boş açıklama alanı temizler: partial state "bu alan yok" der.
+        let c = roundtrip(&changes_description(b"r", ""));
+        let na = &c.deltas[0].ops[0].update_list_attributes.new_attributes;
+        assert_eq!(na.values.description(), "");
+        let kinds: Vec<ListAttributeKind> = na
+            .no_value
+            .iter()
+            .map(|k| k.enum_value().expect("bilinen tür"))
+            .collect();
+        assert_eq!(kinds, [ListAttributeKind::LIST_DESCRIPTION]);
+        // Ortak liste: iki değer de açıkça yazılır (kapalı da bir değerdir).
+        for on in [true, false] {
+            let c = roundtrip(&changes_collaborative(b"r", on));
+            let attrs = &c.deltas[0].ops[0].update_list_attributes.new_attributes;
+            assert_eq!(attrs.values.collaborative(), on);
+            assert!(attrs.values.has_collaborative());
+            assert!(attrs.no_value.is_empty());
+        }
+        // Sınır: 300 karakter kabul, 301 reddedilir.
+        let op = |n: usize| EditOp::SetPlaylistDescription {
+            playlist: playlist(1),
+            description: "a".repeat(n),
+            previous: None,
+        };
+        assert!(op(DESCRIPTION_MAX).validate().is_ok());
+        assert!(op(DESCRIPTION_MAX + 1).validate().is_err());
+    }
+
+    #[test]
+    fn folder_markers_are_percent_encoded_and_read_back() {
+        use super::super::library::{Tok, parse_marker};
+        let key = folder_start_marker("abc123", "Gece / Yaz: 90'lar %");
+        assert!(key.starts_with("spotify:start-group:abc123:"));
+        // `:` adın içinde de geçse kimlik ilk parçadır.
+        let Some(Tok::Start {
+            id,
+            name,
+            key: full,
+        }) = parse_marker(&key)
+        else {
+            panic!("klasör işareti okunamadı: {key}");
+        };
+        assert_eq!(id, "abc123");
+        assert_eq!(name, "Gece / Yaz: 90'lar %");
+        assert_eq!(full, key);
+        assert_eq!(folder_marker_id(&key), Some("abc123"));
+        assert_eq!(folder_marker_id("spotify:end-group:abc"), None);
+        assert_eq!(
+            renamed_folder_key(&key, "Kış").as_deref(),
+            Some(folder_start_marker("abc123", "Kış").as_str())
+        );
+        assert_eq!(
+            parse_marker(&folder_end_marker("abc123")),
+            Some(Tok::End {
+                id: "abc123".into()
+            })
+        );
+        // Boş ad ve kimlikte özel karakter yok.
+        assert_eq!(encode_folder_name("Yaz"), "Yaz");
+        assert_eq!(encode_folder_name("a b"), "a%20b");
+        // Yeni kimlikler benzersiz ve onaltılık.
+        let (a, b) = (new_folder_id(), new_folder_id());
+        assert_ne!(a, b);
+        assert!(a.bytes().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    /// Klasör planları: aç → içine taşı → adlandır → sil → geri getir.
+    /// (Saf: ağ yok; sonuç listesi `apply_move` ile aynı anlamda.)
+    #[test]
+    fn folder_plans_create_move_rename_delete_restore() {
+        let (a, b, c) = (playlist(1), playlist(2), playlist(3));
+        let base = vec![a.clone(), b.clone(), c.clone()];
+        let key = folder_start_marker("f1", "Yaz");
+        let end = folder_end_marker("f1");
+
+        // Aç: sona iki işaret.
+        let (opened, ops) = folder_create_ops(&base, &key).unwrap();
+        assert_eq!(
+            opened,
+            [a.clone(), b.clone(), c.clone(), key.clone(), end.clone()]
+        );
+        assert_eq!(ops[0].kind(), Kind::ADD);
+        assert!(ops[0].add.add_last());
+        // İkinci kez açılmaz (idempotent).
+        assert!(folder_create_ops(&opened, &key).is_none());
+
+        // İçine taşı: bitiş işaretinin hemen önü.
+        let (inside, _) = playlist_move_ops(&opened, &c, Some(key.as_str()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            inside,
+            [a.clone(), b.clone(), key.clone(), c.clone(), end.clone()]
+        );
+        assert_eq!(parent_folder_at(&inside, 3).as_deref(), Some(key.as_str()));
+        assert!(
+            playlist_move_ops(&inside, &c, Some(key.as_str()))
+                .unwrap()
+                .is_none()
+        );
+
+        // Klasörden çıkar: kök listenin sonu.
+        let (root, _) = playlist_move_ops(&inside, &c, None).unwrap().unwrap();
+        assert_eq!(
+            root,
+            [a.clone(), b.clone(), key.clone(), end.clone(), c.clone()]
+        );
+        assert_eq!(parent_folder_at(&root, 4), None);
+
+        // Yeniden adlandır: işaret aynı yerde.
+        let (renamed, _) = folder_rename_ops(&root, &key, "Kış").unwrap().unwrap();
+        let key2 = folder_start_marker("f1", "Kış");
+        assert_eq!(
+            renamed,
+            [a.clone(), b.clone(), key2.clone(), end, c.clone()]
+        );
+        assert!(folder_rename_ops(&renamed, &key, "Kış").unwrap().is_none());
+        assert!(matches!(
+            folder_rename_ops(&renamed, "spotify:start-group:yok:Yok", "X"),
+            Err(EditError::NotFound(_))
+        ));
+
+        // Sil: işaretler kalkar, içindekiler yerinde.
+        let (gone, _) = folder_delete_ops(&renamed, &key2).unwrap();
+        assert_eq!(gone, [a.clone(), b.clone(), c.clone()]);
+        assert!(folder_delete_ops(&gone, &key2).is_none());
+
+        // Geri getir: eski yerine, içeriği sırayla.
+        let (back, _) = folder_restore_ops(&gone, &key2, Some(c.as_str()), &[b.clone()]).unwrap();
+        assert_eq!(
+            back,
+            [a, key2.clone(), b, folder_end_marker("f1"), c.clone()]
+        );
+        assert_eq!(parent_folder_at(&back, 2).as_deref(), Some(key2.as_str()));
+        assert!(folder_restore_ops(&back, &key2, Some(c.as_str()), &[]).is_none());
+    }
+
+    /// İç içe klasör: dış klasör silinince içteki klasör ve listeleri
+    /// yerinde kalır; taşıma yalnız doğrudan sınırları değiştirir.
+    #[test]
+    fn nested_folder_plans_keep_the_inner_folder() {
+        let (a, b, c) = (playlist(1), playlist(2), playlist(3));
+        let outer = folder_start_marker("o", "Dış");
+        let inner = folder_start_marker("i", "İç");
+        let uris = vec![
+            a.clone(),
+            outer.clone(),
+            b.clone(),
+            inner.clone(),
+            c.clone(),
+            folder_end_marker("i"),
+            folder_end_marker("o"),
+        ];
+        assert_eq!(parent_folder_at(&uris, 2).as_deref(), Some(outer.as_str()));
+        assert_eq!(parent_folder_at(&uris, 4).as_deref(), Some(inner.as_str()));
+        // İçteki listeyi dış klasörün içine (iç klasörün dışına) çıkar.
+        let (moved, _) = playlist_move_ops(&uris, &c, Some(outer.as_str()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            moved,
+            [
+                a.clone(),
+                outer.clone(),
+                b.clone(),
+                inner.clone(),
+                folder_end_marker("i"),
+                c.clone(),
+                folder_end_marker("o"),
+            ]
+        );
+        assert_eq!(parent_folder_at(&moved, 5).as_deref(), Some(outer.as_str()));
+        // Dış klasör silinince içteki klasör (ve içindekiler) durur.
+        let (gone, _) = folder_delete_ops(&uris, &outer).unwrap();
+        assert_eq!(gone, [a, b, inner, c, folder_end_marker("i")]);
+    }
+
+    #[test]
+    fn folder_ops_target_rootlist_and_go_through_json() {
+        let key = folder_start_marker("f1", "Yaz");
+        let ops = vec![
+            EditOp::CreateFolder {
+                key: key.clone(),
+                name: "Yaz".into(),
+            },
+            EditOp::RenameFolder {
+                folder: key.clone(),
+                name: "Kış".into(),
+                previous_name: Some("Yaz".into()),
+            },
+            EditOp::DeleteFolder {
+                folder: key.clone(),
+                name: "Kış".into(),
+                before: Some(playlist(1)),
+                contents: vec![playlist(2)],
+            },
+            EditOp::RestoreFolder {
+                folder: key.clone(),
+                name: "Kış".into(),
+                before: Some(playlist(1)),
+                contents: vec![playlist(2)],
+            },
+            EditOp::MovePlaylistToFolder {
+                playlist: playlist(1),
+                folder: Some(key.clone()),
+                previous: None,
+            },
+        ];
+        for op in &ops {
+            assert_eq!(op.target(), ROOTLIST_TARGET);
+            let json = serde_json::to_string(op).unwrap();
+            assert_eq!(&serde_json::from_str::<EditOp>(&json).unwrap(), op);
+        }
+        // Tersler: aç → sil, sil → geri getir, ad → eski ad, taşı → eski yer.
+        assert!(matches!(
+            ops[0].inverse().unwrap(),
+            EditOp::DeleteFolder { ref folder, .. } if *folder == key
+        ));
+        assert!(matches!(
+            ops[2].inverse().unwrap(),
+            EditOp::RestoreFolder { ref folder, .. } if *folder == key
+        ));
+        let EditOp::RenameFolder { folder, name, .. } = ops[1].inverse().unwrap() else {
+            panic!()
+        };
+        let renamed = folder_start_marker("f1", "Kış");
+        assert_eq!((folder.as_str(), name.as_str()), (renamed.as_str(), "Yaz"));
+        let EditOp::MovePlaylistToFolder {
+            folder, previous, ..
+        } = ops[4].inverse().unwrap()
+        else {
+            panic!()
+        };
+        assert_eq!((folder, previous), (None, Some(key)));
     }
 
     // ── Yerel sıralama ──────────────────────────────────────────────

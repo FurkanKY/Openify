@@ -427,13 +427,18 @@ in-memory queue with a fake backend (`OPENIFY_TEST_DISPLAY` or
 `albums` / `playlists` lists cannot: folders (`Folder`, read from the root
 list's `start-group` / `end-group` markers in the same `get_rootlist` call,
 `at` = how many lists precede the folder), each list's parent folder, when it
-joined the library, its creator, and the pins. Folders are **read-only**: the
-edit queue has no root-list operation, so Openify never creates, renames or
-moves a folder. Pins are local (`library_pins`, written by
-`LibraryCommand::Pin`, the UI updates optimistically; nothing goes to
-Spotify). Track "date added" values are read from the cache on demand
-(`LibraryCommand::AddedDates`), no network. The pure tree logic (sibling order,
-pin lifting, nesting) is `ui/library_tree.rs`; the Shell glue (folder
+joined the library, its creator, its description and whether it is
+collaborative, and the pins. Folder writes go through the same edit queue
+(`EditOp::CreateFolder`, `RestoreFolder`, `RenameFolder`, `DeleteFolder`,
+`MovePlaylistToFolder`): markers are added / removed / moved in the root list
+(`engine/edits.rs`), and a root-list refresh follows every write so the tree
+order (`at`, nesting) is read back exactly. Playlist description and the
+collaborative flag are `ListAttributes` changes on the playlist
+(`SetPlaylistDescription`, `SetPlaylistCollaborative`). Pins are local
+(`library_pins`, written by `LibraryCommand::Pin`, the UI updates optimistically;
+nothing goes to Spotify). Track "date added" values are read from the cache on
+demand (`LibraryCommand::AddedDates`), no network. The pure tree logic (sibling
+order, pin lifting, nesting) is `ui/library_tree.rs`; the Shell glue (folder
 open/closed state in `settings.json`, entering folders in the grid, pin
 and sort menus, keyboard cursor) is `ui/library_layout.rs`.
 

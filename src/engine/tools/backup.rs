@@ -268,6 +268,8 @@ mod tests {
                 parents: [(pl(2), folder)].into(),
                 added: [(pl(1), 1_700_000_000_000)].into(),
                 creators: [(pl(1), "furka".to_string())].into(),
+                descriptions: [(pl(1), "Yol şarkıları".to_string())].into(),
+                collaborative: [pl(2)].into(),
                 pinned: vec![pl(1), "liked".into()],
             },
         }

@@ -98,9 +98,10 @@ pub(super) fn shelf_height(p: f32) -> f32 {
     lerp(SHELF_OPEN, STRIP_HEIGHT, p)
 }
 
-/// Liste başlığının yüksekliği, aynı orana göre.
-pub(super) fn header_height(p: f32) -> f32 {
-    lerp(HEADER_OPEN, HEADER_COMPACT, p)
+/// Liste başlığının yüksekliği, aynı orana göre; açıklaması olan listede açık
+/// hâl bir satır uzundur (`extra`).
+pub(super) fn header_height_with(p: f32, extra: f32) -> f32 {
+    lerp(HEADER_OPEN + extra, HEADER_COMPACT, p)
 }
 
 // ── Kartlar ─────────────────────────────────────────────────────────────
@@ -1152,6 +1153,8 @@ impl Shell {
         };
         let (sort_stop, sort_look) = self.stop_look("all-sort", super::tab::PAGE, true, window, cx);
         let (new_stop, new_look) = self.stop_look("all-new", super::tab::PAGE, true, window, cx);
+        let (folder_stop, folder_look) =
+            self.stop_look("all-new-folder", super::tab::PAGE, true, window, cx);
         let (tools_stop, tools_look) =
             self.stop_look("all-tools", super::tab::PAGE, true, window, cx);
         let wide = self.window_width >= ALL_COUNT_MIN_WIDTH;
@@ -1266,6 +1269,26 @@ impl Shell {
                     .on_click(
                         cx.listener(|this, _, _, cx| this.ask_new_playlist(Vec::new(), true, cx)),
                     )
+                    .into_any_element()
+            })
+            // Yeni (boş) klasör: adı sorulur, kök listenin sonuna açılır.
+            .child(if wide {
+                ghost_button(
+                    "all-new-folder",
+                    "folder",
+                    t!(NewFolder),
+                    false,
+                    folder_look,
+                    accent,
+                )
+                .when_some(folder_stop, |el, h| el.track_focus(&h))
+                .on_click(cx.listener(|this, _, _, cx| this.ask_new_folder(None, cx)))
+                .into_any_element()
+            } else {
+                icon_button("all-new-folder", "folder", folder_look, accent)
+                    .when_some(folder_stop, |el, h| el.track_focus(&h))
+                    .tooltip(Tooltip::text(t!(NewFolder), None))
+                    .on_click(cx.listener(|this, _, _, cx| this.ask_new_folder(None, cx)))
                     .into_any_element()
             });
 
@@ -1838,7 +1861,7 @@ mod tests {
     fn shelf_and_header_lose_exactly_the_scrolled_distance() {
         for i in 0..=10 {
             let p = i as f32 / 10.;
-            let lost = (SHELF_OPEN - shelf_height(p)) + (HEADER_OPEN - header_height(p));
+            let lost = (SHELF_OPEN - shelf_height(p)) + (HEADER_OPEN - header_height_with(p, 0.));
             assert!((lost - p * COLLAPSE_MAX).abs() < 1e-3, "p = {p}");
         }
         assert_eq!(SHELF_OPEN, 182.);
