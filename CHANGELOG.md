@@ -14,11 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   System follows Windows app mode immediately, including the window title bar.
 - `OPENIFY_TEST_THEME=light|dark` for isolated visual test runs and contrast
   checks for text and cover-tinted surfaces in both palettes.
-
 - Optional Discord Rich Presence over Windows named pipes: listening activity,
   song, artist, cover and playback progress. Off by default; clears on pause,
   stop, private session, disabling and quit. Settings stays hidden until a
   Discord application ID is configured by the builder.
+- Windows ARM64 release installer on its own Velopack update channel, plus
+  winget manifests and a script to fill their published release hashes.
 
 ## [0.1.1] - 2026-11-13
 

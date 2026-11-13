@@ -10,5 +10,6 @@ prototypes/
 # Local measurement and test scripts; only packaging, license and CI scripts are tracked
 scripts/*
 !scripts/surum-hazirla.ps1
+!scripts/winget-manifest.ps1
 !scripts/third_party_licenses.py
 !scripts/vendor-diff.ps1
