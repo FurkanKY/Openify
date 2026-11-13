@@ -1577,35 +1577,49 @@ h2.display em,
   margin-top: 28px;
 }
 
-.trust {
+.get-meta {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  margin: 26px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14.5px;
+  align-items: center;
+  gap: 6px 0;
+  margin-top: 22px;
+  font-size: 14px;
   color: var(--muted);
 }
-.trust li {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 4px 16px;
+.get-meta > * + *::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 12px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  vertical-align: middle;
 }
-.trust li + li {
-  border-left: 1px solid var(--line-strong);
-}
-.trust svg {
-  width: 15px;
-  height: 15px;
-  color: var(--accent-text);
-}
-.trust a {
+.get-meta a {
   color: var(--soft);
+  text-decoration: none;
+  transition: color 160ms ease-out;
+}
+.get-meta a:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.get-meta .ver {
   font-family: var(--mono);
   font-size: 13px;
-  text-underline-offset: 3px;
+}
+.btn-gh svg {
+  width: 20px;
+  height: 20px;
+}
+.gh-stars svg {
+  display: inline-block;
+  margin: 0 3px 0 0;
+  vertical-align: -1px;
 }
 
 .shot-wrap {

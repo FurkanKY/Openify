@@ -93,22 +93,20 @@
   if (uad && uad.platform === "Windows" && uad.getHighEntropyValues) {
     uad.getHighEntropyValues(["architecture"]).then(function (v) {
       if (v.architecture !== "arm") return;
+      // Swap what the two links point to: the big button becomes the ARM64
+      // installer and the small link offers x64 instead.
       doc.querySelectorAll("[data-arch-swap]").forEach(function (group) {
         var x64 = group.querySelector('[data-arch="x64"]');
         var arm = group.querySelector('[data-arch="arm64"]');
         if (!x64 || !arm) return;
-        ["btn-primary", "primary"].forEach(function (c) {
-          if (x64.classList.contains(c)) {
-            x64.classList.remove(c);
-            arm.classList.add(c);
-          }
-        });
-        if (arm.classList.contains("btn-primary")) {
-          arm.classList.remove("btn-quiet");
-          x64.classList.add("btn-quiet");
-          x64.classList.remove("btn-primary");
-        }
-        group.insertBefore(arm, x64);
+        var h = x64.getAttribute("href");
+        x64.setAttribute("href", arm.getAttribute("href"));
+        arm.setAttribute("href", h);
+        var small = x64.querySelector("small");
+        if (small && x64.dataset.smallAlt) small.textContent = x64.dataset.smallAlt;
+        if (x64.dataset.linkAlt) arm.textContent = x64.dataset.linkAlt;
+        x64.dataset.arch = "arm64";
+        arm.dataset.arch = "x64";
       });
     }, function () {});
   }
