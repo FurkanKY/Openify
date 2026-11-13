@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Design system · Openify</title>
-<meta name="description" content="Openify&#x27;s design system: a night listening room where the cover art is the only accent, with its palettes, type, spacing, rules and tests.">
+<meta name="description" content="Openify&#x27;s color palettes, typography, spacing, interaction states and the tests that keep them consistent.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/docs/design/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/design/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/design/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Design system · Openify">
-<meta property="og:description" content="Openify&#x27;s design system: a night listening room where the cover art is the only accent, with its palettes, type, spacing, rules and tests.">
+<meta property="og:description" content="Openify&#x27;s color palettes, typography, spacing, interaction states and the tests that keep them consistent.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/docs/design/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -68,21 +68,12 @@
     </nav>
     <article class="prose">
 <h1>Design system</h1>
-<p class="lede">Openify looks like a quiet listening room. The interface stays neutral and steps back, and the only color comes from the cover of the song that is playing.</p>
-
-<h2 id="the-idea">The idea</h2>
-<p>Surfaces recede: neutral night in the dark theme, warm off-white in the light theme. The accent and the glow at the top of the window are derived from the current cover, and they fade to the next song's color over 0.8 seconds. The rest of the interface exists to carry that color without competing with it.</p>
-<p>The priorities, in order, are plain, atmospheric, editorial. The plain base is a neutral background, tight but breathing rows and a floating player. The atmospheric layer is the cover color and glow, with covers everywhere. The editorial touch is bold Figtree on page titles. Components should feel calm and exact: almost invisible at rest, immediate and clear when touched. It is a player, and attention belongs to the music.</p>
-<ul>
-<li>Color comes only from the cover. The interface has no accent of its own.</li>
-<li>Depth comes from tonal layers. Shadows appear only on floating elements.</li>
-<li>Every block aligns to one left edge: the shelf, the list header and the rows share the page margin, which is 32, 48 or 64 px depending on window width.</li>
-<li>The library is a shelf of covers, and the player is a floating pill that carries the cover's light.</li>
-<li>Every interactive element has five designed states: normal, hover, pressed, keyboard focus and disabled.</li>
-</ul>
-
+<p class="lede">Openify combines neutral surfaces, cover-derived color and a floating player. Shared tokens keep pages and controls consistent across Dark and Light themes.</p>
+<h2 id="the-idea">Visual structure</h2>
+<p>Large Figtree titles establish hierarchy; covers provide the accent and ambient glow. The library shelf, headers and rows align through <code>page_margin</code>. It ranges from 32 to 64 px with content width, interpolating near the 1280 and 1600 px thresholds.</p>
+<p>Interactive components have five states: normal, hover, pressed, keyboard focus and disabled. Tonal layers distinguish states; shadows mark floating surfaces.</p>
 <h2 id="colors">Colors</h2>
-<p>All palettes live in <code>Palette</code> in <code>src/ui/theme.rs</code>. The light theme is designed on its own and is not an inverted dark theme.</p>
+<p><code>Palette</code> in <code>src/ui/theme.rs</code> defines both themes.</p>
 <div class="table"><table>
 <thead><tr><th>Token</th><th>Dark</th><th>Light</th></tr></thead>
 <tbody>
@@ -95,14 +86,12 @@
 <tr><td>Danger text</td><td><code>#F87171</code></td><td><code>#AD2727</code></td></tr>
 <tr><td>Default accent (no cover yet)</td><td colspan="2"><code>#F59E5B</code>, with glow <code>#C2410C</code></td></tr>
 </tbody></table></div>
-<p>Text is never a fixed gray. It is the foreground color at different opacities: full for main text, 72% (dark) or 80% (light) for secondary text, 68% or 78% for labels, and 28% for disabled icons. That keeps text readable on top of cover tones and hover layers. Main text and surface pairs are held to WCAG AA, at least 4.5:1, by a unit test in both themes.</p>
-<p>The theme setting is Dark, Light or System. A missing or unknown value means Dark. System follows the Windows app color mode live.</p>
-
-<h3>How the cover color is used</h3>
-<p>The accent (<strong>cover light</strong>) colors the playing row, the equalizer bars, the primary button, the focus ring and the selected shelf card. It is lightened as needed so it stays at least 4.5:1 against the background, and its hue is kept. The glow is a 460 px area at the top of the window, pre-mixed with the background rather than drawn as a transparent gradient. Its brightest point is capped, so even a yellow or pink cover leaves the room dark and the labels on top stay readable.</p>
-
+<p>Secondary text uses foreground opacity: 72% in Dark and 80% in Light; labels use 68% and 78%. Disabled icons use 28%. Tests check readable text and surface combinations against the 4.5:1 contrast target.</p>
+<p>Settings offers Dark, Light and System. Missing or unknown settings default to Dark; System follows Windows app mode.</p>
+<h3>Cover-derived color</h3>
+<p>The accent colors playing rows, level bars, primary buttons, focus rings and selected shelf cards. <code>ensure_contrast</code> lightens or darkens it against the target background. The 460 px glow blends cover color with the background: Dark caps its luminance, while Light uses a restrained tint. Cover changes transition over 800 ms.</p>
 <h2 id="typography">Typography</h2>
-<p>Figtree (embedded, OFL) is for titles. Segoe UI Variable Text, Windows' own interface font, is for everything else. Figtree renders blurry at 12 to 14 px, so it is never used below 18 px.</p>
+<p>Embedded Figtree (OFL) is used for titles at 18 px and above. Smaller text uses Segoe UI Variable Text. The six roles pair font size with line height; weights depend on the component.</p>
 <div class="table"><table>
 <thead><tr><th>Role</th><th>Weight, size, line</th><th>Used for</th></tr></thead>
 <tbody>
@@ -113,54 +102,38 @@
 <tr><td>Secondary</td><td>400, 13 / 18 px</td><td>Artist, meta line, descriptions</td></tr>
 <tr><td>Label</td><td>500 to 600, 12 / 16 px, tabular digits</td><td>Column headers, durations, shortcuts</td></tr>
 </tbody></table></div>
-
-<h2 id="layout-shape-depth">Spacing, shape and elevation</h2>
-<p><strong>Spacing</strong> comes from one scale: 2, 4, 8, 12, 16, 24, 32, 48 and 64 px. Related items sit close and separate groups get a larger step. 2 px appears only between two lines of one item and in tight lists.</p>
-<p><strong>Shape</strong> is soft but tight: 2 px for thin bars, 4 px for small covers, 6 px for rows and menu items, 8 px for shelf covers, 12 px for floating panels such as menus and tooltips, and 20 px for the search surface. Icon buttons are circles. Primary buttons, filter chips and the title-bar search are full pills, as is the player.</p>
-<p><strong>Elevation</strong> is tonal: the background first, then translucent white layers on top. Hover is 6%, selected is 10% and pressed is 14%. The playing row takes the cover's tint instead of white, at 8%, 12%, 16% and 20% across its states. Shadows mean "temporary, above the content" and are used only for the search surface, menus, tooltips, the floating player pill and the slider handle. A docked side panel gets a quieter shadow because it sits in the same plane as the list.</p>
-<p>Transitions come from a single token table in <code>theme.rs</code>: 140 ms for hover and press, 220 ms for page, panel and full-screen entry, 160 ms for exits, and 800 ms for cover color changes. Entrances slow down at the end, exits are shorter, and nothing makes input wait. With "reduce animations" on, everything is instant.</p>
-
+<h2 id="layout-shape-depth">Spacing, shape and depth</h2>
+<p>Spacing follows 2, 4, 8, 12, 16, 24, 32, 48 and 64 px. The 2 px step is reserved for closely related lines and compact lists.</p>
+<p>Corner radii run from 2 px for bars through 4 px covers, 6 px rows, 8 px shelf covers, 12 px floating panels and 20 px search surfaces. Icon buttons are circular; primary buttons, chips, title-bar search and the player use pill shapes.</p>
+<p>State layers use white in Dark and dark foreground in Light: hover 6%, selected 10%, pressed 14%. Playing rows use cover tint at 8%, 12%, 16% and 20%. Floating surfaces and slider handles have shadows; docked panels use a quieter shadow.</p>
+<p>Motion tokens set hover and press to 140 ms, entrances to 220 ms, exits to 160 ms and cover transitions to 800 ms. Reduce animations makes these durations zero.</p>
 <h2 id="named-rules">Named rules</h2>
 <dl class="deflist">
-<div class="row"><dt>One Light</dt><dd>The interface has no accent of its own. Color comes from the playing cover, or the default orange when there is none. Before anything plays, the room is dark.</dd></div>
-<div class="row"><dt>Night Stays</dt><dd>However bright the cover, the glow has a ceiling, and the faintest label on top stays at 4.5:1 or better. A test checks this.</dd></div>
-<div class="row"><dt>Tonal Layer</dt><dd>The same state looks the same everywhere: hover 6%, selected 10%, pressed 14%. A screen cannot invent its own opacity.</dd></div>
-<div class="row"><dt>Six Sizes</dt><dd>The code has no font size outside the six roles above. Size and line height come only from <code>type_role</code>.</dd></div>
-<div class="row"><dt>Steady Digits</dt><dd>Any number that changes (time, position, counter) uses tabular digits so it does not jitter.</dd></div>
-<div class="row"><dt>Floating Shadow</dt><dd>Cards, rows and bars have no shadow. If an element has one, it floats above the content.</dd></div>
-<div class="row"><dt>Single Color Logo</dt><dd>The logo, an O ring with a light dot sitting in a notch on its path, is one color: foreground or night. It never takes the cover color.</dd></div>
+<div class="row"><dt>One Light</dt><dd>Use the cover accent, with the default orange when no cover is available.</dd></div>
+<div class="row"><dt>Night Stays</dt><dd>Cap the dark theme's glow so labels retain contrast.</dd></div>
+<div class="row"><dt>Tonal Layer</dt><dd>Reuse the same state opacities across components.</dd></div>
+<div class="row"><dt>Six Sizes</dt><dd>Get font size and line height from <code>type_role</code>.</dd></div>
+<div class="row"><dt>Steady Digits</dt><dd>Use tabular digits for changing times, positions and counters.</dd></div>
+<div class="row"><dt>Floating Shadow</dt><dd>Keep ordinary cards, rows and bars shadow-free.</dd></div>
+<div class="row"><dt>Single Color Logo</dt><dd>The notched O ring and light dot use foreground or night, independently of the cover accent.</dd></div>
 </dl>
-
-<h2 id="do-and-dont">Do and don't</h2>
-<ul>
-<li><strong>Do</strong> take spacing, radius and font size only from the scales in <code>theme.rs</code>.</li>
-<li><strong>Do</strong> show the same state with the same tonal layer.</li>
-<li><strong>Do</strong> add every new component to the component gallery (<code>OPENIFY_GALLERY=1</code>) with all five states.</li>
-<li><strong>Do</strong> pass cover-derived colors through <code>ensure_contrast</code> so they stay readable.</li>
-<li><strong>Do</strong> align a block to the shared left edge, <code>page_margin</code>.</li>
-<li><strong>Don't</strong> put a shadow on a row, card or bar.</li>
-<li><strong>Don't</strong> put an uppercase category label above a title. Put the type in the meta line.</li>
-<li><strong>Don't</strong> use a fixed gray for secondary text. Use a translucent foreground.</li>
-<li><strong>Don't</strong> add an accent color that does not come from the cover.</li>
-<li><strong>Don't</strong> use Figtree below 18 px.</li>
-</ul>
-
-<h2 id="enforcement">How the rules are enforced</h2>
-<p>Design rules are checked by tests, not by review alone. <code>src/ui/design_rules.rs</code> holds count-based tests that must stay at zero. Spacing, radius, font size, shadow and color values may come only from <code>src/ui/theme.rs</code>, and every <code>icon_button("...")</code> must be followed by <code>.tooltip(</code>. A failing test means a raw value slipped in. Further tests there check that shadows appear only on floating elements and that Tab order follows the visual order.</p>
-<p>Other tests protect specific promises: the contrast of text on both palettes, the brightness ceiling of the glow, and the number of song rows visible above the player at the smallest window sizes. The architecture page describes the wider test setup in <a href="../how-it-works/#testing">how it is tested</a>.</p>
+<h2 id="do-and-dont">Component checklist</h2>
+<ul><li>Use <code>theme.rs</code> spacing, radii and type roles; align blocks with <code>page_margin</code>.</li><li>Add new components to <code>OPENIFY_GALLERY=1</code> with all five states.</li><li>Pass cover accents through <code>ensure_contrast</code> and use translucent foreground for secondary text.</li><li>Keep category information in the metadata line; omit uppercase labels above titles.</li><li>Keep Figtree at 18 px or larger and reserve shadows for the defined surfaces.</li></ul>
+<h2 id="enforcement">How the rules are checked</h2>
+<p><code>src/ui/design_rules.rs</code> scans listed UI files for raw spacing, radius, font size, shadow and color values. It checks icon-button tooltips and selected focus-order rules. Theme tests cover contrast and glow brightness; layout tests check visible song rows at small window sizes. See <a href="../how-it-works/#testing">architecture tests</a>.</p>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/docs/DESIGN.md">View the source document on GitHub</a></p>
       <nav class="pager" aria-label="Previous / Next"><a class="pager-prev" href="../contribute/"><span>Previous</span>Contribute</a><a class="pager-next" href="../licenses/"><span>Next</span>Licenses</a></nav>
     </article>
     <nav class="toc" aria-label="On this page">
       <p class="toc-title">On this page</p>
       <ol>
-          <li><a href="#the-idea">The idea</a></li>
+          <li><a href="#the-idea">Visual structure</a></li>
           <li><a href="#colors">Colors</a></li>
           <li><a href="#typography">Typography</a></li>
-          <li><a href="#layout-shape-depth">Spacing, shape and elevation</a></li>
+          <li><a href="#layout-shape-depth">Spacing, shape and depth</a></li>
           <li><a href="#named-rules">Named rules</a></li>
-          <li><a href="#do-and-dont">Do and don't</a></li>
-          <li><a href="#enforcement">How the rules are enforced</a></li>
+          <li><a href="#do-and-dont">Component checklist</a></li>
+          <li><a href="#enforcement">How the rules are checked</a></li>
       </ol>
     </nav>
   </div>

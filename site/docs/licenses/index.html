@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Licenses · Openify</title>
-<meta name="description" content="Openify is GPL-3.0-or-later. What that means for users and forks, plus the licenses of its fonts, icons, OPRA data and 629 Rust crates.">
+<meta name="description" content="Openify&#x27;s GPL-3.0-or-later license, redistribution terms and third-party font, icon, OPRA and Rust crate licenses.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/docs/licenses/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/licenses/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/licenses/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Licenses · Openify">
-<meta property="og:description" content="Openify is GPL-3.0-or-later. What that means for users and forks, plus the licenses of its fonts, icons, OPRA data and 629 Rust crates.">
+<meta property="og:description" content="Openify&#x27;s GPL-3.0-or-later license, redistribution terms and third-party font, icon, OPRA and Rust crate licenses.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/docs/licenses/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -68,34 +68,17 @@
     </nav>
     <article class="prose">
 <h1>Licenses</h1>
-<p class="lede">Openify is free software under the GPL-3.0-or-later. This page explains what that means in practice, and lists the licenses of the fonts, icons, data and Rust crates that come with or are used by the app.</p>
-
-<h2 id="openify-license">Openify's own license</h2>
-<p>Openify is licensed under the GNU General Public License, version 3 or (at your option) any later version. In <code>Cargo.toml</code> that is the SPDX expression <code>GPL-3.0-or-later</code>, and the full text is in the <a href="https://github.com/FurkanKY/Openify/blob/master/LICENSE">LICENSE</a> file in the repository.</p>
-<p>This page is a plain-language summary, not legal advice. If a decision depends on the exact wording, read the license text itself.</p>
-
-<h2 id="for-users">What it means if you just use Openify</h2>
-<ul>
-<li>You can install and run it for any purpose, on as many computers as you like, at no cost.</li>
-<li>You can read the source code, study how it works and change it for your own use.</li>
-<li>You can share the app with others, with or without changes, as long as the terms below are followed.</li>
-<li>There is no warranty. The GPL says the software is provided as is, and that applies here too.</li>
-</ul>
-<p>The license covers Openify's code. It says nothing about Spotify's service or its terms, which are separate. See <a href="#spotify-disclaimer">the Spotify disclaimer</a> below.</p>
-
-<h2 id="for-forks">What it means if you fork or redistribute it</h2>
-<p>You are free to fork Openify, change it and publish your version, including under a different name. The GPL attaches a few conditions to that freedom:</p>
-<ul>
-<li>If you distribute a modified version, or a build of one, you must make the corresponding source code available to the people who receive it, under the same GPL terms.</li>
-<li>You must keep the existing copyright and license notices, and mark that you changed the files.</li>
-<li>You cannot add restrictions on top of the GPL. A closed-source, proprietary fork that you distribute is not allowed.</li>
-<li>Because the license says "or any later version", you may choose to follow a later version of the GPL if the Free Software Foundation publishes one.</li>
-</ul>
-<p>If you only change Openify for yourself and never hand it to anyone else, you do not have to publish anything. Contributions sent to the project are accepted under the same license; <a href="../contribute/">the contributing guide</a> says so too.</p>
-<p>Dependencies matter here. A new crate has to be compatible with GPL-3.0, and the contributing guide asks for a check with <code>cargo deny check licenses</code>.</p>
-
+<p class="lede">Openify is GPL-3.0-or-later. Fonts, icons, headphone data and Rust dependencies retain their own licenses.</p>
+<h2 id="openify-license">Openify's license</h2>
+<p><code>Cargo.toml</code> declares <code>GPL-3.0-or-later</code>: GNU GPL version 3 or any later version. The complete terms are in <a href="https://github.com/FurkanKY/Openify/blob/master/LICENSE">LICENSE</a>.</p>
+<h2 id="for-users">Using Openify</h2>
+<ul><li>You can run, study and modify Openify, and share copies under the GPL.</li><li>Private modifications do not require publication.</li><li>The license excludes warranty to the extent permitted by law.</li></ul>
+<p>Spotify's service has <a href="#spotify-disclaimer">separate terms</a>.</p>
+<h2 id="for-forks">Forks and redistribution</h2>
+<ul><li>Distributing binaries, including unmodified builds, requires providing Corresponding Source through a GPL-permitted method.</li><li>Preserve copyright and license notices. Modified versions must identify changes and their dates and carry the applicable GPL terms.</li><li>You cannot impose further restrictions on recipients' GPL rights.</li></ul>
+<p>Contributions use GPL-3.0-or-later. For new dependencies, the <a href="../contribute/">contributing guide</a> requires GPL-3.0 compatibility and a <code>cargo deny check licenses</code> check.</p>
 <h2 id="fonts-and-icons">Fonts and icons</h2>
-<p>These ship inside the app, in the <code>assets/</code> folder. Their license texts are in <code>assets/licenses/</code>.</p>
+<p>These assets ship with Openify; license texts are in <code>assets/licenses/</code>.</p>
 <div class="table"><table>
 <thead><tr><th>Component</th><th>Used for</th><th>License</th></tr></thead>
 <tbody>
@@ -104,14 +87,11 @@
 <tr><td>Lucide</td><td>Icons</td><td>ISC</td></tr>
 </tbody>
 </table></div>
-
 <h2 id="opra">OPRA headphone data</h2>
-<p>The headphone equalizer profiles come from <a href="https://github.com/opra-project/OPRA">OPRA</a>, an open registry started by Roon Labs and kept up by community contributors. Its manufacturer, product and EQ data is licensed CC BY-SA 4.0. The OPRA repository's own code is MIT.</p>
-<p>Openify does not ship this data. The database file is downloaded to the cache folder the first time you search for a headphone profile, and refreshed from there. Each profile you select is credited to its creator in the equalizer settings. Openify fits the profile to its own 10-band equalizer, so the bands you get are an adaptation of the original curve. The notice is in <code>assets/licenses/OPRA-NOTICE.txt</code>.</p>
-
+<p><a href="https://github.com/opra-project/OPRA">OPRA</a>, started by Roon Labs and maintained with community contributors, licenses manufacturer, product and EQ data under CC BY-SA 4.0; its repository code is MIT.</p>
+<p>Openify downloads the database on first profile search and caches it. Selected profiles credit their creators in Settings. Fitting a curve to the 10-band equalizer creates an adaptation. See <code>assets/licenses/OPRA-NOTICE.txt</code>.</p>
 <h2 id="rust-crates">Rust crates</h2>
-<p>Openify is built from 629 crate entries: 572 distinct crates, some of them present in more than one version. The full list, with versions, sources and the complete license and notice texts, is generated by a script and kept in <a href="https://github.com/FurkanKY/Openify/blob/master/docs/THIRD_PARTY_LICENSES.md">docs/THIRD_PARTY_LICENSES.md</a>.</p>
-<p>The table below counts entries by license expression, taken from that file. Alternatives such as <code>MIT/Apache-2.0</code> and <code>Apache-2.0 OR MIT</code> are written in one order so they count together, and the 26 rows add up to 629.</p>
+<p>The generated <a href="https://github.com/FurkanKY/Openify/blob/master/docs/THIRD_PARTY_LICENSES.md">third-party inventory</a> lists 629 package-version entries across 572 crate names, with sources and license texts. This inventory is broader than a single Windows build. Equivalent alternative-license expressions are grouped below.</p>
 <div class="table"><table>
 <thead><tr><th>License expression</th><th>Crates</th></tr></thead>
 <tbody>
@@ -143,25 +123,24 @@
 <tr><td><code>LGPL-3.0-or-later OR MPL-2.0</code></td><td>1</td></tr>
 </tbody>
 </table></div>
-<p>Most entries are permissive: MIT, Apache-2.0, or a choice between them. Eleven entries involve MPL-2.0 (the Symphonia audio decoders, <code>nucleo-matcher</code>, <code>option-ext</code>, and <code>priority-queue</code>, which is LGPL-3.0-or-later or MPL-2.0). Both are weak, file-level copyleft licenses that can be used in a GPL-3.0 program.</p>
-<p>Four crates are patched copies kept in the repository's <code>vendor/</code> folder: <code>gpui</code>, <code>librespot-connect</code>, <code>librespot-core</code> and <code>librespot-playback</code>. They are listed under their own licenses in the table.</p>
-
-<h2 id="spotify-disclaimer">Spotify disclaimer</h2>
-<p class="note">Openify is an independent project. It is not affiliated with, endorsed by or sponsored by Spotify AB. "Spotify" and the Spotify logo are trademarks of Spotify AB, and they are used here only to say what Openify works with.</p>
-<p>Openify talks to Spotify through the same unofficial, reverse-engineered interfaces as librespot, and some features use endpoints that Spotify does not document and may change or block at any time. Using a third-party client can conflict with Spotify's terms of service, so you use Openify at your own risk. It does not download or save music, and it only plays on Premium accounts.</p>
+<p>Most entries use MIT, Apache-2.0 or a choice of them. Ten use MPL-2.0; <code>priority-queue</code> offers LGPL-3.0-or-later or MPL-2.0. These licenses have different copyleft requirements.</p>
+<p><code>Cargo.toml</code> patches four crates from <code>vendor/</code>: <code>gpui</code>, <code>librespot-connect</code>, <code>librespot-core</code> and <code>librespot-playback</code>. Their own licenses remain listed in the inventory.</p>
+<h2 id="spotify-disclaimer">Spotify</h2>
+<p class="note">Openify is independent of Spotify AB. Spotify's name and logo are Spotify AB trademarks.</p>
+<p>Playback requires Premium and uses unofficial interfaces; undocumented endpoints may change or stop working. Third-party clients may conflict with Spotify's terms. Openify caches audio for playback and has no music export feature.</p>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/docs/THIRD_PARTY_LICENSES.md">View the source document on GitHub</a></p>
       <nav class="pager" aria-label="Previous / Next"><a class="pager-prev" href="../design/"><span>Previous</span>Design system</a></nav>
     </article>
     <nav class="toc" aria-label="On this page">
       <p class="toc-title">On this page</p>
       <ol>
-          <li><a href="#openify-license">Openify's own license</a></li>
-          <li><a href="#for-users">What it means if you just use Openify</a></li>
-          <li><a href="#for-forks">What it means if you fork or redistribute it</a></li>
+          <li><a href="#openify-license">Openify's license</a></li>
+          <li><a href="#for-users">Using Openify</a></li>
+          <li><a href="#for-forks">Forks and redistribution</a></li>
           <li><a href="#fonts-and-icons">Fonts and icons</a></li>
           <li><a href="#opra">OPRA headphone data</a></li>
           <li><a href="#rust-crates">Rust crates</a></li>
-          <li><a href="#spotify-disclaimer">Spotify disclaimer</a></li>
+          <li><a href="#spotify-disclaimer">Spotify</a></li>
       </ol>
     </nav>
   </div>

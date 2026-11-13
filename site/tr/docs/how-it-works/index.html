@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Openify nasıl çalışıyor · Openify</title>
-<meta name="description" content="Openify&#x27;ın mimarisine tur: thread&#x27;ler, UI ile engine ayrımı, ses yolu, kalıcı veri, Spotify erişimi, Windows entegrasyonu ve vendor yamaları.">
+<meta name="description" content="Openify&#x27;ın arayüzü, motoru, ses çıkışı, yerel verileri, Spotify bağlantısı, Windows entegrasyonu ve testleri.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/tr/docs/how-it-works/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/how-it-works/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/how-it-works/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Openify nasıl çalışıyor · Openify">
-<meta property="og:description" content="Openify&#x27;ın mimarisine tur: thread&#x27;ler, UI ile engine ayrımı, ses yolu, kalıcı veri, Spotify erişimi, Windows entegrasyonu ve vendor yamaları.">
+<meta property="og:description" content="Openify&#x27;ın arayüzü, motoru, ses çıkışı, yerel verileri, Spotify bağlantısı, Windows entegrasyonu ve testleri.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/tr/docs/how-it-works/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
 <meta property="og:image:width" content="1200">
@@ -68,181 +68,93 @@
     </nav>
     <article class="prose">
 <h1>Openify nasıl çalışıyor</h1>
-<p class="lede">Openify, Rust ile yazılmış native bir Windows Spotify istemcisi. Bu sayfada sürecin nasıl bölündüğünü, sınırların nerede durduğunu ve bazı şeylerin neden öyle yapıldığını anlatıyoruz.</p>
-
-<h2 id="big-picture">Genel resim</h2>
-<p>Arayüz <a href="https://gpui.rs">gpui</a> ile çiziliyor; Zed'in UI framework'ü bu. Çalma işini <a href="https://github.com/librespot-org/librespot">librespot</a> 0.8 yapıyor. Async işler tokio üstünde koşuyor, cache'ler ve kuyruklar SQLite'ta (<code>rusqlite</code>, bundled) duruyor. Release build'leri x64 ve ARM64 için çıkıyor; ikisinin güncelleme kanalı ayrı.</p>
-<p>Uygulama kanallarla konuşan iki yarıdan oluşuyor. UI thread'i çizim ve girdiyle uğraşıyor. Ayrı bir engine thread'i Spotify oturumunu, player'ı ve veritabanlarını elinde tutuyor. Ses cihazı ise lock kullanmayan bir ring buffer'dan besleniyor.</p>
-<p>Tasarımı dört kural ayakta tutuyor:</p>
-<ol>
-<li>UI, librespot'a, ağa ya da engine'in state'ine dokunmaz. Command gönderir, event çizer.</li>
-<li>Engine kullanıcıya görünen metin üretmez. Tipli kodlar yollar, bunları string'e çevirmek UI'ın işi.</li>
-<li>Ses thread'i lock almaz, bellek ayırmaz, beklemez.</li>
-<li>Edit kuyruğundaki kullanıcı verisi, Spotify'a gitmeden önce diske yazılır.</li>
-</ol>
-
-<h2 id="threads-and-runtimes">Thread'ler ve runtime'lar</h2>
-<div class="table"><table>
-<thead><tr><th>Thread / runtime</th><th>İşi</th></tr></thead>
-<tbody>
-<tr><td>UI thread'i (gpui main)</td><td>Bütün çizim ve girdi.</td></tr>
-<tr><td><code>openify-engine</code></td><td>Aşağıdaki iki runtime'ın sahibi. <code>catch_unwind</code> içinde çalışır: panic olursa <code>EngineStopped</code> event'ine dönüşür ve UI engine'i aynı kanallar üstünde yeniden başlatabilir.</td></tr>
-<tr><td>tokio <code>openify-net</code> (2 worker)</td><td>librespot oturumu (audio-key cevapları dahil) ve command döngüsü.</td></tr>
-<tr><td>tokio <code>openify-bg</code> (3 worker)</td><td>Kütüphane yenileme, metadata, SQLite yazmaları, kapaklar, arama.</td></tr>
-<tr><td>librespot player thread'i</td><td>Sesi çeker, çözer, decode eder.</td></tr>
-<tr><td>Ses cihazı thread'i</td><td>Ses kartının callback'inde ring buffer'ı boşaltır.</td></tr>
-<tr><td><code>Saver</code> thread'i</td><td>"Kaldığın yerden devam" durumunu yazar, çıkışta flush eder.</td></tr>
+<p class="lede">Openify, Rust ile yazılmış native bir Windows Spotify istemcisi. Arayüz, çalma motoru ve ses çıkışı; kanallar ve bir halka tampon üzerinden haberleşiyor.</p>
+<h2 id="big-picture">Genel yapı</h2>
+<p>Arayüzü <a href="https://gpui.rs">gpui</a> çiziyor, müziği <a href="https://github.com/librespot-org/librespot">librespot</a> 0.8 çalıyor. Asenkron işler Tokio'da çalışıyor; cache ve kuyruklar, uygulamayla gelen SQLite'ta (<code>rusqlite</code>) tutuluyor. x64 ve ARM64 sürümlerinin güncelleme kanalları ayrı. Müzik dinlemek için Spotify Premium hesabın olmalı.</p>
+<p>Arayüz motora komut gönderip gelen olayları ekrana yansıtıyor. Ekranda gösterilecek metinlerin yeri arayüzün çeviri tablosu. Ses callback'i kilit almamalı, bellek ayırmamalı veya beklememeli. Kütüphane düzenlemeleri de Spotify'a gönderilmeden önce diske yazılmalı.</p>
+<h2 id="threads-and-runtimes">Thread ve runtime'lar</h2>
+<div class="table"><table><thead><tr><th>Thread veya runtime</th><th>Görevi</th></tr></thead><tbody>
+<tr><td>gpui ana thread'i</td><td>Çizim ve kullanıcı girdisi.</td></tr>
+<tr><td><code>openify-engine</code></td><td>İki runtime'ı yönetir. Yakalanan panic, <code>EngineStopped</code> olayına dönüşür; yeniden başlatma aynı kanalları kullanır.</td></tr>
+<tr><td><code>openify-net</code>, 2 worker</td><td>Spotify oturumu, ses anahtarı yanıtları ve komut döngüsü.</td></tr>
+<tr><td><code>openify-bg</code>, 3 worker</td><td>Kütüphaneyi yenileme, metadata, veritabanı yazımı, kapaklar ve arama.</td></tr>
+<tr><td>librespot çaları</td><td>Sesi alır, şifresini çözer ve decode eder.</td></tr>
+<tr><td>Ses aygıtı callback'i</td><td>Halka tamponu okur.</td></tr>
+<tr><td><code>Saver</code></td><td>Kaldığın yerin kayıtlarını birleştirir, çıkışta kalanları yazar.</td></tr>
 </tbody></table></div>
-<p>İki runtime olmasının sebebi var. librespot, audio-key isteğinin cevabını kısa bir süre bekliyor. Açılıştaki kütüphane yenileme gibi ağır işler oturumla aynı worker'ları paylaşınca cevap zamanında okunamıyor, şarkılar başlamıyordu. Artık ağır iş bağlantının nefesini kesemiyor.</p>
-<p><code>openify &lt;şarkı linki&gt;</code> arayüzü hiç açmadan terminalde çalıyor. <code>openify logout</code> kayıtlı girişi siliyor.</p>
-
-<h2 id="ui-engine-boundary">UI ile engine arasındaki sınır</h2>
-<p>Bütün sözleşme <code>src/engine/mod.rs</code> içinde. UI, bloklamayan bir handle üstünden <code>Command</code> yolluyor. Engine <code>Event</code> ve <code>PlaybackEvent</code> ile cevap veriyor. Cevaplar isteğin sıra numarasını geri taşıyor; UI bayat sonuçları böyle eliyor. Handle, event kanallarının gönderen uçlarını da tuttuğu için engine yeniden başlasa bile UI'ın dinleyicileri yerinde kalıyor.</p>
-<p>I/O gerektirmeyen kararlar, unit test'li saf modüllerde duruyor: çalma kuyruğu, recovery politikası, login state machine'i, yeniden bağlanma ve hesap kontrolleri.</p>
-
+<p>Ayrı runtime'lar, kütüphane yenilenirken ses anahtarı yanıtlarının gecikmesini önlüyor. <code>openify &lt;track link&gt;</code> komutuyla kendi runtime'ında, terminalden müzik çalabilirsin. <code>openify logout</code> kayıtlı girişi siler.</p>
+<h2 id="ui-engine-boundary">Arayüz ile motorun sınırı</h2>
+<p><code>Command</code>, <code>Event</code> ve <code>PlaybackEvent</code>, <code>src/engine/mod.rs</code> içinde tanımlı. Handle beklemeden komut gönderiyor; motor yeniden başlarken olay kanallarının göndericilerini koruyor. İstek anahtarları ve sıra numaraları sayesinde arayüz eski yanıtları eliyor.</p>
 <h3>Çalma çekirdeği</h3>
-<p>Player'ın ne yapacağına karar veren her şey <code>engine/playback/</code> altında, bir test dikişinin arkasında. <code>PlayerPort</code>, engine'in player'dan ne istediğini tarif ediyor. Gerçek uç librespot'u sarıyor, testlerde çağrıları kaydeden bir sahte kullanılıyor. Uyguladığı birkaç kural:</p>
-<ul>
-<li>Kullanıcı komutu önce çıkışa, sonra player'a dokunur. Otomatik şarkı geçişi hiçbir zaman flush etmez; gapless böyle korunuyor.</li>
-<li>Key hatasında engine yeniden bağlanıp aynı şarkıyı bir kez daha dener. İkinci hata atlatır, dördüncüsü durdurur.</li>
-<li>Bir devir kapısı (handover gate), yeni şarkı gerçekten duyulana kadar UI event'lerini tutar.</li>
-</ul>
-
+<p><code>engine/playback/</code>, çalma kararlarını <code>PlayerPort</code> üzerinden uyguluyor; testlerde yerini <code>FakePort</code> alıyor. Sen bir komut verdiğinde önce ses çıkışı hazırlanıyor, sonra çalara komut gidiyor. Otomatik geçişte tampondaki ses korunuyor. Geçiş kapısı, yeni şarkı duyulana kadar başlık ve kapak değişimini bekletiyor.</p>
+<p>Ses anahtarı alınamazsa motor yeniden bağlanıp aynı şarkıyı bir kez daha deniyor. Sonraki hatada şarkıyı atlıyor; art arda dördüncü hatada çalmayı durduruyor.</p>
 <h3>Spotify Connect</h3>
-<p>Connect varsayılan olarak açık, Ayarlar'dan kapatılabiliyor. Çalmayı kim başlattıysa o yönetir. Telefon başlatır ya da aktarırsa kuyruk ve ilerleme Spotify'ın olur; Openify yalnızca izler ve ses çıkışını çalıştırır. Başka bir cihaz çalıyor ve burada hiçbir şey çalmıyorsa Openify bunu gösterir ve "burada çal" önerir. Diğer durumlarda kendi kuyruğu ve kurallarıyla yönetir. Connect kapalıyken hiçbir Connect cihazı kaydedilmez; bunu unit test'ler sabitliyor.</p>
-
-<h2 id="audio-path">Ses yolu</h2>
-<p>Openify, librespot'un hazır rodio backend'ini kullanmıyor. O backend yaklaşık 0,6 sn ses kuyruğa alıyor; duraklatma, ileri sarma, şarkı değiştirme ve ses hep geç tepki veriyordu. Yerine konan çıkış şöyle çalışıyor:</p>
-<ul>
-<li>Decode edilen ses bir sink'ten geçiyor. Sink hem seviye analizörünü (ekolayzer çubukları) besliyor hem de frame'leri ring buffer'a yazan writer'ı.</li>
-<li>Ring atomic sayaçlarla çalışıyor: <code>unsafe</code> yok, lock yok, ses thread'inde bellek ayırma yok.</li>
-<li>Writer, kuyruk bir hedefin (varsayılan 120 ms) altına inene kadar bekliyor. Ring akışın ortasında boşalırsa kaynak sessizlik çalıyor, bir underrun sayıyor ve hedefi büyütüyor.</li>
-<li>Engine çıkışı atomic'lerle yönetiyor: duraklatmadan önce kısa bir fade, ileri sarma ve şarkı geçişinde flush, yaklaşık 10 ms'lik ses rampası. Ses kuyruktan sonra uygulanıyor; bu yüzden ses kısıkken ekolayzer çubukları düzleşmiyor.</li>
-</ul>
-<p>Şarkı sonunda ring yaklaşık 4 sn tutabiliyor; böylece sıradaki şarkıda decoder takılsa bile boşluk oluşmuyor. Bu da player'ın duyulandan önde koşması demek. Devir kapısı bu yüzden var.</p>
-<p>Aynı çıkışın üstünde birkaç özellik daha duruyor:</p>
-<ul>
-<li><strong>Crossfade</strong> (en çok 12 sn) şarkıları writer tarafında üst üste bindiriyor. Yalnız farklı albümler arasındaki doğal şarkı sonlarında devreye giriyor. Aynı albümdeki komşu şarkılar, tek şarkı tekrarı ve elle yaptığın her geçiş gapless kalıyor.</li>
-<li><strong>AutoMix</strong>, bindirmenin nerede ve ne kadar süreceğine karar veriyor. Sessizlik, tempo ve beat analizi kullanıyor; sonuçlar kütüphane veritabanında cache'leniyor.</li>
-<li><strong>Ekolayzer ve karaoke</strong> ses thread'inde koşuyor. Ekolayzerde on filtre ve otomatik pre-gain var; kulaklık profilleri OPRA projesinden geliyor ve ilk kullanımda indiriliyor.</li>
-</ul>
-<p>Kapalıyken bu kodlar hiç çalışmıyor ve çıkış bit bit aynı kalıyor; golden test'ler bunu kapsıyor.</p>
-
-<h2 id="persistence">Kalıcı veri</h2>
-<p>Bütün yollar kullanıcıya özel. Doğruluk için yalnızca edit kuyruğu ve giriş şart. Geri kalan her şey yeniden kurulabilir.</p>
-<div class="table"><table>
-<thead><tr><th>Ne</th><th>Nerede</th></tr></thead>
-<tbody>
-<tr><td>Kütüphane cache'i: kütüphane, şarkılar, sözler, resume durumu, pin'ler, yerel dinleme geçmişi, gizlenen şarkılar</td><td><code>%LOCALAPPDATA%\Openify\library.db</code></td></tr>
-<tr><td>Sayfa cache'i: sanatçı, albüm, Ana sayfa, Keşfet</td><td><code>%LOCALAPPDATA%\Openify\pages.db</code></td></tr>
-<tr><td>Kapaklar (200 MB sınır), şifreli ses (2 GB sınır)</td><td><code>%LOCALAPPDATA%\Openify\covers</code>, <code>audio</code></td></tr>
-<tr><td>Ayarlar (<code>version</code> alanlı JSON)</td><td><code>%APPDATA%\Openify\settings.json</code></td></tr>
-<tr><td>Edit kuyruğu (kullanıcı verisi, cache klasörünün dışında)</td><td><code>%APPDATA%\Openify\edits.db</code></td></tr>
-<tr><td>Spotify oturumu</td><td>Windows Credential Manager, hiçbir zaman dosya değil</td></tr>
+<p>Connect varsayılan olarak açık; Ayarlar'dan kapatabilir veya aygıt adını değiştirebilirsin. Openify'da başlattığın müzik yerel sırayı kullanıyor. Telefondan başlatılan veya aktarılan müzikte sıra ve ilerleme Spirc üzerinden Spotify'a ait. Başka bir aygıt çalarken Openify durumunu gösterip “burada çal” seçeneği sunuyor. Connect kapalıyken aygıt kaydı yapılmıyor.</p>
+<h2 id="audio-path">Sesin izlediği yol</h2>
+<p>Özel ses çıkışı, librespot'un kontrolleri geciktiren yaklaşık 0,6 saniyelik kuyruğunun yerini alıyor. Decode edilen ses önce seviye analizine ve yazıcıya, ardından atomik halka tampona ve ses callback'ine gidiyor.</p>
+<ul><li>Yazıcının varsayılan hedefi 120 ms ses tutmak. Tampon boşalırsa sessizlik çalınıyor ve hedef büyüyor.</li><li>Atomikler; duraklatma öncesi kısa ses kısılmasını, sarma ve elle şarkı değiştirmede tamponun boşaltılmasını, yaklaşık 10 ms'lik ses düzeyi geçişini yönetiyor. Ses düzeyi kuyruktan sonra uygulanıyor; seviye göstergesi dinleme sesinden etkilenmiyor.</li><li>Şarkı sonundaki yaklaşık 4 saniyelik tampon, decoder gecikmelerini karşılıyor. Geçiş kapısı arayüzü duyduğun şarkıyla eşliyor.</li><li>Crossfade, farklı albümler arasındaki doğal geçişlerde yazıcı tarafında en çok 12 saniyeyi üst üste bindiriyor. Aynı albümde komşu şarkılarda, tek şarkı tekrarında ve elle geçişte örtüşme yok.</li><li>AutoMix, cache'teki sessizlik, tempo ve vuruş analizinden geçiş zamanını seçiyor. On bantlı ekolayzer ve karaoke ses callback'inde çalışıyor; kapalıyken çıktının bit düzeyinde aynı kaldığı test ediliyor. OPRA kulaklık profilleri ilk kullanımda indiriliyor.</li></ul>
+<h2 id="persistence">Veriler nerede tutuluyor</h2>
+<div class="table"><table><thead><tr><th>Veri</th><th>Konum</th></tr></thead><tbody>
+<tr><td>Kütüphane, sözler, kaldığın yer, sabitlemeler, yerel geçmiş, gizlenen şarkılar ve AutoMix analizi</td><td><code>%LOCALAPPDATA%\Openify\library.db</code></td></tr>
+<tr><td>Sanatçı, albüm, Ana sayfa ve Keşfet</td><td><code>%LOCALAPPDATA%\Openify\pages.db</code></td></tr>
+<tr><td>Kapaklar (200 MiB sınır), şifreli ses (2 GiB sınır)</td><td><code>%LOCALAPPDATA%\Openify\covers</code>, <code>audio</code></td></tr>
+<tr><td>Sürüm bilgisi taşıyan JSON ayarları</td><td><code>%APPDATA%\Openify\settings.json</code></td></tr>
+<tr><td>Bekleyen kütüphane düzenlemeleri</td><td><code>%APPDATA%\Openify\edits.db</code></td></tr>
+<tr><td>Spotify oturumu</td><td>Windows Kimlik Bilgisi Yöneticisi</td></tr>
 </tbody></table></div>
-<p>Kütüphane cache'i açılışta anında gösteriliyor, arkadan yenileniyor. Bayat sayfalar önce gösteriliyor, arkada tazeleniyor.</p>
-<p>Her SQLite dosyası şema sürümünü <code>PRAGMA user_version</code> içinde tutuyor. Her migration adımı kendi transaction'ında, sürüm artışıyla birlikte çalışıyor; yarıda kalan adım iz bırakmıyor. Koddan daha yeni bir dosya (mesela uygulamayı eski sürüme döndürünce) reddediliyor ve dokunulmadan bırakılıyor. Her veritabanının, bütün eski sürümleri kurup en yeniye taşıyan bir testi var.</p>
-<p><code>library.db</code> ve <code>pages.db</code> WAL modunda; tek writer ve salt okunur bağlantı havuzu var, okumalar writer'ı beklemiyor. UI thread'i veritabanından okumuyor: veriyi engine'den event olarak alıyor.</p>
-
-<h3>Edit kuyruğu</h3>
-<p>Beğenme, listeye ekleme, yeniden adlandırma, sıralama ve takip gibi kütüphane yazmaları tek akıştan geçiyor:</p>
-<ol>
-<li>UI kendi görünümünü hemen günceller.</li>
-<li>İşlem <code>edits.db</code>'ye yazılır.</li>
-<li>Engine aynı saf patch fonksiyonlarını kendi kopyasına ve disk cache'ine uygular.</li>
-<li>İstek ancak ondan sonra Spotify'a gider. Başarıda satır silinir. Geçici hatada backoff'la yeniden denenir. Kalıcı hatada satır, UI'ın gösterdiği bir neden koduyla <code>failed</code>'e taşınır.</li>
-</ol>
-<p>Yani bir yazma, Spotify'a ulaşmadan uygulamayı kapatsan da kaybolmuyor; Ctrl+Z geri alma da aynı işlemlerin üstüne kurulu. Resume durumu (kuyruk ve konum) da benzer şekilde, yaklaşık 5 sn'de bir yazılan küçük satırlarda tutuluyor.</p>
-
-<h2 id="talking-to-spotify">Spotify ile konuşma</h2>
-<p>Çalma, oturum ve metadata librespot üstünden gidiyor. Kütüphane okumaları ve düzenlemeleri, resmi masaüstü istemcisinin kullandığı dahili endpoint'lerle yapılıyor; herkese açık Web API kullanılmıyor, yani Web API scope'u gerekmiyor. Arama, Ana sayfa, Keşfet ve benzer sanatçılar, Spotify'ın pathfinder denen dahili GraphQL endpoint'ini persisted query'lerle kullanıyor. Spotify yeni bir web player çıkarınca sorgu hash'leri değişiyor; Openify bunları çalışırken buluyor ve cache'liyor. Bir çağrı başarısız olursa UI varsa bayat cache'i, yoksa boş ya da çevrimdışı durumu gösteriyor.</p>
-<p>Openify, Spotify'ı yormamaya çalışıyor:</p>
-<ul>
-<li>2 saniyede en fazla bir istek.</li>
-<li>HTTP 429'da yeniden deneme yok; <code>Retry-After</code> geçene kadar hiç istek yok.</li>
-<li>Bir oturumda arka arkaya iki 429'dan sonra circuit breaker devreye giriyor.</li>
-<li>Anahtar başına aynı anda tek istek, ve yalnızca ekranda olan şey çekiliyor.</li>
-</ul>
-<p>Radyo, şarkı kredileri ve arkadaş etkinliği (varsayılan kapalı) Spotify'ın kendi istemcilerinin kullandığı gayriresmî endpoint'leri kullanıyor. Hepsi salt okunur ve ayrı rate gate'leri var.</p>
-<p class="note">Yerel çalma Spotify'a dinleme raporu göndermiyor, çünkü vendor'lanmış librespot kodunda böyle bir çağrı yok. Bu yüzden yerelde çaldığın şarkılar Son çalınanlar'da ya da Wrapped'te görünmeyebilir. Bunu gerçek bir hesapta doğrulamadık. Connect üstünden telefonun yönettiği çalma Spotify tarafından sayılabilir. Openify, Spotify AB ile bağlantılı değil.</p>
-
+<p>İçerik önce cache'ten geliyor, ardından arka planda yenileniyor. <code>library.db</code> yerel geçmişini, sabitlemelerini ve gizlediğin şarkıları da tutuyor; bunlar Spotify'dan yeniden alınamaz.</p>
+<p>Her SQLite migration'ı şemayı ve <code>PRAGMA user_version</code> değerini aynı transaction'da güncelliyor. Uygulamadan yeni bir şema değiştirilmeden reddediliyor. Kütüphane ve sayfa veritabanları WAL, tek yazıcı ve okuyucu havuzu kullanıyor. Veritabanı okumaları UI thread'inin dışında kalıyor.</p>
+<h3>Düzenleme kuyruğu</h3>
+<ol><li>Arayüz değişikliği hemen gösteriyor.</li><li>Motor işlemi <code>edits.db</code>'ye kaydedip belleği ve cache'i güncelliyor.</li><li>Düzenleme Spotify'a gidiyor. Başarıda kayıt siliniyor; geçici hatada aralıklı yeniden deneniyor; kalıcı hatada nedeni ile <code>failed</code> içinde tutuluyor.</li></ol>
+<p>Bekleyen düzenlemeler uygulamayı kapatsan da kalıyor; Ctrl+Z aynı işlemleri kullanıyor. Sanatçı takibi de bu kuyruktan geçiyor ve hâlâ deneysel. Kaldığın yer ayrı bir <code>Saver</code> ile kaydediliyor: küçük durum satırları yaklaşık beş saniyede bir, büyük bağlam satırı yalnız gerektiğinde yazılıyor.</p>
+<h2 id="talking-to-spotify">Spotify bağlantısı</h2>
+<p>Oturum, çalma ve metadata librespot'tan geçiyor. Kütüphane okuma ve düzenlemeleri Spotify'ın dahili koleksiyon ve çalma listesi uçlarını kullanıyor. Arama, Ana sayfa, Keşfet ve benzer sanatçılar ortak <code>pathfinder.rs</code> istemcisinden geçiyor; istemci kayıtlı sorgu hash'lerini Spotify'ın web player'ından bulup saklıyor.</p>
+<p>Ortak kapı, arka plan istekleri arasında iki saniye bırakıyor, <code>Retry-After</code>'a uyuyor ve HTTP 429'u yeniden denemiyor. Art arda iki 429'da devre kesici açılıyor. Etkileşimli arama aralık kuralını ve devre kesiciyi atlıyor ama 429 bekleme süresine uyuyor. Radyo, künye ve arkadaş etkinliğinin kapıları ayrı. Arkadaş etkinliği deneysel ve varsayılan olarak kapalı.</p>
+<p>Sayfalar eski cache'i gösterebiliyor. Benzer sanatçılarda Deezer, sözlerde LRCLIB yedek kaynak. Yerel çalma Spotify'a dinleme raporu göndermiyor; bu yüzden Spotify geçmişinde veya Wrapped'da görünmeyebilir. Connect ile aktarılan müzik sayılabilir.</p>
 <h2 id="windows-integration">Windows entegrasyonu</h2>
-<p><code>src/system</code> modülü işletim sistemine bakıyor ve arayüzden habersiz. <code>ui/integration.rs</code> onu bir kanal üstünden uygulamaya bağlıyor.</p>
-<ul>
-<li><strong>Medya kontrolleri:</strong> System Media Transport Controls (ses paneli, kilit ekranı, medya tuşları) ve görev çubuğu küçük resim düğmeleri.</li>
-<li><strong>Tepsi:</strong> pencereyi kapatınca tepsiye gizleniyor; gizli pencereler bellekte az yer tutmak için render yüzeylerini bırakıyor.</li>
-<li><strong>Tema:</strong> Sistem teması Windows'un uygulama renk modunu, registry'ye yazmadan okuyor ve değişimi canlı izliyor.</li>
-<li><strong>Discord Rich Presence:</strong> isteğe bağlı; gizli oturumda ve duraklatınca sessiz.</li>
-<li><strong>Otomatik başlatma ve güncelleme:</strong> "Windows ile başlat" kullanıcı bazlı Run anahtarını kullanıyor. Güncellemeler Velopack ile. Yeni sürüm ilk açılışlarında sağlıklı olduğunu kanıtlayamazsa (pencere açılıyor ve 20 sn crash yok) uygulama son iyi sürüme dönüyor ve daha yeni bir release çıkana kadar bozuk olanı denemiyor.</li>
-</ul>
-
-<h2 id="vendored-patches">Vendor yamaları ve nedenleri</h2>
-<p>Dört crate, <code>vendor/</code> altında yamalı kopya olarak duruyor ve <code>[patch.crates-io]</code> ile bağlanıyor. Değişen her satır <code>OPENIFY:</code> ile etiketli; her klasörde gerekçeyi anlatan bir <code>OPENIFY.md</code> var.</p>
-<div class="table"><table>
-<thead><tr><th>Crate</th><th>Ne değişti</th><th>Neden</th></tr></thead>
-<tbody>
-<tr><td><code>gpui</code> 0.2.2</td><td>Windows katmanı: görünür pencere yokken vsync uyuyor, gizli pencereler yüzeylerini bırakıyor, bir gölge sıralaması düzeltmesi.</td><td>Tepsiye gizliyken yaklaşık %0,5 boşta CPU ve onlarca MB bellek kazancı.</td></tr>
-<tr><td><code>librespot-core</code></td><td>Audio-key istekleri 4 sn bekliyor, backoff'la 3 kereye kadar yeniden deniyor.</td><td>Yük altında Spotify key isteklerini geciktiriyor. Upstream 1,5 sn'de vazgeçiyordu ve şarkı hiç başlamıyordu.</td></tr>
-<tr><td><code>librespot-playback</code></td><td>Ses kalitesi ve normalizasyon çalışırken değişebiliyor.</td><td>Ayarlar player'ı yeniden başlatmadan uygulanıyor.</td></tr>
-<tr><td><code>librespot-connect</code></td><td>Dört küçük yama; mevcut oturuma bağlanma ve pasifken player event'lerini yok sayma dahil.</td><td>Yamasız Spirc, Openify'ın kendi event'lerine tepki verip yerel çalmayı durduruyor ve dışarıya hiçbir şey bildirmiyor.</td></tr>
+<p><code>src/system/</code> Windows tarafını yönetiyor; <code>ui/integration.rs</code> arayüzle bağlantısını kuruyor.</p>
+<ul><li>Medya kontrolleri, medya tuşları, görev çubuğu düğmeleri ve tepsi simgesiyle çalmayı yönetebilirsin. Gizlenen pencereler çizim yüzeylerini bırakıyor.</li><li>Sistem teması Windows uygulama modunu izliyor. Otomatik başlangıç, kullanıcıya ait Run anahtarını kullanıyor.</li><li>Discord Rich Presence isteğe bağlı; duraklatınca veya gizli oturumda temizleniyor. Yapılandırılmış bir uygulama kimliği gerekiyor; <code>src/discord.rs</code> içindeki kimlik şu an boş.</li><li>Güncellemeleri Velopack yönetiyor. Penceresi 20 saniye açık kalan sürüm sağlıklı sayılıyor. İki başarısız açılıştan sonra, önceki sağlıklı sürüm varsa üçüncü açılışta ona dönülüyor. Başarısız sürüm, daha yenisi çıkana kadar atlanıyor.</li></ul>
+<h2 id="vendored-patches">Yerel crate yamaları</h2>
+<p><code>[patch.crates-io]</code> dört yerel crate'i seçiyor. Değişiklikler her birinin <code>OPENIFY.md</code> dosyasında açıklanıyor.</p>
+<div class="table"><table><thead><tr><th>Crate</th><th>Başlıca değişiklikler</th></tr></thead><tbody>
+<tr><td><code>gpui</code> 0.2.2</td><td>Gizli pencerenin çizim ve bellek davranışı; Windows gölge sırası.</td></tr>
+<tr><td><code>librespot-core</code></td><td>Ses anahtarında 4 saniye zaman aşımı, toplam en çok üç deneme, oturumluk anahtar cache'i, hesap kontrolü ve bağımlılık güncellemeleri.</td></tr>
+<tr><td><code>librespot-playback</code></td><td>Çaları yeniden kurmadan kalite ve ses normalizasyonu değişikliği.</td></tr>
+<tr><td><code>librespot-connect</code></td><td>Açık oturuma bağlanma, yerel çalmadan ayrılma, gözlem olayları ve sıraya ekleme.</td></tr>
 </tbody></table></div>
-<p>Bir script, crates.io'ya göre sapmayı kontrol ediyor; CI bunu özet modunda koşturuyor. Nasıl çalışılacağı için <a href="../contribute/">katkı sayfasına</a> bak.</p>
-
+<p><code>scripts/vendor-diff.ps1</code> upstream farklarını raporluyor; CI özet modunu çalıştırıyor. Ayrıntılar <a href="../contribute/">katkı sayfasında</a>.</p>
 <h2 id="module-map">Modül haritası</h2>
-<div class="table"><table>
-<thead><tr><th>Yol</th><th>Ne işe yarıyor</th></tr></thead>
-<tbody>
-<tr><td><code>src/main.rs</code>, <code>auth.rs</code>, <code>settings.rs</code></td><td>Giriş noktası ve mod seçimi, tarayıcı OAuth girişi, kalıcı tercihler.</td></tr>
-<tr><td><code>src/engine/mod.rs</code></td><td><code>Engine</code>, <code>Command</code>, <code>Event</code>, runtime'lar, command döngüsü.</td></tr>
-<tr><td><code>src/engine/playback/</code>, <code>session.rs</code></td><td>Test dikişinin arkasındaki çalma kararları, oturum ve yeniden bağlanma durumu.</td></tr>
-<tr><td><code>src/engine/output/</code></td><td>Ses ring'i, crossfade, AutoMix, ekolayzer, karaoke.</td></tr>
-<tr><td><code>src/engine/queue.rs</code>, <code>rules.rs</code></td><td>Saf çalma kuyruğu modeli ve karıştırma kuralları.</td></tr>
-<tr><td><code>src/engine/edits.rs</code>, <code>wire.rs</code></td><td>Edit kuyruğu ve kütüphane yazmalarının bağlantısı.</td></tr>
-<tr><td><code>src/engine/search.rs</code>, <code>explore.rs</code>, <code>related.rs</code></td><td>pathfinder istemcileri.</td></tr>
-<tr><td><code>src/engine/tools/</code></td><td>Kopya bulma, birleştir ve böl, sırala, yedek, yerel istatistik.</td></tr>
-<tr><td><code>src/ui/mod.rs</code></td><td><code>Shell</code> kök görünümü, kısayollar, event pompası.</td></tr>
-<tr><td><code>src/ui/theme.rs</code>, <code>components.rs</code></td><td>Tasarım token'ları ve ortak bileşenler (<a href="../design/">tasarım</a>).</td></tr>
-<tr><td><code>src/ui/design_rules.rs</code></td><td>Tasarım kuralı testleri.</td></tr>
-<tr><td><code>src/i18n/</code></td><td>Türkçe ve İngilizce metinler tek tabloda.</td></tr>
-<tr><td><code>src/system/</code>, <code>update.rs</code></td><td>Windows kabuk entegrasyonu, Velopack güncellemesi ve geri alma.</td></tr>
+<div class="table"><table><thead><tr><th>Yol</th><th>Görevi</th></tr></thead><tbody>
+<tr><td><code>src/main.rs</code>, <code>auth.rs</code>, <code>settings.rs</code></td><td>Açılış, tarayıcıdan giriş, tercihler.</td></tr>
+<tr><td><code>src/engine/playback/</code>, <code>session.rs</code></td><td>Çalma kararları ve oturumun yaşam döngüsü.</td></tr>
+<tr><td><code>src/engine/output/</code></td><td>Halka tampon ve ses işleme.</td></tr>
+<tr><td><code>src/engine/queue.rs</code>, <code>rules.rs</code></td><td>Sıra ve karıştırma kuralları.</td></tr>
+<tr><td><code>src/engine/edits.rs</code>, <code>wire.rs</code></td><td>Kalıcı düzenlemeler ve kütüphane komutları.</td></tr>
+<tr><td><code>src/engine/pathfinder.rs</code>, <code>tools/</code></td><td>Ortak Spotify HTTP istemcisi; kütüphane araçları ve istatistikler.</td></tr>
+<tr><td><code>src/ui/mod.rs</code>, <code>theme.rs</code>, <code>components.rs</code></td><td>Kök <code>Shell</code>, <a href="../design/">tasarım token'ları ve bileşenler</a>.</td></tr>
+<tr><td><code>src/i18n/</code>, <code>src/system/</code>, <code>src/update/</code></td><td>Çeviriler, Windows entegrasyonu, güncellemeler.</td></tr>
 </tbody></table></div>
-<p>Çoğu modül, güncel tutulan uzun bir <code>//!</code> yorumuyla açılıyor. Bazıları Türkçe, identifier'lar İngilizce.</p>
-
-<h2 id="testing">Nasıl test ediliyor</h2>
-<p>Testler modüllerin içindeki düz <code>cargo test</code> unit test'leri. Kayıtlı fixture'lar ve sahte backend'ler kullanıyorlar, Spotify'a ya da gerçek ayarlarına hiç dokunmuyorlar. <code>#[ignore]</code> işaretli testler gerçek hesaba çıkıyor; yalnızca elle koşuluyor, CI'da asla.</p>
-<ul>
-<li><strong>Saf çekirdek, ince kabuk.</strong> Kararlar yan etkisiz fonksiyonlar. I/O kenarlarda, <code>PlayerPort</code> gibi küçük dikişlerin arkasında.</li>
-<li><strong>Deterministik ses testleri.</strong> Ring, ses kartı olmadan sürülüyor. Testler ses thread'inin bellek ayırmadığını ve writer'ın cihazın okumak üzere olduğu frame'lere dokunmadığını doğruluyor.</li>
-<li><strong>Tasarım kuralı testleri.</strong> <code>src/ui/design_rules.rs</code> içindeki sayım tabanlı testler sıfırda kalmak zorunda: boşluk, köşe, yazı boyutu, gölge ve renk değerleri yalnızca <code>theme.rs</code>'ten gelir, simgeden ibaret her düğmenin tooltip'i olur. Ayrıntı için <a href="../design/">tasarım sayfası</a>.</li>
-<li><strong>Ortam değişkeni kancaları.</strong> <code>OPENIFY_TEST_DISPLAY</code> ve <code>OPENIFY_TEST_CACHE_DIR</code> gibi değişkenler uygulamayı ikinci monitörde açıyor, çalmayı taklit ediyor, depolamayı yönlendiriyor. Hiçbiri normal kullanıcı için davranışı değiştirmiyor.</li>
-</ul>
-
-<h2 id="known-debt">Bilinen borçlar</h2>
-<ul>
-<li><code>Engine</code>, <code>Shell</code> ve <code>output/</code>, <code>edits.rs</code> gibi birkaç dosya hâlâ büyük. Yeni özellikler <code>Shell</code>'e alan eklemek yerine ayrı gpui entity'si oluyor.</li>
-<li>Player'ın test dikişi var, librespot <code>Session</code>'ının yok. Değişikliklerden sonra gapless geçişleri, devir sırasında duraklatma ya da ileri sarmayı ve key hatası recovery'sini elle dinleyerek kontrol etmek gerekiyor.</li>
-<li>Persisted query hash keşfi dört yerde tekrarlanıyor; arama henüz ortak rate gate'i kullanmıyor.</li>
-<li>Engine hâlâ bazı kullanıcıya görünen metinler üretiyor; i18n geçişi sürüyor.</li>
-<li>Vendor sapması script'le kontrol ediliyor ama zorunlu kılınmıyor.</li>
-<li>Connect ilk canlı kontrolden geçti. "Burada çal", telefon sesi ve aç/kapa/aç ayrıca denenmedi. Bilinen sınırlar: telefonun sesi çıkışa ulaşıyor ama UI kaydırıcısına yansımıyor, telefon yönetirken sıra paneli Openify'ın kendi kuyruğunu gösteriyor, Connect'i açmak ya da cihazı yeniden adlandırmak Spotify oturumunu bir kez yeniden başlatıyor.</li>
-</ul>
+<h2 id="testing">Testler</h2>
+<p><code>cargo test --release</code>, fixture ve sahte backend kullanan modül testlerini çalıştırıyor. Canlı hesap testleri varsayılan olarak atlanıyor ve CI'da çalışmıyor. Ses testleri donanım olmadan halkayı sürüp bellek ayırmayı ve frame sahipliğini denetliyor. <code>src/ui/design_rules.rs</code> token, tooltip ve odak sırasını kontrol ediyor; ayrıntılar <a href="../design/">tasarım sayfasında</a>.</p>
+<h2 id="known-debt">Bilinen sınırlar</h2>
+<ul><li><code>Engine</code> ve <code>Shell</code> hâlâ büyük. Gerçek librespot oturumu, değişikliklerden sonra elle çalma kontrolü gerektiriyor.</li><li>Connect canlı hesapta sınırlı denendi. Telefondaki ses değişikliği arayüzdeki kaydırıcıyı güncellemiyor. Telefondan sarınca tampondaki eski ses kısa süre duyulabiliyor. Connect'i açmak veya aygıt adını değiştirmek oturumu yeniden başlatıyor.</li><li>gpui'de Windows UI Automation desteği olmadığı için ekran okuyucular arayüzü okuyamıyor.</li><li>Spotify'ın belgelenmemiş uçları değişebilir veya çalışmayı bırakabilir.</li></ul>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/docs/ARCHITECTURE.md">Kaynak belgeyi GitHub'da gör</a></p>
       <nav class="pager" aria-label="Önceki / Sonraki"><a class="pager-next" href="../changelog/"><span>Sonraki</span>Sürüm notları</a></nav>
     </article>
     <nav class="toc" aria-label="Bu sayfada">
       <p class="toc-title">Bu sayfada</p>
       <ol>
-          <li><a href="#big-picture">Genel resim</a></li>
-          <li><a href="#threads-and-runtimes">Thread'ler ve runtime'lar</a></li>
-          <li><a href="#ui-engine-boundary">UI ile engine arasındaki sınır</a></li>
-          <li><a href="#audio-path">Ses yolu</a></li>
-          <li><a href="#persistence">Kalıcı veri</a></li>
-          <li><a href="#talking-to-spotify">Spotify ile konuşma</a></li>
+          <li><a href="#big-picture">Genel yapı</a></li>
+          <li><a href="#threads-and-runtimes">Thread ve runtime'lar</a></li>
+          <li><a href="#ui-engine-boundary">Arayüz ile motorun sınırı</a></li>
+          <li><a href="#audio-path">Sesin izlediği yol</a></li>
+          <li><a href="#persistence">Veriler nerede tutuluyor</a></li>
+          <li><a href="#talking-to-spotify">Spotify bağlantısı</a></li>
           <li><a href="#windows-integration">Windows entegrasyonu</a></li>
-          <li><a href="#vendored-patches">Vendor yamaları ve nedenleri</a></li>
+          <li><a href="#vendored-patches">Yerel crate yamaları</a></li>
           <li><a href="#module-map">Modül haritası</a></li>
-          <li><a href="#testing">Nasıl test ediliyor</a></li>
-          <li><a href="#known-debt">Bilinen borçlar</a></li>
+          <li><a href="#testing">Testler</a></li>
+          <li><a href="#known-debt">Bilinen sınırlar</a></li>
       </ol>
     </nav>
   </div>

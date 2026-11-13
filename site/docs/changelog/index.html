@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Changelog · Openify</title>
-<meta name="description" content="What changed in each Openify release, from the first public build to the latest version, written in plain language.">
+<meta name="description" content="Openify release notes: features, fixes and known limitations, newest first.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/docs/changelog/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/changelog/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/changelog/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Changelog · Openify">
-<meta property="og:description" content="What changed in each Openify release, from the first public build to the latest version, written in plain language.">
+<meta property="og:description" content="Openify release notes: features, fixes and known limitations, newest first.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/docs/changelog/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -68,72 +68,67 @@
     </nav>
     <article class="prose">
 <h1>Changelog</h1>
-<p class="lede">Every Openify release, newest first, with what was added, changed and fixed. Installers and checksums for each version are on the <a href="https://github.com/FurkanKY/Openify/releases">GitHub releases page</a>.</p>
+<p class="lede">Download installers, portable builds and checksums from <a href="https://github.com/FurkanKY/Openify/releases">GitHub Releases</a>.</p>
 
 <h2 id="v0-1-2">0.1.2</h2>
-<p><em>13 November 2026.</em> A light theme, a native ARM64 build for Windows, and smoother motion.</p>
+<p><em>13 November 2026.</em></p>
 <h3>Added</h3>
 <ul>
-<li>A light theme with warm off-white surfaces, cover accents that stay readable, and softer shadows. Settings offers Dark (still the default), Light and System. System follows the Windows app mode right away, including the window title bar.</li>
-<li>A native Windows on ARM installer, <code>Openify-win-arm64-Setup.exe</code>, with its own update channel.</li>
-<li>winget manifests, plus a script that fills in their hashes from a release.</li>
-<li>Optional Discord Rich Presence showing song, artist, cover and progress. It stays hidden until a Discord application ID is set at build time.</li>
-<li><code>OPENIFY_TEST_THEME=light|dark</code>, for isolated visual test runs.</li>
+<li>Light theme alongside Dark (default) and System. System follows Windows app mode, including the title bar.</li>
+<li>Native ARM64 installer, <code>Openify-win-arm64-Setup.exe</code>, with a separate update channel.</li>
+<li>winget manifests and a script to fill release hashes.</li>
+<li>Optional Discord Rich Presence: song, artist, cover and progress. Hidden until a Discord application ID is configured at build time.</li>
+<li><code>OPENIFY_TEST_THEME=light|dark</code> for isolated visual tests.</li>
 </ul>
 <h3>Changed</h3>
 <ul>
-<li>Cover colours now blend in a perceptual colour space, so transitions no longer turn muddy halfway. The current lyric line fades in instead of jumping, and switching between lines slides.</li>
-<li>Settings and Tools centre their column in wide windows instead of leaving most of the page empty on the right.</li>
+<li>Perceptual cover-colour blending, lyric fade-ins and sliding toggle switches.</li>
+<li>Centred Settings and Tools columns in wide windows.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Searching while Spotify is unreachable no longer leaves a loading skeleton on screen forever. After 10 seconds the page says Spotify could not be reached.</li>
+<li>Search shows a connection error after 10 seconds if Spotify is unreachable.</li>
 </ul>
 
 <h2 id="v0-1-1">0.1.1</h2>
-<p><em>13 November 2026.</em> A redesigned search, a wider seek bar, and language and time zone fixes.</p>
+<p><em>13 November 2026.</em></p>
 <h3>Changed</h3>
 <ul>
-<li>Search was redesigned. The search box in the title bar is wider and takes its tint from the cover that is playing. Before you type, it shows your recent searches, things to listen to again and genre shortcuts.</li>
-<li>Results are grouped into a top result, songs, artists, and albums and playlists. You can move through them with the arrow keys. Commands only appear when your search clearly matches one.</li>
-<li>The progress bar in the floating player has its own row and is much wider, which makes seeking easier. Lists now end above the floating player, with a soft fade behind it.</li>
+<li>Wider, cover-tinted search box. Before typing: recent searches, repeat listening and genre shortcuts. Results: top result, songs, artists, albums and playlists, navigable with arrow keys. Commands appear for matching queries.</li>
+<li>Wider seek bar on its own player row. Lists end above the floating player, with a fade behind it.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Home, Explore and similar-artist requests now use the interface language (English or Turkish) instead of always asking Spotify for Turkish content. The Explore page cache is kept separately for each language.</li>
-<li>Home now uses your computer's time zone instead of always assuming Europe/Istanbul.</li>
+<li>Home, Explore and similar artists use the interface language (English or Turkish); Explore caches each language separately.</li>
+<li>Home uses the computer's time zone instead of Europe/Istanbul.</li>
 </ul>
-<h3>Other</h3>
+<h3>Builds</h3>
 <ul>
-<li>The documentation was corrected and updated: measured memory figures, privacy notes about play reporting and Spotify Connect, and the known limitations.</li>
-<li>Release builds are now made by GitHub Actions and published with SHA-256 checksums in <code>SHA256SUMS.txt</code>.</li>
+<li>GitHub Actions release builds with SHA-256 checksums in <code>SHA256SUMS.txt</code>.</li>
 </ul>
 
 <h2 id="v0-1-0">0.1.0</h2>
-<p><em>12 November 2026.</em> The first public release.</p>
+<p><em>12 November 2026.</em> First public release.</p>
 <h3>Added</h3>
 <ul>
-<li>A native Windows Spotify client for Premium accounts, written in Rust: a gpui interface, librespot playback and a local SQLite cache.</li>
-<li>Sign-in through the browser. The session is kept in the Windows Credential Manager.</li>
-<li>Home, Explore, Library, artist, album and search pages, with library folders, pins and sorting.</li>
-<li>A command palette (<code>Ctrl+K</code>), keyboard shortcuts, media keys, a tray icon, the Windows media overlay and an optional global search hotkey.</li>
-<li>Gapless playback, optional crossfade, volume normalization, quality up to 320 kbps, and recovery after the output device changes.</li>
-<li>A 10-band equalizer with presets and a preamp, and headphone profile search backed by the OPRA database.</li>
-<li>Library tools: a duplicate and version finder, merging and splitting playlists, permanent sorting, JSON backup and local listening statistics. Library edits can be undone, and edits made offline are queued.</li>
-<li>Synced lyrics in a side panel and full screen, with LRCLIB as a fallback and an optional translation line.</li>
-<li>Smarter shuffle and queue rules (one version per song, skip explicit, never play an artist, hide songs), radio from a song, artist, album or playlist, and a private session.</li>
-<li>A Spotify Connect device. It is on by default and can be turned off in Settings.</li>
-<li>Track credits, similar artists and artist following.</li>
-<li>A friend activity panel. It is off by default and experimental.</li>
-<li>English and Turkish interface.</li>
-<li>An installer with automatic updates, a portable zip, and a rollback when a new version fails to start twice.</li>
+<li>Windows client for Spotify Premium: Rust, gpui, librespot and local SQLite storage.</li>
+<li>Browser sign-in; session stored in Windows Credential Manager.</li>
+<li>Home, Explore, Library, artist, album and search pages; library folders, pins and sorting. English and Turkish interface.</li>
+<li><code>Ctrl+K</code> command palette, keyboard shortcuts, media keys, tray icon, Windows media overlay and optional global search hotkey.</li>
+<li>Gapless playback, optional crossfade, normalization, up to 320 kbps and output-device recovery.</li>
+<li>10-band equalizer, presets, preamp and OPRA headphone profiles.</li>
+<li>Duplicate/version finder, playlist merge/split, permanent sorting, JSON backup, local statistics, undo and queued offline edits.</li>
+<li>Synced lyrics in side panel or full screen, LRCLIB fallback and optional translation.</li>
+<li>Shuffle and queue rules: one version per song, skip explicit songs, block artists and hide songs. Radio from songs, artists, albums or playlists; private session.</li>
+<li>Spotify Connect, on by default and switchable in Settings.</li>
+<li>Track credits, similar artists and artist following. Experimental friend activity, off by default.</li>
+<li>Installer with automatic updates, portable zip and rollback after two failed starts of a new version.</li>
 </ul>
-<h3>Known limitations</h3>
+<h3>Limitations at release</h3>
 <ul>
-<li>Screen readers are not supported yet.</li>
-<li>Dark theme only, and Windows only. (The light theme arrived in 0.1.2.)</li>
-<li>Plays made in Openify are not reported to Spotify.</li>
-<li>Friend activity and artist following have had only limited testing against a live account.</li>
+<li>No screen-reader support. Windows and dark theme only; light theme followed in 0.1.2.</li>
+<li>Openify's own playback sends no listening reports to Spotify. <a href="../privacy/#plays-not-reported">Connect playback may be counted</a>.</li>
+<li>Friend activity and artist following had limited live-account testing.</li>
 </ul>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/CHANGELOG.md">View the source document on GitHub</a></p>
       <nav class="pager" aria-label="Previous / Next"><a class="pager-prev" href="../how-it-works/"><span>Previous</span>How it works</a><a class="pager-next" href="../privacy/"><span>Next</span>Privacy and security</a></nav>

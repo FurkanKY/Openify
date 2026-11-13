@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Contribute · Openify</title>
-<meta name="description" content="How to file an issue, send a pull request, build Openify from source, run the tests and avoid the common gpui pitfalls.">
+<meta name="description" content="Report bugs, send PRs, build Openify and use its isolated test hooks.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/docs/contribute/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/contribute/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/contribute/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Contribute · Openify">
-<meta property="og:description" content="How to file an issue, send a pull request, build Openify from source, run the tests and avoid the common gpui pitfalls.">
+<meta property="og:description" content="Report bugs, send PRs, build Openify and use its isolated test hooks.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/docs/contribute/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og.png">
 <meta property="og:image:width" content="1200">
@@ -68,114 +68,100 @@
     </nav>
     <article class="prose">
 <h1>Contribute</h1>
-<p class="lede">Bug reports, ideas and pull requests are welcome. This page covers how to report a problem, what a pull request has to pass, how to build and test the project, and the gpui traps that cost the most time.</p>
+<p class="lede">Build with the pinned Rust toolchain, keep PRs focused, and run release tests before pushing.</p>
 
 <h2 id="issues">Filing an issue</h2>
-<ul>
-<li>Search existing issues first.</li>
-<li>Use the bug report form. It asks for the Openify version, Windows version, display scale and the log file. Reports without a log are usually not actionable.</li>
-<li>Feature requests work best when they describe the problem first and the solution second.</li>
-<li>For a security problem, do not open a public issue. See <a href="../privacy/#reporting">Privacy and security</a>.</li>
-</ul>
-<p>The logs live in <code>%LOCALAPPDATA%\Openify</code> (paste that into the Explorer address bar): <code>openify.log</code> and, after a crash, <code>crash-&lt;time&gt;.txt</code>. Attach both. For more detail, start the app from a terminal with debug logging:</p>
+<p>Search existing issues first. For bugs, use the report form and include your Openify version, Windows version, display scale and logs. For feature requests, describe the problem before proposing a solution. Report security problems through <a href="../privacy/#reporting">Privacy and security</a>.</p>
+<p>Logs are in <code>%LOCALAPPDATA%\Openify</code>: attach <code>openify.log</code> and any <code>crash-&lt;time&gt;.txt</code> report. For more detail:</p>
 <div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>$env:RUST_LOG="openify=debug"
 .\target\release\openify.exe</code></pre></div>
-<p class="note">Never post tokens or your Spotify credentials. An issue never needs them.</p>
+<p class="note">Never post tokens or Spotify credentials.</p>
 
 <h2 id="pull-requests">Pull requests</h2>
 <ol>
-<li>For anything larger than a small fix, open an issue first so the design can be agreed before you spend time on it.</li>
-<li>Branch from <code>master</code> and keep the PR focused on one thing.</li>
-<li>Run the checks below locally before you push.</li>
-<li>Describe what changed, why, and how you verified it. For a UI change, attach a screenshot. For a performance-sensitive change (render loop, audio path, memory), include a measurement next to the bar it had to meet.</li>
-<li>By contributing you agree your work is licensed under GPL-3.0-or-later.</li>
+<li>Open an issue before a substantial change. Read <a href="../how-it-works/">How it works</a>.</li>
+<li>Branch from <code>master</code>, keep the PR focused, and run the checks below before pushing.</li>
+<li>Explain what changed, why and how you checked it. Include screenshots for UI changes and measurements against thresholds for performance changes.</li>
+<li>Add new UI text in both languages. Tests must use fixtures and temporary settings.</li>
+<li>Contributions are licensed under GPL-3.0-or-later.</li>
 </ol>
-<p>The PR template asks for the same things: what and why, how you checked it, and a short checklist (build and tests pass, new text is in the i18n table in both languages, tests do not touch Spotify or your real settings).</p>
 
 <h2 id="ci">What CI checks</h2>
-<p>CI runs on every pull request and on pushes to <code>master</code>. A change should pass all of it.</p>
+<p>CI runs on every PR and push to <code>master</code>.</p>
 <div class="table"><table>
-<thead><tr><th>Job</th><th>What it runs</th></tr></thead>
+<thead><tr><th>Job</th><th>Checks</th></tr></thead>
 <tbody>
-<tr><td>Build, test, lint (Windows)</td><td><code>cargo build --release --locked</code>, <code>cargo test --release --locked</code>, <code>cargo fmt --check</code>, <code>cargo clippy --release --locked --all-targets -- -D warnings</code></td></tr>
-<tr><td>Windows ARM64</td><td>A release build for <code>aarch64-pc-windows-msvc</code></td></tr>
-<tr><td>cargo-deny</td><td>Licenses, bans and sources must pass. Advisories are checked too, but do not block yet.</td></tr>
-<tr><td>Vendor drift</td><td>A report of how the vendored crates differ from crates.io (<code>scripts/vendor-diff.ps1</code>)</td></tr>
+<tr><td>Windows</td><td><code>cargo build --release --locked</code>, <code>cargo test --release --locked</code>, <code>cargo fmt --check</code>, <code>cargo clippy --release --locked --all-targets -- -D warnings</code></td></tr>
+<tr><td>Windows ARM64</td><td><code>cargo build --release --locked --target aarch64-pc-windows-msvc</code></td></tr>
+<tr><td>cargo-deny</td><td>Licenses, bans and sources block failures. Advisories are checked but remain non-blocking.</td></tr>
+<tr><td>Vendor drift</td><td><code>./scripts/vendor-diff.ps1 -Summary</code> reports differences from crates.io.</td></tr>
 </tbody></table></div>
-<p>The ARM64 job exists because Openify ships an ARM64 installer. If you add a dependency with native code, check that it builds for that target.</p>
+<p>Openify ships an ARM64 installer; check native dependencies on that target too.</p>
 
 <h2 id="conventions">Conventions</h2>
-<p>The full reasoning is in <a href="../how-it-works/">How it works</a>. The short version:</p>
 <ul>
-<li><strong>New features are their own gpui <code>Entity</code>.</strong> Do not add fields to <code>Shell</code>, which is already too big.</li>
-<li><strong>The engine never produces user-facing text.</strong> It sends typed codes (<code>Event</code> variants, notice kinds) and the UI turns them into words.</li>
-<li><strong>Nothing blocks the render path.</strong> No network, no long disk work, no waiting on a lock held by background work.</li>
-<li><strong>Design rules are tests.</strong> <code>src/ui/design_rules.rs</code> fails the build if you use raw spacing, radius, font size, shadow or color values instead of the variables in <code>src/ui/theme.rs</code>, or an <code>icon_button("...")</code> without a <code>.tooltip(</code>. Use the components in <code>src/ui/components.rs</code>. See <a href="../design/">Design</a>.</li>
-<li><strong>Pure core, thin shell.</strong> Put decisions in side-effect-free functions with unit tests (<code>queue.rs</code>, <code>recovery.rs</code>, <code>login.rs</code>) and keep I/O at the edges.</li>
-<li><strong>Vendored crates are patched copies.</strong> Mark every changed line with an <code>OPENIFY:</code> comment and document it in that crate's <code>OPENIFY.md</code>. <code>scripts/vendor-diff.ps1</code> checks drift.</li>
-<li><strong>Be polite to Spotify.</strong> Do not add code paths that hammer its internal endpoints. Reuse the shared rate gate and caches. Tests must not talk to Spotify; use fixtures in <code>src/engine/fixtures</code> or <code>OPENIFY_TEST_FAKE_PLAY=1</code>.</li>
-<li><strong>Settings in tests.</strong> A test that touches settings uses <code>OPENIFY_SETTINGS_PATH</code> with a temporary file, never your real <code>%APPDATA%\Openify\settings.json</code>.</li>
-<li><strong>Comments explain why.</strong> Keep functions small.</li>
-<li><strong>New dependencies need a reason.</strong> Check the license is GPL-3.0 compatible with <code>cargo deny check licenses</code>.</li>
+<li>Give new features their own gpui <code>Entity</code>; avoid adding fields to <code>Shell</code>.</li>
+<li>The engine sends typed events and notice kinds; the UI supplies user-facing text.</li>
+<li>Keep network requests, long disk work and blocking waits out of rendering.</li>
+<li>Use tokens from <code>src/ui/theme.rs</code> and components from <code>src/ui/components.rs</code>. Tests in <code>src/ui/design_rules.rs</code> check raw design values and icon-button tooltips. See <a href="../design/">Design</a>.</li>
+<li>Keep decisions in pure, tested functions, as in <code>queue.rs</code>, <code>recovery.rs</code> and <code>login.rs</code>. Keep functions small; comments explain why.</li>
+<li>Mark vendor changes with <code>OPENIFY:</code> comments, document them in the crate's <code>OPENIFY.md</code>, and run <code>scripts/vendor-diff.ps1</code>.</li>
+<li>Reuse Spotify rate gates and caches. Tests use <code>src/engine/fixtures</code> or fake playback; settings tests use <code>OPENIFY_SETTINGS_PATH</code> with a temporary file.</li>
+<li>Justify new dependencies and check license compatibility with <code>cargo deny check licenses</code>.</li>
 </ul>
 
 <h2 id="i18n">Internationalisation</h2>
-<p>Every UI string lives in one table, <code>src/i18n/table.rs</code>. English and Turkish sit side by side in a single macro entry, so a missing translation is a compile error rather than a blank label at runtime.</p>
-<p>In code, use the <code>t!</code>, <code>tf!</code> and <code>tp!</code> macros (plain text, formatted text, plurals; the header of <code>src/i18n.rs</code> explains each). Do not hard-code user-visible strings anywhere else. The app name comes from <code>src/brand.rs</code>.</p>
-<p>Two tests guard this. <code>src/i18n/tests.rs</code> checks placeholders, plurals and empty strings, and <code>no_raw_turkish_text_in_sources</code> fails if a string literal in code contains Turkish letters (comments and log lines are exempt). To add a whole new language, extend the table and the language setting.</p>
-<p>To try a language without changing your settings, set <code>OPENIFY_TEST_LANG=en</code> or <code>tr</code> in a test run.</p>
+<p>Put English and Turkish UI text together in <code>src/i18n/table.rs</code>; missing translations cause compile errors. Use <code>t!</code>, <code>tf!</code> and <code>tp!</code> for plain, formatted and plural text, as documented in <code>src/i18n.rs</code>. The app name comes from <code>src/brand.rs</code>.</p>
+<p><code>src/i18n/tests.rs</code> checks placeholders, plurals, empty strings and raw Turkish text in source literals, with exceptions including comments and logs. Adding a language requires extending the table and language setting. Preview English or Turkish with <code>OPENIFY_TEST_LANG=en|tr</code>.</p>
 
 <h2 id="build">Building from source</h2>
-<p>You need Windows 10 or 11, Rust (rustup installs the version pinned in <code>rust-toolchain.toml</code> on the first build), the MSVC build tools with the "Desktop development with C++" workload, the Windows SDK and Git. No <code>.env</code> file or API key is needed.</p>
+<p>Install Rust through rustup, Git, MSVC Build Tools with “Desktop development with C++” and the Windows SDK on Windows 10 or 11. Rustup uses <code>rust-toolchain.toml</code>. No <code>.env</code> or API key is needed.</p>
 <div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>git clone https://github.com/FurkanKY/Openify.git
 cd Openify
-cargo build --release
+cargo build --release --locked
 .\target\release\openify.exe</code></pre></div>
-<p>The first build compiles gpui and its dependencies and takes a while. If a running Openify locks <code>target/</code>, build to another directory with <code>--target-dir</code> and run a copy of the exe.</p>
+<p>The first build compiles gpui and its dependencies. Run a copy of the executable when testing; a running executable locks its build output. Use <code>--target-dir</code> for a separate build directory.</p>
 
 <h2 id="tests">Running the tests</h2>
-<div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>cargo test --release
-cargo clippy --release -- -D warnings
+<div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>cargo test --release --locked
+cargo clippy --release --locked --all-targets -- -D warnings
 cargo fmt --check</code></pre></div>
-<p><code>cargo build</code> and <code>cargo test</code> should finish without warnings, apart from known old ones from <code>vendor/librespot-core</code> and <code>proc-macro-error2</code>.</p>
-<p>Tests are ordinary unit tests inside the modules (queue, recovery, login, output ring, edit queue, i18n, settings, cache and more). They use fixtures and fake backends and never touch Spotify or your real settings.</p>
-<p>A few tests are marked <code>#[ignore]</code> and hit a real account, for example friend activity, radio, track credits and library writes. They never run automatically. Only the account owner should run them, on purpose.</p>
+<p>Unit tests cover queue decisions, recovery, login, audio output, edits, i18n, settings and caches with fixtures or fake backends. Keep them off Spotify and real settings. The testing guide accepts only existing dependency warnings from <code>vendor/librespot-core</code> and <code>proc-macro-error2</code>.</p>
+<p>Live-account tests, including friend activity, radio, credits and library writes, are <code>#[ignore]</code>d. Only the account owner should run them deliberately.</p>
 
 <h2 id="test-hooks">Test hooks</h2>
-<p>A test run is a run of the app with <code>OPENIFY_TEST_DISPLAY</code> or <code>OPENIFY_SETTINGS_PATH</code> set. It starts offline with its own temporary folders and never touches your real settings, cache or Spotify account unless you pass <code>OPENIFY_TEST_ONLINE=1</code>. None of these variables changes behavior for normal users. The most useful ones:</p>
+<p>Setting <code>OPENIFY_TEST_DISPLAY</code> or <code>OPENIFY_SETTINGS_PATH</code> makes an app launch a test run with isolated cache and logs. Always point <code>OPENIFY_SETTINGS_PATH</code> at a temporary file to isolate settings too. It starts offline; <code>OPENIFY_TEST_ONLINE=1</code> allows a live-account connection. Use temporary paths for overrides.</p>
 <div class="table"><table>
-<thead><tr><th>Variable</th><th>What it does</th></tr></thead>
+<thead><tr><th>Variable</th><th>Effect</th></tr></thead>
 <tbody>
-<tr><td><code>OPENIFY_TEST_DISPLAY="w,h"</code></td><td>Opens the window on a non-primary monitor without taking focus, and makes the run a test run. Closes itself after 15 minutes.</td></tr>
-<tr><td><code>OPENIFY_SETTINGS_PATH=&lt;file&gt;</code></td><td>Uses this settings file instead of the real one.</td></tr>
-<tr><td><code>OPENIFY_TEST_CACHE_DIR=&lt;folder&gt;</code></td><td>Puts the whole cache folder there. Without it a test run uses <code>%TEMP%\openify-sandbox</code>.</td></tr>
-<tr><td><code>OPENIFY_TEST_FAKE_PLAY=1</code></td><td>Pretends to play without sending anything to Spotify.</td></tr>
-<tr><td><code>OPENIFY_TEST_OFFLINE=1</code></td><td>Starts offline. With an empty cache, Home, Explore and Library show the offline state.</td></tr>
-<tr><td><code>OPENIFY_TEST_LANG=en|tr</code></td><td>Forces the interface language.</td></tr>
-<tr><td><code>OPENIFY_TEST_THEME=light|dark</code></td><td>Forces a palette in an isolated test run without changing the saved preference.</td></tr>
-<tr><td><code>OPENIFY_TEST_VIEW=&lt;page&gt;</code></td><td>Opens a page or panel after a delay: <code>now</code>, <code>home</code>, <code>settings</code>, <code>queue</code>, <code>help</code>, <code>search:&lt;query&gt;</code> and more.</td></tr>
-<tr><td><code>OPENIFY_TEST_SCALE=&lt;0.5-4&gt;</code></td><td>With <code>OPENIFY_TEST_DISPLAY</code>, forces the window scale (1.25, 1.5 and 2 simulate 125 to 200% displays).</td></tr>
-<tr><td><code>OPENIFY_LOG_DIR=&lt;folder&gt;</code></td><td>Moves the log and crash report folder.</td></tr>
-<tr><td><code>OPENIFY_INSTANCE_ID=&lt;name&gt;</code></td><td>Namespaces the single-instance lock, so you can test next to your own running Openify.</td></tr>
-<tr><td><code>RUST_LOG=openify=debug</code></td><td>Startup timings, audio device and format, queue targets.</td></tr>
+<tr><td><code>OPENIFY_TEST_DISPLAY="w,h"</code></td><td>Opens without focus on a secondary monitor, or the main monitor if there is only one. Closes after 15 minutes by default.</td></tr>
+<tr><td><code>OPENIFY_SETTINGS_PATH=&lt;file&gt;</code></td><td>Overrides <code>%APPDATA%\Openify\settings.json</code>.</td></tr>
+<tr><td><code>OPENIFY_TEST_CACHE_DIR=&lt;folder&gt;</code></td><td>Overrides the cache folder; test runs default to <code>%TEMP%\openify-sandbox\cache</code>.</td></tr>
+<tr><td><code>OPENIFY_TEST_FAKE_PLAY=1</code></td><td>Simulates playback without Spotify requests.</td></tr>
+<tr><td><code>OPENIFY_TEST_OFFLINE=1</code></td><td>Starts offline; empty caches show offline pages.</td></tr>
+<tr><td><code>OPENIFY_TEST_LANG=en|tr</code></td><td>Overrides the interface language.</td></tr>
+<tr><td><code>OPENIFY_TEST_THEME=light|dark</code></td><td>Overrides the palette in test runs without saving the preference.</td></tr>
+<tr><td><code>OPENIFY_TEST_VIEW=&lt;page&gt;</code></td><td>Opens a page or panel after a delay, including <code>now</code>, <code>home</code>, <code>settings</code>, <code>queue</code>, <code>help</code> and <code>search:&lt;query&gt;</code>.</td></tr>
+<tr><td><code>OPENIFY_TEST_SCALE=&lt;0.5-4&gt;</code></td><td>With <code>OPENIFY_TEST_DISPLAY</code>, overrides scale. Use dot decimals, such as <code>1.25</code>.</td></tr>
+<tr><td><code>OPENIFY_LOG_DIR=&lt;folder&gt;</code></td><td>Overrides log and crash-report storage; test runs default to <code>%TEMP%\openify-sandbox\log</code>.</td></tr>
+<tr><td><code>OPENIFY_INSTANCE_ID=&lt;name&gt;</code></td><td>Names the single-instance lock for parallel copies.</td></tr>
+<tr><td><code>RUST_LOG=openify=debug</code></td><td>Logs startup timings, audio device, format and queue targets.</td></tr>
 </tbody></table></div>
-<p>Several features also read recorded responses from a JSON fixture (friend activity, track credits, lyrics, radio, search), so you can see every state without a network. The complete list, including measurement hooks for frame time, memory and the audio output, is in <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a>.</p>
-<p>When you measure, run a copy of the exe, stay off the real account, and report the measured value next to the threshold it had to meet.</p>
+<p>JSON fixtures cover friend activity, credits, lyrics, radio and search. See <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a> for all hooks and frame-time, memory and audio measurements. Measure with an executable copy and no real account; report results against thresholds.</p>
 
 <h2 id="gpui-pitfalls">gpui pitfalls</h2>
-<p>Openify is built on gpui 0.2.2. These are the problems that cost the most time. The full list is in <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a>.</p>
+<p>For gpui 0.2.2, keep these constraints in mind. More detail is in <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a>.</p>
 <dl class="deflist">
-<div class="row"><dt>Wheel handlers do no hit testing</dt><dd>A capture-phase <code>on_mouse_event</code> that checks <code>bounds.contains(position)</code> also takes the wheel meant for a layer on top (queue or lyrics panel). Use <code>smooth_scroll::wheel_zone</code>. A layer that covers content uses <code>.occlude()</code>; one that should let the wheel through uses <code>.block_mouse_except_scroll()</code>.</dd></div>
-<div class="row"><dt>Text truncation</dt><dd><code>truncate()</code> caches its first measurement, and <code>line_clamp</code> crashes on multi-byte characters. Use the own <code>Line</code> element in <code>src/ui/text.rs</code>.</dd></div>
-<div class="row"><dt>Single-line text in a flex row</dt><dd>It can be measured at width 0 and draw "..." in a wide area. Make the box <code>.flex()</code> with <code>.min_w_0()</code>, and avoid percentage upper bounds such as <code>max_w(relative(..))</code>.</dd></div>
-<div class="row"><dt>Focus</dt><dd><code>track_focus</code> on the root breaks the window buttons and edge resizing, so use a zero-size focus anchor. <code>track_focus(handle)</code> ignores the element's <code>tab_index</code>; the order lives on the handle. Releasing Enter or Space on a focused element sends a click, so focus returns to the anchor after a mouse click.</dd></div>
-<div class="row"><dt>Cached views</dt><dd>Only a notified view is rebuilt, and a notify on the root does not update its children. Do not nest cached views. <code>window_control_area</code> hit areas are not replayed from the cache, so the title bar stays outside it.</dd></div>
-<div class="row"><dt>Shadows</dt><dd>A shadow with zero blur is not drawn, and a shadow on a transparent element paints its inside. Use a ring border instead.</dd></div>
-<div class="row"><dt>Absolute elements</dt><dd>An <code>.absolute()</code> element without a corner (<code>top_0().left_0()</code>) is placed where it would be in the flow, below the previous sibling.</dd></div>
-<div class="row"><dt>Images</dt><dd>When an image first loads, only the first view that asked is notified, so a bulk refresh happens when covers arrive.</dd></div>
-<div class="row"><dt>Mouse wheel on Windows</dt><dd>The wheel is always <code>ScrollDelta::Lines</code>; touchpads arrive as fractional lines.</dd></div>
+<div class="row"><dt>Wheel capture</dt><dd>Capture handlers lack hit testing. Use <code>smooth_scroll::wheel_zone</code>; overlays use <code>.occlude()</code> to block scrolling or <code>.block_mouse_except_scroll()</code> to pass it through.</dd></div>
+<div class="row"><dt>Text truncation</dt><dd><code>truncate()</code> caches its first measurement; <code>line_clamp</code> crashes on multibyte characters. Use <code>Line</code> in <code>src/ui/text.rs</code>.</dd></div>
+<div class="row"><dt>Flex text</dt><dd>A block wrapper can measure single-line text at zero width. Use <code>.flex().min_w_0()</code> and avoid <code>max_w(relative(..))</code>.</dd></div>
+<div class="row"><dt>Focus</dt><dd>Root <code>track_focus</code> breaks window controls and resizing. Use a zero-size anchor; set tab order on the focus handle. Return focus after mouse clicks to avoid Enter/Space triggering another click.</dd></div>
+<div class="row"><dt>Cached views</dt><dd>Notify each view that needs rebuilding; root notifications alone do not refresh children. Avoid nesting cached views and keep title-bar <code>window_control_area</code> hit areas outside them.</dd></div>
+<div class="row"><dt>Shadows</dt><dd>Zero-blur shadows disappear; transparent elements get filled inside. Use a ring border.</dd></div>
+<div class="row"><dt>Absolute elements</dt><dd>Set a corner such as <code>top_0().left_0()</code>; otherwise placement follows the previous sibling.</dd></div>
+<div class="row"><dt>Images</dt><dd>Initial image loads notify only the first requesting view, requiring a bulk cover refresh.</dd></div>
+<div class="row"><dt>Windows wheel</dt><dd>Wheel input uses <code>ScrollDelta::Lines</code>; touchpads send fractional lines.</dd></div>
 </dl>
-<p>Before a larger change, read the architecture notes in <a href="../how-it-works/">How it works</a>. Thanks for helping.</p>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/CONTRIBUTING.md">View the source document on GitHub</a></p>
       <nav class="pager" aria-label="Previous / Next"><a class="pager-prev" href="../privacy/"><span>Previous</span>Privacy and security</a><a class="pager-next" href="../design/"><span>Next</span>Design system</a></nav>
     </article>

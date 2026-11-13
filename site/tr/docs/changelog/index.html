@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sürüm notları · Openify</title>
-<meta name="description" content="Openify&#x27;ın her sürümünde neyin eklendiği, değiştiği ve düzeldiği; ilk genel sürümden en yeniye, sade bir dille.">
+<meta name="description" content="Openify sürümlerindeki yenilikler, düzeltmeler ve bilinen sınırlar, en yeni sürümden başlayarak.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/tr/docs/changelog/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/changelog/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/changelog/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Sürüm notları · Openify">
-<meta property="og:description" content="Openify&#x27;ın her sürümünde neyin eklendiği, değiştiği ve düzeldiği; ilk genel sürümden en yeniye, sade bir dille.">
+<meta property="og:description" content="Openify sürümlerindeki yenilikler, düzeltmeler ve bilinen sınırlar, en yeni sürümden başlayarak.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/tr/docs/changelog/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
 <meta property="og:image:width" content="1200">
@@ -68,72 +68,67 @@
     </nav>
     <article class="prose">
 <h1>Sürüm notları</h1>
-<p class="lede">Openify'ın tüm sürümleri, en yenisi en üstte: ne eklendi, ne değişti, ne düzeldi. Her sürümün kurulum dosyaları ve sağlama toplamları <a href="https://github.com/FurkanKY/Openify/releases">GitHub'daki release sayfasında</a>.</p>
+<p class="lede">Kurulum dosyalarını, taşınabilir sürümleri ve sağlama toplamlarını <a href="https://github.com/FurkanKY/Openify/releases">GitHub Releases'tan</a> indirebilirsin.</p>
 
 <h2 id="v0-1-2">0.1.2</h2>
-<p><em>13 Kasım 2026.</em> Açık tema, Windows için yerel ARM64 sürümü ve daha akıcı geçişler geldi.</p>
+<p><em>13 Kasım 2026.</em></p>
 <h3>Eklendi</h3>
 <ul>
-<li>Açık tema: sıcak kırık beyaz yüzeyler, okunaklı kalan kapak vurguları ve yumuşatılmış gölgeler. Ayarlar'da Koyu (hâlâ varsayılan), Açık ve Sistem seçenekleri var. Sistem, Windows'un uygulama modunu anında izler; pencere başlık çubuğu da buna dahil.</li>
-<li>Windows on ARM için yerel kurulum dosyası, <code>Openify-win-arm64-Setup.exe</code>. Kendi güncelleme kanalı var.</li>
-<li>winget manifest'leri ve hash'lerini bir release'ten dolduran bir script.</li>
-<li>İsteğe bağlı Discord Rich Presence: şarkı, sanatçı, kapak ve ilerleme gösterilir. Build sırasında bir Discord uygulama kimliği verilmediği sürece görünmez.</li>
-<li>İzole görsel test çalıştırmaları için <code>OPENIFY_TEST_THEME=light|dark</code>.</li>
+<li>Koyu (varsayılan) ve Sistem seçeneklerinin yanına Açık tema eklendi. Sistem, başlık çubuğu dahil Windows'un uygulama modunu izliyor.</li>
+<li>Ayrı güncelleme kanalıyla native ARM64 kurulum dosyası: <code>Openify-win-arm64-Setup.exe</code>.</li>
+<li>winget manifest dosyaları ve release hash'lerini dolduran script.</li>
+<li>İsteğe bağlı Discord Rich Presence: şarkı, sanatçı, kapak ve ilerleme. Build sırasında Discord uygulama kimliği tanımlanana kadar gizli.</li>
+<li>İzole görsel testler için <code>OPENIFY_TEST_THEME=light|dark</code>.</li>
 </ul>
 <h3>Değişti</h3>
 <ul>
-<li>Kapak renkleri artık algısal bir renk uzayında harmanlanıyor; geçişler ortada çamurlaşmıyor. Şarkı sözlerinde o anki satır zıplamak yerine yavaşça beliriyor, satır değişimi kayarak oluyor.</li>
-<li>Ayarlar ve Araçlar, geniş pencerelerde sütunu ortalıyor; sağ taraf boş kalmıyor.</li>
+<li>Kapak renkleri algısal renk uzayında karışıyor, söz satırı yavaşça beliriyor, açma/kapama düğmeleri kayarak geçiş yapıyor.</li>
+<li>Geniş pencerelerde Ayarlar ve Araçlar sütunları ortalanıyor.</li>
 </ul>
 <h3>Düzeltildi</h3>
 <ul>
-<li>Spotify'a ulaşılamazken arama yapınca yükleniyor iskeleti sonsuza kadar kalıyordu. Artık 10 saniye sonra Spotify'a ulaşılamadığı yazıyor.</li>
+<li>Spotify'a ulaşılamazsa arama 10 saniye sonra bağlantı hatası gösteriyor.</li>
 </ul>
 
 <h2 id="v0-1-1">0.1.1</h2>
-<p><em>13 Kasım 2026.</em> Arama yeniden tasarlandı, ilerleme çubuğu genişledi; dil ve saat dilimi hataları düzeldi.</p>
+<p><em>13 Kasım 2026.</em></p>
 <h3>Değişti</h3>
 <ul>
-<li>Arama baştan tasarlandı. Başlık çubuğundaki arama kutusu daha geniş ve rengini çalan kapaktan alıyor. Bir şey yazmadan önce son aramaların, yeniden dinlemek isteyebileceğin şeyler ve tür kısayolları görünüyor.</li>
-<li>Sonuçlar en iyi sonuç, şarkılar, sanatçılar ile albümler ve çalma listeleri olarak gruplanıyor. Ok tuşlarıyla aralarında gezebilirsin. Komutlar yalnızca aramanla açıkça eşleştiğinde çıkıyor.</li>
-<li>Yüzen oynatıcıdaki ilerleme çubuğu kendi satırına taşındı ve çok daha geniş, yani ileri geri sarmak kolaylaştı. Listeler artık yüzen oynatıcının üstünde bitiyor, arkasında yumuşak bir geçiş var.</li>
+<li>Arama kutusu genişledi, çalan kapağın rengini aldı. Yazmadan önce son aramalar, tekrar dinlenecekler ve tür kısayolları çıkıyor. Sonuçlarda en iyi eşleşme, şarkılar, sanatçılar, albümler ve çalma listeleri var; ok tuşlarıyla gezebilirsin. Komutlar eşleşen aramalarda görünüyor.</li>
+<li>İlerleme çubuğu oynatıcıda ayrı bir satıra taşındı ve genişledi. Listeler yüzen oynatıcının üstünde bitiyor, arkasında soluk bir geçiş var.</li>
 </ul>
 <h3>Düzeltildi</h3>
 <ul>
-<li>Ana sayfa, Keşfet ve benzer sanatçı istekleri her zaman Türkçe içerik istemek yerine arayüz dilini (İngilizce ya da Türkçe) kullanıyor. Keşfet sayfasının cache'i dil başına ayrı tutuluyor.</li>
-<li>Ana sayfa artık hep Europe/Istanbul varsaymıyor, bilgisayarının saat dilimini kullanıyor.</li>
+<li>Ana sayfa, Keşfet ve benzer sanatçılar arayüz dilini (İngilizce veya Türkçe) kullanıyor; Keşfet her dili ayrı cache'liyor.</li>
+<li>Ana sayfa Europe/Istanbul yerine bilgisayarının saat dilimini kullanıyor.</li>
 </ul>
-<h3>Diğer</h3>
+<h3>Build</h3>
 <ul>
-<li>Dokümantasyon düzeltildi ve güncellendi: ölçülmüş bellek değerleri, çalma raporlama ve Spotify Connect hakkındaki gizlilik notları, bilinen sınırlar.</li>
-<li>Release build'leri artık GitHub Actions ile üretiliyor ve <code>SHA256SUMS.txt</code> içinde SHA-256 sağlama toplamlarıyla yayınlanıyor.</li>
+<li>Release build'leri GitHub Actions ile üretiliyor; SHA-256 sağlama toplamları <code>SHA256SUMS.txt</code> dosyasında.</li>
 </ul>
 
 <h2 id="v0-1-0">0.1.0</h2>
 <p><em>12 Kasım 2026.</em> İlk genel sürüm.</p>
 <h3>Eklendi</h3>
 <ul>
-<li>Premium hesaplar için Rust ile yazılmış, yerel bir Windows Spotify istemcisi: gpui arayüzü, librespot ile çalma ve yerel SQLite cache.</li>
-<li>Tarayıcıdan giriş. Oturum Windows Kimlik Bilgisi Yöneticisi'nde saklanıyor.</li>
-<li>Ana sayfa, Keşfet, Kütüphane, sanatçı, albüm ve arama sayfaları; kütüphane klasörleri, sabitleme ve sıralama.</li>
-<li>Komut paleti (<code>Ctrl+K</code>), klavye kısayolları, medya tuşları, tepsi simgesi, Windows medya katmanı ve isteğe bağlı global arama kısayolu.</li>
-<li>Boşluksuz çalma, isteğe bağlı yumuşak geçiş, ses seviyesi normalleştirme, 320 kbps'e kadar kalite ve çıkış aygıtı değişince toparlanma.</li>
-<li>Hazır ayarları ve ön kazancı olan 10 bantlı ekolayzer; OPRA veritabanıyla kulaklık profili araması.</li>
-<li>Kütüphane araçları: yinelenen şarkı ve sürüm bulucu, çalma listelerini birleştirme ve bölme, kalıcı sıralama, JSON yedek ve yerel dinleme istatistikleri. Kütüphane düzenlemeleri geri alınabiliyor, çevrimdışı yapılanlar kuyruğa giriyor.</li>
-<li>Yan panelde ve tam ekranda eşzamanlı sözler; yedek kaynak olarak LRCLIB ve isteğe bağlı çeviri satırı.</li>
-<li>Daha akıllı karıştırma ve kuyruk kuralları (şarkı başına tek sürüm, explicit'i atla, bu sanatçıyı asla çalma, şarkıyı gizle); şarkıdan, sanatçıdan, albümden ya da çalma listesinden radyo; özel oturum.</li>
-<li>Spotify Connect aygıtı. Varsayılan olarak açık, Ayarlar'dan kapatılabiliyor.</li>
-<li>Şarkı kredileri, benzer sanatçılar ve sanatçı takibi.</li>
-<li>Arkadaş etkinliği paneli. Varsayılan olarak kapalı ve deneysel.</li>
-<li>İngilizce ve Türkçe arayüz.</li>
-<li>Otomatik güncellemeli kurulum dosyası, taşınabilir zip ve yeni sürüm iki kez açılmazsa eskisine geri dönüş.</li>
+<li>Spotify Premium için Windows istemcisi: Rust, gpui, librespot ve yerel SQLite depolama.</li>
+<li>Tarayıcıdan giriş; oturum Windows Kimlik Bilgisi Yöneticisi'nde saklanıyor.</li>
+<li>Ana sayfa, Keşfet, Kütüphane, sanatçı, albüm ve arama sayfaları; kütüphane klasörleri, sabitleme ve sıralama. İngilizce ve Türkçe arayüz.</li>
+<li><code>Ctrl+K</code> komut paleti, klavye kısayolları, medya tuşları, tepsi simgesi, Windows medya katmanı ve isteğe bağlı global arama kısayolu.</li>
+<li>Boşluksuz çalma, isteğe bağlı yumuşak geçiş, ses seviyesi normalleştirme, 320 kbps'ye kadar kalite ve ses aygıtı değişince çalmaya devam etme.</li>
+<li>10 bantlı ekolayzer, hazır ayarlar, ön kazanç ve OPRA kulaklık profilleri.</li>
+<li>Yinelenen şarkı ve sürüm bulucu, liste birleştirme/bölme, kalıcı sıralama, JSON yedek, yerel istatistikler, geri alma ve çevrimdışı düzenlemeleri kuyruğa alma.</li>
+<li>Yan panelde veya tam ekranda eşzamanlı sözler, LRCLIB yedek kaynağı ve isteğe bağlı çeviri.</li>
+<li>Karıştırma ve kuyruk kuralları: şarkı başına tek sürüm, uygunsuz içerikli şarkıları atlama, sanatçı engelleme ve şarkı gizleme. Şarkı, sanatçı, albüm veya listeden radyo; özel oturum.</li>
+<li>Spotify Connect, varsayılan olarak açık; Ayarlar'dan kapatılabiliyor.</li>
+<li>Şarkıda emeği geçenler, benzer sanatçılar ve sanatçı takibi. Deneysel arkadaş etkinliği, varsayılan olarak kapalı.</li>
+<li>Otomatik güncellemeli kurulum dosyası, taşınabilir zip ve yeni sürüm iki kez açılamazsa önceki sürüme dönüş.</li>
 </ul>
-<h3>Bilinen sınırlar</h3>
+<h3>Bu sürümdeki sınırlar</h3>
 <ul>
-<li>Ekran okuyucular henüz desteklenmiyor.</li>
-<li>Yalnızca koyu tema, yalnızca Windows. (Açık tema 0.1.2 ile geldi.)</li>
-<li>Openify'da çaldıkların Spotify'a bildirilmiyor.</li>
-<li>Arkadaş etkinliği ve sanatçı takibi canlı bir hesapta yalnızca sınırlı denendi.</li>
+<li>Ekran okuyucu desteği yok. Yalnızca Windows ve koyu tema; açık tema 0.1.2'de geldi.</li>
+<li>Openify kendi çaldığı şarkıları Spotify'a raporlamıyor. <a href="../privacy/#plays-not-reported">Connect üzerinden çalınanlar sayılabilir</a>.</li>
+<li>Arkadaş etkinliği ve sanatçı takibi canlı hesapla sınırlı ölçüde denendi.</li>
 </ul>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/CHANGELOG.md">Kaynak belgeyi GitHub'da gör</a></p>
       <nav class="pager" aria-label="Önceki / Sonraki"><a class="pager-prev" href="../how-it-works/"><span>Önceki</span>Nasıl çalışıyor</a><a class="pager-next" href="../privacy/"><span>Sonraki</span>Gizlilik ve güvenlik</a></nav>

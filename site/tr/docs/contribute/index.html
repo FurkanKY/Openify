@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Katkıda bulun · Openify</title>
-<meta name="description" content="Issue açmak, PR göndermek, Openify&#x27;ı kaynaktan derlemek, test çalıştırmak ve gpui tuzaklarından kaçınmak için pratik rehber.">
+<meta name="description" content="Bug bildir, PR hazırla, Openify&#x27;ı derle ve izole test ortamını kullan.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/tr/docs/contribute/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/contribute/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/contribute/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Katkıda bulun · Openify">
-<meta property="og:description" content="Issue açmak, PR göndermek, Openify&#x27;ı kaynaktan derlemek, test çalıştırmak ve gpui tuzaklarından kaçınmak için pratik rehber.">
+<meta property="og:description" content="Bug bildir, PR hazırla, Openify&#x27;ı derle ve izole test ortamını kullan.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/tr/docs/contribute/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
 <meta property="og:image:width" content="1200">
@@ -68,114 +68,100 @@
     </nav>
     <article class="prose">
 <h1>Katkıda bulun</h1>
-<p class="lede">Hata raporu, fikir ve PR her zaman açık kapı. Bu sayfada sorunu nasıl bildireceğini, bir PR'ın hangi kontrollerden geçmesi gerektiğini, projeyi nasıl derleyip test edeceğini ve gpui'de en çok vakit yediren tuzakları bulursun.</p>
+<p class="lede">Projede sabitlenen Rust sürümüyle derle, PR'ı tek işe odakla ve push'tan önce release testlerini çalıştır.</p>
 
 <h2 id="issues">Issue açmak</h2>
-<ul>
-<li>Önce açık issue'lara bir göz at.</li>
-<li>Hata formunu doldur. Openify sürümünü, Windows sürümünü, ekran ölçeğini ve log dosyasını soruyor. Logsuz raporlar çoğunlukla üzerinde çalışılabilir olmuyor.</li>
-<li>Özellik isteklerinde önce sorunu, sonra çözümü anlat; en iyi böyle işliyor.</li>
-<li>Güvenlik sorunuysa herkese açık issue açma. <a href="../privacy/#reporting">Gizlilik ve güvenlik</a> sayfasına bak.</li>
-</ul>
-<p>Loglar <code>%LOCALAPPDATA%\Openify</code> klasöründe (Explorer adres çubuğuna yapıştır): <code>openify.log</code> ve bir çökmeden sonra <code>crash-&lt;zaman&gt;.txt</code>. İkisini de ekle. Daha fazla ayrıntı için uygulamayı terminalden debug loguyla başlat:</p>
+<p>Önce açık issue'lara bak. Bug bildirirken formu kullan; Openify sürümünü, Windows sürümünü, ekran ölçeğini ve logları ekle. Özellik isterken çözümden önce sorunu anlat. Güvenlik sorunları için <a href="../privacy/#reporting">Gizlilik ve güvenlik</a> sayfasını izle.</p>
+<p>Loglar <code>%LOCALAPPDATA%\Openify</code> klasöründe. <code>openify.log</code> dosyasını ve varsa <code>crash-&lt;time&gt;.txt</code> raporunu ekle. Daha ayrıntılı log almak için:</p>
 <div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>$env:RUST_LOG="openify=debug"
 .\target\release\openify.exe</code></pre></div>
-<p class="note">Token'larını ya da Spotify kimlik bilgilerini asla paylaşma. Bir issue için bunlara hiç gerek yok.</p>
+<p class="note">Token veya Spotify giriş bilgilerini asla paylaşma.</p>
 
 <h2 id="pull-requests">PR göndermek</h2>
 <ol>
-<li>Küçük bir düzeltmeden büyük her şey için önce issue aç; tasarım üzerinde baştan anlaşalım, emeğin boşa gitmesin.</li>
-<li><code>master</code>'dan branch aç ve PR'ı tek bir işe odakla.</li>
-<li>Push'tan önce aşağıdaki kontrolleri yerelde çalıştır.</li>
-<li>Neyin değiştiğini, neden değiştiğini ve nasıl doğruladığını yaz. UI değişikliğinde ekran görüntüsü ekle. Performansa dokunan değişiklikte (render döngüsü, ses yolu, bellek) ölçümü, geçmesi gereken eşiğin yanında ver.</li>
-<li>Katkı yaparak çalışmanın GPL-3.0-or-later ile lisanslanmasını kabul etmiş olursun.</li>
+<li>Kapsamlı bir değişiklikten önce issue aç. <a href="../how-it-works/">Nasıl çalışıyor</a> sayfasını oku.</li>
+<li><code>master</code>'dan branch aç, PR'ı tek işe odakla ve push'tan önce aşağıdaki kontrolleri çalıştır.</li>
+<li>Neyi, neden değiştirdiğini ve nasıl kontrol ettiğini anlat. UI değişikliğine ekran görüntüsü, performans değişikliğine hedef eşikle birlikte ölçüm ekle.</li>
+<li>Yeni arayüz metinlerini iki dilde de yaz. Testlerde fixture ve geçici ayar dosyası kullan.</li>
+<li>Katkılar GPL-3.0-or-later ile lisanslanır.</li>
 </ol>
-<p>PR şablonu da aynısını soruyor: ne ve neden, nasıl kontrol ettin, bir de kısa bir liste (build ve testler geçiyor, yeni metinler i18n tablosunda iki dilde, testler Spotify'a ya da gerçek ayarlarına dokunmuyor).</p>
 
-<h2 id="ci">CI neyi kontrol ediyor</h2>
-<p>CI her PR'da ve <code>master</code>'a her push'ta çalışır. Değişikliğin hepsinden geçmeli.</p>
+<h2 id="ci">CI kontrolleri</h2>
+<p>CI her PR'da ve <code>master</code>'a her push'ta çalışır.</p>
 <div class="table"><table>
-<thead><tr><th>Job</th><th>Ne çalıştırıyor</th></tr></thead>
+<thead><tr><th>Job</th><th>Kontroller</th></tr></thead>
 <tbody>
-<tr><td>Build, test, lint (Windows)</td><td><code>cargo build --release --locked</code>, <code>cargo test --release --locked</code>, <code>cargo fmt --check</code>, <code>cargo clippy --release --locked --all-targets -- -D warnings</code></td></tr>
-<tr><td>Windows ARM64</td><td><code>aarch64-pc-windows-msvc</code> için release build</td></tr>
-<tr><td>cargo-deny</td><td>Lisans, ban ve kaynak kontrolleri geçmeli. Advisory'ler de bakılıyor ama henüz build'i bozmuyor.</td></tr>
-<tr><td>Vendor drift</td><td>Vendor'lanmış crate'lerin crates.io'dan ne kadar ayrıldığını gösteren rapor (<code>scripts/vendor-diff.ps1</code>)</td></tr>
+<tr><td>Windows</td><td><code>cargo build --release --locked</code>, <code>cargo test --release --locked</code>, <code>cargo fmt --check</code>, <code>cargo clippy --release --locked --all-targets -- -D warnings</code></td></tr>
+<tr><td>Windows ARM64</td><td><code>cargo build --release --locked --target aarch64-pc-windows-msvc</code></td></tr>
+<tr><td>cargo-deny</td><td>Lisans, ban ve kaynak kontrollerindeki hatalar CI'ı durdurur. Güvenlik duyuruları da kontrol edilir ama henüz engelleyici değildir.</td></tr>
+<tr><td>Vendor farkları</td><td><code>./scripts/vendor-diff.ps1 -Summary</code>, crates.io ile farkları raporlar.</td></tr>
 </tbody></table></div>
-<p>ARM64 job'ı var, çünkü Openify'ın ARM64 kurulum dosyası da yayınlanıyor. Native kod içeren bir bağımlılık eklersen o hedefte de derlendiğinden emin ol.</p>
+<p>Openify'ın ARM64 kurulum dosyası da var. Native bağımlılıkları bu hedefte de kontrol et.</p>
 
-<h2 id="conventions">Kurallar</h2>
-<p>Gerekçelerin tamamı <a href="../how-it-works/">Nasıl çalışıyor</a> sayfasında. Kısa hali:</p>
+<h2 id="conventions">Kod kuralları</h2>
 <ul>
-<li><strong>Yeni özellik kendi gpui <code>Entity</code>'si olur.</strong> Zaten fazla şişmiş olan <code>Shell</code>'e alan ekleme.</li>
-<li><strong>Motor kullanıcıya görünen metin üretmez.</strong> Tipli kodlar gönderir (<code>Event</code> varyantları, bildirim türleri); kelimeye çevirmek UI'ın işi.</li>
-<li><strong>Render yolunu hiçbir şey bloklamaz.</strong> Ağ yok, uzun disk işi yok, arka planın tuttuğu bir lock'u beklemek yok.</li>
-<li><strong>Tasarım kuralları test.</strong> <code>src/ui/design_rules.rs</code>, <code>src/ui/theme.rs</code>'teki değişkenler yerine ham spacing, radius, font boyutu, gölge ya da renk değeri kullanırsan ya da <code>.tooltip(</code> olmadan <code>icon_button("...")</code> yazarsan build'i kırar. <code>src/ui/components.rs</code>'teki bileşenleri kullan. Bkz. <a href="../design/">Tasarım</a>.</li>
-<li><strong>Saf çekirdek, ince kabuk.</strong> Kararları yan etkisiz, unit test'li fonksiyonlara koy (<code>queue.rs</code>, <code>recovery.rs</code>, <code>login.rs</code>), I/O'yu kenarlarda tut.</li>
-<li><strong>Vendor'daki crate'ler yamalı kopyalar.</strong> Değiştirdiğin her satırı <code>OPENIFY:</code> yorumuyla işaretle ve o crate'in <code>OPENIFY.md</code> dosyasına yaz. Sapmayı <code>scripts/vendor-diff.ps1</code> kontrol eder.</li>
-<li><strong>Spotify'a saygılı ol.</strong> İç endpoint'lerini yoran kod yolları ekleme. Ortak rate gate'i ve cache'leri kullan. Testler Spotify'la konuşmamalı; <code>src/engine/fixtures</code> altındaki fixture'ları ya da <code>OPENIFY_TEST_FAKE_PLAY=1</code>'i kullan.</li>
-<li><strong>Testlerde ayarlar.</strong> Ayarlara dokunan test, geçici bir dosyayla <code>OPENIFY_SETTINGS_PATH</code> kullanır; gerçek <code>%APPDATA%\Openify\settings.json</code>'a asla dokunmaz.</li>
-<li><strong>Yorumlar nedenini anlatır.</strong> Fonksiyonları küçük tut.</li>
-<li><strong>Yeni bağımlılığın bir gerekçesi olmalı.</strong> Lisansının GPL-3.0 ile uyumlu olduğunu <code>cargo deny check licenses</code> ile kontrol et.</li>
+<li>Yeni özellik için ayrı bir gpui <code>Entity</code> kullan; <code>Shell</code>'e alan eklemekten kaçın.</li>
+<li>Motor tipli olaylar ve bildirim türleri gönderir; kullanıcıya gösterilecek metni UI üretir.</li>
+<li>Render sırasında ağ isteği, uzun disk işlemi veya bloklayan bekleme yapma.</li>
+<li><code>src/ui/theme.rs</code>'teki token'ları ve <code>src/ui/components.rs</code>'teki bileşenleri kullan. <code>src/ui/design_rules.rs</code> testleri ham tasarım değerlerini ve simge düğmelerinin tooltip'lerini kontrol eder. Bkz. <a href="../design/">Tasarım</a>.</li>
+<li>Kararları <code>queue.rs</code>, <code>recovery.rs</code> ve <code>login.rs</code>'teki gibi saf, test edilmiş fonksiyonlara koy. Fonksiyonları kısa tut; yorumlarda nedenini anlat.</li>
+<li>Vendor değişikliklerini <code>OPENIFY:</code> yorumlarıyla işaretle, crate'in <code>OPENIFY.md</code> dosyasına yaz ve <code>scripts/vendor-diff.ps1</code> çalıştır.</li>
+<li>Spotify için ortak istek sınırını ve cache'leri kullan. Testlerde <code>src/engine/fixtures</code> veya sahte oynatma kullan; ayar testlerinde <code>OPENIFY_SETTINGS_PATH</code>'i geçici bir dosyaya yönlendir.</li>
+<li>Yeni bağımlılığın gerekçesini yaz; lisans uyumunu <code>cargo deny check licenses</code> ile kontrol et.</li>
 </ul>
 
 <h2 id="i18n">Çok dillilik</h2>
-<p>Bütün UI metinleri tek bir tabloda duruyor: <code>src/i18n/table.rs</code>. İngilizce ve Türkçe aynı makro girdisinde yan yana olduğu için eksik çeviri, çalışırken boş kalan bir etiket olarak değil, derleme hatası olarak karşına çıkar.</p>
-<p>Kodda <code>t!</code>, <code>tf!</code> ve <code>tp!</code> makrolarını kullan (düz metin, biçimli metin, çoğul; her birini <code>src/i18n.rs</code>'in başındaki açıklama anlatıyor). Kullanıcıya görünen metni başka hiçbir yere gömme. Uygulama adı <code>src/brand.rs</code>'ten gelir.</p>
-<p>Bunu iki test bekliyor. <code>src/i18n/tests.rs</code> yer tutucuları, çoğulları ve boş metinleri kontrol eder; <code>no_raw_turkish_text_in_sources</code> ise koddaki bir string literal'de Türkçe harf varsa fail eder (yorumlar ve log satırları muaf). Yepyeni bir dil eklemek için tabloyu ve dil ayarını genişlet.</p>
-<p>Ayarlarını değiştirmeden bir dili denemek için test çalıştırmasında <code>OPENIFY_TEST_LANG=en</code> ya da <code>tr</code> ver.</p>
+<p>İngilizce ve Türkçe arayüz metinlerini <code>src/i18n/table.rs</code>'te birlikte yaz; eksik çeviri derleme hatası verir. Düz metin, biçimli metin ve çoğullar için <code>t!</code>, <code>tf!</code> ve <code>tp!</code> kullan. Açıklamaları <code>src/i18n.rs</code>'te bulabilirsin. Uygulama adı <code>src/brand.rs</code>'ten gelir.</p>
+<p><code>src/i18n/tests.rs</code>, yer tutucuları, çoğulları, boş metinleri ve kod içindeki ham Türkçe metinleri kontrol eder; yorumlar ve loglar gibi istisnalar vardır. Yeni dil eklerken tabloyu ve dil ayarını genişlet. İngilizce veya Türkçeyi denemek için <code>OPENIFY_TEST_LANG=en|tr</code> kullan.</p>
 
 <h2 id="build">Kaynaktan derleme</h2>
-<p>Gerekenler: Windows 10 veya 11, Rust (rustup, ilk build'de <code>rust-toolchain.toml</code>'daki sabit sürümü kurar), "Desktop development with C++" iş yüküyle MSVC build araçları, Windows SDK ve Git. <code>.env</code> dosyası ya da API anahtarı gerekmiyor.</p>
+<p>Windows 10 veya 11'de rustup üzerinden Rust'ı, Git'i, “Desktop development with C++” iş yüküyle MSVC Build Tools'u ve Windows SDK'yı kur. Rustup, <code>rust-toolchain.toml</code>'daki sürümü kullanır. <code>.env</code> veya API anahtarı gerekmez.</p>
 <div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>git clone https://github.com/FurkanKY/Openify.git
 cd Openify
-cargo build --release
+cargo build --release --locked
 .\target\release\openify.exe</code></pre></div>
-<p>İlk build gpui'yi ve bağımlılıklarını derlediği için biraz sürer. Çalışan bir Openify <code>target/</code> klasörünü kilitliyorsa <code>--target-dir</code> ile başka bir klasöre derle ve exe'nin bir kopyasını çalıştır.</p>
+<p>İlk build, gpui'yi ve bağımlılıklarını da derler. Test için exe'nin kopyasını çalıştır; çalışan exe, build çıktısını kilitler. Ayrı bir build klasörü için <code>--target-dir</code> kullan.</p>
 
 <h2 id="tests">Testleri çalıştırmak</h2>
-<div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>cargo test --release
-cargo clippy --release -- -D warnings
+<div class="code"><div class="code-bar"><span>PowerShell</span></div><pre><code>cargo test --release --locked
+cargo clippy --release --locked --all-targets -- -D warnings
 cargo fmt --check</code></pre></div>
-<p><code>cargo build</code> ve <code>cargo test</code> uyarısız bitmeli; tek istisna <code>vendor/librespot-core</code> ve <code>proc-macro-error2</code>'den gelen eski, bilinen uyarılar.</p>
-<p>Testler modüllerin içindeki sıradan unit test'ler (queue, recovery, login, output ring, edit queue, i18n, settings, cache ve daha fazlası). Fixture ve sahte backend kullanırlar; Spotify'a da gerçek ayarlarına da dokunmazlar.</p>
-<p>Birkaç test <code>#[ignore]</code> işaretli ve gerçek hesaba gider: arkadaş etkinliği, radyo, parça kredileri, kütüphane yazma gibi. Hiçbiri otomatik çalışmaz. Onları yalnızca hesabın sahibi, bilerek çalıştırmalı.</p>
+<p>Unit test'ler kuyruk kararlarını, toparlanmayı, girişi, ses çıkışını, düzenlemeleri, i18n'i, ayarları ve cache'leri fixture veya sahte backend ile sınar. Spotify'a ve gerçek ayarlara dokunma. Test rehberi yalnızca <code>vendor/librespot-core</code> ve <code>proc-macro-error2</code>'den gelen eski bağımlılık uyarılarını kabul eder.</p>
+<p>Arkadaş etkinliği, radyo, künye ve kütüphane yazma dahil canlı hesap testleri <code>#[ignore]</code> işaretlidir. Bunları yalnızca hesap sahibi, bilerek çalıştırmalı.</p>
 
 <h2 id="test-hooks">Test hook'ları</h2>
-<p>Test çalıştırması, <code>OPENIFY_TEST_DISPLAY</code> ya da <code>OPENIFY_SETTINGS_PATH</code> verilerek başlatılan uygulama demek. Çevrimdışı ve kendi geçici klasörleriyle açılır; <code>OPENIFY_TEST_ONLINE=1</code> vermedikçe gerçek ayarlarına, cache'ine ya da Spotify hesabına dokunmaz. Bu değişkenlerin hiçbiri normal kullanıcı için davranışı değiştirmez. En işe yarayanlar:</p>
+<p><code>OPENIFY_TEST_DISPLAY</code> veya <code>OPENIFY_SETTINGS_PATH</code> verdiğinde uygulama, cache ve logları ayrı tutan bir test oturumu açar. Ayarları da ayırmak için mutlaka <code>OPENIFY_SETTINGS_PATH</code> ile geçici bir dosya seç. Başlangıçta çevrimdışıdır; <code>OPENIFY_TEST_ONLINE=1</code> gerçek hesaba bağlanmasına izin verir. Dosya yollarını kendin verirken geçici konumlar seç.</p>
 <div class="table"><table>
-<thead><tr><th>Değişken</th><th>Ne yapıyor</th></tr></thead>
+<thead><tr><th>Değişken</th><th>Etkisi</th></tr></thead>
 <tbody>
-<tr><td><code>OPENIFY_TEST_DISPLAY="w,h"</code></td><td>Pencereyi odağı çalmadan birincil olmayan monitörde açar ve çalıştırmayı test çalıştırması yapar. 15 dakika sonra kendini kapatır.</td></tr>
-<tr><td><code>OPENIFY_SETTINGS_PATH=&lt;dosya&gt;</code></td><td>Gerçek ayar dosyası yerine bunu kullanır.</td></tr>
-<tr><td><code>OPENIFY_TEST_CACHE_DIR=&lt;klasör&gt;</code></td><td>Tüm cache klasörünü oraya koyar. Verilmezse test çalıştırması <code>%TEMP%\openify-sandbox</code> kullanır.</td></tr>
-<tr><td><code>OPENIFY_TEST_FAKE_PLAY=1</code></td><td>Spotify'a hiçbir şey göndermeden çalıyormuş gibi yapar.</td></tr>
-<tr><td><code>OPENIFY_TEST_OFFLINE=1</code></td><td>Çevrimdışı başlar. Cache boşsa Ana sayfa, Keşfet ve Kütüphane çevrimdışı durumunu gösterir.</td></tr>
-<tr><td><code>OPENIFY_TEST_LANG=en|tr</code></td><td>Arayüz dilini zorlar.</td></tr>
-<tr><td><code>OPENIFY_TEST_THEME=light|dark</code></td><td>İzole bir test çalıştırmasında, kayıtlı tercihi değiştirmeden paleti zorlar.</td></tr>
-<tr><td><code>OPENIFY_TEST_VIEW=&lt;sayfa&gt;</code></td><td>Bir gecikmeden sonra sayfa ya da panel açar: <code>now</code>, <code>home</code>, <code>settings</code>, <code>queue</code>, <code>help</code>, <code>search:&lt;sorgu&gt;</code> ve daha fazlası.</td></tr>
-<tr><td><code>OPENIFY_TEST_SCALE=&lt;0,5-4&gt;</code></td><td><code>OPENIFY_TEST_DISPLAY</code> ile pencere ölçeğini zorlar (1,25, 1,5 ve 2 değerleri %125 ile %200 ekranları taklit eder).</td></tr>
-<tr><td><code>OPENIFY_LOG_DIR=&lt;klasör&gt;</code></td><td>Log ve çökme raporu klasörünü taşır.</td></tr>
-<tr><td><code>OPENIFY_INSTANCE_ID=&lt;ad&gt;</code></td><td>Tek örnek kilidine ad verir; kendi çalışan Openify'ının yanında test edebilirsin.</td></tr>
-<tr><td><code>RUST_LOG=openify=debug</code></td><td>Açılış süreleri, ses cihazı ve formatı, kuyruk hedefleri.</td></tr>
+<tr><td><code>OPENIFY_TEST_DISPLAY="w,h"</code></td><td>Odağı almadan ikinci monitörde, tek monitör varsa ana ekranda açılır. Varsayılan olarak 15 dakika sonra kapanır.</td></tr>
+<tr><td><code>OPENIFY_SETTINGS_PATH=&lt;file&gt;</code></td><td><code>%APPDATA%\Openify\settings.json</code> yerine bu dosyayı kullanır.</td></tr>
+<tr><td><code>OPENIFY_TEST_CACHE_DIR=&lt;folder&gt;</code></td><td>Cache klasörünü belirler; test oturumunun varsayılanı <code>%TEMP%\openify-sandbox\cache</code>.</td></tr>
+<tr><td><code>OPENIFY_TEST_FAKE_PLAY=1</code></td><td>Spotify'a istek göndermeden oynatmayı taklit eder.</td></tr>
+<tr><td><code>OPENIFY_TEST_OFFLINE=1</code></td><td>Çevrimdışı başlar; cache boşsa sayfalar çevrimdışı durumunu gösterir.</td></tr>
+<tr><td><code>OPENIFY_TEST_LANG=en|tr</code></td><td>Arayüz dilini belirler.</td></tr>
+<tr><td><code>OPENIFY_TEST_THEME=light|dark</code></td><td>Test oturumunda tercihi kaydetmeden paleti değiştirir.</td></tr>
+<tr><td><code>OPENIFY_TEST_VIEW=&lt;page&gt;</code></td><td>Gecikmeyle sayfa veya panel açar: <code>now</code>, <code>home</code>, <code>settings</code>, <code>queue</code>, <code>help</code> ve <code>search:&lt;query&gt;</code> seçenekler arasındadır.</td></tr>
+<tr><td><code>OPENIFY_TEST_SCALE=&lt;0.5-4&gt;</code></td><td><code>OPENIFY_TEST_DISPLAY</code> ile ölçeği belirler. Değeri noktayla yaz: örneğin <code>1.25</code>.</td></tr>
+<tr><td><code>OPENIFY_LOG_DIR=&lt;folder&gt;</code></td><td>Log ve çökme raporu klasörünü belirler; test oturumunun varsayılanı <code>%TEMP%\openify-sandbox\log</code>.</td></tr>
+<tr><td><code>OPENIFY_INSTANCE_ID=&lt;name&gt;</code></td><td>Yan yana çalışan kopyalar için tek örnek kilidini adlandırır.</td></tr>
+<tr><td><code>RUST_LOG=openify=debug</code></td><td>Açılış sürelerini, ses cihazını, formatı ve kuyruk hedeflerini loglar.</td></tr>
 </tbody></table></div>
-<p>Birçok özellik kayıtlı yanıtları JSON fixture'dan da okuyabiliyor (arkadaş etkinliği, parça kredileri, sözler, radyo, arama); böylece ağ olmadan her durumu görebilirsin. Kare süresi, bellek ve ses çıkışı için ölçüm hook'ları dahil tam liste <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a> içinde.</p>
-<p>Ölçüm yaparken exe'nin bir kopyasını çalıştır, gerçek hesaba girme ve ölçtüğün değeri geçmesi gereken eşiğin yanında raporla.</p>
+<p>Arkadaş etkinliği, künye, sözler, radyo ve arama için JSON fixture'lar var. Tüm hook'lar ile kare süresi, bellek ve ses ölçümleri <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a>'de. Ölçümü exe kopyasıyla, gerçek hesaba bağlanmadan yap; sonucu hedef eşikle birlikte yaz.</p>
 
 <h2 id="gpui-pitfalls">gpui tuzakları</h2>
-<p>Openify gpui 0.2.2 üzerinde. Aşağıdakiler en çok vakit yiyenler; tam liste <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a> içinde.</p>
+<p>gpui 0.2.2 ile çalışırken bu sınırlara dikkat et. Ayrıntılar <a href="https://github.com/FurkanKY/Openify/blob/master/docs/TESTING.md">docs/TESTING.md</a>'de.</p>
 <dl class="deflist">
-<div class="row"><dt>Wheel handler'ları hit test yapmaz</dt><dd>Capture fazındaki bir <code>on_mouse_event</code>, <code>bounds.contains(position)</code> ile baksa bile üstteki katmana (kuyruk ya da söz paneli) gelen tekerleği de alır. <code>smooth_scroll::wheel_zone</code> kullan. İçeriği kaplayan katman <code>.occlude()</code>, tekerleği geçirmesi gereken katman <code>.block_mouse_except_scroll()</code> kullanır.</dd></div>
-<div class="row"><dt>Metin kesme</dt><dd><code>truncate()</code> ilk ölçümünü cache'ler, <code>line_clamp</code> ise çok baytlı karakterlerde çöker. <code>src/ui/text.rs</code>'teki kendi <code>Line</code> elemanımızı kullan.</dd></div>
-<div class="row"><dt>Flex satırındaki tek satır metin</dt><dd>Geniş alanda bile 0 genişlikte ölçülüp "..." çizebilir. Kutuyu <code>.flex()</code> ve <code>.min_w_0()</code> yap; <code>max_w(relative(..))</code> gibi yüzde üst sınırlardan kaçın.</dd></div>
-<div class="row"><dt>Odak</dt><dd>Kökte <code>track_focus</code> kullanmak pencere düğmelerini ve kenardan boyutlandırmayı bozar; sıfır boyutlu bir odak çıpası kullan. <code>track_focus(handle)</code> elemanın <code>tab_index</code>'ini yok sayar, sıra handle'ın üzerinde durur. Odaktaki elemanda Enter ya da Space'i bırakmak tıklama gönderir; bu yüzden fare tıklamasından sonra odak çıpaya döner.</dd></div>
-<div class="row"><dt>Cache'li view'lar</dt><dd>Yalnızca notify edilen view yeniden kurulur; kökte notify etmek çocukları güncellemez. Cache'li view'ları iç içe koyma. <code>window_control_area</code> hit alanları cache'ten yeniden oynatılmaz, bu yüzden başlık çubuğu cache'in dışında kalmalı.</dd></div>
-<div class="row"><dt>Gölgeler</dt><dd>Blur'u sıfır olan gölge çizilmez, saydam bir elemandaki gölge de iç tarafını boyar. Bunun yerine halka kenarlık kullan.</dd></div>
-<div class="row"><dt>Absolute elemanlar</dt><dd>Köşesi verilmemiş bir <code>.absolute()</code> eleman (<code>top_0().left_0()</code> yok), akışta olacağı yere, yani önceki kardeşin altına yerleşir.</dd></div>
-<div class="row"><dt>Görseller</dt><dd>Bir görsel ilk yüklendiğinde yalnızca isteyen ilk view haberdar edilir; bu yüzden kapaklar gelince toplu bir yenileme yapılıyor.</dd></div>
-<div class="row"><dt>Windows'ta fare tekerleği</dt><dd>Tekerlek her zaman <code>ScrollDelta::Lines</code> gelir; touchpad'ler ondalıklı satırlar olarak gelir.</dd></div>
+<div class="row"><dt>Tekerlek olayları</dt><dd>Capture handler'ları hit test yapmaz. <code>smooth_scroll::wheel_zone</code> kullan. Üst katmanda kaydırmayı engellemek için <code>.occlude()</code>, geçirmek için <code>.block_mouse_except_scroll()</code> seç.</dd></div>
+<div class="row"><dt>Metin kesme</dt><dd><code>truncate()</code> ilk ölçümü cache'ler; <code>line_clamp</code> çok baytlı karakterlerde çöker. <code>src/ui/text.rs</code>'teki <code>Line</code>'ı kullan.</dd></div>
+<div class="row"><dt>Flex içindeki metin</dt><dd>Block kapsayıcı, tek satır metni sıfır genişlikte ölçebilir. <code>.flex().min_w_0()</code> kullan; <code>max_w(relative(..))</code>'den kaçın.</dd></div>
+<div class="row"><dt>Odak</dt><dd>Kökte <code>track_focus</code>, pencere düğmelerini ve boyutlandırmayı bozar. Sıfır boyutlu odak noktası kullan; Tab sırasını focus handle üzerinde belirle. Enter/Space yeniden tıklama üretmesin diye fare tıklamasından sonra odağı geri taşı.</dd></div>
+<div class="row"><dt>Cache'li view'lar</dt><dd>Yenilenmesi gereken her view'a notify gönder; yalnız köke göndermek alt view'ları yenilemez. Cache'li view'ları iç içe koyma; başlık çubuğunun <code>window_control_area</code> alanlarını dışarıda tut.</dd></div>
+<div class="row"><dt>Gölgeler</dt><dd>Sıfır blur'lu gölge görünmez; saydam elemanın içi de boyanır. Halka kenarlık kullan.</dd></div>
+<div class="row"><dt>Absolute elemanlar</dt><dd><code>top_0().left_0()</code> gibi bir köşe belirt; yoksa eleman önceki kardeşin ardından yerleşir.</dd></div>
+<div class="row"><dt>Görseller</dt><dd>Görsel ilk yüklendiğinde yalnız ilk isteyen view haberdar olur; kapaklar için toplu yenileme gerekir.</dd></div>
+<div class="row"><dt>Windows tekerlek girdisi</dt><dd>Tekerlek girdisi <code>ScrollDelta::Lines</code> kullanır; touchpad kesirli satırlar gönderir.</dd></div>
 </dl>
-<p>Büyük bir değişiklikten önce <a href="../how-it-works/">Nasıl çalışıyor</a> sayfasındaki mimari notlarına göz at. Katkın için şimdiden sağ ol.</p>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/CONTRIBUTING.md">Kaynak belgeyi GitHub'da gör</a></p>
       <nav class="pager" aria-label="Önceki / Sonraki"><a class="pager-prev" href="../privacy/"><span>Önceki</span>Gizlilik ve güvenlik</a><a class="pager-next" href="../design/"><span>Sonraki</span>Tasarım sistemi</a></nav>
     </article>
@@ -184,8 +170,8 @@ cargo fmt --check</code></pre></div>
       <ol>
           <li><a href="#issues">Issue açmak</a></li>
           <li><a href="#pull-requests">PR göndermek</a></li>
-          <li><a href="#ci">CI neyi kontrol ediyor</a></li>
-          <li><a href="#conventions">Kurallar</a></li>
+          <li><a href="#ci">CI kontrolleri</a></li>
+          <li><a href="#conventions">Kod kuralları</a></li>
           <li><a href="#i18n">Çok dillilik</a></li>
           <li><a href="#build">Kaynaktan derleme</a></li>
           <li><a href="#tests">Testleri çalıştırmak</a></li>

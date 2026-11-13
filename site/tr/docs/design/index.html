@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tasarım sistemi · Openify</title>
-<meta name="description" content="Openify&#x27;ın tasarım sistemi: tek vurgusu kapak rengi olan sakin bir dinleme odası; paletler, yazı, boşluk, kurallar ve testler.">
+<meta name="description" content="Openify&#x27;ın renk paletleri, yazı stilleri, boşlukları, etkileşim durumları ve tutarlılığı koruyan testleri.">
 <link rel="canonical" href="https://furkanky.github.io/Openify/tr/docs/design/">
 <link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/docs/design/">
 <link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/docs/design/">
@@ -15,7 +15,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Openify">
 <meta property="og:title" content="Tasarım sistemi · Openify">
-<meta property="og:description" content="Openify&#x27;ın tasarım sistemi: tek vurgusu kapak rengi olan sakin bir dinleme odası; paletler, yazı, boşluk, kurallar ve testler.">
+<meta property="og:description" content="Openify&#x27;ın renk paletleri, yazı stilleri, boşlukları, etkileşim durumları ve tutarlılığı koruyan testleri.">
 <meta property="og:url" content="https://furkanky.github.io/Openify/tr/docs/design/">
 <meta property="og:image" content="https://furkanky.github.io/Openify/assets/og-tr.png">
 <meta property="og:image:width" content="1200">
@@ -68,23 +68,14 @@
     </nav>
     <article class="prose">
 <h1>Tasarım sistemi</h1>
-<p class="lede">Openify sakin bir dinleme odası gibi görünüyor. Arayüz nötr kalıp geri çekiliyor; tek renk, çalan şarkının kapağından geliyor.</p>
-
-<h2 id="the-idea">Fikir</h2>
-<p>Yüzeyler geri çekilir: koyu temada nötr gece, açık temada sıcak kırık beyaz. Vurgu ve pencerenin tepesindeki ışıma o anki kapaktan türetilir; şarkı değişince sonraki şarkının rengine 0,8 sn'de yavaşça geçer. Arayüzün geri kalanı bu rengi taşımak için var, onunla yarışmaz.</p>
-<p>Öncelik sırası: sade, atmosferik, editoryal. Sade taban; nötr zemin, sıkı ama nefes alan satırlar ve altta yüzen bir çalar. Atmosferik katman; kapaktan gelen renk ve ışıma, her yerde kapaklar. Editoryal dokunuş; sayfa başlıklarında kalın Figtree. Bileşenler sakin ve kesin hissettirmeli: dururken neredeyse görünmez, dokununca anında ve net. Bu bir çalar, dikkat müzikte kalmalı.</p>
-<ul>
-<li>Renk yalnızca kapaktan gelir. Arayüzün kendi vurgu rengi yoktur.</li>
-<li>Derinliği ton katmanları verir. Gölge yalnızca yüzen öğelerde olur.</li>
-<li>Her blok tek bir sol kenara dizilir: raf, liste başlığı ve satırlar aynı sayfa kenar boşluğunu kullanır; pencere genişliğine göre 32, 48 ya da 64 px.</li>
-<li>Kütüphane bir kapak rafı, çalar ise kapağın ışığını taşıyan yüzen bir hap.</li>
-<li>Her etkileşimli öğenin beş durumu tasarlıdır: normal, üzerine gelme, basma, klavye odağı, pasif.</li>
-</ul>
-
+<p class="lede">Openify nötr yüzeyleri, kapaktan gelen rengi ve yüzen çaları bir araya getiriyor. Ortak token'lar, Koyu ve Açık temada sayfaları ve kontrolleri tutarlı tutuyor.</p>
+<h2 id="the-idea">Görsel yapı</h2>
+<p>Büyük Figtree başlıklar hiyerarşiyi kuruyor; vurgu ve ışıma kapaktan geliyor. Kütüphane rafı, başlıklar ve satırlar <code>page_margin</code> ile hizalanıyor. Kenar boşluğu içerik enine göre 32 ile 64 px arasında değişiyor; 1280 ve 1600 px eşiklerine yaklaşırken ara değerlerden geçiyor.</p>
+<p>Etkileşimli bileşenlerin beş durumu var: normal, hover, basılı, klavye odağı ve devre dışı. Durumları ton katmanları ayırıyor; gölgeler yüzen yüzeyleri belirtiyor.</p>
 <h2 id="colors">Renkler</h2>
-<p>Bütün paletler <code>src/ui/theme.rs</code> içindeki <code>Palette</code>'te duruyor. Açık tema, koyu temanın tersi değil; ayrı tasarlandı.</p>
+<p>İki tema da <code>src/ui/theme.rs</code> içindeki <code>Palette</code>'te tanımlı.</p>
 <div class="table"><table>
-<thead><tr><th>Jeton</th><th>Koyu</th><th>Açık</th></tr></thead>
+<thead><tr><th>Token</th><th>Koyu</th><th>Açık</th></tr></thead>
 <tbody>
 <tr><td>Pencere</td><td><code>#0E0E10</code></td><td><code>#F7F4EE</code></td></tr>
 <tr><td>Yüzen yüzey</td><td><code>#121215</code></td><td><code>#FFFCF7</code></td></tr>
@@ -95,14 +86,12 @@
 <tr><td>Tehlike metni</td><td><code>#F87171</code></td><td><code>#AD2727</code></td></tr>
 <tr><td>Varsayılan vurgu (henüz kapak yokken)</td><td colspan="2"><code>#F59E5B</code>, ışıma <code>#C2410C</code></td></tr>
 </tbody></table></div>
-<p>Metin hiçbir yerde sabit gri değil. Ön plan renginin farklı saydamlıkları kullanılıyor: ana metin tam, ikincil metin koyuda %72, açıkta %80, etiketler %68 ve %78, pasif simgeler %28. Böylece metin kapak tonlarının ve üzerine gelme katmanlarının üstünde de okunuyor. Ana metin ile yüzey çiftleri iki temada da WCAG AA'yı (en az 4,5:1) geçiyor; bir unit test bunu koruyor.</p>
-<p>Tema ayarı Koyu, Açık ya da Sistem. Eksik veya bilinmeyen değer Koyu sayılıyor. Sistem, Windows'un uygulama renk modunu canlı izliyor.</p>
-
-<h3>Kapak rengi nasıl kullanılıyor</h3>
-<p>Vurgu (<strong>kapak ışığı</strong>) çalan satırı, ekolayzer çubuklarını, asıl düğmeyi, odak halkasını ve rafta seçili kartı boyuyor. Zemine karşı en az 4,5:1 kalacak kadar açılıyor, tonu korunuyor. Işıma pencerenin tepesindeki 460 px'lik bir alan; saydam degrade olarak değil, zeminle önceden karıştırılarak çiziliyor. En parlak noktasına bir tavan konmuş: sarı ya da pembe bir kapak da odayı karanlık bırakıyor ve üstündeki etiketler okunur kalıyor.</p>
-
-<h2 id="typography">Yazı</h2>
-<p>Başlıklarda Figtree (gömülü, OFL), geri kalan her yerde Windows'un kendi arayüz fontu olan Segoe UI Variable Text var. Figtree 12–14 px'te bulanık çizildiği için 18 px'in altında kullanılmıyor.</p>
+<p>İkincil metin ön plan rengini Koyu temada %72, Açık temada %80 opaklıkla kullanıyor. Etiketler %68 ve %78, devre dışı simgeler %28. Testler, okunacak metin ile yüzey eşleşmelerini 4,5:1 kontrast hedefine göre kontrol ediyor.</p>
+<p>Ayarlar'dan Koyu, Açık veya Sistem'i seçebilirsin. Eksik ya da tanınmayan ayar Koyu'ya dönüyor; Sistem, Windows uygulama modunu izliyor.</p>
+<h3>Kapaktan gelen renk</h3>
+<p>Vurgu; çalan satırı, seviye çubuklarını, ana düğmeleri, odak halkalarını ve seçili raf kartlarını renklendiriyor. <code>ensure_contrast</code>, zemine göre rengi açıyor veya koyulaştırıyor. 460 px'lik ışıma kapak rengini zeminle karıştırıyor: Koyu temada parlaklık sınırlanıyor, Açık temada hafif bir renk tonu kullanılıyor. Kapak değişimi 800 ms sürüyor.</p>
+<h2 id="typography">Yazı stilleri</h2>
+<p>Uygulamaya gömülü Figtree (OFL), 18 px ve üzerindeki başlıklarda kullanılıyor. Küçük metinlerde Segoe UI Variable Text var. Altı rol, boyut ile satır yüksekliğini eşliyor; kalınlık bileşene göre değişiyor.</p>
 <div class="table"><table>
 <thead><tr><th>Rol</th><th>Ağırlık, boyut, satır</th><th>Nerede</th></tr></thead>
 <tbody>
@@ -113,54 +102,38 @@
 <tr><td>Secondary</td><td>400, 13 / 18 px</td><td>Sanatçı, meta satırı, açıklamalar</td></tr>
 <tr><td>Label</td><td>500–600, 12 / 16 px, eşit genişlikte rakam</td><td>Sütun başlıkları, süreler, kısayollar</td></tr>
 </tbody></table></div>
-
-<h2 id="layout-shape-depth">Boşluk, şekil ve yükselti</h2>
-<p><strong>Boşluk</strong> tek bir ölçekten geliyor: 2, 4, 8, 12, 16, 24, 32, 48 ve 64 px. Birbirine yakın öğeler küçük, ayrı gruplar büyük basamakla ayrılıyor. 2 px yalnızca aynı öğenin iki satırı arasında ve sıkı listelerde var.</p>
-<p><strong>Şekil</strong> yumuşak ama sıkı: ince çubuklar 2 px, küçük kapaklar 4 px, satırlar ve menü öğeleri 6 px, raf kapakları 8 px, menü ve tooltip gibi yüzen paneller 12 px, arama yüzeyi 20 px. Simge düğmeleri daire. Asıl düğme, süzgeç çipleri ve başlık çubuğundaki arama tam hap; çalar da öyle.</p>
-<p><strong>Yükselti</strong> ton katmanlarıyla veriliyor: önce zemin, üstüne beyazın saydam katmanları. Üzerine gelme %6, seçili %10, basma %14. Çalan satır beyaz yerine kapağın tonunu alıyor; durumlarına göre %8, %12, %16 ve %20. Gölge "geçici, içeriğin üstünde" demek ve yalnızca arama yüzeyinde, menülerde, tooltip'lerde, yüzen çalar hapında ve kaydırıcı tutamacında var. Yerleşik yan panel listeyle aynı düzlemde durduğu için daha sakin bir gölge alıyor.</p>
-<p>Geçişlerin hepsi <code>theme.rs</code> içindeki tek bir jeton tablosundan geliyor: üzerine gelme ve basma için 140 ms, sayfa, panel ve tam ekran girişi için 220 ms, çıkışlar için 160 ms, kapak rengi değişimi için 800 ms. Girişler sonda yavaşlıyor, çıkışlar daha kısa, hiçbir şey girdiyi bekletmiyor. "Animasyonları azalt" açıkken her şey anında oluyor.</p>
-
+<h2 id="layout-shape-depth">Boşluk, şekil ve derinlik</h2>
+<p>Boşluk ölçeği 2, 4, 8, 12, 16, 24, 32, 48 ve 64 px. 2 px yalnız birbirine bağlı satırlarda ve sıkı listelerde kullanılıyor.</p>
+<p>Köşe yarıçapı çubuklarda 2 px, küçük kapaklarda 4 px, satırlarda 6 px, raf kapaklarında 8 px, yüzen panellerde 12 px, arama yüzeyinde 20 px. Simge düğmeleri daire; ana düğmeler, filtre çipleri, başlık çubuğu araması ve çalar kapsül biçiminde.</p>
+<p>Durum katmanları Koyu temada beyaz, Açık temada koyu ön plan rengini kullanıyor: hover %6, seçili %10, basılı %14. Çalan satırda kapak tonu %8, %12, %16 ve %20. Yüzen yüzeyler ve kaydırıcı tutamaçları gölgeli; yerleşik panellerde gölge daha hafif.</p>
+<p>Hareket token'ları hover ve basmayı 140 ms, girişi 220 ms, çıkışı 160 ms, kapak geçişini 800 ms olarak tanımlıyor. Animasyonları azalt seçeneği bu süreleri sıfırlıyor.</p>
 <h2 id="named-rules">Adı konmuş kurallar</h2>
 <dl class="deflist">
-<div class="row"><dt>Tek Işık</dt><dd>Arayüzün kendine ait vurgu rengi yok. Renk çalan kapaktan gelir; kapak yoksa varsayılan turuncu. Henüz bir şey çalmıyorken oda karanlık.</dd></div>
-<div class="row"><dt>Gece Kalır</dt><dd>Kapak ne kadar parlak olursa olsun ışımanın bir tavanı var ve üstündeki en soluk etiket 4,5:1'in altına düşmüyor. Bir test bunu kontrol ediyor.</dd></div>
-<div class="row"><dt>Ton Katmanı</dt><dd>Aynı durum her yerde aynı görünür: üzerine gelme %6, seçili %10, basma %14. Bir ekran kendi saydamlık değerini uyduramaz.</dd></div>
-<div class="row"><dt>Altı Basamak</dt><dd>Kodda yukarıdaki altı rolün dışında yazı boyutu yok. Boyut ve satır yüksekliği yalnızca <code>type_role</code>'den gelir.</dd></div>
-<div class="row"><dt>Titremeyen Rakam</dt><dd>Değişen her sayı (süre, konum, sayaç) eşit genişlikte rakamla yazılır; oynamaz.</dd></div>
-<div class="row"><dt>Yüzen Gölge</dt><dd>Kart, satır ve çubuklarda gölge yok. Bir öğede gölge varsa içeriğin üstünde yüzüyordur.</dd></div>
-<div class="row"><dt>Tek Renk Logo</dt><dd>Logo, yolunda bir çentik ve içinde ışık noktası olan bir O halkası. Tek renk: ön plan ya da gece. Kapağın rengini hiç almaz.</dd></div>
+<div class="row"><dt>Tek Işık</dt><dd>Kapaktan gelen vurguyu kullan; kapak yoksa varsayılan turuncuya dön.</dd></div>
+<div class="row"><dt>Gece Kalır</dt><dd>Etiketlerin kontrastını korumak için koyu temanın ışımasını sınırla.</dd></div>
+<div class="row"><dt>Ton Katmanı</dt><dd>Aynı durum opaklıklarını bütün bileşenlerde kullan.</dd></div>
+<div class="row"><dt>Altı Basamak</dt><dd>Yazı boyutunu ve satır yüksekliğini <code>type_role</code>'den al.</dd></div>
+<div class="row"><dt>Titremeyen Rakam</dt><dd>Değişen süre, konum ve sayaçlarda eşit genişlikte rakam kullan.</dd></div>
+<div class="row"><dt>Yüzen Gölge</dt><dd>Normal kartlara, satırlara ve çubuklara gölge verme.</dd></div>
+<div class="row"><dt>Tek Renk Logo</dt><dd>Çentikli O halkası ve ışık noktası, kapak vurgusundan bağımsız olarak ön plan veya gece rengini kullanır.</dd></div>
 </dl>
-
-<h2 id="do-and-dont">Yap ve yapma</h2>
-<ul>
-<li><strong>Yap:</strong> boşluk, köşe ve yazı boyutunu yalnızca <code>theme.rs</code>'teki ölçeklerden al.</li>
-<li><strong>Yap:</strong> aynı durumu aynı ton katmanıyla göster.</li>
-<li><strong>Yap:</strong> her yeni bileşeni beş durumuyla bileşen vitrinine (<code>OPENIFY_GALLERY=1</code>) ekle.</li>
-<li><strong>Yap:</strong> kapaktan gelen renkleri okunur kalsın diye <code>ensure_contrast</code>'tan geçir.</li>
-<li><strong>Yap:</strong> bloğu ortak sol kenara, yani <code>page_margin</code>'e diz.</li>
-<li><strong>Yapma:</strong> satıra, karta ya da çubuğa gölge verme.</li>
-<li><strong>Yapma:</strong> başlığın üstüne büyük harfli tür etiketi koyma. Tür bilgisi meta satırına gider.</li>
-<li><strong>Yapma:</strong> ikincil yazıda sabit gri kullanma. Ön plan renginin saydam tonunu kullan.</li>
-<li><strong>Yapma:</strong> kapaktan gelmeyen bir vurgu rengi ekleme.</li>
-<li><strong>Yapma:</strong> Figtree'yi 18 px'in altında kullanma.</li>
-</ul>
-
-<h2 id="enforcement">Kurallar nasıl zorlanıyor</h2>
-<p>Tasarım kuralları yalnızca code review'a bırakılmıyor, testlerle denetleniyor. <code>src/ui/design_rules.rs</code> içinde sayım tabanlı testler var ve hepsi sıfırda kalmak zorunda. Boşluk, köşe, yazı boyutu, gölge ve renk değerleri yalnızca <code>src/ui/theme.rs</code>'ten gelebilir; her <code>icon_button("...")</code>'ın ardından <code>.tooltip(</code> gelmeli. Test kırılıyorsa koda ham bir değer kaçmış demektir. Aynı dosyadaki başka testler gölgenin yalnızca yüzen öğelerde olduğunu ve Tab sırasının görsel sırayı izlediğini denetliyor.</p>
-<p>Başka testler de belirli sözleri koruyor: iki paletteki metin kontrastı, ışımanın parlaklık tavanı, en küçük pencere boyutlarında çaların üstünde görünen satır sayısı. Genel test düzeni için <a href="../how-it-works/#testing">nasıl test ediliyor</a> bölümüne bak.</p>
+<h2 id="do-and-dont">Bileşen kontrol listesi</h2>
+<ul><li>Boşluğu, köşeyi ve yazı rolünü <code>theme.rs</code>'ten al; blokları <code>page_margin</code> ile hizala.</li><li>Yeni bileşeni beş durumuyla <code>OPENIFY_GALLERY=1</code> galerisine ekle.</li><li>Kapak vurgusunu <code>ensure_contrast</code>'tan geçir; ikincil metinde saydam ön plan rengi kullan.</li><li>Tür bilgisini metadata satırına koy; başlığın üstüne büyük harfli etiket ekleme.</li><li>Figtree'yi 18 px'in altına indirme; gölgeyi tanımlı yüzeylerde kullan.</li></ul>
+<h2 id="enforcement">Kurallar nasıl denetleniyor</h2>
+<p><code>src/ui/design_rules.rs</code>, listesindeki UI dosyalarında ham boşluk, köşe, yazı boyutu, gölge ve renk değerlerini tarıyor. Simge düğmelerinin tooltip'lerini ve belirli odak sırası kurallarını kontrol ediyor. Tema testleri kontrastı ve ışıma parlaklığını; yerleşim testleri küçük pencerede görünen şarkı satırlarını denetliyor. Ayrıntılar <a href="../how-it-works/#testing">mimari testleri bölümünde</a>.</p>
       <p class="doc-source"><a class="text-link" href="https://github.com/FurkanKY/Openify/blob/master/docs/DESIGN.md">Kaynak belgeyi GitHub'da gör</a></p>
       <nav class="pager" aria-label="Önceki / Sonraki"><a class="pager-prev" href="../contribute/"><span>Önceki</span>Katkı</a><a class="pager-next" href="../licenses/"><span>Sonraki</span>Lisanslar</a></nav>
     </article>
     <nav class="toc" aria-label="Bu sayfada">
       <p class="toc-title">Bu sayfada</p>
       <ol>
-          <li><a href="#the-idea">Fikir</a></li>
+          <li><a href="#the-idea">Görsel yapı</a></li>
           <li><a href="#colors">Renkler</a></li>
-          <li><a href="#typography">Yazı</a></li>
-          <li><a href="#layout-shape-depth">Boşluk, şekil ve yükselti</a></li>
+          <li><a href="#typography">Yazı stilleri</a></li>
+          <li><a href="#layout-shape-depth">Boşluk, şekil ve derinlik</a></li>
           <li><a href="#named-rules">Adı konmuş kurallar</a></li>
-          <li><a href="#do-and-dont">Yap ve yapma</a></li>
-          <li><a href="#enforcement">Kurallar nasıl zorlanıyor</a></li>
+          <li><a href="#do-and-dont">Bileşen kontrol listesi</a></li>
+          <li><a href="#enforcement">Kurallar nasıl denetleniyor</a></li>
       </ol>
     </nav>
   </div>
