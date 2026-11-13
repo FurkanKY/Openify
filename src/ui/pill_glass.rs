@@ -48,15 +48,19 @@ const W: usize = PILL_MAX_WIDTH as usize;
 const H: usize = PILL_HEIGHT as usize;
 /// Işığın merkezi: kapağın ortası (hapın sol iç boşluğu + kapağın yarısı).
 const LIGHT_X: f32 = S3 + PILL_COVER / 2.;
-/// Işığın yatay yarıçapı: hapın en geniş hâlinin %60'ında söner (eski
-/// soldan sağa degradenin bittiği yer). Dikeyde hap boyunun 1,35 katı: kapağın
-/// üstü ve altı da aydınlık (%68), ışık kapağın çevresinde toplanır.
-const LIGHT_RX: f32 = PILL_MAX_WIDTH * 0.6;
+/// Işığın yatay yarıçapı: hapın en geniş hâlinin %42'sinde söner. Işık
+/// kimlik bölgesinde (kapak, ad, sanatçı, kalp) toplanır ve çalma düğmelerine
+/// varmadan cama erir: hapın sağ yarısı sakin cam kalır. (Eskiden %60'tı:
+/// ışık hapın içini doldurup düğmelerin arkasına kadar uzanıyordu.) Dikeyde
+/// hap boyunun 1,35 katı: kapağın üstü ve altı da aydınlık (%68).
+const LIGHT_RX: f32 = PILL_MAX_WIDTH * 0.42;
 const LIGHT_RY: f32 = PILL_HEIGHT * 1.35;
 /// Kapaktan gelen rengin camla en güçlü karışımı.
 const LIGHT_MAX_MIX: f32 = 0.6;
 /// Işık renginin açıklığı (motorun ışıma rengindeki gibi orta).
 const LIGHT_LIGHTNESS: f32 = 0.45;
+/// Açık temada kapak tonunun en düşük açıklığı (bkz. `light_grid`).
+const LIGHT_TINT_LIGHTNESS: f32 = 0.6;
 /// Kapak bu boya küçültülüp bulanıklaştırılır (renk örnekleri).
 const GRID: usize = 32;
 /// Hesapta kullanılan tavan: titreşim ve yuvarlama en çok 1 basamak ekler
@@ -261,12 +265,15 @@ fn light_grid(bytes: &[u8], colors: Palette) -> Option<Vec<([f32; 3], f32)>> {
                 // Bulanıklık renkleri karıştırıp soldurur: Apple'ın mini
                 // çalarındaki gibi doygunluk belirgin artırılır.
                 let w = (chroma * 5.).min(1.);
-                if colors.light {
-                    // Fildişinin üstünde düşük yoğunluklu kapak lekeleri.
-                    // Renksiz kapak sıcak camı kirletmez.
-                    return (*c, PILL_LIGHT_TINT_MIX * w);
-                }
                 let saturation = (chroma * 3.2).min(0.9);
+                if colors.light {
+                    // Fildişinin üstünde düşük yoğunluklu kapak tonu. Tonun
+                    // açıklığı tabanın altına inmez: koyu bir kapak (lacivert,
+                    // siyah) camı grileştirmez, yalnız rengini verir.
+                    // Renksiz kapak sıcak camı kirletmez.
+                    let tint = hsl_to_rgb(h, saturation, l.max(LIGHT_TINT_LIGHTNESS));
+                    return (tint, PILL_LIGHT_TINT_MIX * w);
+                }
                 let lightness = LIGHT_LIGHTNESS * w + l.min(LIGHT_LIGHTNESS) * (1. - w);
                 let color = hsl_to_rgb(h, saturation, lightness);
                 if lum(color) <= glass_lum {

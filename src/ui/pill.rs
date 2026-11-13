@@ -1,25 +1,34 @@
 //! Yüzen çalar hapı (taslak D).
 //!
 //! Pencerenin altında, ortada, alttan 24 px yukarıda yüzer: 72 px yüksek, en
-//! fazla 720 px (dar pencerede pencere eksi iki yanda 32 px). Solda 48 px
-//! yuvarlak kapak ve şarkı, ortada önceki / çal / sonraki ve ilerleme, sağda
-//! ses. Işık kaynağı kapak: bir şey çalarken hap, kapağın durduğu soldan
-//! kapak rengiyle aydınlanır. Listeler hapın altından geçer; altlarında hap
-//! payı kadar boşluk vardır (`PILL_CLEARANCE`).
+//! fazla 800 px (dar pencerede pencere eksi iki yanda 32 px). Işık kaynağı
+//! kapak: bir şey çalarken hap, kapağın durduğu soldan kapak rengiyle
+//! aydınlanır. Listeler hapın altından geçer; altlarında hap payı kadar
+//! boşluk vardır (`PILL_CLEARANCE`).
 //!
 //! Hap kendi önbellekli görünümünde (`views::PillView`): çalarken saniyede
 //! bir (ya da dolu kısım bir piksel uzayınca) yalnız o yeniden çizilir.
 //!
-//! Adım 11 / 14: ortada karıştır / önceki / çal / sonraki / tekrar, sağda
-//! sıra ve sözler paneli düğmeleri. Karıştırma ve tekrar açıkken simge kapak
-//! ışığı renginde ve altında küçük bir nokta: durumu bir bakışta. Tam ekran
-//! kapağa tıklayınca (üzerine gelince ortasında simge) ya da F11. Dar hapta
-//! (760 px'ten dar) ses çubuğu çekilir (sessize al kalır, üzerinde tekerlek
-//! sesi değiştirir).
+//! Düzen "tek eksen": her şey hapın yatay orta çizgisinde tek satır, çal
+//! düğmesi hapın tam ortasında.
+//! - Sol bölge (kimlik): 48 px yuvarlak kapak (hapın yuvarlak ucuyla eş
+//!   merkezli), şarkı adı ve sanatçı, adın hemen yanında kalp. Ad, bölgenin
+//!   bütün enini kullanır; kalp ancak ad sığmayınca bölgenin sonuna dayanır.
+//! - Orta (çalma): geçen süre, karıştır / önceki / çal / sonraki / tekrar,
+//!   toplam süre. İki süre düğmelerin iki yanında eşit ende: küme simetrik.
+//! - Sağ bölge (araçlar): mini oynatıcı, sıra, sözler; ardından ses. Sol ve
+//!   sağ bölge eşit ende esner, orta küme bu yüzden hep eksende kalır.
+//! - İlerleme hapın alt kenarında: düz kenar boyunca (yuvarlak uçlar hariç)
+//!   ince bir çizgi; üzerine gelince kalınlaşır ve tutamacı belirir, tıklanır
+//!   ve sürüklenir. Eskiden orta sütunun ikinci satırıydı: üç bölgenin üç ayrı
+//!   dikey ritmi vardı (sol iki satır yazı, orta düğme + çubuk, sağ tek satır).
 //!
-//! Orta sütun iki satır: üstte düğmeler, altında süre yazılarıyla ilerleme
-//! çubuğu (sütunun bütün eni; 800 px'lik hapta ~280 px, en dar hapta
-//! ~250 px). Eskiden çubuk düğmelerin yanındaki artan yere sığıyordu: ~60 px.
+//! Karıştırma ve tekrar açıkken simge kapak ışığı renginde ve altında küçük
+//! bir nokta. Tam ekran kapağa tıklayınca (üzerine gelince ortasında simge)
+//! ya da F11. Dar hapta (`TIMES_MIN_PILL`'den dar) süre yazıları çekilir ve
+//! yerleri şarkı adına kalır; ilerleme çizgisi durur. Çok dar hapta
+//! (`VOLUME_SLIDER_MIN_PILL`) ses çubuğu da çekilir (sessize al kalır,
+//! üzerinde tekerlek sesi değiştirir).
 
 use std::{
     cell::Cell,
@@ -30,14 +39,14 @@ use std::{
 
 use gpui::{
     Animation, AnimationExt, AnyElement, App, Bounds, Context, Div, ElementId, FocusHandle,
-    FontWeight, Hsla, MouseButton, MouseDownEvent, Pixels, Point, ScrollDelta, ScrollWheelEvent,
-    SharedString, Stateful, Transformation, Window, canvas, div, ease_out_quint, img,
-    linear_color_stop, linear_gradient, percentage, prelude::*, px, rgb,
+    FontWeight, Hsla, MouseButton, MouseDownEvent, Pixels, Point, Rgba, ScrollDelta,
+    ScrollWheelEvent, SharedString, Stateful, Transformation, Window, canvas, div, ease_out_quint,
+    img, linear_color_stop, linear_gradient, percentage, prelude::*, px, rgb,
 };
 
 use super::{
     Drag, Shell,
-    components::{Look, Tooltip, icon_button, play_button, secondary_button},
+    components::{Look, Tooltip, icon_button, icon_button_tinted, play_button, secondary_button},
     cover_image,
     library::{Loadable, PAGE_PAD},
     now_playing::Panel,
@@ -56,32 +65,59 @@ pub(super) const PILL_CLEARANCE: f32 = PILL_HEIGHT + PILL_BOTTOM;
 /// kaydırınca son satır hapın üst kenarına yapışmaz, 16 px üstünde durur.
 pub(super) const PILL_LIST_END: f32 = PILL_CLEARANCE + S4;
 /// Hapın en geniş hâli. Adım 11'de 720'den 800'e: karıştır, tekrar, sıra ve
-/// sözler düğmeleri geldi; ilerleme satırı yine en az 136 px.
+/// sözler düğmeleri geldi. (Yerleşik panelin eşiğindeki 44 px'lik boşluk bu
+/// ene bağlı: bkz. `now_panel` testleri.)
 pub(super) const PILL_MAX_WIDTH: f32 = 800.;
-/// Bu genişliğin altında ses çubuğu gizlenir (sessize al kalır).
-const VOLUME_SLIDER_MIN_PILL: f32 = 760.;
+/// Hapın iki yandaki iç boşluğu ve üç bölgenin arası.
+const PILL_PAD: f32 = S3;
+const ZONE_GAP: f32 = S4;
+/// Sağ bölgenin, ses çubuğu en dar hâlindeyken (`VOLUME_MIN`) sığdığı en dar
+/// en. Sol bölge de aynı ende (ikisi eşit esner): 208 px.
+const ZONE_MIN: f32 = S1 + TOOLS_WIDTH + S1 + VOLUME_MIN;
+/// Bu genişliğin altında süre yazıları çekilir: yerleri şarkı adına kalır
+/// (ilerleme çizgisi durur). Eşik, süreler varken iki bölgenin `ZONE_MIN`'e
+/// indiği hap: 764 px.
+const TIMES_MIN_PILL: f32 =
+    2. * (PILL_PAD + ZONE_MIN + ZONE_GAP) + CONTROLS_WIDTH + 2. * (TIME_WIDTH + TIME_GAP);
+/// Bu genişliğin altında ses çubuğu da gizlenir (sessize al kalır): 676 px.
+/// Pencerenin en dar hâlinde hap 696 px: ses çubuğu orada da durur.
+const VOLUME_SLIDER_MIN_PILL: f32 = 2. * (PILL_PAD + ZONE_MIN + ZONE_GAP) + CONTROLS_WIDTH;
 /// Soldaki yuvarlak kapak.
 pub(super) const PILL_COVER: f32 = 48.;
-/// Şarkı bilgisinin genişliği (dar hapta en az `PILL_INFO_MIN`'e iner).
-const PILL_INFO: f32 = 180.;
+/// Bildirim / çevrimdışı satırı sol bölgeyi doldururken en dar hâli.
 const PILL_INFO_MIN: f32 = 112.;
-/// Süre yazılarının genişliği ("12:34").
+/// Süre yazılarının genişliği, toplam süreye göre: on dakikadan kısa
+/// şarkıda ("9:59"), bir saate kadar ("12:34"), bir saati aşan kayıtta
+/// ("1:02:33"). İki yazı hep aynı ende: orta küme simetrik kalır.
+const TIME_WIDTH_SHORT: f32 = 28.;
 const TIME_WIDTH: f32 = 36.;
-/// Orta sütun (düğmeler üstte, ilerleme altta): düğme satırının eni
-/// (4 × 36 px düğme + 44 px çal + 4 aralık). Sütun bunun altına inmez.
+const TIME_WIDTH_LONG: f32 = 52.;
+/// Süre yazısı ile yanındaki düğme arası. Düğmenin 36 px'lik kutusundaki iç
+/// boşlukla (8 px) birlikte yazı simgeden 16 px uzakta: odak halkası yazıya
+/// değmez.
+const TIME_GAP: f32 = S2;
+/// Düğme satırının eni (4 × 36 px düğme + 44 px çal + 4 aralık).
 const CONTROLS_WIDTH: f32 = 36. * 4. + 44. + S1 * 4.;
-/// İlerleme satırının yüksekliği (tıklama alanı); çizgi 4 px. Düğme satırı
-/// (44 px çal düğmesi) ile birlikte 64 px: hapın 72 px'ine 4 px boşlukla sığar.
-const PROGRESS_ROW: f32 = S4 + S1;
+/// Sağ bölgenin sabit kısmı: mini / sıra / sözler, araya `S2`, sessize al.
+const TOOLS_WIDTH: f32 = 36. * 4. + S1 * 2. + S2;
+/// İlerleme çizgisi hapın alt kenarında, yuvarlak uçların bittiği yerden
+/// başlar (yarıçap = boyun yarısı).
+const EDGE_INSET: f32 = PILL_HEIGHT / 2.;
+/// Çizginin kalınlığı: dururken ve üzerine gelince / klavye odağında.
+const EDGE_LINE: f32 = 3.;
+const EDGE_LINE_HOVER: f32 = 5.;
+/// Çizginin tıklama alanı: hapın alt kenarından yukarı. Düğmelerin (alt
+/// kenarları 58 px'te) ve kapağın (60 px) altında kalır, onlarla çakışmaz.
+const EDGE_HIT: f32 = S3;
 /// Ses çubuğu: genişliği ve en dar hâli.
-const VOLUME_WIDTH: f32 = 72.;
+const VOLUME_WIDTH: f32 = 56.;
 const VOLUME_MIN: f32 = 40.;
 /// Kaydırıcının tutamacı (üzerine gelince beliren yuvarlak).
 const SLIDER_THUMB: f32 = 12.;
 /// Kaydırıcının tıklama alanı: 32 px yüksek, saydam (çizgi 4 px).
 const SLIDER_HIT: f32 = 32.;
 
-/// Hapın genişliği: en fazla 720 px, dar pencerede iki yanda sayfa kenarı
+/// Hapın genişliği: en fazla 800 px, dar pencerede iki yanda sayfa kenarı
 /// kadar (32 px) boşluk.
 pub(super) fn pill_width(window_width: f32) -> f32 {
     (window_width - 2. * PAGE_PAD).clamp(0., PILL_MAX_WIDTH)
@@ -272,21 +308,26 @@ impl Shell {
             }
         };
 
-        // Sol: kapak ve şarkı bilgisi. Çalan bir şey yokken bildirim ya da
-        // çevrimdışı durumu, gizli ilerleme satırının yerini de alır: uzun
-        // bildirim 120 px'lik yazı alanına sığmıyor, hapın dışına taşıyordu.
-        // (Boşta ve yüklenirken ilerlemenin yeri korunur: çal'a basınca
-        // düğmeler zıplamasın.)
+        // Sol: kapak ve şarkı bilgisi. Sol ve sağ bölge eşit ende esner
+        // (`flex_1`, tabanı 0): orta küme hep hapın ekseninde. Çalan bir şey
+        // yokken bildirim ya da çevrimdışı durumu artan bütün yeri alır (uzun
+        // bildirim dar yazı alanına sığmıyor, hapın dışına taşıyordu): sağ
+        // bölge o zaman içeriği kadardır, süre yazıları da yoktur.
         // Kaldığı yerden açılan şarkı çevrimdışıyken de: çalınamaz, durum
-        // satırı ("Çevrimdışı · Kütüphane önbellekten") 76 px'e sığmıyordu.
+        // satırı ("Çevrimdışı · Kütüphane önbellekten") uzun.
         let wide_left = matches!(
             m.left,
             PillLeft::Notice(_) | PillLeft::Offline { .. } | PillLeft::Track { offline: true, .. }
         );
+        let pill_w = if live {
+            self.pill_width
+        } else {
+            PILL_MAX_WIDTH
+        };
         let left = div()
-            .when(wide_left, |el| el.flex_1())
-            .when(!wide_left, |el| el.flex_basis(px(PILL_INFO)).flex_shrink())
-            .min_w(px(PILL_INFO_MIN))
+            .flex_1()
+            .when(wide_left, |el| el.min_w(px(PILL_INFO_MIN)))
+            .when(!wide_left, |el| el.min_w_0())
             .child(self.pill_left(m, window, cx));
 
         // Orta: önceki / çal / sonraki. Hiçbir şey çalmıyorken çal düğmesi
@@ -383,87 +424,61 @@ impl Shell {
             .child(next)
             .child(repeat_button);
 
-        // İlerleme: düğmelerin altında, orta sütunun bütün eninde (800 px'lik
-        // hapta ~280 px; eskiden düğmelerin yanında 60 px'e sıkışıyordu).
-        // Şarkı yokken "0:00 ─── 0:00" bozuk bir çalar gibi duruyordu:
-        // gizlenir ama yerini korur (şarkı gelince öğeler zıplamasın).
-        let progress_slider = if live {
-            slider_hit(
-                "progress",
-                m.progress,
-                accent,
-                m.has_track,
-                Some((
-                    nav.progress.clone(),
-                    look(&nav.progress, true) == Look::Focus,
-                )),
-                self.progress_bounds.clone(),
-                Some(Box::new(cx.listener(|this, ev: &MouseDownEvent, _, cx| {
-                    if let Some(f) = fraction(&this.progress_bounds, ev.position) {
-                        this.dragging = Some(Drag::Progress(f));
-                        this.notify_pill(cx);
-                    }
-                }))),
-                PROGRESS_ROW,
-            )
-        } else {
-            slider_hit(
-                "progress",
-                m.progress,
-                accent,
-                m.has_track,
-                None,
-                Rc::default(),
-                None,
-                PROGRESS_ROW,
-            )
-        };
-        // Dar hap (pencere 824 px'ten dar): ses çubuğu çekilir (sessize al
-        // kalır); ilerleme satırı yine tam: 696 px'lik hapta bile sütun
-        // ≥ 340 px, çubuk ≥ 250 px.
-        let wide = !live || self.pill_width >= VOLUME_SLIDER_MIN_PILL;
-        let progress = div()
-            .w_full()
-            .h(px(PROGRESS_ROW))
-            // Sarınca hapın boş yer tıklaması (panel) çalışmasın.
-            .block_mouse_except_scroll()
-            .flex()
-            .items_center()
-            .gap(px(S2))
-            .when(!m.has_track, |el| el.opacity(0.))
-            .type_role(T_LABEL)
-            .tabular()
-            .text_color(muted())
-            .child(
-                div()
-                    .w(px(TIME_WIDTH))
-                    .flex_none()
-                    .text_right()
-                    .child(fmt_time(m.position_ms)),
-            )
-            .child(progress_slider)
-            .child(
-                div()
-                    .w(px(TIME_WIDTH))
-                    .flex_none()
-                    .child(fmt_time(m.duration_ms)),
-            );
-        // Orta sütun: üstte karıştır / önceki / çal / sonraki / tekrar, altında
-        // ilerleme. Solda bildirim ya da çevrimdışı durumu varken ilerleme
-        // yok ama satırı yerinde (düğmeler iki durum arasında kaymasın).
-        let center = div()
-            .when(wide_left, |el| el.flex_none())
-            .when(!wide_left, |el| el.flex_1())
-            .min_w(px(CONTROLS_WIDTH))
-            .flex()
-            .flex_col()
-            .items_center()
-            .child(controls)
-            .child(if wide_left {
-                div().h(px(PROGRESS_ROW)).into_any_element()
+        // İlerleme: hapın alt kenarında, düz kenar boyunca (bkz.
+        // `edge_progress`). Şarkı yokken ve çalınamayan (çevrimdışı) şarkıda
+        // çizilmez: boş bir çizgi bozuk bir çalar gibi duruyordu.
+        let progress = (m.has_track && !wide_left).then(|| {
+            if live {
+                edge_progress(
+                    m.progress,
+                    accent,
+                    Some((
+                        nav.progress.clone(),
+                        look(&nav.progress, true) == Look::Focus,
+                    )),
+                    matches!(self.dragging, Some(Drag::Progress(_))),
+                    self.progress_bounds.clone(),
+                    Some(Box::new(cx.listener(|this, ev: &MouseDownEvent, _, cx| {
+                        if let Some(f) = fraction(&this.progress_bounds, ev.position) {
+                            this.dragging = Some(Drag::Progress(f));
+                            this.notify_pill(cx);
+                        }
+                    }))),
+                )
             } else {
-                progress.into_any_element()
-            });
+                edge_progress(m.progress, accent, None, false, Rc::default(), None)
+            }
+        });
+        // Dar hap: önce süre yazıları çekilir (yerleri şarkı adına kalır),
+        // çok dar hapta ses çubuğu da (sessize al kalır).
+        let wide = pill_w >= VOLUME_SLIDER_MIN_PILL;
+        // Süreler düğmelerin iki yanında, eşit ende (küme simetrik kalsın):
+        // geçen süre karıştır'ın soluna, toplam süre tekrar'ın sağına yaslı.
+        // İkincil tonda: kapağın ışığı geçen sürenin arkasına kadar uzanır
+        // (bkz. `pill_glass`, ikincil ton her noktada ≥ 4,5:1). Şarkı yokken
+        // görünmezler ama yerleri durur (çal'a basınca şarkı adı zıplamasın).
+        // Yazının eni toplam süreden (`time_width`); çekilme eşiği de onunla
+        // kayar.
+        let time_width = time_width(m.duration_ms);
+        let show_times = !wide_left && pill_w >= TIMES_MIN_PILL + 2. * (time_width - TIME_WIDTH);
+        let time = |ms: u32| {
+            div()
+                .w(px(time_width))
+                .flex_none()
+                .type_role(T_LABEL)
+                .tabular()
+                .text_color(muted())
+                .when(!m.has_track, |el| el.opacity(0.))
+                .child(fmt_time(ms))
+        };
+        let center = div()
+            .flex_none()
+            .flex()
+            .items_center()
+            .gap(px(TIME_GAP))
+            .when(show_times, |el| el.child(time(m.position_ms).text_right()))
+            .child(controls)
+            .when(show_times, |el| el.child(time(m.duration_ms)));
 
         // Sağ: ses. Sessizken çubuk boşalmaz: önceki düzey soluk görünür,
         // sesi açınca nereye döneceği belli.
@@ -472,11 +487,7 @@ impl Shell {
             v if v < 0.5 => "volume-1",
             _ => "volume-2",
         };
-        let volume_fill = if m.muted {
-            mix(palette().text, palette().bg, 0.62)
-        } else {
-            palette().text
-        };
+        let volume_fill = volume_tone(m.muted);
         let volume_slider = if live {
             slider(
                 "volume",
@@ -504,7 +515,7 @@ impl Shell {
                 None,
             )
         };
-        let mute = icon_button("mute", volume_icon, look(&nav.mute, true), accent)
+        let mute = icon_button_tinted("mute", volume_icon, muted(), look(&nav.mute, true), accent)
             .tooltip(Tooltip::text(
                 if m.volume == 0.0 {
                     t!(Unmute)
@@ -537,12 +548,16 @@ impl Shell {
         // renginde, kapalıyken sakin. Durum ana pencerede tutulmaz: pencere
         // varsa açıktır.
         let mini_open = live && self.mini.is_some();
-        let mini = toggle_button(
+        // Sağ bölgenin simgeleri ikincil tonda (`muted`): çalma düğmeleri
+        // öndedir, araçlar bir adım geride. Açık olan araç yine vurgu
+        // renginde ve noktalı.
+        let mini = toggle_button_toned(
             "mini",
             "picture-in-picture-2",
             mini_open,
             look(&stops.mini, true),
             accent,
+            muted(),
         )
         .when(live, |el| {
             el.track_focus(&stops.mini)
@@ -552,39 +567,48 @@ impl Shell {
                 }))
         })
         .tooltip(Tooltip::text(t!(MiniPlayer), Some("Alt M")));
-        let queue = toggle_button(
+        let queue = toggle_button_toned(
             "queue",
             "list-music",
             panel == Some(Panel::Queue),
             look(&stops.queue, true),
             accent,
+            muted(),
         )
         .when(live, |el| {
             el.track_focus(&stops.queue)
                 .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Queue, cx)))
         })
         .tooltip(Tooltip::text(t!(QueueTip), Some("Alt Shift Q")));
-        let lyrics = toggle_button(
+        let lyrics = toggle_button_toned(
             "lyrics",
             "mic-vocal",
             panel == Some(Panel::Lyrics),
             look(&stops.lyrics, true),
             accent,
+            muted(),
         )
         .when(live, |el| {
             el.track_focus(&stops.lyrics)
                 .on_click(cx.listener(|this, _, _, cx| this.toggle_panel(Panel::Lyrics, cx)))
         })
         .tooltip(Tooltip::text(t!(Lyrics), Some("Alt Shift L")));
-        let volume = div()
-            // Düğmeler ve ses çubuğu hapın boş yeri sayılmaz.
-            .block_mouse_except_scroll()
+        // Sağ bölge: iki küme, aralarında `S2`: paneller (mini / sıra /
+        // sözler) ve ses (sessize al + kısa çubuk). Sağa yaslı; bölgenin
+        // solunda artan yer hapın boş yeridir (tıklayınca panel).
+        let tools = div()
+            .flex_none()
             .flex()
             .items_center()
             .gap(px(S1))
             .child(mini)
             .child(queue)
-            .child(lyrics)
+            .child(lyrics);
+        let volume = div()
+            .min_w_0()
+            .flex()
+            .items_center()
+            .gap(px(S1))
             .child(mute)
             .when(wide, |el| {
                 el.child(
@@ -595,6 +619,23 @@ impl Shell {
                         .child(volume_slider),
                 )
             });
+        let right = div()
+            .when(wide_left, |el| el.flex_none())
+            .when(!wide_left, |el| el.flex_1().min_w_0())
+            .flex()
+            .justify_end()
+            .pr(px(S1))
+            .child(
+                div()
+                    .min_w_0()
+                    // Düğmeler ve ses çubuğu hapın boş yeri sayılmaz.
+                    .block_mouse_except_scroll()
+                    .flex()
+                    .items_center()
+                    .gap(px(S2))
+                    .child(tools)
+                    .child(volume),
+            );
 
         // Çalarken gelen bilgi / sorun bildirimi hapın içine sığmaz (şarkı
         // bilgisinin ~130 px'lik alanı): hapın üstünde şerit olarak çıkar.
@@ -620,11 +661,10 @@ impl Shell {
             .id("pill")
             .w_full()
             .h(px(PILL_HEIGHT))
-            .pl(px(S3))
-            .pr(px(S4))
+            .px(px(PILL_PAD))
             .flex()
             .items_center()
-            .gap(px(S4))
+            .gap(px(ZONE_GAP))
             .relative()
             .rounded_full()
             .shadow(capsule_shadow())
@@ -658,7 +698,8 @@ impl Shell {
         })
         .child(left)
         .child(center)
-        .child(volume)
+        .child(right)
+        .children(progress)
         .children(toast)
         .children(remote)
         .into_any_element()
@@ -722,9 +763,10 @@ impl Shell {
 
     /// Hapın solu: kapak ve iki satır (ya da bildirim, çevrimdışı, boş).
     fn pill_left(&self, m: &PillModel, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        // İki satırlık yazı kutusu: içeriği kadar, yalnız daralır. Bölgeyi
+        // dolduracaksa çağıran `flex_1` ekler.
         let two_lines = |first: AnyElement, second: AnyElement| {
             div()
-                .flex_1()
                 .min_w_0()
                 .flex()
                 .flex_col()
@@ -796,20 +838,39 @@ impl Shell {
                         .child(self.pill_artists(uri, name, artists, cx))
                         .into_any_element(),
                 };
+                // Beğen (Adım 13, `manage::pill_heart`): adın hemen yanında.
+                // Yazı kutusu içeriği kadar (esnemez, yalnız daralır): kalp
+                // kısa adda ada yapışık durur, uzun adda bölgenin sonuna
+                // dayanır ve ad "…" ile kısalır. Arası `S1`: kalbin 32 px'lik
+                // kutusundaki iç boşlukla birlikte kapak–yazı arasına (`S3`)
+                // eşit görünür.
+                let heart = self.pill_heart(
+                    uri,
+                    name,
+                    artists,
+                    m.live.then_some(("pill-heart", super::tab::HEART, window)),
+                    cx,
+                );
+                let lines = two_lines(
+                    title(
+                        text::line_with_tip("np-name", name.clone())
+                            .flex()
+                            .min_w_0()
+                            .into_any_element(),
+                    ),
+                    second,
+                );
                 row()
                     .child(art)
-                    .child(two_lines(
-                        title(text::line_with_tip("np-name", name.clone()).into_any_element()),
-                        second,
-                    ))
-                    // Beğen (Adım 13, `manage::pill_heart`).
-                    .children(self.pill_heart(
-                        uri,
-                        name,
-                        artists,
-                        m.live.then_some(("pill-heart", super::tab::HEART, window)),
-                        cx,
-                    ))
+                    .child(
+                        div()
+                            .min_w_0()
+                            .flex()
+                            .items_center()
+                            .gap(px(S1))
+                            .child(lines)
+                            .children(heart),
+                    )
                     // Şarkı değişince belirerek gelir.
                     .with_animation(
                         ElementId::Name(format!("np-{uri}").into()),
@@ -840,10 +901,15 @@ impl Shell {
                         PILL_COVER / 2.,
                         "music",
                     ))
-                    .child(two_lines(
-                        title(text::line_with_tip("np-pending", name.clone()).into_any_element()),
-                        second,
-                    ))
+                    .child(
+                        two_lines(
+                            title(
+                                text::line_with_tip("np-pending", name.clone()).into_any_element(),
+                            ),
+                            second,
+                        )
+                        .flex_1(),
+                    )
                     .into_any_element()
             }
             PillLeft::Notice(notice) => {
@@ -876,21 +942,24 @@ impl Shell {
                     .child(round_tile(
                         icon(icon_name, 20., tile_color).into_any_element(),
                     ))
-                    .child(two_lines(
-                        // Dar hapta (bilgi 112 px'e iner) kısalabilir: tamamı ipucunda.
-                        title(text::line_with_tip("np-off-title", *heading).into_any_element()),
-                        // Tıklanınca bir şey yapan ikinci satır ("Yeniden başlat")
-                        // bağlantı gibi: vurgu rengi, yarı kalın.
-                        div()
-                            .type_role(T_SECONDARY)
-                            .when(look.accent_detail, |d| {
-                                d.text_color(rgb(pill_accent(self.accent().text)))
-                                    .font_weight(FontWeight::SEMIBOLD)
-                            })
-                            .when(!look.accent_detail, |d| d.text_color(muted()))
-                            .child(line_with_tip("np-off-detail", *detail).flex().min_w_0())
-                            .into_any_element(),
-                    ));
+                    .child(
+                        two_lines(
+                            // Dar hapta kısalabilir: tamamı ipucunda.
+                            title(text::line_with_tip("np-off-title", *heading).into_any_element()),
+                            // Tıklanınca bir şey yapan ikinci satır ("Yeniden başlat")
+                            // bağlantı gibi: vurgu rengi, yarı kalın.
+                            div()
+                                .type_role(T_SECONDARY)
+                                .when(look.accent_detail, |d| {
+                                    d.text_color(rgb(pill_accent(self.accent().text)))
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                })
+                                .when(!look.accent_detail, |d| d.text_color(muted()))
+                                .child(line_with_tip("np-off-detail", *detail).flex().min_w_0())
+                                .into_any_element(),
+                        )
+                        .flex_1(),
+                    );
                 // Adım 17: giriş gerekirken / motor çökünce hapın bu bölümüne
                 // tıklamak o adımı yapar (kütüphane önbellekten görünürken de
                 // çıkmaz sokak olmasın). Hapın "paneli aç" tıklamasına gitmez.
@@ -911,23 +980,26 @@ impl Shell {
             }
             PillLeft::Idle => row()
                 .child(round_tile(icon("music", 18., label()).into_any_element()))
-                .child(two_lines(
-                    div()
-                        .type_role(T_BODY)
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(soft())
-                        .child(line(t!(NothingPlaying)))
-                        .into_any_element(),
-                    div()
-                        .type_role(T_SECONDARY)
-                        .text_color(label())
-                        .child(
-                            line_with_tip("np-start", start_name(m.start_title.as_deref()))
-                                .flex()
-                                .min_w_0(),
-                        )
-                        .into_any_element(),
-                ))
+                .child(
+                    two_lines(
+                        div()
+                            .type_role(T_BODY)
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(soft())
+                            .child(line(t!(NothingPlaying)))
+                            .into_any_element(),
+                        div()
+                            .type_role(T_SECONDARY)
+                            .text_color(label())
+                            .child(
+                                line_with_tip("np-start", start_name(m.start_title.as_deref()))
+                                    .flex()
+                                    .min_w_0(),
+                            )
+                            .into_any_element(),
+                    )
+                    .flex_1(),
+                )
                 .into_any_element(),
         }
     }
@@ -1143,9 +1215,26 @@ fn round_tile(content: AnyElement) -> AnyElement {
         .into_any_element()
 }
 
+/// Süre yazısının eni, şarkının toplam süresinden.
+fn time_width(duration_ms: u32) -> f32 {
+    match duration_ms {
+        0..600_000 => TIME_WIDTH_SHORT,
+        600_000..3_600_000 => TIME_WIDTH,
+        _ => TIME_WIDTH_LONG,
+    }
+}
+
+/// Ses çubuğunun dolu kısmı: yazı renginin yumuşatılmışı (ilerleme vurgu
+/// renginde; ses ikincil bir ayar, tam beyaz çubuk hapın sağını
+/// ağırlaştırıyordu). Sessizken daha da soluk: çubuk boşalmaz, sesi açınca
+/// nereye döneceği belli.
+fn volume_tone(muted: bool) -> u32 {
+    mix(palette().text, palette().bg, if muted { 0.62 } else { 0.3 })
+}
+
 /// Kaydırıcı tutamacının odak halkası: dolu kısmın renginden ayrışsın.
 fn fill_ring(fill: u32) -> u32 {
-    if fill == palette().text {
+    if fill == palette().text || fill == volume_tone(false) {
         DEFAULT_ACCENT.text
     } else {
         mix(fill, 0xFFFFFF, 0.5)
@@ -1162,10 +1251,23 @@ pub(super) fn toggle_button(
     look: Look,
     accent: u32,
 ) -> Stateful<Div> {
+    toggle_button_toned(id, icon_name, on, look, accent, soft())
+}
+
+/// `toggle_button`, kapalıyken simge tonu verilen (hapın sağındaki araçlar
+/// ikincil tonda).
+pub(super) fn toggle_button_toned(
+    id: impl Into<ElementId>,
+    icon_name: &'static str,
+    on: bool,
+    look: Look,
+    accent: u32,
+    tone: Rgba,
+) -> Stateful<Div> {
     let color: Hsla = match (look.enabled(), on) {
         (false, _) => disabled().into(),
         (true, true) => rgb(accent).into(),
-        (true, false) => soft().into(),
+        (true, false) => tone.into(),
     };
     let el = div()
         .id(id)
@@ -1217,7 +1319,7 @@ pub(super) type OnDown = Box<dyn Fn(&MouseDownEvent, &mut Window, &mut App) + 's
 
 /// İnce, tıklanabilir ve sürüklenebilir yatay çubuk (ilerleme, ses).
 /// Tıklama alanı 32 px yüksek, çizgi 4 px. Üzerine gelince ucunda bir tutamaç
-/// belirir ve dolu kısım tam beyaza döner. `focus` yoksa (vitrin) Tab
+/// belirir ve dolu kısım yazı rengine döner. `focus` yoksa (vitrin) Tab
 /// sırasına girmez; `on_down` yoksa tıklanmaz.
 pub(super) fn slider(
     id: &'static str,
@@ -1282,7 +1384,9 @@ pub(super) fn slider_hit(
                         .rounded(px(R_XS))
                         .bg(rgb(fill))
                         .when(enabled, |el| {
-                            el.group_hover(group.clone(), |s| s.bg(rgb(0xFFFFFF)))
+                            // Yazı rengi: koyu temada beyaz, açık temada koyu
+                            // (sabit beyaz, fildişi camda çubuğu siliyordu).
+                            el.group_hover(group.clone(), |s| s.bg(rgb(palette().text)))
                         }),
                 ),
         )
@@ -1303,6 +1407,82 @@ pub(super) fn slider_hit(
                     .group_hover(group, |s| s.opacity(1.)),
             )
         })
+        .into_any_element()
+}
+
+/// Hapın alt kenarındaki ilerleme çizgisi: düz kenar boyunca (yuvarlak
+/// uçların bittiği yerden, `EDGE_INSET`), kenarın üstüne oturur. Dolu kısım
+/// vurgu renginde. Tıklama alanı kenardan yukarı `EDGE_HIT`; üzerine gelince,
+/// sürüklerken ve klavye odağında çizgi kalınlaşır ve tutamaç belirir.
+/// `focus` yoksa (vitrin) Tab sırasına girmez; `on_down` yoksa tıklanmaz.
+fn edge_progress(
+    value: f32,
+    fill: u32,
+    focus: Option<(FocusHandle, bool)>,
+    dragging: bool,
+    bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
+    on_down: Option<OnDown>,
+) -> AnyElement {
+    let value = value.clamp(0.0, 1.0);
+    let group: SharedString = "slider-progress".into();
+    let ring = focus.as_ref().is_some_and(|(_, ring)| *ring);
+    let active = ring || dragging;
+    div()
+        .id("progress")
+        .when_some(focus, |el, (handle, _)| el.track_focus(&handle))
+        .group(group.clone())
+        .absolute()
+        .left(px(EDGE_INSET))
+        .right(px(EDGE_INSET))
+        .bottom_0()
+        .h(px(EDGE_HIT))
+        // Hapın boş yer tıklaması (panel) çalışmasın.
+        .block_mouse_except_scroll()
+        .when_some(on_down, |el, on_down| {
+            el.cursor_pointer()
+                .on_mouse_down(MouseButton::Left, on_down)
+        })
+        // Çizginin ekrandaki yeri (tıklamayı orana çevirmek için).
+        .child(
+            canvas(move |b, _, _| bounds.set(Some(b)), |_, _, _, _| {})
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+        )
+        .child(
+            div()
+                .absolute()
+                .left_0()
+                .right_0()
+                .bottom_0()
+                .h(px(if active { EDGE_LINE_HOVER } else { EDGE_LINE }))
+                .rounded(px(R_XS))
+                .bg(rgb(palette().track))
+                .group_hover(group.clone(), |s| s.h(px(EDGE_LINE_HOVER)))
+                .child(
+                    div()
+                        .h_full()
+                        .w(gpui::relative(value))
+                        .rounded(px(R_XS))
+                        .bg(rgb(fill)),
+                ),
+        )
+        .child(
+            div()
+                .absolute()
+                .bottom(px((EDGE_LINE_HOVER - SLIDER_THUMB) / 2.))
+                .left(gpui::relative(value))
+                .ml(px(-SLIDER_THUMB / 2.))
+                .size(px(SLIDER_THUMB))
+                .rounded_full()
+                .bg(rgb(0xFFFFFF))
+                .shadow(pill_shadow())
+                // Klavye odağında tutamaç vurgu renginde halka alır.
+                .when(ring, |el| el.border_2().border_color(rgb(fill_ring(fill))))
+                .opacity(if active { 1. } else { 0. })
+                .group_hover(group, |s| s.opacity(1.)),
+        )
         .into_any_element()
 }
 
@@ -1377,6 +1557,44 @@ mod tests {
                 danger_icon: false
             }
         );
+    }
+
+    /// Bölgelerin sığması: sol ve sağ bölge eşit ende. Süreler görünürken de
+    /// çekilince de sağ bölge araçları ve ses çubuğunun en dar hâlini alır;
+    /// şarkı adına en az 100 px kalır (eski düzende 76 px'ti).
+    #[test]
+    fn pill_zones_fit() {
+        assert_eq!(TIMES_MIN_PILL, 764.);
+        assert_eq!(VOLUME_SLIDER_MIN_PILL, 676.);
+        let zone = |pill: f32| {
+            let times = if pill >= TIMES_MIN_PILL {
+                2. * (TIME_WIDTH + TIME_GAP)
+            } else {
+                0.
+            };
+            (pill - 2. * PILL_PAD - 2. * ZONE_GAP - CONTROLS_WIDTH - times) / 2.
+        };
+        // Kapak, arası, kalp ve arası çıkınca şarkı adına kalan.
+        let name = |pill: f32| zone(pill) - PILL_COVER - S3 - S1 - 32.;
+        let mut pill = pill_width(crate::ui::MIN_WINDOW_WIDTH);
+        assert!(pill >= VOLUME_SLIDER_MIN_PILL);
+        while pill <= PILL_MAX_WIDTH {
+            assert!(zone(pill) >= ZONE_MIN, "{pill}: bölge {}", zone(pill));
+            assert!(name(pill) >= 100., "{pill}: ad {}", name(pill));
+            pill += 0.5;
+        }
+        // En geniş hapta ses çubuğu tam eninde, ad eskisinin 1,5 katından geniş.
+        assert!(zone(PILL_MAX_WIDTH) >= S1 + TOOLS_WIDTH + S1 + VOLUME_WIDTH);
+        assert!(name(PILL_MAX_WIDTH) >= 76. * 1.5);
+        // Süre yazısının eni toplam süreyle büyür.
+        assert_eq!(time_width(599_999), TIME_WIDTH_SHORT);
+        assert_eq!(time_width(600_000), TIME_WIDTH);
+        assert_eq!(time_width(3_599_999), TIME_WIDTH);
+        assert_eq!(time_width(3_600_000), TIME_WIDTH_LONG);
+        // İlerleme çizgisinin tıklama alanı düğmelerin (44 px çal düğmesi,
+        // ortada) ve kapağın altında kalır.
+        assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + 44.) / 2.);
+        assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + PILL_COVER) / 2.);
     }
 
     #[test]
