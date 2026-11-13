@@ -253,7 +253,7 @@ kbd {
   border-radius: 9999px;
 }
 .nav .lang a {
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 9999px;
   font: 600 12.5px/1.4 var(--mono);
   color: var(--muted);
@@ -836,8 +836,8 @@ kbd {
   color: var(--text);
 }
 .tablist .badge {
-  padding: 2px 7px;
-  font-size: 11px;
+  padding: 3px 9px;
+  font-size: 12px;
 }
 .panel {
   padding: 24px;
