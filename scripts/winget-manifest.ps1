@@ -26,6 +26,8 @@ try {
     $installerPath = Join-Path $manifestDir "$Owner.$Repository.installer.yaml"
     $yaml = Get-Content -Raw $installerPath
     $yaml = [regex]::Replace($yaml, '(?m)^PackageVersion: .*$', "PackageVersion: $Version")
+    # Önceki sürümün klasöründen kopyalanınca indirme adresleri de bu sürüme.
+    $yaml = [regex]::Replace($yaml, '/releases/download/v[^/]+/', "/releases/download/$tag/")
     foreach ($asset in $assets.Keys) {
         # Releases before 0.1.2 have no ARM64 installer; only fill entries the manifest lists.
         if ($yaml -notmatch [regex]::Escape("/$asset")) { continue }
@@ -38,6 +40,7 @@ try {
     Get-ChildItem -Path $manifestDir -Filter "*.yaml" | Where-Object FullName -ne $installerPath | ForEach-Object {
         $content = Get-Content -Raw $_.FullName
         $content = [regex]::Replace($content, '(?m)^PackageVersion: .*$', "PackageVersion: $Version")
+        $content = [regex]::Replace($content, '/releases/tag/v[^\s]+', "/releases/tag/$tag")
         Set-Content -Path $_.FullName -Value $content -Encoding utf8
     }
     Set-Content -Path $installerPath -Value $yaml -Encoding utf8
