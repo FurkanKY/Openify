@@ -2447,3 +2447,5 @@ h2.display,
     grid-column: 3 / 8;
   }
 }
+.chips-row li { padding: 8px 14px; }
+.ss-btn { padding: 8px 14px; }
