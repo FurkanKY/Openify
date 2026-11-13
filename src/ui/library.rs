@@ -62,6 +62,9 @@ pub(super) struct RowSpec {
     /// "Eklenme tarihi" sütunu: `Some(yazı)` sütun var (tarih bilinmiyorsa yazı boş),
     /// `None` sütun yok (albüm, sayfalar, dar pencere).
     pub added: Option<SharedString>,
+    /// Dinlenme sayısı sütunu: `Some(sayı)` sütun var (sayfa satırları,
+    /// yeterince geniş pencere), `None` yok (kütüphane listeleri, dar pencere).
+    pub plays: Option<u64>,
 }
 
 /// Seçim bitişik bir blok mu: (ilk satır, uzunluk).
@@ -963,6 +966,7 @@ impl Shell {
                                         .unwrap_or_default()
                                         .into()
                                 }),
+                                plays: None,
                             };
                             Some(this.song_row(spec, track, cx))
                         })
@@ -1058,6 +1062,7 @@ impl Shell {
             look,
             reorder: false,
             added: None,
+            plays: None,
         };
         self.song_row(spec, track, cx)
     }
@@ -1084,6 +1089,7 @@ impl Shell {
             look,
             reorder,
             added,
+            plays,
         } = spec;
         let accent = self.accent().text;
         // Numara sütunundaki her şey (numara, çal simgesi, ekolayzer, "#")
@@ -1270,6 +1276,20 @@ impl Shell {
                         .flex_none()
                         .flex()
                         .child(line_with_tip(("t-added", ix), when).flex().min_w_0()),
+                )
+            })
+            // Dinlenme sayısı (albüm ve sanatçı sayfaları; dar pencerede sütun yok).
+            .when_some(plays, |el, n| {
+                el.child(
+                    div()
+                        .w(px(PLAYS_COLUMN))
+                        .flex_none()
+                        .flex()
+                        .justify_end()
+                        .type_role(T_LABEL)
+                        .text_color(label())
+                        .tabular()
+                        .child(crate::i18n::num(n)),
                 )
             })
             // Beğenilenlerde her satır beğenili: kalp yalnız üzerine gelince.
@@ -1780,6 +1800,10 @@ const ALBUM_COLUMN: f32 = 3.;
 /// pencere, yerleşik panel açıkken ~1300 px altı).
 const ADDED_COLUMN: f32 = 132.;
 pub(super) const ADDED_MIN_WIDTH: f32 = 1000.;
+/// Dinlenme sayısı sütununun eni (sabit, sağa yaslı) ve görünmesi için içeriğin
+/// en az eni; daha darda "Eklenme tarihi" gibi gizlenir.
+const PLAYS_COLUMN: f32 = 72.;
+pub(super) const PLAYS_MIN_WIDTH: f32 = 1000.;
 
 fn column(grow: f32) -> gpui::Div {
     let mut el = div().flex_basis(gpui::relative(0.)).flex_shrink().min_w_0();

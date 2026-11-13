@@ -13,7 +13,7 @@
 
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     rc::Rc,
     sync::Arc,
     time::Instant,
@@ -42,8 +42,9 @@ use super::{
     theme::*,
 };
 use crate::engine::{
-    AlbumCard, AlbumPage, ArtistCard, ArtistPage, CollectionId, Command, LibraryCommand,
-    LibraryEvent, LibraryItem, RelatedList, ReleaseKind, SearchResults, TrackLinks, TrackRow,
+    AlbumCard, AlbumPage, AlbumPlaycounts, ArtistCard, ArtistPage, ArtistStats, CollectionId,
+    Command, LibraryCommand, LibraryEvent, LibraryItem, RelatedList, ReleaseKind, SearchResults,
+    TrackLinks, TrackRow,
 };
 use crate::{t, tf, tp};
 
@@ -98,6 +99,10 @@ pub struct PageState {
     pub history: History,
     pub artists: HashMap<String, PageLoad<ArtistPage>>,
     pub albums: HashMap<String, PageLoad<AlbumPage>>,
+    /// Sanatçı / albüm sayfalarının dinlenme sayıları (ayrı, isteğe bağlı
+    /// istek; gelmezse sayfa bugünkü gibi çizilir).
+    pub artist_stats: HashMap<String, Arc<ArtistStats>>,
+    pub album_plays: HashMap<String, Arc<AlbumPlaycounts>>,
     pub search: Option<SearchPage>,
     /// Sayfalardaki şarkı listeleri ("top:…", "album:…", "search:…").
     pub lists: HashMap<String, Arc<Vec<TrackRow>>>,
@@ -137,6 +142,8 @@ impl PageState {
             history: History::new(Route::Home),
             artists: HashMap::new(),
             albums: HashMap::new(),
+            artist_stats: HashMap::new(),
+            album_plays: HashMap::new(),
             search: None,
             lists: HashMap::new(),
             scroll: UniformListScrollHandle::new(),
@@ -759,6 +766,12 @@ impl Shell {
         match event {
             LibraryEvent::Artist { uri, page } => self.store_artist(uri, page),
             LibraryEvent::Album { uri, page } => self.store_album(uri, page),
+            LibraryEvent::ArtistStats { uri, stats } => {
+                self.pages.artist_stats.insert(uri, stats);
+            }
+            LibraryEvent::AlbumPlaycounts { uri, stats } => {
+                self.pages.album_plays.insert(uri, stats);
+            }
             LibraryEvent::PageFailed { uri, error } => {
                 // Gösterilen (bayat) sayfa hata yüzünden silinmez.
                 if uri.starts_with("spotify:artist:") {
@@ -1445,6 +1458,7 @@ impl Shell {
         tracks: &[TrackRow],
         limit: Option<usize>,
         album_artists: Option<&str>,
+        plays: Option<&BTreeMap<String, u64>>,
         playing_ix: Option<usize>,
         cx: &mut Context<Self>,
     ) -> AnyElement {
@@ -1463,12 +1477,17 @@ impl Shell {
                     .any(|t| !super::library::same_artists(a, &t.artists))
         });
         let playing_uri = self.state.track.as_ref().map(|t| t.uri.as_str());
+        // Dar pencerede dinlenme sayısı sütunu gizlenir ("Eklenme tarihi" gibi).
+        let show_plays = self.window_width - self.dock_inset() >= super::library::PLAYS_MIN_WIDTH;
         let mut rows = div().flex().flex_col();
         for (ix, track) in tracks[..shown].iter().enumerate() {
             let playing = match playing_ix {
                 Some(p) => p == ix,
                 None => playing_uri == Some(track.uri.as_str()),
             };
+            let plays = plays
+                .filter(|_| show_plays)
+                .and_then(|m| m.get(&track.uri).copied());
             rows = rows.child(
                 self.song_row(
                     RowSpec {
@@ -1485,6 +1504,7 @@ impl Shell {
                         look: Look::Live,
                         reorder: false,
                         added: None,
+                        plays,
                     },
                     track,
                     cx,
@@ -1685,9 +1705,16 @@ impl Shell {
         if !page.singles.is_empty() {
             meta_parts.push(tp!(ArtistSingleCount, page.singles.len()));
         }
-        let meta = div()
+        // Dinlenme sayıları ayrı gelir: varsa ad altındaki sakin satırda,
+        // yoksa satır bugünkü gibi kalır (iskelet yok).
+        let stats = self.pages.artist_stats.get(uri);
+        let monthly = stats
+            .filter(|s| s.monthly_listeners > 0)
+            .map(|s| tp!(ArtistMonthlyListeners, s.monthly_listeners));
+        let meta_line = div()
             .flex()
             .min_w_0()
+            .when_some(monthly, |el, text| el.child(text).child(" · "))
             .child(
                 div()
                     .font_weight(FontWeight::SEMIBOLD)
@@ -1696,6 +1723,32 @@ impl Shell {
             )
             .when(!meta_parts.is_empty(), |el| {
                 el.child(format!(" · {}", meta_parts.join(" · ")))
+            });
+        // Dünya sıralaması ve en çok dinlendiği şehirler: varsa tek sakin satır.
+        let note = stats.and_then(|s| {
+            let mut parts = Vec::new();
+            if let Some(rank) = s.world_rank.filter(|r| *r > 0) {
+                parts.push(tf!(ArtistWorldRank, crate::i18n::num(rank)));
+            }
+            if !s.top_cities.is_empty() {
+                let cities = s
+                    .top_cities
+                    .iter()
+                    .map(|c| c.city.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                parts.push(tf!(ArtistTopCities, cities));
+            }
+            (!parts.is_empty()).then(|| parts.join(" · "))
+        });
+        let meta = div()
+            .flex()
+            .flex_col()
+            .gap(px(S0))
+            .min_w_0()
+            .child(meta_line)
+            .when_some(note, |el, note| {
+                el.child(div().type_role(T_LABEL).text_color(label()).child(note))
             })
             .into_any_element();
         let list = format!("top:{uri}");
@@ -1765,6 +1818,7 @@ impl Shell {
                 &page.top_tracks,
                 Some(TOP_FEW),
                 None,
+                stats.map(|s| &s.track_plays),
                 None,
                 cx,
             ));
@@ -1978,6 +2032,7 @@ impl Shell {
                 &page.tracks,
                 None,
                 Some(&artists_text),
+                self.pages.album_plays.get(uri).map(|s| &s.track_plays),
                 playing_ix,
                 cx,
             )))
@@ -2060,6 +2115,7 @@ impl Shell {
                     Some(SEARCH_FEW),
                     None,
                     None,
+                    None,
                     cx,
                 ));
             }
@@ -2068,6 +2124,7 @@ impl Shell {
                     &format!("search:{query}"),
                     None,
                     &results.tracks,
+                    None,
                     None,
                     None,
                     None,

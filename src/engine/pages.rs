@@ -66,6 +66,8 @@ const TOP_TRACKS: usize = 10;
 /// Sayfa bu kadar sürece "taze" (arka planda yeniden isteme).
 const ARTIST_FRESH_MS: i64 = 6 * 3600 * 1000;
 const ALBUM_FRESH_MS: i64 = 7 * 24 * 3600 * 1000;
+/// Dinlenme sayıları (`stats.rs`) bir gün taze.
+const STATS_FRESH_MS: i64 = super::stats::STATS_FRESH_MS;
 /// Bundan eski sayfa hiç gösterilmez.
 const HARD_EXPIRE_MS: i64 = 60 * 24 * 3600 * 1000;
 /// Bellekte tutulan en çok sayfa.
@@ -190,6 +192,8 @@ pub(super) enum Kind {
     Related,
     /// Keşfet ve Ana sayfa verisi (`explore.rs`; tazelik kuralları orada).
     Explore,
+    /// Dinlenme sayıları (`stats.rs`): bir gün taze, sonra arkadan tazelenir.
+    Stats,
 }
 
 impl Kind {
@@ -199,6 +203,7 @@ impl Kind {
             Self::Album => ALBUM_FRESH_MS,
             Self::Related => super::related::FRESH_MS,
             Self::Explore => super::explore::STALE_MAX_MS,
+            Self::Stats => STATS_FRESH_MS,
         }
     }
 }
