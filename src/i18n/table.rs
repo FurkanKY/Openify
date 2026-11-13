@@ -896,4 +896,11 @@ keys! {
     FriendsBusyBody { en: "Trying again in a few minutes.", tr: "Birkaç dakika sonra yeniden denenecek." }
     FriendsDeniedBody { en: "Spotify doesn't share it with this account.", tr: "Spotify bunu bu hesapla paylaşmıyor." }
 
+    // Mini oynatıcı (ayrı, hep üstte duran küçük pencere; src/ui/mini.rs)
+    MiniPlayer { en: "Mini player", tr: "Mini oynatıcı" }
+    MiniShowMain { en: "Show main window", tr: "Ana pencereyi göster" }
+    MiniClose { en: "Close mini player", tr: "Mini oynatıcıyı kapat" }
+    CmdMiniPlayerDesc { en: "Keep playback controls in a small window that stays on top.", tr: "Çalma denetimlerini hep üstte kalan küçük bir pencerede tut." }
+    ShMiniPlayer { en: "Mini player", tr: "Mini oynatıcı" }
+
 }

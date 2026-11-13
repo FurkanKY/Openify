@@ -246,6 +246,18 @@ fn surface_top_for(p: Palette, glow: u32) -> u32 {
     mix(p.pill_glass_top, glow_top_for(p, glow), 0.6)
 }
 
+/// Mini oynatıcının (ayrı, küçük pencere) zemini: hapın cam zemini, çalan
+/// kapağın ışığıyla karışır (`surface_top`: arama yüzeyiyle aynı parlaklık
+/// tavanı), alta doğru camın kendisine döner. Açık temada fildişi, koyuda
+/// gece kalır; yazı her kapak renginde okunur (`theme` testleri).
+pub fn mini_fill(glow: u32) -> (u32, u32) {
+    mini_fill_for(palette(), glow)
+}
+
+fn mini_fill_for(p: Palette, glow: u32) -> (u32, u32) {
+    (surface_top_for(p, glow), p.pill_glass_bottom)
+}
+
 /// Ton katmanı: beyazın `alpha` saydamlığı.
 pub fn veil(alpha: f32) -> Rgba {
     with_alpha(if is_light() { palette().text } else { 0xFFFFFF }, alpha)
@@ -966,6 +978,8 @@ icons!(
     "cast",
     // Arama yüzeyi: son aramalar.
     "history",
+    // Mini oynatıcı (ayrı, hep üstte duran küçük pencere).
+    "picture-in-picture-2",
 );
 
 /// gpui'nin `svg().path(...)` için okuduğu gömülü dosyalar.
@@ -1262,6 +1276,35 @@ mod tests {
                     "etiket {:.2}:1, ışık {glow:06X}",
                     contrast(fg, bg)
                 );
+            }
+        }
+    }
+
+    /// Mini oynatıcının zemini: iki temada da en soluk yazı (ikincil) ve
+    /// etiket tonu, her kapak renginde ≥ 4,5:1. Kapak yokken (karanlık oda)
+    /// de aynı.
+    #[test]
+    fn mini_player_surface_stays_readable_on_every_glow() {
+        let mut glows: Vec<u32> = vec![palette().bg];
+        for hue in (0..360).step_by(15) {
+            for sat in [0.5, 0.7, 0.9] {
+                glows.push(hsl_to_rgb(hue as f32, sat, 0.42));
+            }
+        }
+        for p in [Palette::DARK, Palette::LIGHT] {
+            for glow in &glows {
+                let (top, bottom) = mini_fill_for(p, *glow);
+                for (name, bg) in [("üst", top), ("alt", bottom)] {
+                    for alpha in [p.muted_alpha, p.label_alpha] {
+                        let fg = mix(bg, p.text, alpha);
+                        assert!(
+                            contrast(fg, bg) >= 4.5,
+                            "mini {name} light={} {glow:06X}: {:.2}:1",
+                            p.light,
+                            contrast(fg, bg)
+                        );
+                    }
+                }
             }
         }
     }

@@ -56,6 +56,8 @@ mod tests {
         ("credits.rs", include_str!("credits.rs")),
         // Ekolayzer bölümü.
         ("equalizer.rs", include_str!("equalizer.rs")),
+        // Mini oynatıcı (ayrı pencere).
+        ("mini.rs", include_str!("mini.rs")),
     ];
 
     fn violations(rule: impl Fn(&str) -> bool) -> Vec<String> {

@@ -533,6 +533,25 @@ impl Shell {
         });
         // Sıra ve sözler paneli.
         let panel = if live { self.now.panel } else { None };
+        // Mini oynatıcı (ayrı, hep üstte duran pencere): açıkken vurgu
+        // renginde, kapalıyken sakin. Durum ana pencerede tutulmaz: pencere
+        // varsa açıktır.
+        let mini_open = live && self.mini.is_some();
+        let mini = toggle_button(
+            "mini",
+            "picture-in-picture-2",
+            mini_open,
+            look(&stops.mini, true),
+            accent,
+        )
+        .when(live, |el| {
+            el.track_focus(&stops.mini)
+                .on_click(cx.listener(|this, _, window, cx| {
+                    let screen = window.display(cx).map(|d| d.bounds());
+                    this.toggle_mini(screen, cx);
+                }))
+        })
+        .tooltip(Tooltip::text(t!(MiniPlayer), Some("Alt M")));
         let queue = toggle_button(
             "queue",
             "list-music",
@@ -563,6 +582,7 @@ impl Shell {
             .flex()
             .items_center()
             .gap(px(S1))
+            .child(mini)
             .child(queue)
             .child(lyrics)
             .child(mute)
@@ -1193,7 +1213,7 @@ pub(super) fn repeat_tip(repeat: RepeatMode) -> &'static str {
     }
 }
 
-type OnDown = Box<dyn Fn(&MouseDownEvent, &mut Window, &mut App) + 'static>;
+pub(super) type OnDown = Box<dyn Fn(&MouseDownEvent, &mut Window, &mut App) + 'static>;
 
 /// İnce, tıklanabilir ve sürüklenebilir yatay çubuk (ilerleme, ses).
 /// Tıklama alanı 32 px yüksek, çizgi 4 px. Üzerine gelince ucunda bir tutamaç

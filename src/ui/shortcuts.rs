@@ -146,6 +146,8 @@ pub enum Shortcut {
     Repeat,
     QueuePanel,
     LyricsPanel,
+    /// Mini oynatıcı penceresi (bkz. `ui::mini`).
+    MiniPlayer,
     FullScreen,
     Search,
     GlobalSearch,
@@ -241,6 +243,7 @@ const TABLE: &[Entry] = &[
         How::Keys,
         &[alt_shift("l")],
     ),
+    entry(Shortcut::MiniPlayer, Group::Panels, How::Keys, &[alt("m")]),
     entry(
         Shortcut::FullScreen,
         Group::Panels,
@@ -365,6 +368,7 @@ impl Shortcut {
             Shortcut::Repeat => t!(ShRepeat),
             Shortcut::QueuePanel => t!(ShQueuePanel),
             Shortcut::LyricsPanel => t!(ShLyricsPanel),
+            Shortcut::MiniPlayer => t!(ShMiniPlayer),
             Shortcut::FullScreen => t!(ShFullScreen),
             Shortcut::Search => t!(ShSearch),
             Shortcut::GlobalSearch => t!(ShGlobalSearch),

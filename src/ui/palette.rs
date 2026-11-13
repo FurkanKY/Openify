@@ -97,11 +97,13 @@ pub enum PaletteCommand {
     PrivateSession,
     /// Çalan şarkının radyosunu başlat (bkz. `listening`).
     StartRadio,
+    /// Mini oynatıcı penceresini aç / kapat (bkz. `mini`).
+    MiniPlayer,
 }
 
 /// Eylem, adı, açıklaması. Çal ve sessize al eylemlerinin adı o anki duruma
 /// göre değişir (bkz. `command_state`).
-fn commands() -> [(PaletteCommand, &'static str, &'static str); 16] {
+fn commands() -> [(PaletteCommand, &'static str, &'static str); 17] {
     [
         (PaletteCommand::TogglePlay, t!(CmdTogglePlay), ""),
         (PaletteCommand::Next, t!(CmdNext), ""),
@@ -135,6 +137,11 @@ fn commands() -> [(PaletteCommand, &'static str, &'static str); 16] {
             PaletteCommand::PrivateSession,
             t!(CmdPrivateSession),
             t!(CmdPrivateSessionDesc),
+        ),
+        (
+            PaletteCommand::MiniPlayer,
+            t!(MiniPlayer),
+            t!(CmdMiniPlayerDesc),
         ),
         (PaletteCommand::Settings, t!(Settings), t!(CmdSettingsDesc)),
         (
@@ -1405,6 +1412,7 @@ impl Shell {
             PaletteCommand::Tools => self.open_tools(cx),
             PaletteCommand::PrivateSession => self.toggle_private_session(cx),
             PaletteCommand::StartRadio => self.start_radio_from_current(cx),
+            PaletteCommand::MiniPlayer => self.toggle_mini(None, cx),
             // Paletin kendi satır onayı (ikinci Enter) zaten geçildi.
             PaletteCommand::Logout => self.sign_out(cx),
         }
@@ -2395,6 +2403,7 @@ fn command_icon(cmd: PaletteCommand) -> &'static str {
         PaletteCommand::Tools => "wrench",
         PaletteCommand::PrivateSession => "eye-off",
         PaletteCommand::StartRadio => "radio",
+        PaletteCommand::MiniPlayer => "picture-in-picture-2",
     }
 }
 

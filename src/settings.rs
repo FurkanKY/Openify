@@ -142,6 +142,14 @@ pub struct Settings {
     /// Arayüz dili: `"system"` (Windows'un görüntü dili), `"en"`, `"tr"` (bkz. `i18n`).
     pub language: String,
 
+    // ── Mini oynatıcı (bkz. `ui::mini`) ─────────────────────────────────
+    /// Mini oynatıcı penceresi açık mı? Kapalıyken pencere hiç yaratılmaz;
+    /// uygulama kapanırken son hâli buraya yazılır.
+    pub mini_open: bool,
+    /// Mini pencerenin ekrandaki yeri (mantıksal px, sol üst). Ekran dışında
+    /// kalmışsa açılışta görünür alana çekilir (`ui::mini::visible_pos`).
+    pub mini_pos: Option<[f32; 2]>,
+
     // ── Karıştırma ve sıra kuralları (bkz. `engine::rules`) ─────────────
     /// Karıştırılmış bağlamda aynı şarkının sürümlerinden (Remastered, Live,
     /// Radio Edit…) yalnız biri çalsın.
@@ -289,6 +297,8 @@ impl Default for Settings {
             global_hotkey: true,
             resume: true,
             language: "system".into(),
+            mini_open: false,
+            mini_pos: None,
             dedupe_versions: true,
             skip_explicit: false,
             blocked_artists: Vec::new(),
@@ -527,6 +537,14 @@ impl Settings {
         }
         if !crate::i18n::PREFS.contains(&self.language.as_str()) {
             self.language = Self::default().language;
+        }
+        // Mini pencerenin yeri: sonlu olmayan değer (elle düzenlenmiş dosya)
+        // atılır; ekran dışında kalıp kalmadığı pencere açılırken bakılır.
+        if self
+            .mini_pos
+            .is_some_and(|p| !p[0].is_finite() || !p[1].is_finite())
+        {
+            self.mini_pos = None;
         }
         // Boş aygıt adı "varsayılan" demektir.
         if self
@@ -1004,6 +1022,51 @@ mod tests {
         };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         assert!(back.sanitized().lyrics_translation);
+    }
+
+    /// Mini oynatıcı: varsayılan kapalı, eski dosyada alan yok; açık / konum
+    /// dosyada kalır ve bozuk konum atılır.
+    #[test]
+    fn mini_player_state_defaults_off_persists_and_drops_bad_positions() {
+        let d = Settings::default();
+        assert!(!d.mini_open && d.mini_pos.is_none());
+        let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
+        assert!(
+            !old.mini_open && old.mini_pos.is_none(),
+            "eski dosyada alan yok: kapalı"
+        );
+        assert_eq!(
+            old.version, SETTINGS_VERSION,
+            "yeni alan göç gerektirmez, sürüm artmaz"
+        );
+
+        let dir = temp_dir("mini");
+        let path = dir.join("settings.json");
+        let s = Settings {
+            mini_open: true,
+            mini_pos: Some([120.5, 48.0]),
+            ..Settings::default()
+        };
+        s.save_to(&path).unwrap();
+        let back = Settings::load_from(&path);
+        assert!(back.mini_open);
+        assert_eq!(back.mini_pos, Some([120.5, 48.0]));
+
+        // Elle düzenlenmiş dosyada bozuk konum atılır, açıklık korunur.
+        let nan = Settings {
+            mini_open: true,
+            mini_pos: Some([f32::NAN, 3.0]),
+            ..Settings::default()
+        };
+        let nan = nan.sanitized();
+        assert_eq!(nan.mini_pos, None);
+        assert!(nan.mini_open);
+        let inf = Settings {
+            mini_pos: Some([0.0, f32::INFINITY]),
+            ..Settings::default()
+        };
+        assert_eq!(inf.sanitized().mini_pos, None);
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

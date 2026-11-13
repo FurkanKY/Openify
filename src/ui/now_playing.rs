@@ -162,6 +162,7 @@ impl LyricScroll {
 pub(super) struct Stops {
     pub shuffle: FocusHandle,
     pub repeat: FocusHandle,
+    pub mini: FocusHandle,
     pub queue: FocusHandle,
     pub lyrics: FocusHandle,
 }
@@ -239,6 +240,7 @@ impl NowState {
             stops: Stops {
                 shuffle: stop(cx, super::tab::SHUFFLE),
                 repeat: stop(cx, super::tab::REPEAT),
+                mini: stop(cx, super::tab::MINI),
                 queue: stop(cx, super::tab::QUEUE),
                 lyrics: stop(cx, super::tab::LYRICS),
             },
@@ -789,7 +791,7 @@ impl Shell {
         // Odaktaki yeni düğmeyi gpui kendisi tıklar (Enter / Boşluk): genel
         // kısayol aynı tuşta ikinci kez çalışmasın.
         let s = &self.now.stops;
-        let on_stop = [&s.shuffle, &s.repeat, &s.queue, &s.lyrics]
+        let on_stop = [&s.shuffle, &s.repeat, &s.mini, &s.queue, &s.lyrics]
             .iter()
             .any(|h| h.is_focused(window));
         if on_stop && (key == "enter" || key == "space") {
