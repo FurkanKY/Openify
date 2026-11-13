@@ -23,7 +23,8 @@
 <meta property="og:locale" content="tr_TR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="../assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/InstrumentSerif-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/site.css">
 <script>document.documentElement.classList.add("js")</script>
 <script type="application/ld+json">
@@ -80,9 +81,10 @@
 <main id="main">
   <section class="hero">
     <div class="stage">
+    <canvas class="spectrum" data-spectrum="ascii" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-copy">
-        <h1>Spotify için native bir istemci, <span class="lit">baştan sona Rust.</span></h1>
+        <h1>Spotify için native bir istemci, <em>baştan sona Rust.</em></h1>
         <p class="lede">Openify, Spotify Premium hesabını librespot ile çalar, arayüzün her pikselini gpui ile çizer. İçinde tarayıcı da yok, Electron da; açıkken yaklaşık 70 MB bellek kullanır.</p>
         <div class="get" data-arch-swap>
           <a class="btn btn-primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">
@@ -94,13 +96,26 @@
             <span>Windows on ARM<small>ARM64 kurulum dosyası</small></span>
           </a>
         </div>
-        <p class="meta"><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a> · Windows 10 ve 11 · Spotify Premium gerekir</p>
+        <ul class="trust">
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Windows 10 ve 11</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Spotify Premium gerekir</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Ücretsiz ve açık kaynak</li>
+          <li><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a></li>
+        </ul>
       </div>
+      <div class="shot-wrap">
+      <ul class="callouts" aria-hidden="true">
+        <li class="callout c1"><span class="dot"></span>Ctrl K ile her şeyi ara</li>
+        <li class="callout c2"><span class="dot"></span>gpui ile GPU'da çiziliyor</li>
+        <li class="callout c3"><span class="dot"></span>librespot ile boşluksuz ses</li>
+        <li class="callout c4"><span class="dot"></span>Yaklaşık 70 MB bellek</li>
+      </ul>
       <div class="shot">
         <picture>
           <source media="(prefers-reduced-motion: reduce)" srcset="../assets/img/library-760.webp 760w, ../assets/img/library-1360.webp 1360w" sizes="(max-width: 1180px) 92vw, 1120px">
           <img src="../assets/img/demo.webp" width="960" height="600" fetchpriority="high" alt="Openify'dan kısa bir kayıt: arama yapılıyor, bir albüm açılıyor ve şarkı başlıyor">
         </picture>
+      </div>
       </div>
     </div>
     </div>
@@ -109,9 +124,9 @@
   <section class="metrics" aria-label="Ölçülen değerler">
     <div class="wrap">
       <dl class="metrics-row reveal">
-        <div class="metric"><dt>70<em>MB</em></dt><dd>bellek, pencere açıkken (aşağı yukarı)</dd></div>
-        <div class="metric"><dt>50–60<em>MB</em></dt><dd>bellek, tepsideyken</dd></div>
-        <div class="metric"><dt>0,5<em>sn</em></dt><dd>açılıştan ilk kareye (aşağı yukarı)</dd></div>
+        <div class="metric"><dt>70<em>MB</em></dt><dd>pencere açıkken kullandığı bellek (aşağı yukarı)</dd></div>
+        <div class="metric"><dt>50–60<em>MB</em></dt><dd>tepsiye küçültülmüşken kullandığı bellek</dd></div>
+        <div class="metric"><dt>0,5<em>sn</em></dt><dd>açılıştan ilk görüntüye kadar geçen süre</dd></div>
       </dl>
       <p class="metrics-note">Yazarın bilgisayarında, küçük bir kütüphaneyle ölçüldü. Kütüphanen büyüdükçe ya da donanımın farklıysa sayılar da değişir.</p>
     </div>
@@ -120,7 +135,7 @@
   <section class="section" id="features" aria-labelledby="features-title">
     <div class="wrap">
       <div class="section-head">
-        <h2 id="features-title">Müzik önde, arayüz geride.</h2>
+        <h2 id="features-title">Müzik önde, <em>arayüz geride.</em></h2>
         <p>Ana sayfa, Keşfet, Kütüphane, sanatçılar, albümler. Ekrandaki tek renk, o an çalan şarkının kapağından geliyor.</p>
       </div>
       <div class="bento">
@@ -179,7 +194,7 @@
   <section class="section tight" id="keys" aria-labelledby="keys-title">
     <div class="wrap split">
       <div class="section-head">
-        <h2 id="keys-title">Klavye kısayolları</h2>
+        <h2 id="keys-title">Elin <em>klavyeden kalkmasın.</em></h2>
         <p>Her şeyin bir kısayolu var. Tam liste için uygulamada <kbd>?</kbd> tuşuna bas; burada her gün kullanacakların var.</p>
       </div>
       <div class="card keymap reveal">
@@ -216,7 +231,7 @@
 
   <section class="section tight" id="stack" aria-labelledby="stack-title">
     <div class="wrap">
-      <h2 class="plain" id="stack-title">Nasıl yapıldı</h2>
+      <h2 class="display" id="stack-title">Nasıl <em>yapıldı?</em></h2>
       <div class="built">
         <div class="built-col reveal">
           <h3>Baştan sona native</h3>
@@ -256,7 +271,7 @@ velopack  = <span class="s">"=1.2.161"</span>
   <section class="section tight" id="install" aria-labelledby="install-title">
     <div class="wrap">
       <div class="section-head">
-        <h2 class="plain" id="install-title">Kurulum</h2>
+        <h2 id="install-title">Nasıl istersen <em>öyle kur.</em></h2>
         <p>Kurulum dosyası, taşınabilir zip ya da kaynak koddan build. Openify yalnız senin kullanıcı hesabına kurulur, yönetici izni istemez.</p>
       </div>
       <div class="install">
@@ -349,7 +364,7 @@ velopack  = <span class="s">"=1.2.161"</span>
       <div class="card repo-card reveal">
         <div>
           <a class="repo-name" href="https://github.com/FurkanKY/Openify"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.71 1.71.75.75 0 0 1-1.07 1.05A2.5 2.5 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.71A2.5 2.5 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.09a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></svg> FurkanKY / <b>Openify</b></a>
-          <h2 id="repo-title">Açık kaynak, herkesin gözü önünde.</h2>
+          <h2 id="repo-title">Açık kaynak, <em>herkesin gözü önünde.</em></h2>
           <p>Kodu oku, bir issue aç ya da PR gönder. Kuralları ve kontrolleri Katkı sayfası anlatıyor.</p>
           <ul class="repo-stats">
             <li>Rust</li>

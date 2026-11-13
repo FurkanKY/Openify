@@ -23,7 +23,8 @@
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="../assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/InstrumentSerif-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../assets/fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../assets/site.css">
 <script>document.documentElement.classList.add("js")</script>
 </head>
@@ -53,34 +54,41 @@
   </div>
 </header>
 
-<main id="main" class="docs">
+<main id="main" class="docs hub">
+  <canvas class="spectrum blocks" data-spectrum="blocks" aria-hidden="true"></canvas>
   <div class="wrap">
     <div class="doc-hub-head">
-      <h1>Openify documentation</h1>
+      <h1>Openify <em>documentation</em></h1>
       <p class="lede">How Openify works, what changed in each release, what it does with your data and how to contribute. Everything here comes from the project's own docs, written up for the site.</p>
     </div>
     <div class="doc-cards">
       <a class="card doc-card" href="how-it-works/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
         <h2>How it works</h2>
         <p>A tour of Openify&#x27;s architecture: threads, the UI and engine split, the audio path, persistence, Spotify access, Windows integration and vendored patches.</p>
       </a>
       <a class="card doc-card" href="changelog/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
         <h2>Release notes</h2>
         <p>What changed in each Openify release, from the first public build to the latest version, written in plain language.</p>
       </a>
       <a class="card doc-card" href="privacy/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
         <h2>Privacy and security</h2>
         <p>What Openify stores, which services it contacts, what it never does, how updates work and how to report a vulnerability.</p>
       </a>
       <a class="card doc-card" href="contribute/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4"/><path d="m13 4-2 2 2 2"/></svg>
         <h2>Contribute</h2>
         <p>How to file an issue, send a pull request, build Openify from source, run the tests and avoid the common gpui pitfalls.</p>
       </a>
       <a class="card doc-card" href="design/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
         <h2>Design system</h2>
         <p>Openify&#x27;s design system: a night listening room where the cover art is the only accent, with its palettes, type, spacing, rules and tests.</p>
       </a>
       <a class="card doc-card" href="licenses/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0L5 7ZM19 7l-3 6a3 3 0 0 0 6 0l-3-6Z"/></svg>
         <h2>Licenses</h2>
         <p>Openify is GPL-3.0-or-later. What that means for users and forks, plus the licenses of its fonts, icons, OPRA data and 629 Rust crates.</p>
       </a>

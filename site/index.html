@@ -23,7 +23,8 @@
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/InstrumentSerif-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="assets/fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="assets/site.css">
 <script>document.documentElement.classList.add("js")</script>
 <script type="application/ld+json">
@@ -80,9 +81,10 @@
 <main id="main">
   <section class="hero">
     <div class="stage">
+    <canvas class="spectrum" data-spectrum="ascii" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="hero-copy">
-        <h1>A native Spotify client, <span class="lit">written in Rust.</span></h1>
+        <h1>A native Spotify client, <em>written in Rust.</em></h1>
         <p class="lede">Openify plays your Spotify Premium account through librespot and draws every pixel with gpui. No web view, no Electron, about 70 MB of memory.</p>
         <div class="get" data-arch-swap>
           <a class="btn btn-primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">
@@ -94,13 +96,26 @@
             <span>Windows on ARM<small>ARM64 installer</small></span>
           </a>
         </div>
-        <p class="meta"><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a> · Windows 10 and 11 · Spotify Premium required</p>
+        <ul class="trust">
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Windows 10 and 11</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Spotify Premium required</li>
+          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Free and open source</li>
+          <li><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a></li>
+        </ul>
       </div>
+      <div class="shot-wrap">
+      <ul class="callouts" aria-hidden="true">
+        <li class="callout c1"><span class="dot"></span>Ctrl K searches everything</li>
+        <li class="callout c2"><span class="dot"></span>Drawn on the GPU with gpui</li>
+        <li class="callout c3"><span class="dot"></span>Gapless audio via librespot</li>
+        <li class="callout c4"><span class="dot"></span>About 70 MB of memory</li>
+      </ul>
       <div class="shot">
         <picture>
           <source media="(prefers-reduced-motion: reduce)" srcset="assets/img/library-760.webp 760w, assets/img/library-1360.webp 1360w" sizes="(max-width: 1180px) 92vw, 1120px">
           <img src="assets/img/demo.webp" width="960" height="600" fetchpriority="high" alt="A short recording in Openify: typing a search, opening an album and starting a song">
         </picture>
+      </div>
       </div>
     </div>
     </div>
@@ -120,7 +135,7 @@
   <section class="section" id="features" aria-labelledby="features-title">
     <div class="wrap">
       <div class="section-head">
-        <h2 id="features-title">Everything you play, nothing in the way.</h2>
+        <h2 id="features-title">Everything you play, <em>nothing in the way.</em></h2>
         <p>Home, Explore, Library, artists and albums, with the cover of the current song as the only colour in the room.</p>
       </div>
       <div class="bento">
@@ -179,7 +194,7 @@
   <section class="section tight" id="keys" aria-labelledby="keys-title">
     <div class="wrap split">
       <div class="section-head">
-        <h2 id="keys-title">Keyboard shortcuts</h2>
+        <h2 id="keys-title">Hands stay <em>on the keys.</em></h2>
         <p>Every action has one. Press <kbd>?</kbd> in the app for the full list; these are the ones you will use every day.</p>
       </div>
       <div class="card keymap reveal">
@@ -216,7 +231,7 @@
 
   <section class="section tight" id="stack" aria-labelledby="stack-title">
     <div class="wrap">
-      <h2 class="plain" id="stack-title">How it's built</h2>
+      <h2 class="display" id="stack-title">How it's <em>built.</em></h2>
       <div class="built">
         <div class="built-col reveal">
           <h3>Native all the way down</h3>
@@ -256,7 +271,7 @@ velopack  = <span class="s">"=1.2.161"</span>
   <section class="section tight" id="install" aria-labelledby="install-title">
     <div class="wrap">
       <div class="section-head">
-        <h2 class="plain" id="install-title">Install</h2>
+        <h2 id="install-title">Install it <em>your way.</em></h2>
         <p>Installer, portable zip or straight from source. Openify installs for your user only and needs no administrator rights.</p>
       </div>
       <div class="install">
@@ -349,7 +364,7 @@ velopack  = <span class="s">"=1.2.161"</span>
       <div class="card repo-card reveal">
         <div>
           <a class="repo-name" href="https://github.com/FurkanKY/Openify"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.71 1.71.75.75 0 0 1-1.07 1.05A2.5 2.5 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.71A2.5 2.5 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.09a.25.25 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></svg> FurkanKY / <b>Openify</b></a>
-          <h2 id="repo-title">Open source, built in the open.</h2>
+          <h2 id="repo-title">Open source, <em>built in the open.</em></h2>
           <p>Read the code, open an issue or send a pull request. The Contribute page explains the checks and conventions.</p>
           <ul class="repo-stats">
             <li>Rust</li>

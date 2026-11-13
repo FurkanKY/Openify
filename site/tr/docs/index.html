@@ -23,7 +23,8 @@
 <meta property="og:locale" content="tr_TR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
-<link rel="preload" href="../../assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../assets/fonts/InstrumentSerif-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../../assets/fonts/InstrumentSerif-Italic.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="../../assets/site.css">
 <script>document.documentElement.classList.add("js")</script>
 </head>
@@ -53,34 +54,41 @@
   </div>
 </header>
 
-<main id="main" class="docs">
+<main id="main" class="docs hub">
+  <canvas class="spectrum blocks" data-spectrum="blocks" aria-hidden="true"></canvas>
   <div class="wrap">
     <div class="doc-hub-head">
-      <h1>Openify belgeleri</h1>
+      <h1>Openify <em>belgeleri</em></h1>
       <p class="lede">Openify nasıl çalışıyor, hangi sürümde ne değişti, verilerinle ne yapıyor ve projeye nasıl katkı verirsin. Hepsi projenin kendi belgelerinden, site için yeniden yazıldı.</p>
     </div>
     <div class="doc-cards">
       <a class="card doc-card" href="how-it-works/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
         <h2>Nasıl çalışıyor</h2>
         <p>Openify&#x27;ın mimarisine tur: thread&#x27;ler, UI ile engine ayrımı, ses yolu, kalıcı veri, Spotify erişimi, Windows entegrasyonu ve vendor yamaları.</p>
       </a>
       <a class="card doc-card" href="changelog/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 2"/></svg>
         <h2>Sürüm notları</h2>
         <p>Openify&#x27;ın her sürümünde neyin eklendiği, değiştiği ve düzeldiği; ilk genel sürümden en yeniye, sade bir dille.</p>
       </a>
       <a class="card doc-card" href="privacy/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
         <h2>Gizlilik ve güvenlik</h2>
         <p>Openify&#x27;ın neyi nerede sakladığı, hangi dış servislerle konuştuğu, neyi yapmadığı, güncellemeler ve güvenlik açığı bildirimi.</p>
       </a>
       <a class="card doc-card" href="contribute/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v7M18 15.5V9a3 3 0 0 0-3-3h-4"/><path d="m13 4-2 2 2 2"/></svg>
         <h2>Katkı</h2>
         <p>Issue açmak, PR göndermek, Openify&#x27;ı kaynaktan derlemek, test çalıştırmak ve gpui tuzaklarından kaçınmak için pratik rehber.</p>
       </a>
       <a class="card doc-card" href="design/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg>
         <h2>Tasarım sistemi</h2>
         <p>Openify&#x27;ın tasarım sistemi: tek vurgusu kapak rengi olan sakin bir dinleme odası; paletler, yazı, boşluk, kurallar ve testler.</p>
       </a>
       <a class="card doc-card" href="licenses/">
+        <svg class="doc-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 6a3 3 0 0 0 6 0L5 7ZM19 7l-3 6a3 3 0 0 0 6 0l-3-6Z"/></svg>
         <h2>Lisanslar</h2>
         <p>Openify GPL-3.0-or-later lisanslı. Kullanıcılar ve fork&#x27;lar için ne anlama geldiği; font, ikon, OPRA verisi ve 629 Rust crate&#x27;inin lisansları.</p>
       </a>
