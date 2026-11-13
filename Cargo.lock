@@ -4762,6 +4762,7 @@ dependencies = [
  "gpui",
  "http",
  "http-body-util",
+ "iana-time-zone",
  "image",
  "keyring",
  "librespot",

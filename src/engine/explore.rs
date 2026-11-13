@@ -49,8 +49,27 @@ const MAX_CARDS: usize = 24;
 /// Spotify'ın tür sayfası adresleri (`browseAll` listesindeki sabit kimlikler).
 const NEW_RELEASES_PAGE: &str = "spotify:page:0JQ5DAqbMKFz6FAsUtgAab";
 const CHARTS_PAGE: &str = "spotify:page:0JQ5DAudkNjCgYMM0TZXDw";
-/// Ana sayfa sorgusu `timeZone` ister (günün saatine göre "daylist" vb.).
-const TIME_ZONE: &str = "Europe/Istanbul";
+/// Ana sayfa sorgusu `timeZone` ister (günün saatine göre "daylist" vb.):
+/// sistemin IANA saat dilimi (ör. "Europe/Berlin"); okunamazsa "UTC".
+fn time_zone() -> &'static str {
+    static TZ: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    TZ.get_or_init(|| {
+        iana_time_zone::get_timezone()
+            .ok()
+            .filter(|tz| valid_time_zone(tz))
+            .unwrap_or_else(|| "UTC".to_string())
+    })
+}
+
+/// IANA adı gibi görünüyor mu ("Bölge/Şehir" ya da "UTC"): boş ya da
+/// tuhaf bir değer Spotify'a gitmesin.
+fn valid_time_zone(tz: &str) -> bool {
+    tz == "UTC"
+        || (tz.contains('/')
+            && tz
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | '_' | '-' | '+')))
+}
 const INTEGRATION: &str = "INTEGRATION_WEB_PLAYER";
 
 // ── Türler ──────────────────────────────────────────────────────────────
@@ -529,7 +548,7 @@ fn home_variables() -> Value {
     json!({
         "includeHomeChapterVideoCards": false,
         "homeEndUserIntegration": INTEGRATION,
-        "timeZone": TIME_ZONE,
+        "timeZone": time_zone(),
         "sp_t": "",
         "facet": "",
         "sectionItemsLimit": 10,
@@ -605,6 +624,24 @@ pub async fn load(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn time_zone_is_the_system_zone_not_a_constant() {
+        let tz = time_zone();
+        assert!(valid_time_zone(tz), "{tz}");
+        assert_eq!(home_variables()["timeZone"], tz);
+        for ok in [
+            "Europe/Berlin",
+            "America/Argentina/Buenos_Aires",
+            "Etc/GMT+3",
+            "UTC",
+        ] {
+            assert!(valid_time_zone(ok), "{ok}");
+        }
+        for bad in ["", "Berlin", "Europe/Ber lin", "W. Europe Standard Time"] {
+            assert!(!valid_time_zone(bad), "{bad}");
+        }
+    }
 
     fn fixture(s: &str) -> Value {
         serde_json::from_str(s).expect("fixture JSON")

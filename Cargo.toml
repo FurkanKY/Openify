@@ -29,6 +29,7 @@ http = "1"
 # Benzer sanatçılar (src/engine/related.rs): yanıt gövdesini 429 yinelemesi olmadan
 # okumak için; librespot'un kullandığı sürüm, yeni indirme yok.
 http-body-util = "0.1"
+iana-time-zone = "0.1"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 keyring = "4"
 librespot = { version = "0.8.0", default-features = false, features = ["rodio-backend", "rustls-tls-native-roots"] }
