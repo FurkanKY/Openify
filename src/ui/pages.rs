@@ -54,13 +54,6 @@ const HEADER_ART_COMPACT: f32 = 128.;
 /// Albüm sayfasının büyük kapağı (Apple Music gibi başlıkta kahraman).
 const ALBUM_ART: f32 = 224.;
 const ALBUM_ART_COMPACT: f32 = 160.;
-/// Albüm listesi sayfa kenarından kenarına uzar (kütüphane listesi gibi,
-/// `theme::page_margin`; 7 Kasım: 1040 px üst sınırı sağda boş alan
-/// bırakıyordu). İçerik bu enden geniş olunca, albümde albüm sanatçısından
-/// farklı sanatçılı şarkı varsa sanatçılar başlığın altından ayrı bir
-/// sütuna geçer (ortadaki boşluk anlamlı veriyle dolar); yoksa başlık solda,
-/// süre sağda.
-const ALBUM_ARTIST_COLUMN_FROM: f32 = 1100.;
 /// Kartın en dar hâli: sütun sayısı buna göre, sonra kartlar esner.
 pub(super) const CARD_MIN: f32 = 152.;
 pub(super) const CARD_GAP: f32 = S4;
@@ -1469,12 +1462,13 @@ impl Shell {
             _ => tracks.len(),
         };
         let album = album_artists.is_some();
-        // Geniş albüm sayfası: farklı sanatçılı şarkı varsa sanatçılar sütunda.
-        let artist_column = album_artists.is_some_and(|a| {
-            self.window_width >= ALBUM_ARTIST_COLUMN_FROM
-                && tracks
-                    .iter()
-                    .any(|t| !super::library::same_artists(a, &t.artists))
+        // Albümde sanatçılar ya her satırda (en az bir şarkının sanatçısı
+        // albümünkinden farklıysa) ya hiçbirinde: karışık görünmesin. Ayrı
+        // sanatçı sütunu yok, ad şarkının altında (satırlar aynı düzende).
+        let hide_artists = album_artists.is_some_and(|a| {
+            tracks
+                .iter()
+                .all(|t| super::library::same_artists(a, &t.artists))
         });
         let playing_uri = self.state.track.as_ref().map(|t| t.uri.as_str());
         // Dar pencerede dinlenme sayısı sütunu gizlenir ("Eklenme tarihi" gibi).
@@ -1488,35 +1482,39 @@ impl Shell {
             let plays = plays
                 .filter(|_| show_plays)
                 .and_then(|m| m.get(&track.uri).copied());
-            rows = rows.child(
-                self.song_row(
-                    RowSpec {
-                        list: key.clone(),
-                        ix,
-                        show_cover: !album,
-                        show_album: !album,
-                        hide_artist: artist_column
-                            || album_artists
-                                .is_some_and(|a| super::library::same_artists(a, &track.artists)),
-                        artist_column,
-                        playing,
-                        selected: self.is_selected(&key, ix),
-                        look: Look::Live,
-                        reorder: false,
-                        added: None,
-                        plays,
-                    },
-                    track,
-                    cx,
-                ),
-            );
+            rows = rows.child(self.song_row(
+                RowSpec {
+                    list: key.clone(),
+                    ix,
+                    show_cover: !album,
+                    show_album: !album,
+                    hide_artist: hide_artists,
+                    artist_column: false,
+                    playing,
+                    selected: self.is_selected(&key, ix),
+                    look: Look::Live,
+                    reorder: false,
+                    added: None,
+                    plays,
+                },
+                track,
+                cx,
+            ));
         }
         let toggle = limit.is_some_and(|n| tracks.len() > n);
+        // Albümün tam listesinde sütun başlığı (kısa "Popüler" ve arama
+        // listelerinde yok): dinlenme sayısının ne olduğu da buradan okunur.
+        let header = album.then(|| {
+            let any_plays =
+                show_plays && plays.is_some_and(|m| tracks.iter().any(|t| m.contains_key(&t.uri)));
+            super::library::page_column_header(any_plays, self.margin())
+        });
         div()
             .pb(px(S6))
             .when_some(title, |el, t| {
                 el.child(self.section_title(list, t, toggle, cx))
             })
+            .children(header)
             .child(rows)
             .into_any_element()
     }

@@ -87,6 +87,7 @@ keys! {
     CloseFind { en: "Close search", tr: "Bulmayı kapat" }
     ColTitle { en: "Title", tr: "Şarkı" }
     ColDuration { en: "Duration", tr: "Süre" }
+    ColPlays { en: "Plays", tr: "Dinlenme" }
     DurMinutes { en: "{} min", tr: "{} dk" }
     DurHoursMinutes { en: "{} hr {} min", tr: "{} sa {} dk" }
 

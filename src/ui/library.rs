@@ -1022,6 +1022,7 @@ impl Shell {
             .child(column_header(
                 matches!(id, CollectionId::Album(_)),
                 self.shows_added_column(&id),
+                false,
                 page_margin(self.window_width),
             ))
             .child(body)
@@ -1898,7 +1899,13 @@ pub(super) fn equalizer(color: u32, playing: bool) -> AnyElement {
     equalizer_bars(color, eq_levels(playing))
 }
 
-fn column_header(album: bool, added: bool, margin: f32) -> AnyElement {
+/// Sayfalardaki şarkı listesinin sütun başlığı (albüm sayfası): satırlar
+/// gibi sayfa kenar boşluğunda. `plays`: dinlenme sayısı sütunu görünüyor mu.
+pub(super) fn page_column_header(plays: bool, margin: f32) -> AnyElement {
+    column_header(true, false, plays, margin)
+}
+
+fn column_header(album: bool, added: bool, plays: bool, margin: f32) -> AnyElement {
     div()
         .mx(px(margin - ROW_INSET))
         .px(px(ROW_INSET))
@@ -1921,6 +1928,16 @@ fn column_header(album: bool, added: bool, margin: f32) -> AnyElement {
                     .w(px(ADDED_COLUMN))
                     .flex_none()
                     .child(t!(ColDateAdded)),
+            )
+        })
+        .when(plays, |el| {
+            el.child(
+                div()
+                    .w(px(PLAYS_COLUMN))
+                    .flex_none()
+                    .flex()
+                    .justify_end()
+                    .child(t!(ColPlays)),
             )
         })
         // Kalp sütunu: başlığı yok.
