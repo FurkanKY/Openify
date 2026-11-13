@@ -87,7 +87,17 @@ counts and which fields are present, never names or titles.
 - `OPENIFY_TEST_PRIVATE=1`: start in a private session (icon in the title bar).
 - `OPENIFY_TEST_SEARCH_JSON=<file>`: with `OPENIFY_TEST_VIEW=search:<query>`, full
   search is filled from a recorded response instead of Spotify, for example
-  `src/engine/fixtures/search_desktop.json` (images stay empty).
+  `src/engine/fixtures/search_desktop.json` (images stay empty). The search
+  surface (Ctrl+K / the title-bar pill) reads the same file once you type (images
+  are kept, so cached covers show; the offline demo library in
+  `src/engine/seed_readme.rs` uses `https://demo.invalid/covers/...` URLs). Instead
+  of a file, `!loading` never answers (skeleton placeholders stay on screen) and
+  `!error` fails as if Spotify were unreachable. `OPENIFY_TEST_VIEW=palette` opens
+  the surface after `OPENIFY_TEST_VIEW_AFTER` seconds (default 3) and
+  `OPENIFY_TEST_VIEW=palette:<query>` opens it with the query typed: the reliable
+  way for screenshots. Typing with posted key presses (`ty:letters` or
+  `k:vk,scan` in `scripts/ekran-sinama.ps1`; `WM_CHAR` from `t:` never reaches it)
+  works for keyboard checks but now and then drops a letter.
 - `OPENIFY_TEST_FRIENDS_JSON=<file>`: friend activity is filled from a fixture and
   never touches the network. The "Show friend activity" setting is switched on in
   memory only and the title-bar button appears. `ageSeconds` in the file means

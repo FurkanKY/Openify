@@ -111,15 +111,36 @@ pub fn test_results() -> Option<SearchResults> {
     Some(results)
 }
 
-/// Geliştirme kancası: palet aramasının Spotify sonuçları da aynı kayıtlı
-/// yanıttan gelir (`OPENIFY_TEST_SEARCH_JSON`); resim adresleri olduğu gibi
-/// kalır (önbellekteki kapaklar çıksın). Yalnız sınama koşusunda.
-pub fn test_palette_results() -> Option<SearchResults> {
+/// Palet aramasının sınama kancası (`OPENIFY_TEST_SEARCH_JSON`, yalnız sınama
+/// koşusunda): Spotify sonuçları da aynı kayıtlı yanıttan gelir; resim
+/// adresleri olduğu gibi kalır (önbellekteki kapaklar çıksın). Dosya yerine
+/// `!loading` cevap hiç gelmeyen (iskelet), `!error` Spotify'a ulaşılamayan
+/// durumu gösterir.
+pub enum TestSearch {
+    /// Kanca yok: gerçek arama.
+    Live,
+    Results(SearchResults),
+    /// Cevap hiç gelmez (yükleniyor görünümü).
+    Hold,
+    /// Spotify'a ulaşılamadı.
+    Fail,
+}
+
+pub fn test_palette_search() -> TestSearch {
     if !crate::crash::is_test_run() {
-        return None;
+        return TestSearch::Live;
     }
-    let path = std::env::var_os("OPENIFY_TEST_SEARCH_JSON")?;
-    from_json(&std::fs::read_to_string(path).ok()?)
+    let Some(path) = std::env::var_os("OPENIFY_TEST_SEARCH_JSON") else {
+        return TestSearch::Live;
+    };
+    match path.to_str() {
+        Some("!loading") => TestSearch::Hold,
+        Some("!error") => TestSearch::Fail,
+        _ => std::fs::read_to_string(path)
+            .ok()
+            .and_then(|text| from_json(&text))
+            .map_or(TestSearch::Live, TestSearch::Results),
+    }
 }
 
 /// Kayıtlı bir `searchDesktop` yanıtını çözer (testler ve geliştirme kancası).

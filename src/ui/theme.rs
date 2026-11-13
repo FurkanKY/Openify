@@ -100,6 +100,58 @@ pub fn accent_veil(accent: u32, alpha: f32) -> Rgba {
     with_alpha(accent, alpha)
 }
 
+// ── Arama hapı ve arama yüzeyi ──────────────────────────────────────────
+//
+// Başlık çubuğundaki arama hapı ve Ctrl+K yüzeyindeki giriş hapı aynı dil:
+// zemin, çalan kapağın ışığının zeminle karışımı (opak; ışığın parlak
+// kapaklarda yazıyı bozmaması için parlaklık tavanlı) ve üstüne hafif bir beyaz
+// kat; kapak yokken (oda karanlık) yine de seçilir. Odakta vurgu renginde
+// ince halka ve onun dışında soluk ikinci halka.
+
+/// Hapın dinlenme dolgusunun ışıkla karışımı ve parlaklık tavanı. Tavan,
+/// yer tutucunun (%64) ve yazının her kapakta ≥ 4,5:1 kalması için.
+pub const SEARCH_MIX: f32 = 0.5;
+pub const SEARCH_MAX_LUMINANCE: f32 = 0.040;
+/// Üzerine gelince ve arama yüzeyinde (açık) biraz daha açık.
+pub const SEARCH_MIX_OPEN: f32 = 0.62;
+pub const SEARCH_MAX_LUMINANCE_OPEN: f32 = 0.05;
+/// Dolgunun üstündeki beyaz kat: kapak yokken de hap zeminden ayrılsın.
+pub const SEARCH_LIFT: f32 = 0.09;
+/// Odak halkasının dışındaki soluk ikinci halka (vurgu renginin saydamlığı).
+pub const SEARCH_HALO: f32 = 0.30;
+/// Yer tutucu yazının vurguya doğru ısınması (0 = ön plan rengi).
+pub const SEARCH_WARMTH: f32 = 0.22;
+
+/// Arama hapının dolgusu: `glow` ışığın zeminle karışımı, parlaklık
+/// tavanının altında kalana dek azaltılır, üstüne beyaz kat.
+pub fn search_fill(glow: u32, open: bool) -> u32 {
+    let (mut t, cap) = if open {
+        (SEARCH_MIX_OPEN, SEARCH_MAX_LUMINANCE_OPEN)
+    } else {
+        (SEARCH_MIX, SEARCH_MAX_LUMINANCE)
+    };
+    loop {
+        let base = mix(BG, glow, t);
+        let lifted = mix(base, 0xFFFFFF, SEARCH_LIFT);
+        if luminance(lifted) <= cap || t <= 0.0 {
+            return lifted;
+        }
+        t -= 0.02;
+    }
+}
+
+/// Arama yer tutucusunun yazısı: ön plan rengi, vurgu rengine doğru biraz
+/// ısıtılmış ("sıcak"), %78 sağlam.
+pub fn search_hint(accent: u32) -> Rgba {
+    with_alpha(mix(TEXT, accent, SEARCH_WARMTH), 0.78)
+}
+
+/// Arama yüzeyinin cam zemininin üstü: hapın camı ile kapak ışığının
+/// karışımı (ışığın tavanı `glow_top` ile aynı: etiketler okunur kalır).
+pub fn surface_top(glow: u32) -> u32 {
+    mix(PILL_GLASS_TOP, glow_top(glow), 0.6)
+}
+
 /// Ton katmanı: beyazın `alpha` saydamlığı.
 pub fn veil(alpha: f32) -> Rgba {
     with_alpha(0xFFFFFF, alpha)
@@ -278,10 +330,14 @@ pub const R_XS: f32 = 2.;
 pub const R_SM: f32 = 4.;
 /// Satırlar, düğme zeminleri, menü öğeleri.
 pub const R_MD: f32 = 6.;
-/// Raf kapakları, "Tümü" karosu, arama kutusu.
+/// Raf kapakları, "Tümü" karosu, kütüphane arama kutusu.
 pub const R_LG: f32 = 8.;
-/// Yüzen paneller (palet, menü).
+/// Yüzen paneller (menü, ipucu).
 pub const R_XL: f32 = 12.;
+/// Arama yüzeyi (Ctrl+K): büyük, yumuşak köşe; içindeki kartlar `R_LG`.
+pub const R_2XL: f32 = 20.;
+/// Tam yuvarlak: başlık çubuğundaki arama hapı, çipler, yuvarlak düğmeler.
+pub const R_FULL: f32 = 9999.;
 
 // ── Derinlik ────────────────────────────────────────────────────────────
 
@@ -673,6 +729,8 @@ icons!(
     // Bir anlam, bir simge: "Hiçbir yerde çalma" (ban), Connect şeridi (cast).
     "ban",
     "cast",
+    // Arama yüzeyi: son aramalar.
+    "history",
 );
 
 /// gpui'nin `svg().path(...)` için okuduğu gömülü dosyalar.
@@ -806,6 +864,40 @@ mod tests {
             worst.1,
             worst.2
         );
+    }
+
+    /// Çıta: arama hapının yer tutucusu (ısıtılmış, %78) hem dinlenme hem açık
+    /// dolguda, etiket tonu arama yüzeyinin cam zemininde (üst ve alt) her
+    /// kapak ışığında ≥ 4,5:1; kapak yokken (karanlık oda) de.
+    #[test]
+    fn search_pill_and_surface_stay_readable_on_every_glow() {
+        let mut glows: Vec<u32> = vec![BG];
+        for hue in (0..360).step_by(10) {
+            for sat in [0.5, 0.7, 0.9] {
+                glows.push(hsl_to_rgb(hue as f32, sat, 0.42));
+            }
+        }
+        for glow in glows {
+            let accent = ensure_contrast(glow, glow_top(glow), 4.5);
+            for open in [false, true] {
+                let fill = search_fill(glow, open);
+                let hint = search_hint(accent);
+                let fg = mix(fill, mix(TEXT, accent, SEARCH_WARMTH), hint.a);
+                assert!(
+                    contrast(fg, fill) >= 4.5,
+                    "yer tutucu {:.2}:1, ışık {glow:06X}, açık {open}",
+                    contrast(fg, fill)
+                );
+            }
+            for bg in [surface_top(glow), PILL_GLASS_BOTTOM] {
+                let fg = mix(bg, TEXT, LABEL_ALPHA);
+                assert!(
+                    contrast(fg, bg) >= 4.5,
+                    "etiket {:.2}:1, ışık {glow:06X}",
+                    contrast(fg, bg)
+                );
+            }
+        }
     }
 
     #[test]

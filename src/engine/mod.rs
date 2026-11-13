@@ -87,8 +87,7 @@ pub use rules::{BLOCKED_MAX, Rules, Traits, fold as fold_name};
 #[cfg(test)]
 pub use search::from_json as search_from_json;
 pub use search::{
-    SearchHit, SearchResults, test_palette_results as test_palette_search_results,
-    test_results as test_search_results,
+    SearchHit, SearchResults, TestSearch, test_palette_search, test_results as test_search_results,
 };
 // Sayfalar ve kütüphane yazmaları (Adım 12–13, bkz. `wire.rs`).
 pub use edits::{AddPosition, EditOp, FailKind, new_temp_id, same_edit};

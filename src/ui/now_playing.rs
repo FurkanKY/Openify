@@ -1206,6 +1206,33 @@ impl Shell {
         // Sayfalar: "home", "explore", "library", "recent", "settings", "category:<sayfa kimliği>", "search:<sorgu>", "artist:<uri>", "album:<uri>"
         // (arama sayfası paletten Ctrl+Enter ister, sınamada iletiyle
         // gönderilemiyor; yanlış adres hata hâlini gösterir).
+        // `palette` / `palette:<sorgu>`: arama yüzeyi açık gelir, sorgu yazılmış
+        // (klavye iletileri yazıyı kimi zaman yutuyor; ekran görüntüsü için
+        // kesin yol). `OPENIFY_TEST_VIEW_AFTER` saniye sonra, varsayılan 3.
+        if view == "palette" || view.starts_with("palette:") {
+            let query = view
+                .strip_prefix("palette:")
+                .unwrap_or_default()
+                .to_string();
+            let after = std::env::var("OPENIFY_TEST_VIEW_AFTER")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(3);
+            cx.spawn(async move |this, cx| {
+                cx.background_executor()
+                    .timer(std::time::Duration::from_secs(after))
+                    .await;
+                let _ = this.update(cx, |shell, cx| {
+                    shell.open_palette(cx);
+                    if !query.is_empty() {
+                        shell.palette.query = query;
+                        shell.on_query_changed(cx);
+                    }
+                });
+            })
+            .detach();
+            return;
+        }
         use super::history::Route;
         let route = match view.split_once(':') {
             Some(("search", q)) => Some(Route::Search(q.to_string())),

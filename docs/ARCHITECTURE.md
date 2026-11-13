@@ -666,7 +666,7 @@ re-apply the patches from the `OPENIFY:` markers and update the `OPENIFY.md`.
 | `pill.rs`, `pill_glass.rs`, `player.rs`, `now_panel.rs`, `queue_panel.rs`, `lyrics_view.rs`, `fullscreen.rs`, `now_playing.rs` | Floating player pill, UI-side playback state, right-hand panel, queue, lyrics, full-screen view. |
 | `shortcuts.rs` | The single table of bound shortcuts (`Shortcut`, exact modifier matching): every key handler resolves keys through it and the `?` / Ctrl+/ help overlay is drawn from it; tests catch a shortcut no handler uses. |
 | `tools.rs`, `tools_view.rs` | Library tools page (`Route::Tools`): selection boxes (own scrolling, one Tab stop each), previews, bulk confirmation, name field, backup / stats states, play recorder; test script hook `OPENIFY_TEST_TOOLS`. |
-| `palette.rs`, `fuzzy.rs`, `manage.rs`, `history.rs`, `popups.rs`, `integration.rs`, `windows_titlebar.rs` | Command palette (Ctrl+K), fuzzy matching, library management (menus, drag reorder, undo), back/forward, popup windows, OS bridge, title bar. |
+| `palette.rs`, `fuzzy.rs`, `manage.rs`, `history.rs`, `popups.rs`, `integration.rs`, `windows_titlebar.rs` | Music search surface (Ctrl+K, title-bar pill: best result, songs, artists, albums and playlists, skeletons, grid keyboard navigation), fuzzy matching, library management (menus, drag reorder, undo), back/forward, popup windows, OS bridge, title bar. |
 | `gallery.rs`, `frames.rs`, `design_rules.rs` | Component gallery (`OPENIFY_GALLERY=1`), frame-time stats, design-rule tests. |
 
 ## 10. Build, run, test

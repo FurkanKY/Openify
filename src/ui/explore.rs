@@ -675,6 +675,12 @@ impl Shell {
 }
 
 impl ExploreUi {
+    /// Tür ve ruh hâli karoları (önbellekten ya da Keşfet'e girilince gelen);
+    /// henüz yoksa `None` (arama yüzeyi tür çiplerini göstermez).
+    pub fn categories(&self) -> Option<&Arc<CategoryList>> {
+        self.categories.as_ref()
+    }
+
     /// Anahtarın verisi elde mi?
     pub fn has(&self, key: &ExploreKey) -> bool {
         match key {

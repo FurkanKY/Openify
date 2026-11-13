@@ -242,18 +242,19 @@ keys! {
     ShDelete { en: "Remove the selected songs (from your own playlist or the queue)", tr: "Seçili şarkıları çıkar (kendi listenden ya da sıradan)" }
     ShRename { en: "Rename the open playlist", tr: "Açık listeni yeniden adlandır" }
     ShContextMenu { en: "Menu for the selected song (like right-click)", tr: "Seçili şarkının menüsü (sağ tık gibi)" }
-    SearchPlaceholder { en: "What do you want to play?", tr: "Ne dinlemek istersin?" }
-    PaletteYourSongs { en: "Your songs", tr: "Şarkıların" }
-    PaletteMore { en: "More", tr: "Daha fazlası" }
-    PaletteAllResults { en: "See all results", tr: "Bütün sonuçları gör" }
-    PaletteAllResultsDesc { en: "Songs, artists, albums and playlists for “{}”", tr: "“{}” için şarkılar, sanatçılar, albümler, listeler" }
+    SearchPlaceholder { en: "What are you in the mood for?", tr: "Bugün ne dinlemek istersin?" }
+    PaletteListenAgain { en: "Listen again", tr: "Tekrar dinle" }
+    PaletteBrowseGenres { en: "Browse by genre", tr: "Türlere göz at" }
+    PaletteInvite { en: "Search for artists, songs, albums and playlists.", tr: "Sanatçı, şarkı, albüm ve liste ara." }
+    PaletteTopResult { en: "Top result", tr: "En iyi sonuç" }
+    PaletteAlbumsLists { en: "Albums and playlists", tr: "Albümler ve listeler" }
+    PaletteNoResultsFor { en: "Nothing found for “{}”", tr: "“{}” için bir şey bulunamadı" }
+    PaletteActions { en: "Actions", tr: "Eylemler" }
+    PaletteAllResultsFor { en: "All results for “{}”", tr: "“{}” için tüm sonuçlar" }
+    KindSong { en: "Song", tr: "Şarkı" }
     PaletteRecentSearches { en: "Recent searches", tr: "Son aramalar" }
-    PaletteSearching { en: "Searching…", tr: "Aranıyor…" }
-    PaletteNoResults { en: "No results.", tr: "Sonuç yok." }
     PaletteConfirmSignOut { en: "Click again or press Enter to sign out", tr: "Çıkış yapmak için yeniden tıkla ya da Enter'a bas" }
     PaletteConfirmSignOutDesc { en: concat!("Your saved sign-in is deleted and ", app_name!(), " quits · Esc to cancel"), tr: concat!("Kayıtlı giriş silinir, ", app_name!(), " kapanır · Vazgeçmek için Esc") }
-    PaletteSectionAccount { en: "Account", tr: "Hesap" }
-    PaletteSectionCommands { en: "Commands", tr: "Komutlar" }
     PaletteSearchOffline { en: "Can't reach Spotify. Searching your library only.", tr: "Spotify'a ulaşılamadı; yalnızca kütüphanende aranıyor." }
     PaletteSearchBusy { en: "Spotify is busy right now. Searching your library only.", tr: "Spotify şu an yoğun; yalnızca kütüphanende aranıyor." }
     PaletteSearchFailed { en: "Couldn't search Spotify. Searching your library only.", tr: "Spotify'da aranamadı; yalnızca kütüphanende aranıyor." }

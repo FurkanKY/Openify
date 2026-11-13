@@ -4,7 +4,7 @@ A fast, quiet, native Spotify client for Windows. It plays music through your ow
 
 ![Library](docs/screenshots/library.png)
 
-![Openify in use: command palette, an album, playback](docs/screenshots/demo.gif)
+![Openify in use: search, an album, playback](docs/screenshots/demo.gif)
 
 > **Status:** early (0.1). Friend activity and artist following are **experimental**: they have had only limited testing against a live account and may break. [Download the installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) or [build it from source](#build-from-source).
 
@@ -15,7 +15,7 @@ Openify is a desktop player written in Rust. The interface is drawn with [gpui](
 ## Highlights
 
 - **Light and quick.** Measured on the author's machine with a small library: about 70 MB of memory with the window open, about 50 to 60 MB when hidden in the tray, and the first frame about half a second after launch. Numbers will vary with library size and hardware. Pages you have opened before come from a local cache and appear immediately while they refresh.
-- **Keyboard first.** `Ctrl+K` opens a command palette that searches your library and Spotify and runs commands. `Space`, `Ctrl+←/→`, `Ctrl+↑/↓` and friends control playback, `?` shows every shortcut. Media keys, the tray icon, the Windows media overlay and an optional global search hotkey work too.
+- **Keyboard first.** `Ctrl+K` (or a click on the search pill) opens a search surface: a top result, songs, artists, albums and playlists from your library and Spotify, and a few actions when you type their name. `Space`, `Ctrl+←/→`, `Ctrl+↑/↓` and friends control playback, `?` shows every shortcut. Media keys, the tray icon, the Windows media overlay and an optional global search hotkey work too.
 - **Gapless playback and crossfade.** Songs that follow each other on an album play without a gap. Optional crossfade between songs (2 to 12 seconds), volume normalization with three levels and quality up to 320 kbps. Playback normally recovers by itself when you unplug or switch an output device.
 - **Equalizer and headphone profiles.** A 10-band equalizer with presets and a preamp, and a headphone profile search backed by the open [OPRA](https://github.com/opra-project/OPRA) database: pick your model and get a ready-made correction curve fitted to the ten bands.
 - **Library tools.** Find duplicate songs and different versions of the same song (remaster, live, radio edit) in a playlist, merge or split playlists, sort a playlist permanently, back everything up to a JSON file, and see your own listening statistics. Library edits can be undone with `Ctrl+Z`, and edits made while you are offline are queued and sent when you are back online.
@@ -34,8 +34,8 @@ The screenshots show Spotify's own public playlists and albums with a sample pro
 | A Spotify playlist with the floating player | Full-screen lyrics with translation |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Library tools](docs/screenshots/tools.png) |
 | Equalizer and headphone profile | Duplicate finder in the library tools |
-| ![Album](docs/screenshots/album.png) | ![Command palette](docs/screenshots/palette.png) |
-| An album page | Command palette (Ctrl+K) |
+| ![Album](docs/screenshots/album.png) | ![Search](docs/screenshots/palette.png) |
+| An album page | Search (Ctrl+K) |
 | ![Now playing](docs/screenshots/now-playing.png) | |
 | Now playing panel | |
 

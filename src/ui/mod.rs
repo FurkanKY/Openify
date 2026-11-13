@@ -108,8 +108,10 @@ const TITLEBAR_HEIGHT: f32 = 44.;
 /// Sağ üstteki küçült / büyüt / kapat düğmelerinin her birinin eni
 /// (Windows 11'in kendi başlık düğmeleri gibi).
 const CAPTION_BUTTON_WIDTH: f32 = 46.;
-/// Başlık çubuğundaki arama alanının boyu.
+/// Kütüphane arama alanının boyu.
 const SEARCH_HEIGHT: f32 = 32.;
+/// Başlık çubuğundaki arama hapının boyu (çubuk 44 px: dört px pay).
+const TITLE_SEARCH_HEIGHT: f32 = 36.;
 /// Hap zamanlayıcısının en kısa ve en uzun beklemesi (ms). Hap yalnız ekranda
 /// bir şey değişince (dolu kısım bir piksel uzayınca ya da süre yazısı bir
 /// saniye ilerleyince) yeniden çizilir; en kısa bekleme, çok kısa şarkıda ya
@@ -272,6 +274,10 @@ struct Shell {
     /// Pencerenin içerik genişliği (px; yerleşik panel açıkken onun solu),
     /// son çizimden. Rafa kaç kart sığacağı ve ızgaranın sütunları bundan.
     window_width: f32,
+    /// Pencerenin eni ve boyu (px), son çizimden: arama hapının eni ve arama
+    /// yüzeyinin sığacağı yer bundan.
+    viewport_w: f32,
+    viewport_h: f32,
     /// Hapın eni (px), son çizimden: pencereden (`pill_width`), yerleşik
     /// panele yetişirse daha dar. Dar hapın kuralları buna göre.
     pill_width: f32,
@@ -448,6 +454,8 @@ impl Shell {
             notice_expiry: None,
             image_refresh: None,
             window_width: f32::from(window.viewport_size().width),
+            viewport_w: f32::from(window.viewport_size().width),
+            viewport_h: f32::from(window.viewport_size().height),
             pill_width: pill_width(f32::from(window.viewport_size().width)),
             _events: events_task,
             _appearance: appearance,
@@ -994,6 +1002,25 @@ impl Shell {
             cx.stop_propagation();
             return;
         }
+        // Odak arama hapındayken yazmaya başlamak aramayı açar, ilk harf girişe
+        // düşer (Enter / Boşluk gpui'nin klavye tıklamasıyla zaten açar).
+        if self.keyboard_focus && self.nav.focused(window) == Some(NavTarget::Search) {
+            let ks = &event.keystroke;
+            let typed = ks
+                .key_char
+                .as_deref()
+                .filter(|c| !c.trim().is_empty() && !c.chars().any(char::is_control));
+            if let Some(ch) = typed
+                && !ks.modifiers.control
+                && !ks.modifiers.alt
+            {
+                self.open_palette(cx);
+                self.palette.query.push_str(ch);
+                self.on_query_changed(cx);
+                cx.stop_propagation();
+                return;
+            }
+        }
         // Profil menüsü, aygıt listesi, onay kutusu ve Ctrl+, (bkz. `settings`).
         if self.settings_key(event, cx) {
             cx.stop_propagation();
@@ -1496,7 +1523,7 @@ impl Shell {
         let search = AnyView::from(self.views.search.clone()).cached(
             StyleRefinement::default()
                 .w(px(self.search_width()))
-                .h(px(SEARCH_HEIGHT))
+                .h(px(TITLE_SEARCH_HEIGHT))
                 .flex_shrink_0(),
         );
 
@@ -1588,45 +1615,73 @@ impl Shell {
             .into_any_element()
     }
 
-    /// Dar pencerede arama kısalır: sağdaki sürükleme alanı daralmasın.
+    /// Başlık çubuğundaki arama hapının eni: geniş pencerede geniş, pencere
+    /// daraldıkça küçülür (bkz. `search_width_for`).
     fn search_width(&self) -> f32 {
-        if self.compact { 280. } else { 420. }
+        search_width_for(self.viewport_w)
     }
 
-    /// Başlık çubuğundaki arama alanı (kendi görünümünde çizilir).
+    /// Başlık çubuğundaki arama hapı (kendi görünümünde çizilir): tam yuvarlak,
+    /// çalan kapağın ışığıyla hafifçe tonlu dolgu, solda büyüteç, sıcak yer
+    /// tutucu. Üzerine gelince dolgu açılır (140 ms), klavye odağında vurgu
+    /// renginde ince halka ve dışında soluk ikinci halka. Tuş ipucu yok:
+    /// tıklamak, yazmaya başlamak ve Ctrl+K aynı arama yüzeyini açar.
     fn render_search(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        let accent = self.accent();
+        let focused = self.look(&self.nav.search, window, true) == Look::Focus;
         div()
-            .id("titlebar-search")
+            .relative()
             .w(px(self.search_width()))
-            .h(px(SEARCH_HEIGHT))
-            .px(px(S3))
-            .rounded(px(R_LG))
-            .flex()
-            .items_center()
-            .gap(px(S2))
-            .bg(shade(SHADE_INPUT))
-            .border_1()
-            .border_color(veil(LINE_INPUT))
-            .cursor_pointer()
-            .hover(|s| {
-                s.bg(shade(SHADE_INPUT_HOVER))
-                    .border_color(veil(LINE_HOVER))
+            .h(px(TITLE_SEARCH_HEIGHT))
+            .flex_none()
+            .when(focused, |el| {
+                el.child(
+                    div()
+                        .absolute()
+                        .top(px(-S0))
+                        .left(px(-S0))
+                        .right(px(-S0))
+                        .bottom(px(-S0))
+                        .rounded(px(R_FULL))
+                        .border_2()
+                        .border_color(accent_veil(accent.text, SEARCH_HALO)),
+                )
             })
-            .active(|s| s.bg(shade(SCRIM)))
-            .track_focus(&self.nav.search)
-            .when(
-                self.look(&self.nav.search, window, true) == Look::Focus,
-                |el| el.border_color(rgb(self.accent().text)),
-            )
-            .on_click(cx.listener(|this, _, _, cx| this.open_palette(cx)))
-            .child(icon("search", 14., muted()))
             .child(
                 div()
-                    .flex_1()
-                    .min_w_0()
-                    .type_role(T_SECONDARY)
-                    .text_color(muted())
-                    .child(line(palette::search_placeholder())),
+                    .id("titlebar-search")
+                    .relative()
+                    .size_full()
+                    .px(px(S4))
+                    .rounded(px(R_FULL))
+                    .flex()
+                    .items_center()
+                    .gap(px(S3))
+                    .bg(rgb(search_fill(accent.glow, false)))
+                    .border_1()
+                    .border_color(if focused {
+                        rgb(accent.text)
+                    } else {
+                        veil(LINE_INPUT)
+                    })
+                    .cursor_pointer()
+                    .track_focus(&self.nav.search)
+                    .on_click(cx.listener(|this, _, _, cx| this.open_palette(cx)))
+                    .child(tween::hover_fill(
+                        veil(VEIL_HOVER),
+                        veil(VEIL_SELECTED),
+                        0.,
+                        R_FULL,
+                    ))
+                    .child(icon("search", 16., soft()))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .type_role(T_BODY)
+                            .text_color(search_hint(accent.text))
+                            .child(line(palette::search_placeholder())),
+                    ),
             )
             .into_any_element()
     }
@@ -1748,6 +1803,8 @@ impl Render for Shell {
         // ve kaydırma konumunu okur.
         let viewport = window.viewport_size();
         self.compact = viewport.width < px(COMPACT_BELOW);
+        self.viewport_w = f32::from(viewport.width);
+        self.viewport_h = f32::from(viewport.height);
         // "Şimdi çalıyor" paneli geniş pencerede listenin yanına yerleşir:
         // raf, liste ve sayfalar panelin solunda kalan bütün alana göre
         // ölçülür; hap hep pencerenin ortasında, panele yetişirse daralır
@@ -2090,6 +2147,21 @@ fn fake_row() -> usize {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(0)
+}
+
+/// Başlık çubuğundaki arama hapının eni (pencere eninden): ≥ 1500 px 520,
+/// ≥ 1180 px 480, ≥ 1000 px 420; daha dar pencerede 280 (sol yarıda gezinme
+/// düğmeleri ve sekmeler, sağda pencere düğmeleri var; hap ortada kalır).
+fn search_width_for(window: f32) -> f32 {
+    if window >= 1500. {
+        520.
+    } else if window >= 1180. {
+        480.
+    } else if window >= COMPACT_BELOW {
+        420.
+    } else {
+        280.
+    }
 }
 
 /// Vurgu rengini zeminde ve ışımada okunur hâle getirir (bkz. `Shell::accent`).
