@@ -1,108 +1,103 @@
 # Openify
 
-A fast, quiet, native Spotify client for Windows. It plays music through your own **Spotify Premium** account, is light on memory and is built for keyboard use.
+A fast, quiet, native Spotify client for Windows, written in Rust. It plays through your own **Spotify Premium** account, uses about 70 MB of memory with the window open and is built for the keyboard.
 
-![Library](docs/screenshots/library.png)
+**[Download for Windows](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe)** · [ARM64 installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe) · [Website](https://furkanky.github.io/Openify/) · [Release notes](CHANGELOG.md) · [Türkçe](#türkçe)
 
 ![Openify in use: search, an album, playback](docs/screenshots/demo.gif)
 
-> **Status:** early (0.1). Friend activity and artist following are **experimental**: they have had only limited testing against a live account and may break. [Download the installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) or [build it from source](#build-from-source).
+> **Status:** early (0.1). Friend activity and artist following are experimental and may break.
 
-## What it is
+## Why Openify
 
-Openify is a desktop player written in Rust. The interface is drawn with [gpui](https://gpui.rs) (the UI framework of the Zed editor), playback is done by [librespot](https://github.com/librespot-org/librespot), and everything is stored locally in SQLite. There is no web view and no Electron. It needs a Spotify Premium account: free accounts cannot stream through third-party clients.
+The interface is drawn on the GPU by [gpui](https://gpui.rs), the UI framework of the Zed editor. Playback comes from [librespot](https://github.com/librespot-org/librespot), and your library cache lives in SQLite on your PC. There is no web view and no Electron, so it opens in about half a second and stays light.
 
-## Highlights
+## Features
 
-- **Light and quick.** Measured on the author's machine with a small library: about 70 MB of memory with the window open, about 50 to 60 MB when hidden in the tray, and the first frame about half a second after launch. Numbers will vary with library size and hardware. Pages you have opened before come from a local cache and appear immediately while they refresh.
-- **Keyboard first.** `Ctrl+K` (or a click on the search pill) opens a search surface: a top result, songs, artists, albums and playlists from your library and Spotify, and a few actions when you type their name. `Space`, `Ctrl+←/→`, `Ctrl+↑/↓` and friends control playback, `?` shows every shortcut. Media keys, the tray icon, the Windows media overlay and an optional global search hotkey work too.
-- **Gapless playback and crossfade.** Songs that follow each other on an album play without a gap. Optional crossfade between songs (2 to 12 seconds), volume normalization with three levels and quality up to 320 kbps. Playback normally recovers by itself when you unplug or switch an output device.
-- **Equalizer and headphone profiles.** A 10-band equalizer with presets and a preamp, and a headphone profile search backed by the open [OPRA](https://github.com/opra-project/OPRA) database: pick your model and get a ready-made correction curve fitted to the ten bands.
-- **Library tools.** Find duplicate songs and different versions of the same song (remaster, live, radio edit) in a playlist, merge or split playlists, sort a playlist permanently, back everything up to a JSON file, and see your own listening statistics. Library edits can be undone with `Ctrl+Z`, and edits made while you are offline are queued and sent when you are back online.
-- **Lyrics and translation.** Synced lyrics in the side panel or full screen (from Spotify, with [LRCLIB](https://lrclib.net) as a fallback), with an optional translation under every line when one is available.
-- **Friend activity (experimental).** An optional panel (off by default) that shows what your friends are listening to. See the privacy section: it uses an unofficial endpoint and has had limited testing.
-- **Smarter shuffle and queue rules.** Play only one version of each song, skip explicit songs, never play a chosen artist, hide single songs, start a radio from a song, artist, album or playlist, and use a private session that keeps Openify's own history and statistics from recording anything.
-- **Calm interface.** Pages for Home, Explore, Library, artists, albums and search, a floating player, covers that tint the player and the full-screen view, English and Turkish interface languages. The design rules are enforced by tests.
-- **Dark, Light or System.** Keep the original dark room, choose a warm off-white palette, or follow Windows app mode as it changes. Pick a theme in Settings > Appearance and behavior; existing installations keep Dark.
-
-## Screenshots
-
-The screenshots show Spotify's own public playlists and albums with a sample profile.
+- **Search everything with `Ctrl+K`.** One palette for songs, artists, albums and playlists from your library and Spotify, plus a few commands when you type their name. `?` shows every shortcut; media keys, the tray icon and the Windows media overlay work too.
+- **Gapless albums and crossfade.** Songs that follow each other on an album play without a gap. Crossfade from 2 to 12 seconds, three levels of volume normalization, up to 320 kbps.
+- **Equalizer with headphone profiles.** Ten bands, presets, a preamp, and correction curves from the open [OPRA](https://github.com/opra-project/OPRA) database.
+- **Library tools.** Find duplicates and other versions of one song, merge or split playlists, sort one for good, back up to JSON and see your own statistics. `Ctrl+Z` undoes edits; edits made offline are sent when you are back.
+- **Synced lyrics.** In the side panel or full screen, with an optional translation under each line ([LRCLIB](https://lrclib.net) fills in when Spotify has none).
+- **Spotify Connect.** Openify shows up as a device in the Spotify app on your phone.
+- **Smarter shuffle and queue rules.** One version of each song, skip explicit songs, never play a chosen artist, start a radio from anything, and a private session that records nothing.
+- **Dark, Light or System theme**, English and Turkish interface.
 
 | | |
 |---|---|
-| ![Playlist](docs/screenshots/playlist.png) | ![Lyrics](docs/screenshots/lyrics.png) |
-| A Spotify playlist with the floating player | Full-screen lyrics with translation |
+| ![Search](docs/screenshots/palette.png) | ![Lyrics](docs/screenshots/lyrics.png) |
+| Search (`Ctrl+K`) | Full-screen lyrics with translation |
 | ![Equalizer](docs/screenshots/equalizer.png) | ![Library tools](docs/screenshots/tools.png) |
-| Equalizer and headphone profile | Duplicate finder in the library tools |
-| ![Album](docs/screenshots/album.png) | ![Search](docs/screenshots/palette.png) |
-| An album page | Search results (Ctrl+K) |
-| ![Now playing](docs/screenshots/now-playing.png) | ![Search suggestions](docs/screenshots/search.png) |
-| Now playing panel | Search suggestions before you type |
+| Equalizer and headphone profile | Duplicate finder |
+| ![Album](docs/screenshots/album.png) | ![Now playing](docs/screenshots/now-playing.png) |
+| An album page | Now playing |
 
 ## Install
 
-1. Download [Openify-win-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) from the [latest release](https://github.com/FurkanKY/Openify/releases/latest). On Windows on ARM, use [Openify-win-arm64-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe).
-2. Run it. Openify installs for your user only (no administrator rights) and opens.
-3. Sign in with your Spotify account in the browser window that opens.
+1. Download [Openify-win-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe) (on Windows on ARM: [Openify-win-arm64-Setup.exe](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe)) and run it. It installs for your user only, no administrator rights needed.
+2. If SmartScreen says "Windows protected your PC", click **More info**, then **Run anyway**. The installer is not code-signed yet.
+3. Sign in with your Spotify Premium account in the browser window that opens.
 
-The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC". Click **More info**, then **Run anyway**. A portable zip is on the same release page if you prefer not to install.
+Openify updates itself in the background and applies the update the next time you open it; if a new version fails to start twice, it goes back to the previous one. Prefer not to install? A portable zip is on the [release page](https://github.com/FurkanKY/Openify/releases/latest). Uninstall from Windows Settings > Apps.
 
-Openify updates itself in the background and applies the update the next time you open it. If a new version fails to start twice, it goes back to the previous one on its own.
+**Requirements:** Windows 10 or 11 (x64 or ARM64), Spotify Premium, a working audio output.
 
-To uninstall, use Windows Settings > Apps.
+## Privacy
 
-Requirements: Windows 10 or 11 (x64 or ARM64), a Spotify Premium account and a working audio output.
+- **Your data stays on your PC.** Cache, history and statistics are in `%LOCALAPPDATA%\Openify`, settings in `%APPDATA%\Openify`, the Spotify session in the Windows Credential Manager. There is no Openify server, no analytics and no telemetry.
+- **Plays are not reported to Spotify.** Openify sends no listening reports and does not scrobble, so songs you play here may not appear in Spotify's Recently played, your Wrapped or artists' play counts. Playback you transfer to Openify through Spotify Connect goes through Spotify's own protocol and may be counted.
+- **Spotify Connect is on by default.** Openify registers as a persistent device named `Openify (<computer name>)`. Turn it off or rename it in Settings.
+- **Few outside calls.** Besides Spotify: LRCLIB for lyrics, Deezer for similar artists (artist names are sent), OPRA for headphone profiles, and the update server.
+- **Friend activity** is off by default; when on, it asks Spotify's unofficial friend feed while the panel is open.
+
+## Known limitations
+
+- **No screen reader support yet.** gpui 0.2.2 exposes no UI Automation tree on Windows, so Narrator and NVDA cannot read the interface. Keyboard use is well covered, but that is not a substitute.
+- Windows only, and Premium only.
+- Friend activity, radio, track credits and lyrics translation use endpoints Spotify does not document and may stop working without notice.
 
 ## Build from source
 
-You need Windows 10 or 11, [Rust](https://rustup.rs) (rustup installs the pinned version from `rust-toolchain.toml` on the first build), the MSVC build tools (Visual Studio Build Tools with the "Desktop development with C++" workload) and Git.
+You need Windows 10 or 11, [Rust](https://rustup.rs) (the pinned version in `rust-toolchain.toml` installs on the first build), the MSVC build tools ("Desktop development with C++") and Git.
 
 ```powershell
 git clone https://github.com/FurkanKY/Openify.git
 cd Openify
 cargo build --release
 .\target\release\openify.exe
-```
-
-The first build compiles gpui and its dependencies and takes a while. No `.env` file or API key is needed. Then run the tests:
-
-```powershell
 cargo test --release
 ```
 
-Read [ARCHITECTURE.md](docs/ARCHITECTURE.md) before a non-trivial change and [DESIGN.md](docs/DESIGN.md) for the design system (some project notes are in Turkish; the identifiers are English). Test hooks and checks are in [TESTING.md](docs/TESTING.md).
-
-## Known limitations
-
-- **Screen readers are not supported yet.** The UI toolkit (gpui 0.2.2) has no accessibility support on Windows: it does not expose a UI Automation tree, so Narrator, NVDA and similar tools cannot read Openify's interface. Keyboard use is well covered (focus order, shortcuts, command palette), but that is not a substitute.
-- Windows only (Windows 10 or 11, x64 or ARM64). There are no macOS or Linux builds.
-- Needs a Spotify Premium account.
-- Some features use endpoints Spotify does not document (friend activity, radio, track credits, lyrics translation) and may stop working without notice. See the disclaimer below.
-
-## Privacy
-
-- Your data stays on your computer. The library cache, play history and statistics live in `%LOCALAPPDATA%\Openify`, settings in `%APPDATA%\Openify`, and the Spotify session in the Windows Credential Manager. Nothing is sent to any server of ours: there is none, and there is no analytics or telemetry.
-- **Plays are not reported to Spotify.** Openify's own playback sends no listening reports: the bundled librespot code and Openify's engine contain no call to Spotify's playback-reporting services, and Openify does not scrobble. As a result, songs you play in Openify may not show up in Spotify's Recently played, in your Wrapped, in artists' play counts or in your friends' activity feed; we have not checked each of these on a live account. Playback that you start on another device and transfer to Openify through Spotify Connect goes through Spotify's own Connect protocol, and Spotify may count it. Openify's own Recently played list and statistics are computed locally from your own play history.
-- **Spotify Connect is on by default.** Openify registers itself with your Spotify account as a Connect device (named `Openify (<computer name>)` by default), so you can pick it in the device list of the Spotify app on your phone and play to it. It keeps the same device ID between runs and shows up in your account's device list as a persistent device. Turn it off, or rename the device, in the Spotify Connect row of Settings; with it off, Openify registers no device.
-- Besides Spotify itself, Openify talks to a few services only when the feature needs them: Spotify's cover image servers, [LRCLIB](https://lrclib.net) for lyrics Spotify does not have, Deezer for the "similar artists" lists (artist names are sent), the OPRA database for headphone profiles (downloaded the first time you search one), and the update server for update checks.
-- Friend activity (experimental) is off by default. When you turn it on, Openify asks Spotify's unofficial friend feed endpoint for the list while the panel is open.
-- A private session (profile menu) stops Openify from recording recent plays and statistics locally for that session.
+The first build compiles gpui and takes a while. No `.env` file or API key is needed. Before a non-trivial change read [ARCHITECTURE.md](docs/ARCHITECTURE.md), [DESIGN.md](docs/DESIGN.md) and [TESTING.md](docs/TESTING.md), and see [CONTRIBUTING.md](CONTRIBUTING.md) for the checks a pull request must pass.
 
 ## Disclaimer
 
-Openify is an independent project. It is **not affiliated with, endorsed by or sponsored by Spotify AB**. "Spotify" and the Spotify logo are trademarks of Spotify AB; they are used here only to say what Openify works with. Openify talks to Spotify through the same unofficial, reverse-engineered interfaces as librespot, and some of its features use endpoints that Spotify does not document and may change or block at any time. Using third-party clients can conflict with Spotify's terms of service; you use Openify at your own risk. Please do not use it to circumvent Spotify's licensing: it does not download or save music, and it only plays on Premium accounts.
-
-## Contributing
-
-Bug reports, ideas and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first: it explains how to report a problem (with the log file), which checks a pull request must pass and the conventions of the code base.
+Openify is an independent project. It is **not affiliated with, endorsed by or sponsored by Spotify AB**. "Spotify" is a trademark of Spotify AB, used here only to say what Openify works with. Openify talks to Spotify through the same unofficial interfaces as librespot, which Spotify may change or block at any time, and using a third-party client may conflict with Spotify's terms of service. It does not download or save music and only plays on Premium accounts.
 
 ## License
 
-Openify is licensed under the **GNU General Public License, version 3 or later**. See [LICENSE](LICENSE). Third-party components and their licenses (gpui, librespot, fonts, icons, the OPRA data and every Rust crate) are listed in [THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
+GNU General Public License, version 3 or later. See [LICENSE](LICENSE). Third-party components and their licenses are listed in [THIRD_PARTY_LICENSES.md](docs/THIRD_PARTY_LICENSES.md).
 
 ## Türkçe
 
-Koyu, sıcak açık ve Windows uygulama modunu canlı izleyen Sistem teması Ayarlar → Görünüm ve davranış bölümünden seçilir. Mevcut kurulumlar Koyu temada kalır.
+Openify, Spotify Premium hesabınla çalışan, Windows için hızlı ve sade bir Spotify istemcisi. Rust ile yazıldı: arayüzü gpui GPU'da çizer, sesi librespot çalar. İçinde tarayıcı ya da Electron yok; pencere açıkken yaklaşık 70 MB bellek kullanır.
 
-Openify, Spotify Premium hesabınla çalışan, Windows için yerel, hızlı ve sade bir Spotify istemcisidir. Rust ile yazıldı; arayüz gpui, ses librespot ile gelir. Yazarın makinesinde, küçük bir kütüphaneyle ölçülen değerler: pencere açıkken yaklaşık 70 MB, tepsideyken yaklaşık 50-60 MB bellek, açılışta ilk kare yaklaşık yarım saniye (kütüphane büyüklüğüne ve donanıma göre değişir). Klavyeyle neredeyse her şey yapılır; albüm içindeki şarkılar boşluksuz çalar, isteğe bağlı yumuşak geçiş, ekolayzer ve OPRA kulaklık profilleri, kütüphane araçları (yinelenen bulucu, birleştir / böl, sıralama, yedek, istatistik), çeviri destekli sözler ve deneysel arkadaş etkinliği vardır (arkadaş etkinliği ve sanatçı takibi canlı hesapta yalnız sınırlı denendi). Kütüphane düzenlemeleri Ctrl+Z ile geri alınabilir; çevrimdışıyken yapılanlar kuyruğa alınır. Arayüz İngilizce ve Türkçedir. Verilerin bilgisayarında kalır. Openify çaldıklarını Spotify'a bildirmez: bu yüzden Openify'da çaldığın şarkılar Spotify'ın Son çalınanlar listesinde, Wrapped'da, sanatçıların dinlenme sayılarında ya da arkadaşlarının etkinliğinde görünmeyebilir (hepsini canlı hesapta tek tek doğrulamadık). Spotify Connect varsayılan olarak açıktır: Openify hesabında `Openify (<bilgisayar adı>)` adlı kalıcı bir aygıt olarak görünür; Ayarlar'dan kapatılabilir. Bilinen sınırlar: ekran okuyucular henüz desteklenmiyor (gpui 0.2.2'de Windows UI Automation desteği yok), yalnız Windows, Premium hesap gerekir. Kurulum dosyası [son sürüm sayfasında](https://github.com/FurkanKY/Openify/releases/latest); dosya henüz imzalı olmadığı için Windows "Bilgisayarınız korundu" derse **Ek bilgi**, sonra **Yine de çalıştır**'a bas. Spotify ile ilişkisi yoktur, Spotify bir Spotify AB ticari markasıdır. Katkı için [CONTRIBUTING.md](CONTRIBUTING.md), lisans GPL-3.0-or-later.
+**[Windows için indir](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe)** · [ARM64 kurulumu](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe) · [Web sitesi](https://furkanky.github.io/Openify/tr/)
+
+**Neler var**
+
+- `Ctrl+K` ile kütüphanende ve Spotify'da tek kutudan arama
+- Albümlerde boşluksuz çalma, 2–12 saniyelik geçiş, üç düzey ses dengeleme
+- On bantlı ekolayzer ve OPRA kulaklık profilleri
+- Kütüphane araçları: kopya bulma, liste birleştirme ve bölme, sıralama, yedek, istatistik; `Ctrl+Z` ile geri alma
+- Çeviri destekli, zamanlı şarkı sözleri
+- Spotify Connect: telefondaki Spotify'da cihaz olarak görünür
+- Koyu, Açık ya da Sistem teması; Türkçe ve İngilizce arayüz
+
+**Kurulum:** kurulum dosyasını indirip çalıştır. Dosya henüz imzalı olmadığı için Windows "Bilgisayarınız korundu" derse **Ek bilgi**, sonra **Yine de çalıştır**'a bas. Ardından açılan tarayıcı penceresinde Spotify Premium hesabınla giriş yap. Güncellemeler kendiliğinden gelir.
+
+**Gizlilik:** verilerin bilgisayarında kalır; Openify'ın sunucusu, analizi ya da telemetrisi yok. Openify çaldıklarını Spotify'a bildirmez, bu yüzden bu şarkılar Spotify'ın Son çalınanlar listesinde ve Wrapped'ında görünmeyebilir. Spotify Connect varsayılan olarak açık; Ayarlar'dan kapatılabilir.
+
+**Bilinen sınırlar:** ekran okuyucular henüz desteklenmiyor, yalnız Windows ve yalnız Premium. Arkadaş etkinliği ve sanatçı takibi deneysel.
+
+Openify'ın Spotify AB ile bir bağı yok; Spotify, Spotify AB'nin ticari markası. Katkı için [CONTRIBUTING.md](CONTRIBUTING.md). Lisans: GPL-3.0-or-later.
