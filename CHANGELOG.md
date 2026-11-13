@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Optional Discord Rich Presence over Windows named pipes: listening activity,
+  song, artist, cover and playback progress. Off by default; clears on pause,
+  stop, private session, disabling and quit. Settings stays hidden until a
+  Discord application ID is configured by the builder.
+
 ## [0.1.1] - 2026-11-13
 
 ### Changed

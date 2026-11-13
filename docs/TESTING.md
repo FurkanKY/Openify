@@ -23,6 +23,28 @@ ignored outside a test run.
 - Tests must not talk to Spotify. Use the fixtures in `src/engine/fixtures`, or
   `OPENIFY_TEST_FAKE_PLAY=1` when you run the app.
 
+## Discord presence (no Spotify account required)
+
+`cargo test --release --target-dir target/wt discord::tests` checks exact frame
+bytes, fragmented/concatenated/oversized input, track JSON and progress,
+privacy/paused/disabled eligibility, 15-second retry boundaries, handshake,
+ping/pong, nonce matching, external-cover rejection fallback, clear and EOF.
+The transport uses in-memory duplex streams; no Discord pipe is opened.
+Test app copies (`OPENIFY_TEST_DISPLAY` or `OPENIFY_SETTINGS_PATH`) always
+disable the Discord worker, even if the application ID is configured.
+
+For the owner to verify manually in a normal run: create an application in the
+Discord developer portal, copy its application ID into `DISCORD_CLIENT_ID` in
+`src/discord.rs`, upload a Rich Presence image with asset key `openify`, rebuild,
+and enable Settings > Integrations > Share listening on Discord. Check title,
+artist, cover and progress with the Discord desktop client running and its
+activity sharing enabled; seek; pause/resume; stop; enable private session;
+disable the preference; quit. Presence should clear on each privacy/stop path.
+Start Discord after playback has begun, and restart it during playback: the
+latest track should appear after the 15-second retry interval. External image
+acceptance and Discord profile rendering require this manual check; there is
+no client ID, secret, token or account shipped with Openify.
+
 ## Live tests (real account)
 
 These are `#[ignore]`d, never run automatically, and only the account owner
