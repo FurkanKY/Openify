@@ -2548,3 +2548,59 @@ h2.display,
 @media (max-width: 560px) {
   .qa-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Top nav: text links get a sliding underline instead of a box */
+.nav a:not(.gh):not(.lang a) {
+  position: relative;
+  background: none;
+  transition: color 180ms ease-out;
+}
+.nav a:not(.gh):not(.lang a)::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 3px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav a:not(.gh):not(.lang a):hover,
+.nav a:not(.gh):not(.lang a)[aria-current="page"] {
+  background: none;
+  color: var(--text);
+}
+.nav a:not(.gh):not(.lang a):hover::after,
+.nav a:not(.gh):not(.lang a)[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+.nav a:not(.gh):not(.lang a):active {
+  opacity: 0.7;
+  transition: opacity 60ms;
+}
+.nav a:focus { outline: none; }
+.nav a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.nav .gh {
+  transition: border-color 180ms ease-out, background-color 180ms ease-out, color 180ms ease-out;
+}
+.nav .gh:hover {
+  background: var(--veil);
+  border-color: color-mix(in srgb, var(--text) 30%, transparent);
+}
+.nav .gh:active,
+.nav .lang a:active {
+  transform: scale(0.97);
+}
+.nav .lang a {
+  transition: color 180ms ease-out, background-color 180ms ease-out;
+}
+.nav .lang a:not([aria-current="true"]):hover {
+  background: none;
+  color: var(--text);
+}
