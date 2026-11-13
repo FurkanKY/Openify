@@ -1502,13 +1502,12 @@ impl Shell {
             ));
         }
         let toggle = limit.is_some_and(|n| tracks.len() > n);
-        // Albümün tam listesinde sütun başlığı (kısa "Popüler" ve arama
-        // listelerinde yok): dinlenme sayısının ne olduğu da buradan okunur.
-        let header = album.then(|| {
-            let any_plays =
-                show_plays && plays.is_some_and(|m| tracks.iter().any(|t| m.contains_key(&t.uri)));
-            super::library::page_column_header(any_plays, self.margin())
-        });
+        // Her şarkı listesinde aynı sütun başlığı (kütüphanedeki gibi):
+        // dinlenme sayısının ne olduğu da buradan okunur.
+        let any_plays = show_plays
+            && plays.is_some_and(|m| tracks[..shown].iter().any(|t| m.contains_key(&t.uri)));
+        let header = (shown > 0)
+            .then(|| super::library::page_column_header(album, any_plays, self.margin()));
         div()
             .pb(px(S6))
             .when_some(title, |el, t| {

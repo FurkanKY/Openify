@@ -1899,10 +1899,12 @@ pub(super) fn equalizer(color: u32, playing: bool) -> AnyElement {
     equalizer_bars(color, eq_levels(playing))
 }
 
-/// Sayfalardaki şarkı listesinin sütun başlığı (albüm sayfası): satırlar
-/// gibi sayfa kenar boşluğunda. `plays`: dinlenme sayısı sütunu görünüyor mu.
-pub(super) fn page_column_header(plays: bool, margin: f32) -> AnyElement {
-    column_header(true, false, plays, margin)
+/// Sayfalardaki şarkı listelerinin sütun başlığı (albüm, sanatçının
+/// popüler şarkıları, arama): satırlar gibi sayfa kenar boşluğunda. `album`:
+/// albüm sayfası (kapak ve albüm sütunu yok); `plays`: dinlenme sayısı
+/// sütunu görünüyor mu.
+pub(super) fn page_column_header(album: bool, plays: bool, margin: f32) -> AnyElement {
+    column_header(album, false, plays, margin)
 }
 
 fn column_header(album: bool, added: bool, plays: bool, margin: f32) -> AnyElement {
