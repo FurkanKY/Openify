@@ -402,6 +402,72 @@ pub fn mix(a: u32, b: u32, t: f32) -> u32 {
     channel(16) | channel(8) | channel(0)
 }
 
+/// `mix` gibi, ama algısal (OKLab) uzayda: geçişte parlaklık eşit adımlarla
+/// değişir, ara ton sRGB karışımındaki gibi kararıp çamurlaşmaz. Ortam rengi geçişleri (kapaktan kapağa) bunu kullanır.
+pub fn mix_oklab(a: u32, b: u32, t: f32) -> u32 {
+    let t = t.clamp(0.0, 1.0);
+    if t == 0.0 || a == b {
+        return a;
+    }
+    if t == 1.0 {
+        return b;
+    }
+    let (la, aa, ba) = to_oklab(a);
+    let (lb, ab, bb) = to_oklab(b);
+    from_oklab(la + (lb - la) * t, aa + (ab - aa) * t, ba + (bb - ba) * t)
+}
+
+fn to_oklab(c: u32) -> (f32, f32, f32) {
+    let lin = |shift: u32| {
+        let v = ((c >> shift) & 0xFF) as f32 / 255.0;
+        if v <= 0.04045 {
+            v / 12.92
+        } else {
+            ((v + 0.055) / 1.055).powf(2.4)
+        }
+    };
+    let (r, g, b) = (lin(16), lin(8), lin(0));
+    let l = (0.412_221_47 * r + 0.536_332_55 * g + 0.051_445_995 * b).cbrt();
+    let m = (0.211_903_5 * r + 0.680_699_5 * g + 0.107_396_96 * b).cbrt();
+    let s = (0.088_302_46 * r + 0.281_718_85 * g + 0.629_978_7 * b).cbrt();
+    (
+        0.210_454_26 * l + 0.793_617_8 * m - 0.004_072_047 * s,
+        1.977_998_5 * l - 2.428_592_2 * m + 0.450_593_7 * s,
+        0.025_904_037 * l + 0.782_771_77 * m - 0.808_675_77 * s,
+    )
+}
+
+fn from_oklab(l: f32, a: f32, b: f32) -> u32 {
+    let l_ = (l + 0.396_337_78 * a + 0.215_803_76 * b).powi(3);
+    let m_ = (l - 0.105_561_346 * a - 0.063_854_17 * b).powi(3);
+    let s_ = (l - 0.089_484_18 * a - 1.291_485_5 * b).powi(3);
+    let r = 4.076_741_7 * l_ - 3.307_711_6 * m_ + 0.230_969_94 * s_;
+    let g = -1.268_438 * l_ + 2.609_757_4 * m_ - 0.341_319_38 * s_;
+    let bl = -0.004_196_086_3 * l_ - 0.703_418_6 * m_ + 1.707_614_7 * s_;
+    let enc = |v: f32| {
+        let v = v.clamp(0.0, 1.0);
+        let v = if v <= 0.003_130_8 {
+            v * 12.92
+        } else {
+            1.055 * v.powf(1.0 / 2.4) - 0.055
+        };
+        (v * 255.0).round() as u32
+    };
+    (enc(r) << 16) | (enc(g) << 8) | enc(bl)
+}
+
+/// İki gpui rengi arasında doğrusal karışım (saydamlık dahil); kısa durum
+/// geçişleri için (ör. sözlerde etkin satırın aydınlanması).
+pub fn blend(a: Rgba, b: Rgba, t: f32) -> Rgba {
+    let t = t.clamp(0.0, 1.0);
+    Rgba {
+        r: a.r + (b.r - a.r) * t,
+        g: a.g + (b.g - a.g) * t,
+        b: a.b + (b.b - a.b) * t,
+        a: a.a + (b.a - a.a) * t,
+    }
+}
+
 /// WCAG göreli parlaklık (0.0 siyah – 1.0 beyaz).
 pub fn luminance(color: u32) -> f32 {
     let lin = |shift: u32| {
@@ -681,6 +747,13 @@ fn read_animation_setting() -> bool {
 /// Başı hızlı, sonu yavaş yumuşama (0.0–1.0).
 pub fn ease_out(t: f32) -> f32 {
     1.0 - (1.0 - t.clamp(0.0, 1.0)).powi(3)
+}
+
+/// Ortam eğrisi: yumuşak kalkar, yumuşak oturur (ease-in-out sinüs). Kapak
+/// rengi gibi kullanıcının tetiklemediği, arka planda süren geçişler için:
+/// başta sıçramaz, sonda kesilmez.
+pub fn ease_in_out(t: f32) -> f32 {
+    0.5 - 0.5 * (std::f32::consts::PI * t.clamp(0.0, 1.0)).cos()
 }
 
 /// Giriş eğrisi: çok hızlı başlar, uzun yavaşlar (ease-out quint). Panel,
@@ -970,6 +1043,43 @@ pub const UI_FONT: &str = "Segoe UI Variable Text";
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn oklab_mix_keeps_ends_and_steps_lightness_evenly() {
+        for c in [0x000000, 0xFFFFFF, 0xE11D48, 0x22D3EE, 0x123456] {
+            assert_eq!(mix_oklab(c, 0x808080, 0.0), c);
+            assert_eq!(mix_oklab(0x808080, c, 1.0), c);
+            // Gidiş-dönüş: kanal başına en çok 1 birim sapma.
+            let back = from_oklab(to_oklab(c).0, to_oklab(c).1, to_oklab(c).2);
+            for sh in [16, 8, 0] {
+                let d = ((c >> sh) & 0xFF) as i32 - ((back >> sh) & 0xFF) as i32;
+                assert!(d.abs() <= 1, "{c:06X} -> {back:06X}");
+            }
+        }
+        // Ara tonun algısal parlaklığı iki ucun tam ortasında kalır; sRGB
+        // karışımında koyu-doygun renkler arasında ortası çöker ya da sıçrar.
+        let l = |c: u32| to_oklab(c).0;
+        for (a, b) in [
+            (0xE11D48, 0x22D3EE),
+            (0x1E3A8A, 0xFACC15),
+            (0x7C3AED, 0x10B981),
+        ] {
+            let want = (l(a) + l(b)) / 2.;
+            let ok = (l(mix_oklab(a, b, 0.5)) - want).abs();
+            let srgb = (l(mix(a, b, 0.5)) - want).abs();
+            assert!(ok < 0.01, "{a:06X}-{b:06X} {ok}");
+            assert!(ok < srgb, "{a:06X}-{b:06X} {ok} {srgb}");
+        }
+    }
+
+    #[test]
+    fn ease_in_out_is_symmetric_and_bounded() {
+        assert_eq!(ease_in_out(0.0), 0.0);
+        assert!((ease_in_out(1.0) - 1.0).abs() < 1e-6);
+        assert!((ease_in_out(0.5) - 0.5).abs() < 1e-6);
+        assert!((ease_in_out(0.25) + ease_in_out(0.75) - 1.0).abs() < 1e-6);
+        assert_eq!(ease_in_out(2.0), ease_in_out(1.0));
+    }
 
     #[test]
     fn light_idle_lyric_is_large_text_aa_and_clearly_dimmer() {

@@ -9,7 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::theme::{DARK_ROOM, DEFAULT_ACCENT, accent_fade, ease_out, mix, palette, themed_accent};
+use super::theme::{
+    DARK_ROOM, DEFAULT_ACCENT, accent_fade, ease_in_out, mix_oklab, palette, themed_accent,
+};
 use crate::engine::{Event, NoticeKind, QueueState, TrackInfo, palette::Accent};
 use crate::t;
 
@@ -283,14 +285,15 @@ impl PlayerState {
     }
 
     fn raw_accent_at(&self, now: Instant) -> Accent {
-        let t = ease_out(
+        // Ortam rengi: algısal uzayda, yumuşak kalkıp yumuşak oturarak.
+        let t = ease_in_out(
             now.saturating_duration_since(self.accent_changed)
                 .as_secs_f32()
                 / accent_fade().as_secs_f32(),
         );
         Accent {
-            text: mix(self.accent_from.text, self.accent.text, t),
-            glow: mix(self.accent_from.glow, self.accent.glow, t),
+            text: mix_oklab(self.accent_from.text, self.accent.text, t),
+            glow: mix_oklab(self.accent_from.glow, self.accent.glow, t),
         }
     }
 

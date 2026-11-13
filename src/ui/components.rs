@@ -18,7 +18,7 @@ use gpui::{
 
 use super::text::line_with_tip;
 use super::theme::*;
-use super::tween::{HoverFill, hover_fill};
+use super::tween::{HoverFill, SwitchPart, hover_fill, switch_paint};
 use crate::t;
 
 /// Bir bileşenin hangi durumda çizileceği.
@@ -449,11 +449,13 @@ pub fn ghost_button(
 /// soluk düğme; açıkken vurgu renginde ve koyu düğme (çal düğmesi gibi:
 /// vurgunun üstünde koyu).
 pub fn switch(id: impl Into<ElementId>, on: bool, look: Look, accent: u32) -> Stateful<Div> {
-    let (track, knob) = match (look.enabled(), on) {
+    // Oluk ve topuz rengi iki durum için; geçişi `SwitchPaint` çizer.
+    let colors = |on: bool| match (look.enabled(), on) {
         (false, _) => (veil(0.10), disabled()),
         (true, true) => (rgb(accent), rgb(palette().bg)),
         (true, false) => (rgb(palette().track), soft()),
     };
+    let ((track_off, knob_off), (track_on, knob_on)) = (colors(false), colors(true));
     let (hover, pressed) = if on {
         (rgb(accent_hover(accent)), rgb(mix(accent, 0x000000, 0.14)))
     } else {
@@ -466,12 +468,24 @@ pub fn switch(id: impl Into<ElementId>, on: bool, look: Look, accent: u32) -> St
         .flex_shrink_0()
         .p(px(S0))
         .rounded_full()
-        .flex()
-        .items_center()
-        .when(on, |el| el.justify_end())
-        .bg(track)
+        .relative()
+        .child(switch_paint(
+            on,
+            SwitchPart::Track {
+                off: track_off.into(),
+                on: track_on.into(),
+            },
+        ))
         .children(layer(look, hover, pressed, 0., FULL))
-        .child(div().size(px(20.)).flex_shrink_0().rounded_full().bg(knob));
+        .child(switch_paint(
+            on,
+            SwitchPart::Knob {
+                off: knob_off.into(),
+                on: knob_on.into(),
+                size: 20.,
+                inset: S0,
+            },
+        ));
     let el = outer_ring(el, look, accent);
     states(el, look, hover, pressed)
 }

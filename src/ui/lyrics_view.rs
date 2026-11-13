@@ -282,6 +282,31 @@ impl Shell {
             }
         }
 
+        // Etkin satırın rengi: yeni satır `motion` içinde aydınlanır, öncekisi
+        // söner (kaydırmayla aynı anda; anında atlamaz).
+        let glow = {
+            let scroll = self.lyric_scroll(place);
+            if scroll.lit != active {
+                // İlk etkin satır (açılış, şarkı değişimi) geçişsiz gelir.
+                scroll.lit_at = scroll.lit.is_some().then_some(now);
+                scroll.lit_prev = scroll.lit;
+                scroll.lit = active;
+            }
+            let t = match scroll.lit_at {
+                Some(at) if animations_enabled() => {
+                    (now.saturating_duration_since(at).as_secs_f32() / motion().as_secs_f32())
+                        .min(1.)
+                }
+                _ => 1.,
+            };
+            if t >= 1. {
+                scroll.lit_at = None;
+            } else {
+                animating = true;
+            }
+            (scroll.lit_prev, ease_out(t))
+        };
+
         let (role, weight, gap) = if full {
             // Geniş pencerede (bkz. `fullscreen::LARGE_FROM`) bir basamak büyük.
             (
@@ -337,8 +362,12 @@ impl Shell {
         for (i, l) in lyrics.lines.iter().enumerate() {
             let is_active = active == Some(i);
             let alpha = fades.as_ref().map_or(1., |f| f.alpha(i));
-            let color = if is_active || !synced {
+            let color = if !synced {
                 text()
+            } else if is_active {
+                blend(lyric_idle(), text(), glow.1)
+            } else if glow.0 == Some(i) {
+                blend(text(), lyric_idle(), glow.1)
             } else {
                 lyric_idle()
             };

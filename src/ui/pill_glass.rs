@@ -143,7 +143,7 @@ impl Shell {
         let mut layers = Vec::new();
         let lights = &self.now.full.pill_light;
         if lit && let Some(current) = &lights.current {
-            let t = ease_out(current.at.elapsed().as_secs_f32() / accent_fade().as_secs_f32());
+            let t = ease_in_out(current.at.elapsed().as_secs_f32() / accent_fade().as_secs_f32());
             if t < 1. {
                 window.request_animation_frame();
                 if let Some(previous) = &lights.previous {

@@ -235,6 +235,174 @@ impl IntoElement for HoverFill {
     }
 }
 
+/// Anahtarın oluğu ya da topuzu (13 Kasım): açılıp kapanınca oluk rengi
+/// yumuşakça döner, topuz yerine sıçramaz, `motion_fast` içinde kayar.
+/// Anahtarın içine mutlak konumlu katman olarak konur (oluk ilk çocuk, topuz
+/// üzerine gelme katmanından sonra). İkisi aynı karede başlayıp aynı sürede
+/// ilerler; durum, anahtarın kimliği altında parça başına tutulur.
+pub enum SwitchPart {
+    Track {
+        off: Hsla,
+        on: Hsla,
+    },
+    Knob {
+        off: Hsla,
+        on: Hsla,
+        size: f32,
+        inset: f32,
+    },
+}
+
+pub struct SwitchPaint {
+    on: bool,
+    part: SwitchPart,
+}
+
+pub fn switch_paint(on: bool, part: SwitchPart) -> SwitchPaint {
+    SwitchPaint { on, part }
+}
+
+#[derive(Default)]
+struct Glide {
+    level: f32,
+    at: Option<Instant>,
+    started: bool,
+}
+
+fn lerp_hsla(a: Hsla, b: Hsla, t: f32) -> Hsla {
+    let (a, b) = (gpui::Rgba::from(a), gpui::Rgba::from(b));
+    gpui::Rgba {
+        r: a.r + (b.r - a.r) * t,
+        g: a.g + (b.g - a.g) * t,
+        b: a.b + (b.b - a.b) * t,
+        a: a.a + (b.a - a.a) * t,
+    }
+    .into()
+}
+
+impl Element for SwitchPaint {
+    type RequestLayoutState = ();
+    type PrepaintState = ();
+
+    fn id(&self) -> Option<ElementId> {
+        Some(ElementId::Name(
+            match self.part {
+                SwitchPart::Track { .. } => "swt",
+                SwitchPart::Knob { .. } => "swk",
+            }
+            .into(),
+        ))
+    }
+
+    fn source_location(&self) -> Option<&'static Location<'static>> {
+        None
+    }
+
+    fn request_layout(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        window: &mut Window,
+        cx: &mut App,
+    ) -> (LayoutId, ()) {
+        let mut style = Style::default();
+        style.refine(
+            &StyleRefinement::default()
+                .absolute()
+                .top_0()
+                .left_0()
+                .size_full(),
+        );
+        (window.request_layout(style, [], cx), ())
+    }
+
+    fn prepaint(
+        &mut self,
+        _id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        _bounds: Bounds<Pixels>,
+        _request_layout: &mut (),
+        _window: &mut Window,
+        _cx: &mut App,
+    ) {
+    }
+
+    fn paint(
+        &mut self,
+        id: Option<&GlobalElementId>,
+        _inspector_id: Option<&InspectorElementId>,
+        bounds: Bounds<Pixels>,
+        _request_layout: &mut (),
+        _prepaint: &mut (),
+        window: &mut Window,
+        _cx: &mut App,
+    ) {
+        let Some(id) = id else { return };
+        let target = if self.on { 1. } else { 0. };
+        let state: Rc<RefCell<Glide>> =
+            window.with_element_state(id, |s: Option<Rc<RefCell<Glide>>>, _| {
+                let s = s.unwrap_or_default();
+                (s.clone(), s)
+            });
+        let level = {
+            let mut s = state.borrow_mut();
+            let now = Instant::now();
+            if !s.started || !animations_enabled() {
+                // İlk çizimde anahtar zaten durumunda belirir.
+                s.started = true;
+                s.level = target;
+                s.at = None;
+            } else if s.level != target {
+                let dt =
+                    s.at.map(|t| now.duration_since(t))
+                        .unwrap_or(Duration::from_millis(8));
+                s.level = step(s.level, target, dt);
+                s.at = Some(now);
+            } else {
+                s.at = None;
+            }
+            s.level
+        };
+        if level != target {
+            window.request_animation_frame();
+        }
+        let eased = ease_out(level);
+        match self.part {
+            SwitchPart::Track { off, on } => {
+                let r = bounds.size.height / 2.;
+                window.paint_quad(
+                    fill(bounds, lerp_hsla(off, on, eased)).corner_radii(Corners::all(r)),
+                );
+            }
+            SwitchPart::Knob {
+                off,
+                on,
+                size,
+                inset,
+            } => {
+                let size = px(size);
+                let travel = bounds.size.width - size - px(inset) * 2.;
+                let origin = gpui::point(
+                    bounds.origin.x + px(inset) + travel * eased,
+                    bounds.origin.y + (bounds.size.height - size) / 2.,
+                );
+                let knob = Bounds::new(origin, gpui::size(size, size));
+                window.paint_quad(
+                    fill(knob, lerp_hsla(off, on, eased)).corner_radii(Corners::all(size / 2.)),
+                );
+            }
+        }
+    }
+}
+
+impl IntoElement for SwitchPaint {
+    type Element = Self;
+
+    fn into_element(self) -> Self {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

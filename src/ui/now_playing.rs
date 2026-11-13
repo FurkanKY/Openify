@@ -119,6 +119,11 @@ pub(super) struct LyricScroll {
     /// Kenar solması yerleşimden okunur; içerik yeni gelince ya da açılışta
     /// yerleşim ölçülene dek bu kadar kare daha istenir (sonra dururken çizim yok).
     pub settle: u8,
+    /// Rengi parlayan satır, bir önceki ve değişim anı: etkin satır rengi
+    /// anında atlamaz, `motion` içinde aydınlanır (öncekisi söner).
+    pub lit: Option<usize>,
+    pub lit_prev: Option<usize>,
+    pub lit_at: Option<Instant>,
 }
 
 /// Yerleşimin ölçülmesi için gereken kare sayısı (bkz. `LyricScroll::settle`).
@@ -133,6 +138,9 @@ impl LyricScroll {
             user_until: None,
             painted: Rc::default(),
             settle: SETTLE_FRAMES,
+            lit: None,
+            lit_prev: None,
+            lit_at: None,
         }
     }
 
@@ -143,6 +151,9 @@ impl LyricScroll {
         self.anim = None;
         self.user_until = None;
         self.painted.set(None);
+        self.lit = None;
+        self.lit_prev = None;
+        self.lit_at = None;
         self.settle = SETTLE_FRAMES;
     }
 }
