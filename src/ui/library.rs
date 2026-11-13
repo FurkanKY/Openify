@@ -19,7 +19,7 @@ use super::{
     manage::ListKey,
     pill::{PILL_CLEARANCE, PILL_LIST_END},
     player::fmt_time,
-    shelf::{COLLAPSE_MAX, COMPACT_AT, header_height},
+    shelf::{COLLAPSE_MAX, COMPACT_AT, header_height_with},
     smooth_scroll::{SmoothScroll, Wheel},
     text::line_with_tip,
     theme::*,
@@ -134,6 +134,69 @@ impl LibraryState {
             .unwrap_or_default()
     }
 
+    /// Listenin açıklaması (kök listeden gelir; yoksa `None`).
+    pub(super) fn list_description(&self, id: &CollectionId) -> Option<&str> {
+        let (Loadable::Loaded(lib), CollectionId::Playlist(uri)) = (&self.library, id) else {
+            return None;
+        };
+        lib.meta
+            .descriptions
+            .get(uri)
+            .map(String::as_str)
+            .filter(|d| !d.is_empty())
+    }
+
+    /// Liste ortak mı (başkaları da şarkı ekleyebilir)?
+    pub(super) fn list_is_collaborative(&self, id: &CollectionId) -> bool {
+        let (Loadable::Loaded(lib), CollectionId::Playlist(uri)) = (&self.library, id) else {
+            return false;
+        };
+        lib.meta.collaborative.contains(uri)
+    }
+
+    /// Listenin içinde durduğu klasörün anahtarı (kökteyse `None`).
+    pub(super) fn folder_of(&self, id: &CollectionId) -> Option<&str> {
+        let Loadable::Loaded(lib) = &self.library else {
+            return None;
+        };
+        lib.meta.parents.get(id.key()).map(String::as_str)
+    }
+
+    pub(super) fn folder_name(&self, key: &str) -> Option<&str> {
+        let Loadable::Loaded(lib) = &self.library else {
+            return None;
+        };
+        lib.meta
+            .folders
+            .iter()
+            .find(|f| f.key == key)
+            .map(|f| f.name.as_str())
+    }
+
+    /// "Klasöre taşı" alt menüsü: (anahtar, "Üst / Alt" yolu), kök sırasıyla.
+    pub(super) fn folder_choices(&self) -> Vec<(String, String)> {
+        let Loadable::Loaded(lib) = &self.library else {
+            return Vec::new();
+        };
+        lib.meta
+            .folders
+            .iter()
+            .map(|f| {
+                let mut parts = vec![f.name.clone()];
+                let mut parent = f.parent.as_deref();
+                while let Some(p) = parent {
+                    let Some(pf) = lib.meta.folders.iter().find(|x| x.key == p) else {
+                        break;
+                    };
+                    parts.push(pf.name.clone());
+                    parent = pf.parent.as_deref();
+                }
+                parts.reverse();
+                (f.key.clone(), parts.join(" / "))
+            })
+            .collect()
+    }
+
     pub fn tracks(&self, id: &CollectionId) -> Option<&Arc<Vec<TrackRow>>> {
         match self.collections.get(id) {
             Some(Loadable::Loaded(tracks)) => Some(tracks),
@@ -143,6 +206,27 @@ impl LibraryState {
 }
 
 impl Shell {
+    /// Listenin açıklaması (Shell üzerinden, menü / başlık için).
+    pub(super) fn list_description(&self, id: &CollectionId) -> Option<&str> {
+        self.library.list_description(id)
+    }
+
+    pub(super) fn list_is_collaborative(&self, id: &CollectionId) -> bool {
+        self.library.list_is_collaborative(id)
+    }
+
+    pub(super) fn folder_of(&self, id: &CollectionId) -> Option<&str> {
+        self.library.folder_of(id)
+    }
+
+    pub(super) fn folder_name(&self, key: &str) -> Option<&str> {
+        self.library.folder_name(key)
+    }
+
+    pub(super) fn folder_choices(&self) -> Vec<(String, String)> {
+        self.library.folder_choices()
+    }
+
     /// Listeyi aç (geri / ileri geçmişine eklenir, bkz. `pages::navigate`).
     pub(super) fn select_collection(&mut self, id: CollectionId, cx: &mut Context<Self>) {
         // Takip edilen sanatçı bir şarkı listesi değil: sanatçı sayfası açılır.
@@ -171,7 +255,7 @@ impl Shell {
         self.library.list_glide.cancel();
         match scroll {
             Some(position) => {
-                let collapse = position.min(COLLAPSE_MAX);
+                let collapse = position.min(self.collapse_max());
                 self.library.header_collapse = collapse;
                 let handle = self.library.scroll.0.borrow().base_handle.clone();
                 handle.set_offset(gpui::point(px(0.), px(-(position - collapse))));
@@ -419,7 +503,28 @@ impl Shell {
         if self.all.open {
             return 0.;
         }
-        (self.library.header_collapse / COLLAPSE_MAX).clamp(0., 1.)
+        (self.library.header_collapse / self.collapse_max()).clamp(0., 1.)
+    }
+
+    /// Açıklaması olan listenin başlığı bir satır uzar: kapanma ekseni de o
+    /// kadar uzar (raf + başlık değişmezi bozulmaz, bkz. `scroll_list_by`).
+    pub(super) fn header_extra(&self) -> f32 {
+        if self.all.open {
+            return 0.;
+        }
+        let Some(id) = self.library.selected.as_ref() else {
+            return 0.;
+        };
+        if self.library.list_description(id).is_some() {
+            T_SECONDARY.line + S1
+        } else {
+            0.
+        }
+    }
+
+    /// Bu listenin raf + başlık kapanma yolu (bkz. `shelf::COLLAPSE_MAX`).
+    pub(super) fn collapse_max(&self) -> f32 {
+        COLLAPSE_MAX + self.header_extra()
     }
 
     /// Şarkı listesinin görünen yüksekliği ve içeriğin boyu (px). Görünen
@@ -456,7 +561,7 @@ impl Shell {
         if scroll_trace::enabled() {
             scroll_trace::event(
                 event,
-                self.library.header_collapse.min(COLLAPSE_MAX),
+                self.library.header_collapse.min(self.collapse_max()),
                 self.list_offset(),
                 detail,
             );
@@ -466,7 +571,7 @@ impl Shell {
     /// Raf, başlık ve listenin birlikte ne kadar kaydığı (px): tekerlek
     /// hareketi bunu izler.
     pub(super) fn list_position(&self) -> f32 {
-        let collapse = self.library.header_collapse.min(COLLAPSE_MAX);
+        let collapse = self.library.header_collapse.min(self.collapse_max());
         collapse - f32::from(self.library.scroll.0.borrow().base_handle.offset().y)
     }
 
@@ -475,7 +580,7 @@ impl Shell {
     /// şeride iner ve başlık küçülür, kalan yol listeye geçer. Yukarı: önce
     /// liste kayar, en üste gelince raf ve başlık açılır.
     pub(super) fn scroll_list_by(&mut self, d: f32) -> f32 {
-        let from_collapse = self.library.header_collapse.min(COLLAPSE_MAX);
+        let from_collapse = self.library.header_collapse.min(self.collapse_max());
         let max_y = self
             .list_extent()
             .map_or(0., |(viewport, content)| (content - viewport).max(0.));
@@ -490,7 +595,7 @@ impl Shell {
         // yapının kendisinden gelir: başlangıç durumu bozuk olsa bile
         // (bkz. `heal_list_collapse`) ilk adım onu düzeltir, satırlar
         // ekranda yerinden oynamaz.
-        let (collapse, y) = move_axis(from_collapse, from_y, d, max_y);
+        let (collapse, y) = move_axis(from_collapse, from_y, d, max_y, self.collapse_max());
         if collapse != from_collapse {
             self.library.header_collapse = collapse;
         }
@@ -512,9 +617,9 @@ impl Shell {
     /// raf ve başlık küçülür). Kök çizilirken, raf ve liste çizilmeden önce
     /// çağrılır; bir şey değiştiyse `true`.
     pub(super) fn heal_list_collapse(&mut self) -> bool {
-        let collapse = self.library.header_collapse.min(COLLAPSE_MAX);
+        let collapse = self.library.header_collapse.min(self.collapse_max());
         let y = self.list_offset();
-        let Some((to_collapse, to_y)) = fold_axis(collapse, y) else {
+        let Some((to_collapse, to_y)) = fold_axis(collapse, y, self.collapse_max()) else {
             return false;
         };
         self.library.header_collapse = to_collapse;
@@ -779,14 +884,43 @@ impl Shell {
                             .min_w_0(),
                     ),
             );
+        let shared = self.library.list_is_collaborative(&id);
         let title_el = div()
             .flex()
+            .items_center()
+            .gap(px(S2))
             .min_w_0()
             .font_family(font())
             .type_role(if compact { T_TITLE } else { T_HEADLINE })
             .font_weight(FontWeight::EXTRA_BOLD)
             .text_color(text())
-            .child(line_with_tip("page-title", title.clone()).flex().min_w_0());
+            .child(line_with_tip("page-title", title.clone()).flex().min_w_0())
+            // Ortak liste işareti: adın yanında küçük, ipucuyla.
+            .when(shared, |el| {
+                el.child(
+                    div()
+                        .id("shared-badge")
+                        .flex_none()
+                        .flex()
+                        .items_center()
+                        .type_role(T_SECONDARY)
+                        .text_color(label())
+                        .tooltip(super::components::Tooltip::text(t!(SharedTip), None))
+                        .child(icon("users", T_SECONDARY.size, label())),
+                )
+            });
+
+        // Açıklama (boşsa yer kaplamaz): başlığın altında tek satır; tamamı
+        // ipucunda. Kısalmış başlıkta yer kalmadığı için yalnız açık hâlde.
+        let description = (!compact)
+            .then(|| self.library.list_description(&id))
+            .flatten()
+            .map(|d| d.split_whitespace().collect::<Vec<_>>().join(" "))
+            .filter(|d| !d.is_empty());
+        let extra = self.header_extra();
+        // Açıklama satırı, başlık kapanırken yüksekliğiyle birlikte kısalır
+        // (başlığın boy formülüyle aynı oranda): ara boylarda taşmaz.
+        let desc_h = extra * (1. - progress);
 
         // İçerik satırlarla aynı enle: Çal düğmesi süre sütununun sağ
         // kenarında (sağ sayfa kenarı) durur. Üstteki çizgi rafı sayfadan
@@ -810,6 +944,19 @@ impl Shell {
                 .flex_col()
                 .child(title_el)
                 .child(meta)
+                .when_some(description, |el, text| {
+                    el.child(
+                        div().h(px(desc_h)).overflow_hidden().child(
+                            div()
+                                .flex()
+                                .min_w_0()
+                                .pt(px(S1))
+                                .type_role(T_SECONDARY)
+                                .text_color(muted())
+                                .child(line_with_tip("list-description", text).flex().min_w_0()),
+                        ),
+                    )
+                })
         };
         let content = div()
             .w_full()
@@ -832,7 +979,7 @@ impl Shell {
             );
         let header = div()
             .flex_shrink_0()
-            .h(px(header_height(progress)))
+            .h(px(header_height_with(progress, extra)))
             .px(px(page_margin(self.window_width)))
             .border_t_1()
             .border_color(veil(LINE))
@@ -993,7 +1140,7 @@ impl Shell {
             .map(|m| (m.viewport, m.offset));
         let viewport = self.list_viewport.clone();
         let scroll = self.library.scroll.clone();
-        let drawn_collapse = self.library.header_collapse.min(COLLAPSE_MAX);
+        let drawn_collapse = self.library.header_collapse.min(self.collapse_max());
         let measure = gpui::canvas(
             move |bounds, window, _| {
                 viewport.set(Some(bounds));
@@ -1797,21 +1944,21 @@ fn title_column() -> gpui::Div {
 /// kapanma, kalanı liste. Aşağı: önce raf kapanır, sonra liste kayar;
 /// yukarı: önce liste en üste gelir, sonra raf açılır. `max_y`: listenin en
 /// çok kayabileceği yol (liste zaten ötesindeyse orada kalır).
-fn move_axis(collapse: f32, y: f32, d: f32, max_y: f32) -> (f32, f32) {
-    let from = collapse.min(COLLAPSE_MAX) + y.max(0.);
-    let to = (from + d).clamp(0., COLLAPSE_MAX + max_y.max(y));
-    let collapse = to.min(COLLAPSE_MAX);
+fn move_axis(collapse: f32, y: f32, d: f32, max_y: f32, m: f32) -> (f32, f32) {
+    let from = collapse.min(m) + y.max(0.);
+    let to = (from + d).clamp(0., m + max_y.max(y));
+    let collapse = to.min(m);
     (collapse, to - collapse)
 }
 
 /// Değişmez bozuksa (raf tam kapanmamışken liste kaymış) liste konumunu
 /// kapanmaya aktar: toplam konum aynı kalır. Bozuk değilse `None`.
-fn fold_axis(collapse: f32, y: f32) -> Option<(f32, f32)> {
-    let collapse = collapse.min(COLLAPSE_MAX);
-    if y <= 0. || collapse >= COLLAPSE_MAX {
+fn fold_axis(collapse: f32, y: f32, m: f32) -> Option<(f32, f32)> {
+    let collapse = collapse.min(m);
+    if y <= 0. || collapse >= m {
         return None;
     }
-    let fold = y.min(COLLAPSE_MAX - collapse);
+    let fold = y.min(m - collapse);
     Some((collapse + fold, y - fold))
 }
 
@@ -1993,35 +2140,35 @@ mod tests {
     }
 
     /// Değişmez: raf/başlık tam kapanmamışken liste en üstte.
-    fn holds(collapse: f32, y: f32) -> bool {
-        y <= 0. || collapse >= COLLAPSE_MAX
+    fn holds(collapse: f32, y: f32, m: f32) -> bool {
+        y <= 0. || collapse >= m
     }
 
     #[test]
     fn wheel_axis_collapses_first_then_scrolls() {
         let m = COLLAPSE_MAX;
         // Aşağı: önce raf kapanır, kalan yol listeye.
-        assert_eq!(move_axis(0., 0., 234., 1000.), (m, 234. - m));
-        assert_eq!(move_axis(0., 0., 10., 1000.), (10., 0.));
+        assert_eq!(move_axis(0., 0., 234., 1000., m), (m, 234. - m));
+        assert_eq!(move_axis(0., 0., 10., 1000., m), (10., 0.));
         // Yukarı: önce liste en üste, sonra raf açılır.
-        assert_eq!(move_axis(m, 50., -80., 1000.), (m - 30., 0.));
+        assert_eq!(move_axis(m, 50., -80., 1000., m), (m - 30., 0.));
         // Sınırlar: en üstte ve en altta yol alınmaz.
-        assert_eq!(move_axis(0., 0., -50., 1000.), (0., 0.));
-        assert_eq!(move_axis(m, 1000., 50., 1000.), (m, 1000.));
+        assert_eq!(move_axis(0., 0., -50., 1000., m), (0., 0.));
+        assert_eq!(move_axis(m, 1000., 50., 1000., m), (m, 1000.));
         // Liste hiç çizilmediyse (max_y 0) yalnız raf kapanır.
-        assert_eq!(move_axis(0., 0., 234., 0.), (m, 0.));
+        assert_eq!(move_axis(0., 0., 234., 0., m), (m, 0.));
         // Kısa pencerede kapanma "en çok" (f32::MAX) olarak saklanıyor.
-        assert_eq!(move_axis(f32::MAX, 0., 20., 1000.), (m, 20.));
+        assert_eq!(move_axis(f32::MAX, 0., 20., 1000., m), (m, 20.));
         // Bozuk başlangıç (raf açık, liste 0,7 px aşağıda; eski "y < 0,5"
         // sınaması bunu "en üstte değil" sayıp bütün yolu listeye veriyordu):
         // adım değişmezi kurar.
-        let (c, y) = move_axis(0., 0.7, 234., 1000.);
-        assert!(holds(c, y) && (c + y - 234.7).abs() < 1e-3, "{c} {y}");
+        let (c, y) = move_axis(0., 0.7, 234., 1000., m);
+        assert!(holds(c, y, m) && (c + y - 234.7).abs() < 1e-3, "{c} {y}");
         // Her başlangıçtan her adımda değişmez korunur.
         for (c0, y0) in [(0., 0.), (40., 0.), (m, 0.), (m, 300.), (10., 120.)] {
             for d in [-500., -90., -3., 0., 3., 90., 500.] {
-                let (c, y) = move_axis(c0, y0, d, 1000.);
-                assert!(holds(c, y), "({c0}, {y0}) + {d} -> ({c}, {y})");
+                let (c, y) = move_axis(c0, y0, d, 1000., m);
+                assert!(holds(c, y, m), "({c0}, {y0}) + {d} -> ({c}, {y})");
             }
         }
     }
@@ -2030,12 +2177,12 @@ mod tests {
     fn fold_keeps_rows_in_place() {
         let m = COLLAPSE_MAX;
         // Raf açıkken liste 224 px kaymış: raf kapanır, liste o kadar yukarı.
-        assert_eq!(fold_axis(0., 224.), Some((m, 224. - m)));
-        assert_eq!(fold_axis(30., 20.), Some((50., 0.)));
+        assert_eq!(fold_axis(0., 224., m), Some((m, 224. - m)));
+        assert_eq!(fold_axis(30., 20., m), Some((50., 0.)));
         // Değişmez sağlamsa dokunulmaz.
-        assert_eq!(fold_axis(0., 0.), None);
-        assert_eq!(fold_axis(m, 300.), None);
-        assert_eq!(fold_axis(f32::MAX, 300.), None);
+        assert_eq!(fold_axis(0., 0., m), None);
+        assert_eq!(fold_axis(m, 300., m), None);
+        assert_eq!(fold_axis(f32::MAX, 300., m), None);
     }
 
     #[test]

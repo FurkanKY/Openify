@@ -1117,6 +1117,20 @@ impl Engine {
                     // kütüphane Spotify'dan tazelensin.
                     refresh |= !self.created(op, uri.clone(), &held);
                 }
+                (
+                    EditOp::CreateFolder { .. }
+                    | EditOp::RestoreFolder { .. }
+                    | EditOp::RenameFolder { .. }
+                    | EditOp::DeleteFolder { .. }
+                    | EditOp::MovePlaylistToFolder { .. },
+                    _,
+                ) => {
+                    self.persist_done(op, &held);
+                    // Kök listenin sırası (klasörlerin `at`ı, iç içe yerleşim)
+                    // yazmadan sonra kesin hâliyle okunur: iyimser kopya
+                    // yaklaşıktır, bu tek istek onu düzeltir.
+                    refresh = true;
+                }
                 _ => self.persist_done(op, &held),
             }
         }
@@ -1569,6 +1583,137 @@ pub fn patch_library(
             }
         }
         EditOp::MovePlaylistItems { .. } => false,
+        EditOp::SetPlaylistDescription {
+            playlist,
+            description,
+            ..
+        } => {
+            let old = lib.meta.descriptions.get(playlist).cloned();
+            if description.is_empty() {
+                lib.meta.descriptions.remove(playlist);
+            } else {
+                lib.meta
+                    .descriptions
+                    .insert(playlist.clone(), description.clone());
+            }
+            old.as_deref().unwrap_or("") != description.as_str()
+        }
+        EditOp::SetPlaylistCollaborative {
+            playlist,
+            collaborative,
+            ..
+        } => {
+            let was = lib.meta.collaborative.contains(playlist);
+            if *collaborative {
+                lib.meta.collaborative.insert(playlist.clone());
+            } else {
+                lib.meta.collaborative.remove(playlist);
+            }
+            was != *collaborative
+        }
+        EditOp::CreateFolder { key, name } => {
+            if lib.meta.folders.iter().any(|f| &f.key == key) {
+                return false;
+            }
+            lib.meta.folders.push(crate::engine::library::Folder {
+                key: key.clone(),
+                name: name.clone(),
+                parent: None,
+                at: lib.playlists.len(),
+            });
+            true
+        }
+        EditOp::RenameFolder { folder, name, .. } => {
+            let Some(new_key) = edits::renamed_folder_key(folder, name) else {
+                return false;
+            };
+            if new_key == *folder {
+                return false;
+            }
+            let mut changed = false;
+            for f in &mut lib.meta.folders {
+                if f.key == *folder {
+                    f.key = new_key.clone();
+                    f.name = name.clone();
+                    changed = true;
+                }
+                if f.parent.as_deref() == Some(folder.as_str()) {
+                    f.parent = Some(new_key.clone());
+                    changed = true;
+                }
+            }
+            for parent in lib.meta.parents.values_mut() {
+                if parent.as_str() == folder.as_str() {
+                    *parent = new_key.clone();
+                }
+            }
+            changed
+        }
+        EditOp::DeleteFolder { folder, .. } => {
+            let Some(ix) = lib.meta.folders.iter().position(|f| &f.key == folder) else {
+                return false;
+            };
+            let gone = lib.meta.folders.remove(ix);
+            // İçindekiler bir dış klasöre (yoksa köke) çıkar.
+            for f in &mut lib.meta.folders {
+                if f.parent.as_deref() == Some(folder.as_str()) {
+                    f.parent = gone.parent.clone();
+                }
+            }
+            for parent in lib.meta.parents.values_mut() {
+                if parent.as_str() == folder.as_str() {
+                    *parent = gone.parent.clone().unwrap_or_default();
+                }
+            }
+            lib.meta.parents.retain(|_, p| !p.is_empty());
+            true
+        }
+        EditOp::RestoreFolder {
+            folder,
+            name,
+            before,
+            contents,
+        } => {
+            if lib.meta.folders.iter().any(|f| &f.key == folder) {
+                return false;
+            }
+            let at = before
+                .as_ref()
+                .and_then(|b| lib.playlists.iter().position(|p| p.id.key() == b))
+                .unwrap_or(lib.playlists.len());
+            let parent = before
+                .as_ref()
+                .and_then(|b| lib.meta.parents.get(b).cloned());
+            lib.meta.folders.push(crate::engine::library::Folder {
+                key: folder.clone(),
+                name: name.clone(),
+                parent,
+                at,
+            });
+            // Aynı `at`ta sıra bozulmasın: klasörler `at`a göre sıralı kalır.
+            lib.meta.folders.sort_by_key(|f| f.at);
+            for child in contents {
+                lib.meta.parents.insert(child.clone(), folder.clone());
+            }
+            true
+        }
+        EditOp::MovePlaylistToFolder {
+            playlist, folder, ..
+        } => {
+            let old = lib.meta.parents.get(playlist).cloned();
+            if old == *folder {
+                return false;
+            }
+            match folder {
+                Some(folder) => {
+                    lib.meta.parents.insert(playlist.clone(), folder.clone());
+                }
+                None => {
+                    lib.meta.parents.remove(playlist);
+                }
+            }
+            true
+        }
     }
 }
 

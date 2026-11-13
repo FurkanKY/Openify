@@ -431,6 +431,8 @@ mod readme {
                 .iter()
                 .map(|(n, _, _, owner)| (playlist_key(*n), (*owner).to_string()))
                 .collect(),
+            descriptions: Default::default(),
+            collaborative: Default::default(),
             pinned: Vec::new(),
         };
         let library = Library {

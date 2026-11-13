@@ -1861,7 +1861,7 @@ impl Render for Shell {
         self.advance_list_glide(window);
         if library::scroll_trace::enabled() {
             let (collapse, offset) = (
-                self.library.header_collapse.min(shelf::COLLAPSE_MAX),
+                self.library.header_collapse.min(self.collapse_max()),
                 self.list_offset(),
             );
             let extent = self.list_extent();
