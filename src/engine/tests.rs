@@ -136,6 +136,7 @@ fn row(i: usize) -> TrackRow {
         album: "Albüm".into(),
         duration_ms: 200_000,
         image: String::new(),
+        plays: None,
     }
 }
 
@@ -366,6 +367,7 @@ fn rule_row(i: usize) -> TrackRow {
         album: "Albüm".into(),
         duration_ms: 200_000,
         image: String::new(),
+        plays: None,
     }
 }
 
@@ -600,6 +602,7 @@ fn seed_rules_demo_library() {
             album: "Demo".into(),
             duration_ms: 200_000 + i as u32 * 1_000,
             image: String::new(),
+            plays: None,
         })
         .collect();
     let db = Db::open(&dir.join("library.db")).unwrap();
@@ -1044,6 +1047,7 @@ fn radio_rows(from: usize, to: usize) -> Vec<TrackRow> {
             album: String::new(),
             duration_ms: 180_000,
             image: String::new(),
+            plays: None,
         })
         .collect()
 }

@@ -464,6 +464,7 @@ mod tests {
             album: String::new(),
             duration_ms: ms,
             image: String::new(),
+            plays: None,
         }
     }
 

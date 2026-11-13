@@ -39,6 +39,7 @@ mod demo {
             album: album.into(),
             duration_ms: minutes * 1000 + 61_000,
             image: String::new(),
+            plays: None,
         }
     }
 
@@ -218,6 +219,9 @@ mod demo {
         ];
         let mut saved = rows.to_vec();
         saved.extend(versions.iter().cloned());
+        let smart_unplayed = track(15, "Yumuşak Işık", "Mavi Orman", "Uzun Yol", 6);
+        let smart_forgotten = track(16, "Eski Sokak", "Deniz Aydın", "Sessiz Ev", 5);
+        saved.extend([smart_unplayed.clone(), smart_forgotten.clone()]);
         db.save_tracks(&saved).unwrap();
         let ages = [
             2,
@@ -231,7 +235,7 @@ mod demo {
             400 * DAY,
             800 * DAY,
         ];
-        let entries: Vec<Entry> = rows
+        let mut entries: Vec<Entry> = rows
             .iter()
             .zip(ages)
             .map(|(r, a)| Entry {
@@ -239,6 +243,10 @@ mod demo {
                 added_at: Some(ago(a)),
             })
             .collect();
+        entries.push(Entry {
+            track: smart_unplayed.uri.clone(),
+            added_at: Some(ago(1)),
+        });
         db.save_collection_entries(&CollectionId::Liked, Some(b"1"), &entries)
             .unwrap();
         // "Gece sürüşü": aynı şarkı iki kez (Sessiz Gece, Ayna) ve sürümler (Remaster, Live, Radio Edit).
@@ -337,6 +345,31 @@ mod demo {
                 duration_ms: r.duration_ms,
                 listened_ms: listened,
                 played_at: played_at.min(now),
+            })
+            .unwrap();
+        }
+        // Akıllı listelerin ekran sınamasında her koşuda dolu kalması için sabit örnekler.
+        for n in 0..8 {
+            db.record_play(&crate::engine::tools::stats::PlayRecord {
+                uri: rows[0].uri.clone(),
+                name: rows[0].name.clone(),
+                artists: rows[0].artists.clone(),
+                album: rows[0].album.clone(),
+                duration_ms: rows[0].duration_ms,
+                listened_ms: 60_000,
+                played_at: now - n * 86_400_000,
+            })
+            .unwrap();
+        }
+        for n in 0..4 {
+            db.record_play(&crate::engine::tools::stats::PlayRecord {
+                uri: smart_forgotten.uri.clone(),
+                name: smart_forgotten.name.clone(),
+                artists: smart_forgotten.artists.clone(),
+                album: smart_forgotten.album.clone(),
+                duration_ms: smart_forgotten.duration_ms,
+                listened_ms: 60_000,
+                played_at: now - (90 + n) * 86_400_000,
             })
             .unwrap();
         }

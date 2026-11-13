@@ -232,6 +232,7 @@ mod tests {
             album: "Albüm".into(),
             duration_ms: 1000 * n,
             image: String::new(),
+            plays: None,
         }
     }
 

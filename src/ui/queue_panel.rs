@@ -919,6 +919,7 @@ impl Shell {
                     album: album.into(),
                     duration_ms: 181_000 + n as u32 * 23_000,
                     image: String::new(),
+                    plays: None,
                 }),
                 source,
             }

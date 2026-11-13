@@ -35,8 +35,17 @@ impl Engine {
                 add_ms,
             } => db.extend_play(uri, *played_at, *add_ms),
         };
+        let counted = matches!(log, PlayLog::Count(_));
         if let Err(e) = written {
             log::warn!("Çalma geçmişi yazılamadı: {e:#}");
+        } else if counted {
+            for list in crate::engine::library::SmartList::ALL {
+                let id = crate::engine::CollectionId::Smart(list);
+                if self.opened.contains(&id) {
+                    self.collections.remove(&id);
+                    self.open_collection(id);
+                }
+            }
         }
     }
 
@@ -231,6 +240,7 @@ mod tests {
             album: "Y".into(),
             duration_ms: 1,
             image: String::new(),
+            plays: None,
         };
         rig.db.save_tracks(std::slice::from_ref(&row)).unwrap();
         rig.db

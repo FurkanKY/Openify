@@ -203,6 +203,7 @@ mod tests {
             album: "Albüm".into(),
             duration_ms: ms,
             image: String::new(),
+            plays: None,
         }
     }
 

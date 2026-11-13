@@ -706,6 +706,7 @@ mod tests {
             album: String::new(),
             duration_ms: 1,
             image: String::new(),
+            plays: None,
         }
     }
 

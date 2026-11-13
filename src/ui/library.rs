@@ -24,7 +24,7 @@ use super::{
     text::line_with_tip,
     theme::*,
 };
-use crate::engine::{CollectionId, Command, Library, LibraryItem, TrackRow};
+use crate::engine::{CollectionId, Command, Library, LibraryItem, SmartList, TrackRow};
 use crate::{t, tf, tp};
 
 pub(super) const ROW_HEIGHT: f32 = 56.;
@@ -131,6 +131,9 @@ impl LibraryState {
         if id == &CollectionId::Liked {
             return t!(LikedSongs).into();
         }
+        if let CollectionId::Smart(list) = id {
+            return smart_title(*list).to_string();
+        }
         self.item(id)
             .map(|i| i.name.clone())
             .or_else(|| self.titles.get(id).cloned())
@@ -205,6 +208,14 @@ impl LibraryState {
             Some(Loadable::Loaded(tracks)) => Some(tracks),
             _ => None,
         }
+    }
+}
+
+pub(super) fn smart_title(list: SmartList) -> &'static str {
+    match list {
+        SmartList::Top30 => t!(SmartTop30),
+        SmartList::Unplayed => t!(SmartUnplayed),
+        SmartList::Forgotten => t!(SmartForgotten),
     }
 }
 
@@ -716,6 +727,7 @@ impl Shell {
         // şarkı sayısı ve süre soluk. Başlığın üstüne ayrı etiket konmaz.
         let (lead, kind): (SharedString, Option<&str>) = match &id {
             CollectionId::Liked => (t!(LibraryYours).into(), None),
+            CollectionId::Smart(_) => (t!(SmartListLocal).into(), None),
             CollectionId::Album(_) => (owner.clone().into(), Some(t!(Album))),
             CollectionId::Playlist(_) if crate::i18n::canon::is_spotify(&owner) => {
                 ("Spotify".into(), None)
@@ -776,8 +788,16 @@ impl Shell {
                 tp!(Songs, 0).into(),
                 centered(state_view(
                     "list-music",
-                    t!(EmptyListTitle),
-                    t!(EmptyListBody),
+                    if matches!(id, CollectionId::Smart(_)) {
+                        t!(SmartListLocal)
+                    } else {
+                        t!(EmptyListTitle)
+                    },
+                    if matches!(id, CollectionId::Smart(_)) {
+                        t!(SmartListEmpty)
+                    } else {
+                        t!(EmptyListBody)
+                    },
                 )),
             ),
             Some(Loadable::Loaded(tracks)) => {
@@ -1022,7 +1042,7 @@ impl Shell {
             .child(column_header(
                 matches!(id, CollectionId::Album(_)),
                 self.shows_added_column(&id),
-                false,
+                matches!(id, CollectionId::Smart(_)),
                 page_margin(self.window_width),
             ))
             .child(body)
@@ -1114,7 +1134,8 @@ impl Shell {
                                         .unwrap_or_default()
                                         .into()
                                 }),
-                                plays: None,
+                                plays: matches!(id, CollectionId::Smart(_))
+                                    .then_some(track.plays.unwrap_or_default()),
                             };
                             Some(this.song_row(spec, track, cx))
                         })
@@ -1279,6 +1300,7 @@ impl Shell {
         });
         let title_color = if playing { rgb(accent) } else { text() };
         let liked = self.is_liked(&track.uri);
+        let smart = matches!(&list, ListKey::Collection(CollectionId::Smart(_)));
         // Tıklanabilen adlar ve beğenilmemiş şarkının kalbi yalnız fare
         // üzerindeki satırda kurulur: her satırda kurulunca kaydırırken kare
         // ~0,9 ms (%17) pahalanıyordu (`OPENIFY_PROF_HIDE=rowx` ile ölçüldü).
@@ -1426,7 +1448,7 @@ impl Shell {
                         .child(line_with_tip(("t-added", ix), when).flex().min_w_0()),
                 )
             })
-            // Dinlenme sayısı (albüm ve sanatçı sayfaları; dar pencerede sütun yok).
+            // Dinlenme sayısı (akıllı listeler ve sayfalar; dar pencerede sütun yok).
             .when_some(plays, |el, n| {
                 el.child(
                     div()
@@ -1442,7 +1464,8 @@ impl Shell {
             })
             // Beğenilenlerde her satır beğenili: kalp yalnız üzerine gelince.
             .child(
-                if !(hot || liked && list != ListKey::Collection(CollectionId::Liked))
+                if smart
+                    || !(hot || liked && list != ListKey::Collection(CollectionId::Liked))
                     || super::frames::hidden("hearts")
                     || super::frames::hidden("rowx")
                 {
@@ -1721,6 +1744,23 @@ impl Shell {
     ) -> AnyElement {
         match id {
             CollectionId::Liked => liked_art(side, radius, self.accent().text),
+            CollectionId::Smart(list) => {
+                let (glyph, tone, ink) = match list {
+                    SmartList::Top30 => ("repeat-1", palette().placeholder, self.accent().text),
+                    SmartList::Unplayed => ("heart", palette().bar, self.accent().text),
+                    SmartList::Forgotten => ("history", palette().placeholder, self.accent().text),
+                };
+                div()
+                    .size(px(side))
+                    .flex_shrink_0()
+                    .rounded(px(radius))
+                    .flex()
+                    .items_center()
+                    .justify_center()
+                    .bg(rgb(tone))
+                    .child(icon(glyph, (side * 0.42).max(14.), rgb(ink)))
+                    .into_any_element()
+            }
             CollectionId::Album(_) => {
                 cover_image(&self.images, image, name, side, radius, "disc-3")
             }

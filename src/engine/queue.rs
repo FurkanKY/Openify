@@ -1829,6 +1829,7 @@ mod tests {
                     album: String::new(),
                     duration_ms: 1000,
                     image: String::new(),
+                    plays: None,
                 })
                 .collect(),
         )
@@ -2284,6 +2285,7 @@ mod tests {
             album: "A".into(),
             duration_ms: 1000,
             image: String::new(),
+            plays: None,
         };
         let rows = Arc::new((0..3).map(|i| row(&format!("t{i}"))).collect::<Vec<_>>());
         let mut q = Queue::new();
@@ -2363,6 +2365,7 @@ mod tests {
             album: String::new(),
             duration_ms: ms,
             image: String::new(),
+            plays: None,
         }
     }
 

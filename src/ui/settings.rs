@@ -1735,6 +1735,13 @@ impl Shell {
             window,
             cx,
         );
+        let smart_lists = self.switch_control(
+            "smart-lists",
+            p.show_smart_lists,
+            |p, v| p.show_smart_lists = v,
+            window,
+            cx,
+        );
         let close = self.choice_control(
             "close",
             &[("tray", t!(CloseToTray)), ("quit", t!(CloseQuit))],
@@ -1768,6 +1775,11 @@ impl Shell {
                     false,
                     row_text(t!(SettingsLanguageTitle), t!(SettingsLanguageDesc), None),
                     language,
+                ),
+                setting_row(
+                    false,
+                    row_text(t!(SmartListsSettingTitle), t!(SmartListsSettingDesc), None),
+                    smart_lists,
                 ),
                 setting_row(
                     false,

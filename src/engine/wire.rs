@@ -1984,6 +1984,7 @@ fn stub_row(uri: &str) -> TrackRow {
         album: String::new(),
         duration_ms: 0,
         image: String::new(),
+        plays: None,
     }
 }
 
@@ -2097,6 +2098,7 @@ mod tests {
             album: "Albüm".into(),
             duration_ms: 1000,
             image: String::new(),
+            plays: None,
         }
     }
 
@@ -3542,6 +3544,7 @@ mod tests {
             album: "Gece Radyosu".into(),
             duration_ms: 180_000 + n * 7_000,
             image: image(n),
+            plays: None,
         };
         let album = |n: u32, name: &str, year: u16, kind: pages::ReleaseKind| pages::AlbumCard {
             uri: format!("spotify:album:seed{n:018}"),

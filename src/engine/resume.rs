@@ -210,6 +210,7 @@ fn user_item(u: SnapUser) -> UserItem {
         album: u.album,
         duration_ms: u.duration_ms,
         image: u.image,
+        plays: None,
     });
     UserItem { uri: u.uri, track }
 }
@@ -383,6 +384,7 @@ mod tests {
                 album: "Albüm".into(),
                 duration_ms: 123_000,
                 image: "https://i.scdn.co/image/x".into(),
+                plays: None,
             }),
         }
     }
@@ -550,6 +552,7 @@ mod tests {
                 album: String::new(),
                 duration_ms: 1000,
                 image: String::new(),
+                plays: None,
             })
             .collect();
         let mut q = Queue::new();
