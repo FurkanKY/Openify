@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-11-14
+
+### Added
+
+- Smart lists: three self-updating lists in your library, built only from
+  what you play in Openify on this computer. "On repeat · 30 days" shows your
+  most played songs of the last month, "Liked, never played" the liked songs
+  you have not played yet, and "Long time no play" old favourites you have not
+  heard for two months. They can be played and shuffled like any list, are
+  never written to Spotify, and can be hidden in Settings.
+
+### Changed
+
+- Now-playing pill redesign: one centred axis with the play button in the
+  middle, times on both sides of the controls, progress as a thin line along
+  the bottom edge, and a quieter set of tool buttons.
+
 ## [0.1.3] - 2026-11-13
 
 ### Added
