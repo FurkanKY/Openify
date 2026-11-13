@@ -23,6 +23,21 @@ ignored outside a test run.
 - Tests must not talk to Spotify. Use the fixtures in `src/engine/fixtures`, or
   `OPENIFY_TEST_FAKE_PLAY=1` when you run the app.
 
+## Theme checks
+
+Theme checks need no account: seed the README library, give each run a fresh
+copy of that cache, then use `scripts/ekran-sinama.ps1 -Exe <temporary exe copy>`
+with `OPENIFY_TEST_OFFLINE=1`, `OPENIFY_TEST_FAKE_PLAY=1`,
+`OPENIFY_TEST_LOOK_ONLINE=1`, `OPENIFY_TEST_LANG=en` and
+`OPENIFY_TEST_THEME=dark|light`. Capture Home, Library, a playlist,
+`OPENIFY_TEST_VIEW=palette:night`, Settings (including Appearance), Equalizer
+and `OPENIFY_TEST_VIEW=fullscreen`. Inspect cover overlays, shadows, scrims,
+quiet text and the search fill in each image. Test settings changes once more
+without the forced theme, so the screenshot override cannot mask a broken
+setting. For a real Windows notification check, the owner can choose System
+and change Windows' default **app** mode; explicit Dark/Light must stay fixed.
+Automated checks never write Windows' theme settings.
+
 ## Live tests (real account)
 
 These are `#[ignore]`d, never run automatically, and only the account owner
@@ -62,6 +77,10 @@ counts and which fields are present, never names or titles.
   Openify is open.
 - `OPENIFY_TEST_LANG=en|tr`: force the interface language, overriding the
   setting and the Windows language (`src/i18n.rs`).
+- `OPENIFY_TEST_THEME=light|dark`: force a palette in an isolated test run
+  (`OPENIFY_TEST_DISPLAY` or `OPENIFY_SETTINGS_PATH` must be set). Overrides the
+  saved theme and System mode, without changing the saved preference. Invalid
+  values are ignored. Use the same demo seed and viewport for both themes.
 - `OPENIFY_TEST_PANIC_ENGINE=1`: the engine panics after 2 seconds, to see the
   "Restart" state.
 - `OPENIFY_TEST_NOTICE="working|info|problem:text"`: show a notice strip.

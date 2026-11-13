@@ -340,7 +340,7 @@ impl Shell {
             let color = if is_active || !synced {
                 text()
             } else {
-                muted()
+                lyric_idle()
             };
             let start = l.start_ms;
             let content: String = if l.text.is_empty() {
@@ -475,7 +475,7 @@ impl Shell {
     }
 }
 
-/// Panelin üst ya da alt kenarındaki geçiş: panel yüzeyinden (`BAR`) saydama.
+/// Panelin üst ya da alt kenarındaki geçiş: panel yüzeyinden (`palette().bar`) saydama.
 /// `strength` 0..1; ~0 ise hiç öğe yok. Hiçbir olaya bağlanmaz: tıklama ve
 /// tekerlek altındaki satıra geçer.
 pub(super) fn edge_veil(top: bool, strength: f32) -> Option<AnyElement> {
@@ -483,8 +483,11 @@ pub(super) fn edge_veil(top: bool, strength: f32) -> Option<AnyElement> {
     if strength < 0.01 {
         return None;
     }
-    let solid = linear_color_stop(with_alpha(BAR, strength), if top { 0. } else { 1. });
-    let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
+    let solid = linear_color_stop(
+        with_alpha(palette().bar, strength),
+        if top { 0. } else { 1. },
+    );
+    let clear = linear_color_stop(with_alpha(palette().bar, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
     let veil = div()
         .absolute()

@@ -591,7 +591,11 @@ changes). The `Saver` thread coalesces writes.
   windows. When the main window is hidden they are destroyed on close and
   recreated on demand, to keep hidden memory low (`ui/integration.rs`
   `schedule_trim`).
-- `ui/windows_titlebar.rs`: dark custom title bar.
+- `system/app_theme.rs`: reads `AppsUseLightTheme` without modifying the registry;
+  resolves Dark / Light / System and the isolated screenshot override. The existing
+  `WM_SETTINGCHANGE` / `ImmersiveColorSet` event updates System mode live.
+- `ui/windows_titlebar.rs`: applies the active palette and the DWM immersive dark
+  mode flag to the reachable HWND.
 
 ## 8. Vendored patches and why
 
@@ -764,6 +768,15 @@ These exist for tests and measurements; none changes behaviour for normal users.
   `--features mem-stats`), `RUST_LOG=openify=debug`.
 
 ## 11. Conventions
+
+Theme preferences are persisted as `theme: "dark" | "light" | "system"` in
+settings. Missing or unknown values select Dark, preserving existing users'
+appearance. `ui/theme.rs` owns `Palette::DARK` and `Palette::LIGHT`; `palette()`
+resolves every surface and foreground token. Theme changes notify the Shell and
+its observing child views. Cover-dependent pill and full-screen images are
+rebuilt with a captured palette and a generation check, so an older worker
+cannot paint a previous theme over the current one. Taskbar and tray icons
+continue to follow Windows' shell mode, independently of the app preference.
 
 - **New features are their own gpui `Entity`.** Do not add fields to `Shell`;
   it is already too big and splitting it is planned. A feature owns its state,

@@ -52,6 +52,41 @@ fn migrate_value(value: &mut Value, steps: &[Migration]) -> (u32, bool) {
     (from, changed)
 }
 
+/// Kalıcı görünüm tercihi. Eksik, bilinmeyen ya da bozuk değer koyu açılır;
+/// yeni bir tema değeri eski dosyanın diğer tercihlerini kaybettirmemeli.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase", from = "Value")]
+pub enum ThemePreference {
+    #[default]
+    Dark,
+    Light,
+    System,
+}
+
+impl ThemePreference {
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Dark => "dark",
+            Self::Light => "light",
+            Self::System => "system",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Self {
+        match key {
+            "light" => Self::Light,
+            "system" => Self::System,
+            _ => Self::Dark,
+        }
+    }
+}
+
+impl From<Value> for ThemePreference {
+    fn from(value: Value) -> Self {
+        value.as_str().map(Self::from_key).unwrap_or_default()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -96,6 +131,8 @@ pub struct Settings {
     pub output_device: Option<String>,
     /// Animasyonları azalt: `"system"` (Windows'un ayarı), `"on"`, `"off"`.
     pub reduce_motion: String,
+    /// Uygulama renkleri: koyu (varsayılan), açık ya da Windows uygulama modu.
+    pub theme: ThemePreference,
     /// Kapat düğmesi pencereyi tepsiye gizler (`true`) ya da uygulamadan çıkar.
     pub close_to_tray: bool,
     /// Her yerden arama kısayolu (Ctrl+Shift+Boşluk).
@@ -245,6 +282,7 @@ impl Default for Settings {
             normalise_level: "normal".into(),
             output_device: None,
             reduce_motion: "system".into(),
+            theme: ThemePreference::Dark,
             close_to_tray: true,
             global_hotkey: true,
             resume: true,
@@ -818,6 +856,49 @@ mod tests {
             ("very_high", "system")
         );
         assert_eq!(s.output_device, None);
+    }
+
+    #[test]
+    fn theme_preference_defaults_to_dark_without_discarding_other_settings() {
+        assert_eq!(Settings::default().theme, ThemePreference::Dark);
+        let old: Settings = serde_json::from_str(r#"{"volume":0.4}"#).unwrap();
+        assert_eq!(old.theme, ThemePreference::Dark);
+        for invalid in [
+            serde_json::json!("unknown"),
+            serde_json::json!("Light"),
+            serde_json::json!(null),
+            serde_json::json!(123),
+            serde_json::json!({}),
+            serde_json::json!([]),
+        ] {
+            let settings: Settings = serde_json::from_value(serde_json::json!({
+                "volume": 0.4, "theme": invalid,
+            }))
+            .unwrap();
+            assert_eq!(settings.theme, ThemePreference::Dark);
+            assert_eq!(settings.volume, 0.4);
+        }
+    }
+
+    #[test]
+    fn theme_preference_round_trips_through_the_settings_file() {
+        let dir = temp_dir("theme-round-trip");
+        for theme in [
+            ThemePreference::Dark,
+            ThemePreference::Light,
+            ThemePreference::System,
+        ] {
+            let path = dir.join(format!("{}.json", theme.key()));
+            let settings = Settings {
+                theme,
+                ..Settings::default()
+            };
+            settings.save_to(&path).unwrap();
+            assert_eq!(Settings::load_from(&path), settings);
+            let raw: Value = serde_json::from_str(&fs::read_to_string(&path).unwrap()).unwrap();
+            assert_eq!(raw["theme"], theme.key());
+        }
+        let _ = fs::remove_dir_all(&dir);
     }
 
     #[test]

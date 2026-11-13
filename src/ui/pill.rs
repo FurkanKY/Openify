@@ -472,7 +472,11 @@ impl Shell {
             v if v < 0.5 => "volume-1",
             _ => "volume-2",
         };
-        let volume_fill = if m.muted { mix(TEXT, BG, 0.62) } else { TEXT };
+        let volume_fill = if m.muted {
+            mix(palette().text, palette().bg, 0.62)
+        } else {
+            palette().text
+        };
         let volume_slider = if live {
             slider(
                 "volume",
@@ -610,8 +614,8 @@ impl Shell {
             // halka. Çalmıyorken renksiz, sakin cam.
             .bg(linear_gradient(
                 180.,
-                linear_color_stop(rgb(PILL_GLASS_TOP), 0.),
-                linear_color_stop(rgb(PILL_GLASS_BOTTOM), 1.),
+                linear_color_stop(rgb(palette().pill_glass_top), 0.),
+                linear_color_stop(rgb(palette().pill_glass_bottom), 1.),
             ))
             .children(self.pill_surface(m.glow.is_some(), window));
         pill.when(live, |el| {
@@ -676,8 +680,8 @@ impl Shell {
             .gap(px(S3))
             .rounded(px(R_XL))
             .border_1()
-            .border_color(rgb(BORDER))
-            .bg(rgb(BAR))
+            .border_color(rgb(palette().border))
+            .bg(rgb(palette().bar))
             // Altındaki satırlar tıklanmasın, üzerine gelmek onları boyamasın.
             .block_mouse_except_scroll()
             .child(icon("cast", 18., label()))
@@ -749,10 +753,10 @@ impl Shell {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .bg(shade(SCRIM))
+                            .bg(cover_scrim(SCRIM))
                             .opacity(0.)
                             .group_hover("np-cover", |s| s.opacity(1.))
-                            .child(icon("maximize-2", 18., text())),
+                            .child(icon("maximize-2", 18., cover_ink())),
                     )
                     .tooltip(Tooltip::text(t!(FullScreen), Some("F11")))
                     // Kapak tam ekranı açar, paneli değil (hapın on_click'i).
@@ -844,7 +848,7 @@ impl Shell {
             } => {
                 let look = offline_look(&self.state.connection);
                 let tile_color: Hsla = if look.danger_icon {
-                    rgb(DANGER_TEXT).into()
+                    rgb(palette().danger_text).into()
                 } else {
                     label().into()
                 };
@@ -914,7 +918,7 @@ impl Shell {
         match kind {
             engine::NoticeKind::Working => ("refresh-cw", label().into()),
             engine::NoticeKind::Info => ("info", muted().into()),
-            engine::NoticeKind::Problem => ("circle-alert", rgb(DANGER_TEXT).into()),
+            engine::NoticeKind::Problem => ("circle-alert", rgb(palette().danger_text).into()),
         }
     }
 
@@ -1023,8 +1027,8 @@ impl Shell {
             .gap(px(S3))
             .rounded(px(R_XL))
             .border_1()
-            .border_color(rgb(BORDER))
-            .bg(rgb(BAR))
+            .border_color(rgb(palette().border))
+            .bg(rgb(palette().bar))
             // Gölgesi yok: hapın gölgesiyle üst üste binen ikinci bir gölge
             // şeffaf piksel çizgileri bırakıyordu (bkz. `pill_shadow`).
             // Altındaki satırlar tıklanmasın, üzerine gelmek onları boyamasın.
@@ -1100,7 +1104,7 @@ fn round(child: AnyElement) -> AnyElement {
         .flex_shrink_0()
         .rounded_full()
         .overflow_hidden()
-        .bg(rgb(PLACEHOLDER))
+        .bg(rgb(palette().placeholder))
         .child(child)
         .into_any_element()
 }
@@ -1111,7 +1115,7 @@ fn round_tile(content: AnyElement) -> AnyElement {
         .size(px(PILL_COVER))
         .flex_shrink_0()
         .rounded_full()
-        .bg(rgb(PLACEHOLDER))
+        .bg(rgb(palette().placeholder))
         .flex()
         .items_center()
         .justify_center()
@@ -1121,7 +1125,7 @@ fn round_tile(content: AnyElement) -> AnyElement {
 
 /// Kaydırıcı tutamacının odak halkası: dolu kısmın renginden ayrışsın.
 fn fill_ring(fill: u32) -> u32 {
-    if fill == TEXT {
+    if fill == palette().text {
         DEFAULT_ACCENT.text
     } else {
         mix(fill, 0xFFFFFF, 0.5)
@@ -1250,7 +1254,7 @@ pub(super) fn slider_hit(
                 .w_full()
                 .h(px(4.))
                 .rounded(px(R_XS))
-                .bg(rgb(TRACK))
+                .bg(rgb(palette().track))
                 .child(
                     div()
                         .h_full()

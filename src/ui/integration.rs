@@ -354,6 +354,16 @@ mod imp {
                     log::info!("sistem: medya kontrolünden sarma {ms} ms");
                     vec![]
                 }
+                SystemEvent::ThemeChanged => {
+                    // Tepsi / görev çubuğu kendi sistem modunu izlemeyi sürdürür.
+                    if let Some(integration) = &mut self.desk.integration {
+                        integration.on_event(SystemEvent::ThemeChanged);
+                    }
+                    // Uygulama paletini yalnız Sistem tercihinde (veya geçerli
+                    // sınama zorlamasıyla) çözümle; kalıcı tercihi değiştirme.
+                    self.apply_theme(cx);
+                    vec![]
+                }
                 SystemEvent::Show => vec![Op::Show {
                     front: true,
                     at: s.at,

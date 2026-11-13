@@ -89,9 +89,9 @@ pub(super) fn drag_ghost(name: &str, artists: &str) -> gpui::Div {
         .items_center()
         .gap(px(S3))
         .rounded(px(R_MD))
-        .bg(rgb(BAR))
+        .bg(rgb(palette().bar))
         .border_1()
-        .border_color(rgb(BORDER))
+        .border_color(rgb(palette().border))
         .shadow(float_shadow())
         .child(icon("grip-vertical", 16., label()))
         .child(
@@ -275,9 +275,9 @@ impl Shell {
             .flex()
             .flex_col()
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             // Yüzen panel içeriğin üstünde: yüzen gölge. Yerleşik panel
             // listenin yanında, aynı düzlemde: daha sakin gölge (bkz.
             // `dock_shadow`). (Eski "iki kenarda şeffaf delik" ekran görüntüsü
@@ -749,14 +749,14 @@ impl Shell {
                         .flex()
                         .items_center()
                         .justify_center()
-                        .bg(shade(SCRIM))
+                        .bg(cover_scrim(SCRIM))
                         .opacity(0.)
                         .group_hover(group, |s| s.opacity(1.))
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.play_queue_item(v, cx);
                             cx.stop_propagation();
                         }))
-                        .child(icon("play-fill", 14., text())),
+                        .child(icon("play-fill", 14., cover_ink())),
                 )
             })
             .when(look == Look::Hover && !current, |el| {
@@ -768,8 +768,8 @@ impl Shell {
                         .flex()
                         .items_center()
                         .justify_center()
-                        .bg(shade(SCRIM))
-                        .child(icon("play-fill", 14., text())),
+                        .bg(cover_scrim(SCRIM))
+                        .child(icon("play-fill", 14., cover_ink())),
                 )
             });
 
@@ -1008,7 +1008,7 @@ impl Shell {
             .w(px(PANEL_WIDTH))
             .p(px(S4))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .flex()
             .flex_col()
             .gap(px(S3))

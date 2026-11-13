@@ -11,7 +11,10 @@
 //! Yazı tipleri ve simgeler (Lucide) exe'ye gömülü; lisansları
 //! `assets/licenses/` altında.
 
-use std::borrow::Cow;
+use std::{
+    borrow::Cow,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use anyhow::Result;
 use gpui::{
@@ -23,27 +26,84 @@ use crate::engine::palette::Accent;
 
 // ── Renkler ─────────────────────────────────────────────────────────────
 //
-// Pusula: "gece dinleme odası". Oda karanlık ve nötr; tek ışık kaynağı çalan
-// şarkının kapağı (vurgu rengi ve ışıma, `engine/palette.rs`). Yüzeyler
-// gölgeyle değil ton katmanlarıyla ayrılır: zeminin üstüne beyazın saydam
-// tonları (`VEIL_*`). Gölge yalnızca içeriğin üstünde yüzen öğelerde.
+// Pusula: sakin dinleme odası. Koyu palet nötr gece; açık palet sıcak
+// kırık beyaz. Vurgu ve yüzey tonu kapaktan (`engine/palette.rs`). Ton
+// katmanı koyuda beyaz, açıkta koyu mürekkeptir. Okunacak metinler seçili
+// ve basılı yüzeylerde de AA karşıtlığını korur.
 
 /// Oda: pencerenin zemini.
-pub const BG: u32 = 0x0E0E10;
-/// Çalar hapı ve yüzen paneller (palet, menü, ipucu).
-pub const BAR: u32 = 0x121215;
-/// Yüzen panellerin ve ayrı bölgelerin kenarı.
-pub const BORDER: u32 = 0x1C1C21;
-/// Ön plan: bütün yazılar bu rengin saydam tonlarıdır.
-pub const TEXT: u32 = 0xF4F4F5;
-/// İlerleme ve ses çubuklarının boş kısmı.
-pub const TRACK: u32 = 0x2A2A30;
-/// Kapak gelene kadar yerini tutan yüzey.
-pub const PLACEHOLDER: u32 = 0x1C1C21;
-/// Kapat düğmesinin üzerine gelince (Windows'un kendi kırmızısı).
-pub const CLOSE_HOVER: u32 = 0xC42B1C;
-/// Tehlikeli işlemlerin yazısı (silme, çıkarma): yüzen panelde ≥ 4,5:1.
-pub const DANGER_TEXT: u32 = 0xF87171;
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Palette {
+    pub light: bool,
+    pub bg: u32,
+    pub bar: u32,
+    pub border: u32,
+    pub text: u32,
+    pub track: u32,
+    pub placeholder: u32,
+    pub close_hover: u32,
+    pub danger_text: u32,
+    pub pill_glass_top: u32,
+    pub pill_glass_bottom: u32,
+    pub label_alpha: f32,
+    pub muted_alpha: f32,
+}
+
+impl Palette {
+    pub const DARK: Self = Self {
+        light: false,
+        bg: 0x0E0E10,
+        bar: 0x121215,
+        border: 0x1C1C21,
+        text: 0xF4F4F5,
+        track: 0x2A2A30,
+        placeholder: 0x1C1C21,
+        close_hover: 0xC42B1C,
+        danger_text: 0xF87171,
+        pill_glass_top: 0x19191D,
+        pill_glass_bottom: 0x0F0F12,
+        label_alpha: 0.68,
+        muted_alpha: 0.72,
+    };
+    pub const LIGHT: Self = Self {
+        light: true,
+        bg: 0xF7F4EE,
+        bar: 0xFFFCF7,
+        border: 0xDBD5CB,
+        text: 0x24211F,
+        track: 0xD5CEC3,
+        placeholder: 0xE7E0D5,
+        close_hover: 0xC42B1C,
+        danger_text: 0xAD2727,
+        pill_glass_top: 0xFFFFFB,
+        pill_glass_bottom: 0xECE7DF,
+        label_alpha: 0.78,
+        muted_alpha: 0.80,
+    };
+}
+
+static LIGHT: AtomicBool = AtomicBool::new(false);
+
+pub fn is_light() -> bool {
+    LIGHT.load(Ordering::Relaxed)
+}
+
+/// Yalnız UI iş parçacığı değiştirir; resim işçileri paletin kopyasını alır.
+pub fn set_light(light: bool) -> bool {
+    LIGHT.swap(light, Ordering::Relaxed) != light
+}
+
+pub fn palette() -> Palette {
+    if is_light() {
+        Palette::LIGHT
+    } else {
+        Palette::DARK
+    }
+}
+
+pub const PILL_LIGHT_TINT_MIX: f32 = 0.14;
+pub const BACKDROP_LIGHT_TINT_MIX: f32 = 0.10;
+pub const COVER_TINT_MIN_LUMINANCE: f32 = 0.68;
 
 /// Ton katmanları: zeminin üstüne beyazın saydamlığı. Durumlar her yerde
 /// aynı katmanı kullanır (raf, liste, palet, menü).
@@ -70,9 +130,7 @@ pub const ACCENT_PLAYING_HOVER: f32 = 0.12;
 pub const ACCENT_PLAYING_SELECTED: f32 = 0.16;
 pub const ACCENT_PLAYING_PRESSED: f32 = 0.20;
 /// Çalar hapının cam zemini, üstten alta (ışık yukarıdan gelir gibi; 7 Kasım
-/// kararı, `pill_glass`). Önce düz `BAR` ve renkli kenar çizgisiydi.
-pub const PILL_GLASS_TOP: u32 = 0x19191D;
-pub const PILL_GLASS_BOTTOM: u32 = 0x0F0F12;
+/// kararı, `pill_glass`). Önce düz `palette().bar` ve renkli kenar çizgisiydi.
 /// Hapın 1 px'lik iç halkası (beyazın saydamlığı).
 pub const PILL_RING: f32 = 0.055;
 /// Hapın üstündeki ince ışık çizgisi: halkanın üstüne biner, üstte toplam
@@ -92,7 +150,32 @@ pub const PILL_LIGHT_REF: u32 = 0x404040;
 /// koyu bir tondaysa (lacivert) vurgu ona göre açılmıştı; hapın ışığı
 /// tavana kadar parladığı için biraz daha açılabilir (ton korunur).
 pub fn pill_accent(accent: u32) -> u32 {
-    ensure_contrast(accent, PILL_LIGHT_REF, 4.5)
+    pill_accent_for(palette(), accent)
+}
+
+pub fn pill_accent_for(p: Palette, accent: u32) -> u32 {
+    let bg = if p.light {
+        LIGHT_ACCENT_REF
+    } else {
+        PILL_LIGHT_REF
+    };
+    ensure_contrast(accent, bg, 4.5)
+}
+
+/// Açık renkli yüzeylerin en koyusundan da koyu: renk karışımlarına pay.
+pub const LIGHT_ACCENT_REF: u32 = 0xCECECE;
+
+pub fn themed_accent(accent: Accent) -> Accent {
+    let p = palette();
+    let bg = if p.light {
+        LIGHT_ACCENT_REF
+    } else {
+        glow_top_for(p, accent.glow)
+    };
+    Accent {
+        text: ensure_contrast(accent.text, bg, 4.5),
+        ..accent
+    }
 }
 
 /// Kapak ışığının `alpha` saydamlığı (çalan satır).
@@ -125,13 +208,20 @@ pub const SEARCH_WARMTH: f32 = 0.22;
 /// Arama hapının dolgusu: `glow` ışığın zeminle karışımı, parlaklık
 /// tavanının altında kalana dek azaltılır, üstüne beyaz kat.
 pub fn search_fill(glow: u32, open: bool) -> u32 {
+    search_fill_for(palette(), glow, open)
+}
+
+fn search_fill_for(p: Palette, glow: u32, open: bool) -> u32 {
+    if p.light {
+        return mix(p.bg, glow, if open { 0.10 } else { 0.07 });
+    }
     let (mut t, cap) = if open {
         (SEARCH_MIX_OPEN, SEARCH_MAX_LUMINANCE_OPEN)
     } else {
         (SEARCH_MIX, SEARCH_MAX_LUMINANCE)
     };
     loop {
-        let base = mix(BG, glow, t);
+        let base = mix(p.bg, glow, t);
         let lifted = mix(base, 0xFFFFFF, SEARCH_LIFT);
         if luminance(lifted) <= cap || t <= 0.0 {
             return lifted;
@@ -143,23 +233,84 @@ pub fn search_fill(glow: u32, open: bool) -> u32 {
 /// Arama yer tutucusunun yazısı: ön plan rengi, vurgu rengine doğru biraz
 /// ısıtılmış ("sıcak"), %78 sağlam.
 pub fn search_hint(accent: u32) -> Rgba {
-    with_alpha(mix(TEXT, accent, SEARCH_WARMTH), 0.78)
+    with_alpha(mix(palette().text, accent, SEARCH_WARMTH), 0.78)
 }
 
 /// Arama yüzeyinin cam zemininin üstü: hapın camı ile kapak ışığının
 /// karışımı (ışığın tavanı `glow_top` ile aynı: etiketler okunur kalır).
 pub fn surface_top(glow: u32) -> u32 {
-    mix(PILL_GLASS_TOP, glow_top(glow), 0.6)
+    surface_top_for(palette(), glow)
+}
+
+fn surface_top_for(p: Palette, glow: u32) -> u32 {
+    mix(p.pill_glass_top, glow_top_for(p, glow), 0.6)
 }
 
 /// Ton katmanı: beyazın `alpha` saydamlığı.
 pub fn veil(alpha: f32) -> Rgba {
-    with_alpha(0xFFFFFF, alpha)
+    with_alpha(if is_light() { palette().text } else { 0xFFFFFF }, alpha)
 }
 
 /// Siyahın `alpha` saydamlığı (ışımanın üstünde koyulaştırma, perde).
 pub fn shade(alpha: f32) -> Rgba {
+    if is_light() {
+        with_alpha(palette().text, alpha * 0.16)
+    } else {
+        with_alpha(0x000000, alpha)
+    }
+}
+
+/// Kapağın üstündeki simgeler iki temada da beyaz mürekkeple okunur.
+pub fn cover_scrim(alpha: f32) -> Rgba {
     with_alpha(0x000000, alpha)
+}
+pub fn cover_ink() -> Rgba {
+    rgb(0xFFFFFF)
+}
+pub fn cover_accent(accent: u32) -> Rgba {
+    rgb(ensure_contrast(accent, 0x666666, 4.5))
+}
+
+pub fn avatar_tones(p: Palette, hue: f32) -> (u32, u32) {
+    let bg = mix(p.placeholder, hsl_color(hue, 0.55, 0.52), 0.30);
+    (bg, ensure_contrast(hsl_color(hue, 0.55, 0.82), bg, 4.5))
+}
+
+/// Hapın altındaki içerik pencerenin kendi rengine doğru söner.
+pub fn bottom_scrim(alpha: f32) -> Rgba {
+    if is_light() {
+        with_alpha(palette().bg, alpha * 1.6)
+    } else {
+        shade(alpha)
+    }
+}
+
+pub fn accent_hover(accent: u32) -> u32 {
+    mix(accent, if is_light() { 0x000000 } else { 0xFFFFFF }, 0.16)
+}
+
+pub fn hero_tint_for(p: Palette, tint: u32) -> (u32, u32) {
+    if p.light {
+        return (mix(p.bar, tint, 0.09), mix(p.bar, tint, 0.03));
+    }
+    let mut t = 0.5;
+    loop {
+        let top = mix(p.bar, tint, t);
+        if luminance(top) <= HERO_MAX_LUMINANCE || t <= 0.0 {
+            return (top, mix(p.bar, tint, t * 0.3));
+        }
+        t -= 0.01;
+    }
+}
+
+pub const HERO_MAX_LUMINANCE: f32 = 0.04;
+
+fn shadow(alpha: f32) -> Rgba {
+    if is_light() {
+        with_alpha(0x55483C, alpha * 0.28)
+    } else {
+        shade(alpha)
+    }
 }
 
 /// Hapın arkasındaki alt perde: pencerenin alt kenarından yukarı, hap payı
@@ -184,9 +335,16 @@ pub const GLOW_MAX_LUMINANCE: f32 = 0.025;
 /// Işımanın en üstteki (en parlak) rengi: zeminle karışım, parlaklık
 /// tavanını aşmayacak kadar.
 pub fn glow_top(glow: u32) -> u32 {
+    glow_top_for(palette(), glow)
+}
+
+fn glow_top_for(p: Palette, glow: u32) -> u32 {
+    if p.light {
+        return mix(p.bg, glow, 0.08);
+    }
     let mut t = GLOW_ALPHA;
     loop {
-        let top = mix(BG, glow, t);
+        let top = mix(p.bg, glow, t);
         if luminance(top) <= GLOW_MAX_LUMINANCE || t <= 0.0 {
             return top;
         }
@@ -205,7 +363,7 @@ pub const DEFAULT_ACCENT: Accent = Accent {
 /// halkası) varsayılan renkte kalır: denetimler karanlıkta da okunsun.
 pub const DARK_ROOM: Accent = Accent {
     text: DEFAULT_ACCENT.text,
-    glow: BG,
+    glow: Palette::DARK.bg,
 };
 
 /// 0xRRGGBB + saydamlık (0.0–1.0)
@@ -264,19 +422,23 @@ pub fn contrast(a: u32, b: u32) -> f32 {
     (hi + 0.05) / (lo + 0.05)
 }
 
-/// Rengi `bg` üzerinde en az `min` karşıtlığa ulaşana kadar beyaza doğru
-/// açar. Tonu korur; zaten yeterliyse dokunmaz.
+/// Zeminin parlaklığına göre mürekkebi açar ya da koyulaştırır.
 pub fn ensure_contrast(color: u32, bg: u32, min: f32) -> u32 {
     if contrast(color, bg) >= min {
         return color;
     }
-    for step in 1..=20 {
-        let lighter = mix(color, 0xFFFFFF, step as f32 / 20.0);
-        if contrast(lighter, bg) >= min {
-            return lighter;
+    let ink = if luminance(bg) > 0.179 {
+        0x000000
+    } else {
+        0xFFFFFF
+    };
+    for step in 1..=40 {
+        let adjusted = mix(color, ink, step as f32 / 40.0);
+        if contrast(adjusted, bg) >= min {
+            return adjusted;
         }
     }
-    0xFFFFFF
+    ink
 }
 
 // ── Boşluk ölçeği ───────────────────────────────────────────────────────
@@ -349,7 +511,7 @@ pub fn float_shadow() -> Vec<BoxShadow> {
     // ekran görüntüsü betiğinin (GDI+ #0D0B0C'yi saydam sayıyor; bkz.
     // vendor/gpui/OPENIFY.md madde 7). İki katman da doğru çiziliyor.
     vec![BoxShadow {
-        color: shade(0.55).into(),
+        color: shadow(0.55).into(),
         offset: point(px(0.), px(12.)),
         blur_radius: px(32.),
         spread_radius: px(0.),
@@ -363,7 +525,7 @@ pub fn float_shadow() -> Vec<BoxShadow> {
 /// gece zemininde belli olsun, yüzüyormuş gibi durmasın.
 pub fn dock_shadow() -> Vec<BoxShadow> {
     vec![BoxShadow {
-        color: shade(0.40).into(),
+        color: shadow(0.40).into(),
         offset: point(px(0.), px(8.)),
         blur_radius: px(24.),
         spread_radius: px(0.),
@@ -378,7 +540,7 @@ pub fn dock_shadow() -> Vec<BoxShadow> {
 /// madde 7.)
 pub fn pill_shadow() -> Vec<BoxShadow> {
     vec![BoxShadow {
-        color: shade(0.55).into(),
+        color: shadow(0.55).into(),
         offset: point(px(0.), px(8.)),
         blur_radius: px(28.),
         spread_radius: px(0.),
@@ -390,7 +552,7 @@ pub fn pill_shadow() -> Vec<BoxShadow> {
 /// üstünde daha belirgin yüzer. Kaydırıcı tutamacı küçük, eskisinde kalır.
 pub fn capsule_shadow() -> Vec<BoxShadow> {
     vec![BoxShadow {
-        color: shade(0.60).into(),
+        color: shadow(0.60).into(),
         offset: point(px(0.), px(12.)),
         blur_radius: px(36.),
         spread_radius: px(0.),
@@ -763,32 +925,41 @@ pub fn icon(name: &'static str, size: f32, color: impl Into<Hsla>) -> Svg {
 }
 
 pub fn text() -> Rgba {
-    rgb(TEXT)
+    rgb(palette().text)
 }
 
-/// İkincil metin: gri değil, ön plan renginin saydam tonu. Kapak renginde
-/// ışımanın üstünde de okunur kalır (gri, kahverengi zeminde bulanıklaşıyordu).
+/// İkincil metin: ön planın palete göre ayarlanmış saydam tonu.
 pub fn muted() -> Rgba {
-    with_alpha(TEXT, 0.64)
+    with_alpha(palette().text, palette().muted_alpha)
+}
+
+/// Söz satırının etkin olmayan hâli. Büyük ve kalın yazıdır (AA için
+/// ≥ 3:1 yeter); açık temada `muted` siyaha fazla yakın kalıp etkin satırı
+/// ayırmıyordu, bu yüzden orada daha açık.
+pub const LYRIC_IDLE_LIGHT_ALPHA: f32 = 0.56;
+
+pub fn lyric_idle() -> Rgba {
+    if is_light() {
+        with_alpha(palette().text, LYRIC_IDLE_LIGHT_ALPHA)
+    } else {
+        muted()
+    }
 }
 
 /// Tam metinden bir ton geri: simge düğmeleri ve başlık çubuğundaki ad.
 /// Üzerine gelince tam metne açılır.
 pub fn soft() -> Rgba {
-    with_alpha(TEXT, 0.86)
+    with_alpha(palette().text, 0.86)
 }
 
-/// Küçük etiketler (sütun başlıkları, bölüm adları): zeminde ~5,2:1, kapak
-/// ışımasının üstünde her renkte ≥ 4,5:1 (bkz. testler).
+/// Küçük etiketler: kapak tonu ve etkileşim katmanlarının üstünde ≥ 4,5:1.
 pub fn label() -> Rgba {
-    with_alpha(TEXT, LABEL_ALPHA)
+    with_alpha(palette().text, palette().label_alpha)
 }
-
-pub const LABEL_ALPHA: f32 = 0.52;
 
 /// Pasif simgeler (metinde kullanılmaz).
 pub fn disabled() -> Rgba {
-    with_alpha(TEXT, 0.28)
+    with_alpha(palette().text, 0.28)
 }
 
 /// Arayüz metni: Windows'un kendi arayüz yazı tipi. Küçük boyutlar için
@@ -800,6 +971,91 @@ pub const UI_FONT: &str = "Segoe UI Variable Text";
 mod tests {
     use super::*;
 
+    #[test]
+    fn light_idle_lyric_is_large_text_aa_and_clearly_dimmer() {
+        let p = Palette::LIGHT;
+        let idle = mix(p.bg, p.text, LYRIC_IDLE_LIGHT_ALPHA);
+        assert!(contrast(idle, p.bg) >= 3.0, "{}", contrast(idle, p.bg));
+        assert!(contrast(p.text, idle) >= 2.0, "{}", contrast(p.text, idle));
+    }
+
+    #[test]
+    fn bright_cover_accent_is_readable_on_light_background() {
+        let bg = 0xF7F4EE;
+        assert!(contrast(ensure_contrast(0xF5CF71, bg, 4.5), bg) >= 4.5);
+    }
+
+    #[test]
+    fn profile_initials_are_readable_in_both_palettes() {
+        for p in [Palette::DARK, Palette::LIGHT] {
+            for hue in (0..360).step_by(15) {
+                let (bg, ink) = avatar_tones(p, hue as f32);
+                assert!(contrast(ink, bg) >= 4.5, "light={} hue={hue}", p.light);
+            }
+        }
+    }
+
+    #[test]
+    fn both_palettes_meet_aa_for_main_text_pairs() {
+        for p in [Palette::DARK, Palette::LIGHT] {
+            for bg in [p.bg, p.bar, p.pill_glass_bottom, p.pill_glass_top] {
+                for alpha in [1.0, 0.86, p.muted_alpha, p.label_alpha] {
+                    let ratio = contrast(mix(bg, p.text, alpha), bg);
+                    assert!(
+                        ratio >= 4.5,
+                        "light={} bg={bg:06X} alpha={alpha} ratio={ratio}",
+                        p.light
+                    );
+                }
+            }
+            assert!(contrast(p.danger_text, p.bar) >= 4.5);
+        }
+    }
+
+    #[test]
+    fn tinted_surfaces_meet_aa_in_both_palettes() {
+        for p in [Palette::DARK, Palette::LIGHT] {
+            for hue in (0..360).step_by(10) {
+                for lightness in [0.05, 0.25, 0.45, 0.65, 0.95] {
+                    let glow = hsl_color(hue as f32, 0.9, lightness);
+                    let top = glow_top_for(p, glow);
+                    for base in [p.bg, p.bar, top] {
+                        for alpha in [VEIL_HOVER, VEIL_SELECTED, VEIL_PRESSED] {
+                            let bg = mix(base, if p.light { p.text } else { 0xFFFFFF }, alpha);
+                            for ink_alpha in [p.muted_alpha, p.label_alpha] {
+                                assert!(
+                                    contrast(mix(bg, p.text, ink_alpha), bg) >= 4.5,
+                                    "state light={} {bg:06X} alpha={ink_alpha}",
+                                    p.light
+                                );
+                            }
+                        }
+                    }
+                    let ink =
+                        ensure_contrast(glow, if p.light { LIGHT_ACCENT_REF } else { top }, 4.5);
+                    assert!(contrast(ink, top) >= 4.5);
+                    assert!(contrast(ink, p.bg) >= 4.5);
+                    for open in [false, true] {
+                        let bg = search_fill_for(p, glow, open);
+                        let hint = mix(bg, mix(p.text, ink, SEARCH_WARMTH), 0.78);
+                        assert!(
+                            contrast(hint, bg) >= 4.5,
+                            "search light={} {glow:06X}",
+                            p.light
+                        );
+                    }
+                    for bg in [surface_top_for(p, glow), p.pill_glass_bottom] {
+                        assert!(contrast(mix(bg, p.text, p.label_alpha), bg) >= 4.5);
+                    }
+                    let (hero_top, hero_bottom) = hero_tint_for(p, glow);
+                    for bg in [hero_top, hero_bottom] {
+                        assert!(contrast(mix(bg, p.text, p.muted_alpha), bg) >= 4.5);
+                    }
+                }
+            }
+        }
+    }
+
     /// Çıta: kapaktan gelen vurgu her durumda ≥ 4,5:1. Bütün tonları ve
     /// açıklıkları tarayan 100 renkle (10 ton × 10 açıklık), ışıma da aynı
     /// renkten geldiğinde (en kötü durum: zemin açılmış).
@@ -808,10 +1064,10 @@ mod tests {
         for hue in 0..10 {
             for light in 0..10 {
                 let color = hsl_to_rgb(hue as f32 * 36.0, 0.8, 0.05 + light as f32 * 0.09);
-                let glow_top = mix(BG, color, 0.36);
+                let glow_top = mix(palette().bg, color, 0.36);
                 let fixed = ensure_contrast(color, glow_top, 4.5);
                 assert!(
-                    contrast(fixed, glow_top) >= 4.5 && contrast(fixed, BG) >= 4.5,
+                    contrast(fixed, glow_top) >= 4.5 && contrast(fixed, palette().bg) >= 4.5,
                     "{color:06X} → {fixed:06X}"
                 );
             }
@@ -847,8 +1103,8 @@ mod tests {
                 let top = glow_top(glow);
                 let mut y = 112.0;
                 while y < GLOW_HEIGHT {
-                    let bg = mix(top, BG, y / GLOW_HEIGHT);
-                    let fg = mix(bg, TEXT, LABEL_ALPHA);
+                    let bg = mix(top, palette().bg, y / GLOW_HEIGHT);
+                    let fg = mix(bg, palette().text, Palette::DARK.label_alpha);
                     let c = contrast(fg, bg);
                     if c < worst.0 {
                         worst = (c, glow, y);
@@ -871,7 +1127,7 @@ mod tests {
     /// kapak ışığında ≥ 4,5:1; kapak yokken (karanlık oda) de.
     #[test]
     fn search_pill_and_surface_stay_readable_on_every_glow() {
-        let mut glows: Vec<u32> = vec![BG];
+        let mut glows: Vec<u32> = vec![palette().bg];
         for hue in (0..360).step_by(10) {
             for sat in [0.5, 0.7, 0.9] {
                 glows.push(hsl_to_rgb(hue as f32, sat, 0.42));
@@ -882,15 +1138,15 @@ mod tests {
             for open in [false, true] {
                 let fill = search_fill(glow, open);
                 let hint = search_hint(accent);
-                let fg = mix(fill, mix(TEXT, accent, SEARCH_WARMTH), hint.a);
+                let fg = mix(fill, mix(palette().text, accent, SEARCH_WARMTH), hint.a);
                 assert!(
                     contrast(fg, fill) >= 4.5,
                     "yer tutucu {:.2}:1, ışık {glow:06X}, açık {open}",
                     contrast(fg, fill)
                 );
             }
-            for bg in [surface_top(glow), PILL_GLASS_BOTTOM] {
-                let fg = mix(bg, TEXT, LABEL_ALPHA);
+            for bg in [surface_top(glow), palette().pill_glass_bottom] {
+                let fg = mix(bg, palette().text, Palette::DARK.label_alpha);
                 assert!(
                     contrast(fg, bg) >= 4.5,
                     "etiket {:.2}:1, ışık {glow:06X}",

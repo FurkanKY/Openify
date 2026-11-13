@@ -2317,9 +2317,9 @@ impl Shell {
             .pl(px(S4))
             .pr(px(if toast.undo { S2 } else { S4 }))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .type_role(T_SECONDARY)
             .text_color(text())
@@ -2331,7 +2331,7 @@ impl Shell {
                 },
                 16.,
                 if toast.problem {
-                    rgb(DANGER_TEXT)
+                    rgb(palette().danger_text)
                 } else {
                     rgb(accent)
                 },
@@ -2414,9 +2414,9 @@ impl Shell {
             .flex_col()
             .gap(px(S4))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
@@ -2512,7 +2512,7 @@ impl Shell {
         let (icon_name, color, count, tip) = if failed > 0 {
             (
                 "circle-alert",
-                rgb(DANGER_TEXT),
+                rgb(palette().danger_text),
                 failed,
                 tp!(SyncFailed, failed),
             )
@@ -2565,9 +2565,9 @@ impl Shell {
             .flex_col()
             .gap(px(S1))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
@@ -2624,7 +2624,7 @@ impl Shell {
                                 .child(
                                     div()
                                         .type_role(T_SECONDARY)
-                                        .text_color(rgb(DANGER_TEXT))
+                                        .text_color(rgb(palette().danger_text))
                                         .child(explain_edit_failure(&f.op, f.kind, foreign)),
                                 )
                                 // Değişiklik ekranda hâlâ uygulanmış görünüyor (örn. çıkarılan
@@ -3147,9 +3147,9 @@ impl DragPreview {
             .flex()
             .items_center()
             .gap(px(S2))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .type_role(T_SECONDARY)
             .font_weight(FontWeight::MEDIUM)

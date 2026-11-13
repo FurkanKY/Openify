@@ -1580,7 +1580,7 @@ impl Shell {
                 .size(px(tile))
                 .flex_none()
                 .overflow_hidden()
-                .bg(rgb(PLACEHOLDER));
+                .bg(rgb(palette().placeholder));
             el = match corner {
                 0 => el.rounded_tl(px(radius)),
                 1 => el.rounded_tr(px(radius)),
@@ -1676,7 +1676,7 @@ fn liked_art(side: f32, radius: f32, accent: u32) -> AnyElement {
         .flex()
         .items_center()
         .justify_center()
-        .bg(rgb(PLACEHOLDER))
+        .bg(rgb(palette().placeholder))
         .child(icon("heart-fill", (side * 0.42).max(14.), rgb(accent)))
         .into_any_element()
 }

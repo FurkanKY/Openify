@@ -63,7 +63,7 @@ fn mark(on: bool, radio: bool, accent: u32) -> Div {
     };
     if on {
         el.bg(rgb(accent))
-            .child(super::theme::icon("check", 12., rgb(BG)))
+            .child(super::theme::icon("check", 12., rgb(palette().bg)))
     } else {
         el.border_1().border_color(veil(LINE_HOVER))
     }
@@ -165,7 +165,11 @@ impl Shell {
     fn tools_note(&self, text: impl Into<gpui::SharedString>, problem: bool) -> AnyElement {
         div()
             .type_role(T_SECONDARY)
-            .text_color(if problem { rgb(DANGER_TEXT) } else { label() })
+            .text_color(if problem {
+                rgb(palette().danger_text)
+            } else {
+                label()
+            })
             .child(text.into())
             .into_any_element()
     }

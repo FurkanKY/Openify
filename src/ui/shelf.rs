@@ -696,11 +696,11 @@ impl Shell {
                 .bottom(px(S1))
                 .size(px(side))
                 .rounded_full()
-                .bg(shade(SCRIM))
+                .bg(cover_scrim(SCRIM))
                 .flex()
                 .items_center()
                 .justify_center()
-                .child(icon("volume-2", side * 0.6, rgb(accent)))
+                .child(icon("volume-2", side * 0.6, cover_accent(accent)))
         });
         // Sabitli listenin kapağının sol üstünde küçük iğne.
         let pin = card

@@ -84,7 +84,7 @@ fn outer_ring(el: Stateful<Div>, look: Look, accent: u32) -> Stateful<Div> {
             spread_radius: px(4.),
         },
         gpui::BoxShadow {
-            color: rgb(BG).into(),
+            color: rgb(palette().bg).into(),
             offset: gpui::point(px(0.), px(0.)),
             blur_radius: px(1.),
             spread_radius: px(2.),
@@ -229,7 +229,7 @@ pub fn primary_button_sized(
     let fill = if look.enabled() {
         accent
     } else {
-        mix(accent, BG, 0.6)
+        mix(accent, palette().bg, 0.6)
     };
     let el = div()
         .id(id)
@@ -246,23 +246,27 @@ pub fn primary_button_sized(
         .items_center()
         .gap(px(if small { S1 } else { S2 }))
         .bg(rgb(fill))
-        .text_color(rgb(BG))
+        .text_color(rgb(palette().bg))
         .type_role(if small { T_SECONDARY } else { T_BODY })
         .font_weight(FontWeight::SEMIBOLD)
         .children(layer(
             look,
-            rgb(mix(accent, 0xFFFFFF, 0.16)),
+            rgb(accent_hover(accent)),
             rgb(mix(accent, 0x000000, 0.14)),
             0.,
             FULL,
         ))
-        .child(icon(icon_name, if small { 14. } else { 16. }, rgb(BG)))
+        .child(icon(
+            icon_name,
+            if small { 14. } else { 16. },
+            rgb(palette().bg),
+        ))
         .child(label.into());
     let el = outer_ring(el, look, accent);
     states(
         el,
         look,
-        rgb(mix(accent, 0xFFFFFF, 0.16)),
+        rgb(accent_hover(accent)),
         rgb(mix(accent, 0x000000, 0.14)),
     )
 }
@@ -279,8 +283,8 @@ pub fn chip(
     let fill = if on {
         layer(
             look,
-            rgb(mix(0xFFFFFF, accent, 0.14)),
-            rgb(mix(TEXT, BG, 0.22)),
+            rgb(mix(palette().text, accent, 0.14)),
+            rgb(mix(palette().text, palette().bg, 0.22)),
             0.,
             FULL,
         )
@@ -307,15 +311,15 @@ pub fn chip(
     if on {
         let el = el
             .bg(if look.enabled() { text() } else { veil(0.24) })
-            .text_color(rgb(BG))
+            .text_color(rgb(palette().bg))
             .font_weight(FontWeight::SEMIBOLD);
         let el = outer_ring(el, look, accent);
         // Beyaz zeminde ton katmanı görünmez: çal düğmesi gibi ısınır / grileşir.
         states(
             el,
             look,
-            rgb(mix(0xFFFFFF, accent, 0.14)),
-            rgb(mix(TEXT, BG, 0.22)),
+            rgb(mix(palette().text, accent, 0.14)),
+            rgb(mix(palette().text, palette().bg, 0.22)),
         )
     } else {
         let el = el
@@ -345,15 +349,15 @@ pub fn play_button(
         .bg(if look.enabled() { text() } else { veil(0.24) })
         .children(layer(
             look,
-            rgb(mix(0xFFFFFF, accent, 0.14)),
-            rgb(mix(TEXT, BG, 0.22)),
+            rgb(mix(palette().text, accent, 0.14)),
+            rgb(mix(palette().text, palette().bg, 0.22)),
             0.,
             FULL,
         ))
         .child(icon(
             if playing { "pause-fill" } else { "play-fill" },
             18.,
-            rgb(BG),
+            rgb(palette().bg),
         ));
     // Beyaz zeminde ton katmanı görünmez: üzerine gelince kapağın rengine
     // hafifçe ısınır, basınca grileşir.
@@ -361,8 +365,8 @@ pub fn play_button(
     states(
         el,
         look,
-        rgb(mix(0xFFFFFF, accent, 0.14)),
-        rgb(mix(TEXT, BG, 0.22)),
+        rgb(mix(palette().text, accent, 0.14)),
+        rgb(mix(palette().text, palette().bg, 0.22)),
     )
 }
 
@@ -447,14 +451,11 @@ pub fn ghost_button(
 pub fn switch(id: impl Into<ElementId>, on: bool, look: Look, accent: u32) -> Stateful<Div> {
     let (track, knob) = match (look.enabled(), on) {
         (false, _) => (veil(0.10), disabled()),
-        (true, true) => (rgb(accent), rgb(BG)),
-        (true, false) => (rgb(TRACK), soft()),
+        (true, true) => (rgb(accent), rgb(palette().bg)),
+        (true, false) => (rgb(palette().track), soft()),
     };
     let (hover, pressed) = if on {
-        (
-            rgb(mix(accent, 0xFFFFFF, 0.16)),
-            rgb(mix(accent, 0x000000, 0.14)),
-        )
+        (rgb(accent_hover(accent)), rgb(mix(accent, 0x000000, 0.14)))
     } else {
         (veil(VEIL_SELECTED), veil(VEIL_PRESSED))
     };
@@ -510,7 +511,7 @@ pub fn segment(
     if on {
         let el = el
             .bg(if look.enabled() { text() } else { veil(0.24) })
-            .text_color(rgb(BG))
+            .text_color(rgb(palette().bg))
             .font_weight(FontWeight::SEMIBOLD)
             .child(label.into());
         outer_ring(el, look, accent)
@@ -601,7 +602,7 @@ pub fn state_view(
             div()
                 .size(px(S7))
                 .rounded(px(R_LG))
-                .bg(rgb(PLACEHOLDER))
+                .bg(rgb(palette().placeholder))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -640,7 +641,7 @@ pub fn state_mark(icon_name: &'static str) -> AnyElement {
     div()
         .size(px(S8))
         .rounded(px(R_XL))
-        .bg(rgb(PLACEHOLDER))
+        .bg(rgb(palette().placeholder))
         .flex()
         .items_center()
         .justify_center()
@@ -812,9 +813,9 @@ fn tooltip_panel(content: SharedString, shortcut: Option<SharedString>) -> Div {
         .px(px(S2))
         .py(px(S1))
         .rounded(px(R_MD))
-        .bg(rgb(BAR))
+        .bg(rgb(palette().bar))
         .border_1()
-        .border_color(rgb(BORDER))
+        .border_color(rgb(palette().border))
         .shadow(float_shadow())
         .type_role(T_LABEL)
         .text_color(text())
@@ -893,9 +894,9 @@ pub fn menu_panel(id: impl Into<ElementId>) -> Stateful<Div> {
         .flex()
         .flex_col()
         .rounded(px(R_XL))
-        .bg(rgb(BAR))
+        .bg(rgb(palette().bar))
         .border_1()
-        .border_color(rgb(BORDER))
+        .border_color(rgb(palette().border))
         .shadow(float_shadow())
 }
 
@@ -912,7 +913,7 @@ pub fn menu_separator() -> Div {
 pub fn menu_item(i: usize, item: MenuItem, accent: u32) -> Stateful<Div> {
     let color = match (item.look.enabled(), item.danger) {
         (false, _) => disabled(),
-        (true, true) => rgb(DANGER_TEXT),
+        (true, true) => rgb(palette().danger_text),
         (true, false) => text(),
     };
     let el = div()

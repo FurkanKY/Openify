@@ -386,7 +386,7 @@ impl Shell {
             .flex()
             .items_center()
             .justify_center()
-            .bg(rgb(PLACEHOLDER))
+            .bg(rgb(palette().placeholder))
             .child(icon("folder", (side * 0.42).max(14.), muted()))
             .into_any_element()
     }
@@ -400,11 +400,11 @@ impl Shell {
             .top(px(S1))
             .size(px(side))
             .rounded_full()
-            .bg(shade(SCRIM))
+            .bg(cover_scrim(SCRIM))
             .flex()
             .items_center()
             .justify_center()
-            .child(icon("pin", side * 0.6, soft()))
+            .child(icon("pin", side * 0.6, cover_ink()))
             .into_any_element()
     }
 

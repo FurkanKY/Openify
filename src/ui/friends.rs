@@ -98,7 +98,7 @@ const HEAD_GAP: f32 = S3;
 const BODY_TOP: f32 = S1;
 const BODY_BOTTOM: f32 = S2;
 /// Panel çerçevesi (iki yanda 1 px kenarlık).
-const BORDER: f32 = 2.;
+const PANEL_BORDER: f32 = 2.;
 /// Durum ekranlarının (boş, yükleniyor, hata) gövde yüksekliği.
 const STATE_BODY: f32 = 208.;
 /// Baş harf dairesinin ton çemberindeki adım sayısı (15°'lik adımlar).
@@ -370,7 +370,7 @@ pub(super) fn panel_height(body: Body, items_h: f32, room: f32) -> f32 {
         Body::Rows => BODY_TOP + items_h + BODY_BOTTOM,
         _ => STATE_BODY,
     };
-    (BORDER + ROW_HEIGHT + inner).min(room)
+    (PANEL_BORDER + ROW_HEIGHT + inner).min(room)
 }
 
 // ── Profil resmi yokken baş harf dairesi (saf) ──────────────────────────
@@ -395,10 +395,7 @@ pub(super) fn avatar_hue_step(name: &str) -> u32 {
 /// düşük.
 pub(super) fn avatar_colors(name: &str) -> (u32, u32) {
     let hue = avatar_hue_step(name) as f32 * (360. / HUE_STEPS as f32);
-    (
-        mix(PLACEHOLDER, hsl_color(hue, 0.55, 0.52), 0.30),
-        hsl_color(hue, 0.55, 0.82),
-    )
+    avatar_tones(palette(), hue)
 }
 
 // ── Zaman yazısı (mutlak) ───────────────────────────────────────────────
@@ -763,7 +760,7 @@ impl Shell {
                 let list = self.friends.list.clone().unwrap_or_default();
                 let at = entry_top(&plan_items(&list, now_ms()), &list, ix);
                 let x = f32::from(viewport.width) - right - width - S2 - 240.;
-                let y = top + BORDER / 2. + ROW_HEIGHT + at + offset + S5;
+                let y = top + PANEL_BORDER / 2. + ROW_HEIGHT + at + offset + S5;
                 self.open_friend_menu(ix, point(px(x.max(S2)), px(y)), cx);
                 true
             }
@@ -1006,8 +1003,8 @@ impl Shell {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .bg(shade(SCRIM))
-                            .child(icon("play-fill", 16., text())),
+                            .bg(cover_scrim(SCRIM))
+                            .child(icon("play-fill", 16., cover_ink())),
                     ),
             )
             .tooltip(Tooltip::text(t!(FriendsPlayTip), None));
@@ -1624,7 +1621,7 @@ mod tests {
         );
         // Panel içerik kadar: sığıyorsa o, sığmıyorsa alanın tamamı (kayar).
         let h = items_height(&items, &list);
-        let want = BORDER + ROW_HEIGHT + BODY_TOP + h + BODY_BOTTOM;
+        let want = PANEL_BORDER + ROW_HEIGHT + BODY_TOP + h + BODY_BOTTOM;
         assert_eq!(panel_height(Body::Rows, h, 2000.), want);
         assert_eq!(panel_height(Body::Rows, h, 300.), 300.);
         // Durum ekranları sabit, kısa bir kart.
@@ -1635,7 +1632,7 @@ mod tests {
         ] {
             assert_eq!(
                 panel_height(body, 0., 2000.),
-                BORDER + ROW_HEIGHT + STATE_BODY
+                PANEL_BORDER + ROW_HEIGHT + STATE_BODY
             );
         }
     }
@@ -1680,7 +1677,7 @@ mod tests {
             for shift in [16, 8, 0] {
                 let (a, b) = (
                     ((fill >> shift) & 0xFF) as i32,
-                    ((PLACEHOLDER >> shift) & 0xFF) as i32,
+                    ((palette().placeholder >> shift) & 0xFF) as i32,
                 );
                 assert!(
                     (a - b).abs() <= 55,

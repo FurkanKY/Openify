@@ -707,8 +707,8 @@ impl Shell {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .bg(shade(SCRIM))
-                            .child(icon("maximize-2", 20., text())),
+                            .bg(cover_scrim(SCRIM))
+                            .child(icon("maximize-2", 20., cover_ink())),
                     ),
             )
             .tooltip(Tooltip::text(t!(FullScreen), Some("F11")))
@@ -1127,11 +1127,11 @@ fn lyric_line(content: String, active: bool, plain: bool, accent: u32) -> Div {
         })
 }
 
-/// Söz kesitinin üst ya da alt kenarındaki solma: panel yüzeyinden (`BAR`)
+/// Söz kesitinin üst ya da alt kenarındaki solma: panel yüzeyinden (`palette().bar`)
 /// saydama (sözler sekmesindeki gibi). Olay almaz: tıklama kesite geçer.
 fn excerpt_fade(top: bool) -> Div {
-    let solid = linear_color_stop(with_alpha(BAR, 1.), if top { 0. } else { 1. });
-    let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
+    let solid = linear_color_stop(with_alpha(palette().bar, 1.), if top { 0. } else { 1. });
+    let clear = linear_color_stop(with_alpha(palette().bar, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
     let fade = div()
         .absolute()

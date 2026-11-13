@@ -35,7 +35,7 @@ use super::{
 use crate::{
     autostart::Autostart,
     engine,
-    settings::{CROSSFADE_CHOICES_MS, Settings},
+    settings::{CROSSFADE_CHOICES_MS, Settings, ThemePreference},
     update,
 };
 use crate::{t, tf};
@@ -321,6 +321,7 @@ impl Shell {
     fn set_pref(&mut self, cx: &mut Context<Self>, change: impl FnOnce(&mut Settings)) {
         change(&mut self.prefs);
         self.apply_prefs(false);
+        self.apply_theme(cx);
         self.save_settings();
         // Arkadaş etkinliği ayarı değiştiyse (panel, yenileme, bellekteki liste).
         self.after_friend_pref(cx);
@@ -1138,7 +1139,11 @@ impl Shell {
                 false,
             ),
         };
-        let ok_color = if danger { DANGER_TEXT } else { accent };
+        let ok_color = if danger {
+            palette().danger_text
+        } else {
+            accent
+        };
         let panel = div()
             .id("confirm")
             .occlude()
@@ -1148,9 +1153,9 @@ impl Shell {
             .flex_col()
             .gap(px(S4))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(
@@ -1321,7 +1326,11 @@ fn row_text_inner(
             div()
                 .pt(px(S1))
                 .type_role(T_SECONDARY)
-                .text_color(if problem { rgb(DANGER_TEXT) } else { label() })
+                .text_color(if problem {
+                    rgb(palette().danger_text)
+                } else {
+                    label()
+                })
                 .child(note)
         }))
 }
@@ -1682,6 +1691,18 @@ impl Shell {
 
     fn behavior_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let p = &self.prefs;
+        let appearance = self.choice_control(
+            "theme",
+            &[
+                ("dark", t!(ThemeDark)),
+                ("light", t!(ThemeLight)),
+                ("system", t!(ThemeSystem)),
+            ],
+            p.theme.key(),
+            |p, k| p.theme = ThemePreference::from_key(k),
+            window,
+            cx,
+        );
         // Dil: "Sistem" Windows'un görüntü dilini izler; seçim hemen uygulanır
         // (`apply_prefs` → `i18n::apply_preference`, ardından kök yenilenir).
         let language = self.choice_control(
@@ -1739,6 +1760,11 @@ impl Shell {
             vec![
                 setting_row(
                     true,
+                    row_text(t!(RowTheme), t!(RowThemeDesc), None),
+                    appearance,
+                ),
+                setting_row(
+                    false,
                     row_text(t!(SettingsLanguageTitle), t!(SettingsLanguageDesc), None),
                     language,
                 ),

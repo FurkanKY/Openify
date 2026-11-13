@@ -491,7 +491,7 @@ impl Shell {
         let fill_color = if on {
             rgb(accent)
         } else {
-            rgb(mix(TEXT, BG, 0.62))
+            rgb(mix(palette().text, palette().bg, 0.62))
         };
         let value_color = if focused {
             rgb(accent)
@@ -543,7 +543,7 @@ impl Shell {
                     .w(px(4.))
                     .h(px(travel))
                     .rounded(px(R_XS))
-                    .bg(rgb(TRACK)),
+                    .bg(rgb(palette().track)),
             )
             // Sıfır çizgisi.
             .child(

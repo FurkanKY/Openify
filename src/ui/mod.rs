@@ -138,6 +138,10 @@ pub fn run(start_hidden: bool) {
     // önbelleği açar, kütüphaneyi ve açılış listesini okur; pencere kurulurken
     // olaylar hazır bekler (bkz. `Shell::new`).
     let settings = Settings::load();
+    #[cfg(windows)]
+    theme::set_light(crate::system::app_theme::light(settings.theme));
+    #[cfg(not(windows))]
+    theme::set_light(settings.theme == crate::settings::ThemePreference::Light);
     // Arayüz dili: Windows'un dili ya da Ayarlar'daki seçim (bkz. `i18n`).
     crate::i18n::apply_preference(&settings.language);
     // Ses ayarları motor kurulmadan önce (ilk şarkıdan geçerli olsun).
@@ -307,6 +311,24 @@ struct Shell {
 }
 
 impl Shell {
+    /// Tercih ya da Windows uygulama modu değişti: renkleri, kapak yüzeylerini
+    /// ve önbellekli çocukları aynı güncellemede yenile. Sınama zorlaması
+    /// yalnız çözümleme katmanında kalır, `prefs.theme` değiştirilmez.
+    fn apply_theme(&mut self, cx: &mut Context<Self>) {
+        #[cfg(windows)]
+        let light = crate::system::app_theme::light(self.prefs.theme);
+        #[cfg(not(windows))]
+        let light = self.prefs.theme == crate::settings::ThemePreference::Light;
+        if theme::set_light(light) {
+            self.refresh_theme_surfaces(cx);
+            cx.notify();
+        }
+        #[cfg(windows)]
+        if let Some(hwnd) = self.desk.hwnd {
+            windows_titlebar::apply_hwnd(hwnd);
+        }
+    }
+
     fn new(
         window: &mut Window,
         cx: &mut Context<Self>,
@@ -319,9 +341,11 @@ impl Shell {
         #[cfg(windows)]
         windows_titlebar::apply(window);
 
-        // gpui, Windows açık/koyu tema değişince pencere çerçevesini sistem
-        // temasına geri çeviriyor; Openify her zaman koyu kalsın.
-        let appearance = cx.observe_window_appearance(window, |_, _window, _| {
+        // gpui çerçeveyi Windows moduna döndürebilir: etkin uygulama temasını
+        // yeniden uygula. Asıl uygulama modu ayrıca ImmersiveColorSet
+        // kanalından okunur; görev çubuğunun modu uygulamadan farklı olabilir.
+        let appearance = cx.observe_window_appearance(window, |this, _window, cx| {
+            this.apply_theme(cx);
             #[cfg(windows)]
             windows_titlebar::apply(_window);
         });
@@ -1480,6 +1504,7 @@ impl Shell {
             let (handle, look) = self.stop_look(id, index, true, window, cx);
             div()
                 .id(id)
+                .group("caption-control")
                 .w(px(CAPTION_BUTTON_WIDTH))
                 .h_full()
                 .flex()
@@ -1495,7 +1520,7 @@ impl Shell {
                     gpui::transparent_black()
                 })
                 .when(close, |el| {
-                    el.hover(|s| s.bg(rgb(CLOSE_HOVER)).text_color(text()))
+                    el.hover(|s| s.bg(rgb(palette().close_hover)).text_color(cover_ink()))
                 })
                 .when(!close, |el| {
                     el.hover(|s| s.bg(veil(VEIL_HOVER)).text_color(text()))
@@ -1512,7 +1537,11 @@ impl Shell {
                             }
                         }))
                 })
-                .child(icon(icon_name, 14., muted()))
+                .child(
+                    icon(icon_name, 14., muted()).group_hover("caption-control", |s| {
+                        s.text_color(if close { cover_ink() } else { text() })
+                    }),
+                )
         };
 
         // Ortada görünür arama: komut paletini sadece Ctrl+K bilen bulmasın.
@@ -1699,7 +1728,7 @@ impl Shell {
         let top = match self.category_glow_color() {
             Some(color) => color,
             None => mix(
-                BG,
+                palette().bg,
                 glow_top(self.accent().glow),
                 1. - GLOW_SCROLLED_DIM * collapse,
             ),
@@ -1713,7 +1742,7 @@ impl Shell {
             .bg(linear_gradient(
                 180.,
                 linear_color_stop(rgb(top), 0.),
-                linear_color_stop(rgb(BG), 1.),
+                linear_color_stop(rgb(palette().bg), 1.),
             ))
             .into_any_element()
     }
@@ -1849,7 +1878,7 @@ impl Render for Shell {
         // önbellekli bir görünümde olsalar çalışmazlardı.
         let titlebar = self.render_titlebar(window, cx);
         // Her yerden açılan palet kendi penceresinde (bkz. `popups`).
-        let palette =
+        let palette_overlay =
             (self.palette.open && !self.palette.detached).then(|| self.render_palette(cx));
         // Raf, liste ve hap kendi görünümlerinde çizilir (bkz. `views`);
         // burada yalnız yerlerini tutan kutular var. Kutunun boyu içerikten
@@ -1913,8 +1942,8 @@ impl Render for Shell {
                 .h(px(pill::PILL_CLEARANCE + PILL_SCRIM_FADE))
                 .bg(linear_gradient(
                     180.,
-                    linear_color_stop(shade(0.), 0.),
-                    linear_color_stop(shade(PILL_SCRIM_ALPHA), 1.),
+                    linear_color_stop(bottom_scrim(0.), 0.),
+                    linear_color_stop(bottom_scrim(PILL_SCRIM_ALPHA), 1.),
                 ))
         });
         let equalizer = (!hide("equalizer")).then_some(equalizer);
@@ -2009,7 +2038,7 @@ impl Render for Shell {
         let root = div()
             .relative()
             .size_full()
-            .bg(rgb(BG))
+            .bg(rgb(palette().bg))
             .font_family(UI_FONT)
             .text_color(text())
             .on_key_down(cx.listener(Self::on_key_down))
@@ -2061,7 +2090,7 @@ impl Render for Shell {
             .children(side)
             .children(full)
             .children(overlays)
-            .children(palette)
+            .children(palette_overlay)
             .children(drag_watch)
             // Kare ölçümü (yalnız `OPENIFY_FRAME_STATS` ile): en son boyanan öğe.
             .when(frames::enabled(), |el| {
@@ -2088,7 +2117,7 @@ fn framed(child: impl IntoElement, side: f32, radius: f32) -> AnyElement {
         .flex_shrink_0()
         .rounded(px(radius))
         .overflow_hidden()
-        .bg(rgb(PLACEHOLDER))
+        .bg(rgb(palette().placeholder))
         .child(child)
         .into_any_element()
 }
@@ -2107,8 +2136,8 @@ fn placeholder(_seed: &str, side: f32, radius: f32, icon_name: &'static str) -> 
         .justify_center()
         .bg(linear_gradient(
             180.,
-            linear_color_stop(rgb(mix(PLACEHOLDER, 0xFFFFFF, 0.05)), 0.),
-            linear_color_stop(rgb(PLACEHOLDER), 1.),
+            linear_color_stop(rgb(mix(palette().placeholder, 0xFFFFFF, 0.05)), 0.),
+            linear_color_stop(rgb(palette().placeholder), 1.),
         ))
         .child(icon(icon_name, (side * 0.3).max(12.), label()))
         .into_any_element()

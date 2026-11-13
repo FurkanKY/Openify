@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use super::theme::{DARK_ROOM, DEFAULT_ACCENT, accent_fade, ease_out, mix};
+use super::theme::{DARK_ROOM, DEFAULT_ACCENT, accent_fade, ease_out, mix, palette, themed_accent};
 use crate::engine::{Event, NoticeKind, QueueState, TrackInfo, palette::Accent};
 use crate::t;
 
@@ -268,13 +268,21 @@ impl PlayerState {
             return;
         }
         // Geçişin ortasında yeni renk gelirse o anki karışımdan devam et.
-        self.accent_from = self.accent_at(now);
+        self.accent_from = self.raw_accent_at(now);
         self.accent = accent;
         self.accent_changed = now;
     }
 
     /// O anki vurgu rengi (geçiş sürüyorsa iki rengin karışımı).
     pub fn accent_at(&self, now: Instant) -> Accent {
+        let mut accent = self.raw_accent_at(now);
+        if self.accent == DARK_ROOM && self.accent_from == DARK_ROOM {
+            accent.glow = palette().bg;
+        }
+        themed_accent(accent)
+    }
+
+    fn raw_accent_at(&self, now: Instant) -> Accent {
         let t = ease_out(
             now.saturating_duration_since(self.accent_changed)
                 .as_secs_f32()

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Light theme with warm off-white surfaces, readable cover accents and softer
+  shadows. Settings offers Dark (the existing default), Light and System;
+  System follows Windows app mode immediately, including the window title bar.
+- `OPENIFY_TEST_THEME=light|dark` for isolated visual test runs and contrast
+  checks for text and cover-tinted surfaces in both palettes.
+
 ## [0.1.1] - 2026-11-13
 
 ### Changed

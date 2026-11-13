@@ -1323,11 +1323,11 @@ impl Shell {
                                 .bottom(px(S2))
                                 .size(px(S5))
                                 .rounded_full()
-                                .bg(shade(SCRIM))
+                                .bg(cover_scrim(SCRIM))
                                 .flex()
                                 .items_center()
                                 .justify_center()
-                                .child(icon("volume-2", 14., rgb(self.accent().text))),
+                                .child(icon("volume-2", 14., cover_accent(self.accent().text))),
                         )
                     }),
             )

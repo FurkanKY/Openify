@@ -639,9 +639,9 @@ impl Shell {
             .flex()
             .flex_col()
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(float_shadow())
             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             .child(header)
@@ -690,7 +690,7 @@ fn help_fade_strengths(offset: f32, max: f32) -> (f32, f32) {
 }
 
 /// Kaydırma alanının üst ya da alt kenarındaki 32 px'lik geçiş: panel
-/// yüzeyinden (`BAR`) saydama. `strength` 0..1; ~0 ise hiç öğe yok. Köşeleri
+/// yüzeyinden (`palette().bar`) saydama. `strength` 0..1; ~0 ise hiç öğe yok. Köşeleri
 /// yuvarlak değil (yuvarlak köşe alt köşede satırın bir kırıntısını açıkta
 /// bırakıyordu). Hiçbir olaya bağlanmaz: tıklama ve tekerlek satıra geçer.
 fn help_veil(top: bool, strength: f32) -> Option<AnyElement> {
@@ -698,8 +698,11 @@ fn help_veil(top: bool, strength: f32) -> Option<AnyElement> {
     if strength < 0.01 {
         return None;
     }
-    let solid = linear_color_stop(with_alpha(BAR, strength), if top { 0. } else { 1. });
-    let clear = linear_color_stop(with_alpha(BAR, 0.), if top { 1. } else { 0. });
+    let solid = linear_color_stop(
+        with_alpha(palette().bar, strength),
+        if top { 0. } else { 1. },
+    );
+    let clear = linear_color_stop(with_alpha(palette().bar, 0.), if top { 1. } else { 0. });
     let (from, to) = if top { (solid, clear) } else { (clear, solid) };
     let veil = div()
         .absolute()

@@ -1,9 +1,4 @@
-//! Windows başlık çubuğunu Openify'ın koyu arka planıyla birleştirir.
-//!
-//! gpui başlık çubuğunu sistem temasına göre açık ya da koyu çiziyor. Windows
-//! açık temadayken Openify'ın koyu içeriğinin üstünde beyaz bir şerit kalıyor.
-//! Burada DWM'e (Windows'un pencere yöneticisi) başlık çubuğunu koyu ve
-//! uygulamanın arka plan rengiyle aynı çizmesini söylüyoruz.
+//! Windows başlık çubuğunu Openify'ın etkin uygulama paletiyle birleştirir.
 
 use gpui::Window;
 use raw_window_handle::{HasWindowHandle, RawWindowHandle};
@@ -15,7 +10,7 @@ use windows::Win32::{
 };
 use windows::core::BOOL;
 
-use super::theme::{BG, TEXT};
+use super::theme::{is_light, palette};
 
 /// gpui penceresinin Windows tutamacı. (`display_handle` gpui'de yazılmamış,
 /// çağrılırsa çöker; yalnız pencere tutamacı okunur.)
@@ -31,10 +26,14 @@ pub fn apply(window: &Window) {
     let Some(hwnd) = hwnd(window) else {
         return;
     };
+    apply_hwnd(hwnd);
+}
 
-    let dark = BOOL::from(true);
-    let caption = colorref(BG);
-    let text = colorref(TEXT);
+/// Tercih değişirken gpui Window ödüncü gerektirmeyen DWM güncellemesi.
+pub fn apply_hwnd(hwnd: HWND) {
+    let dark = BOOL::from(!is_light());
+    let caption = colorref(palette().bg);
+    let text = colorref(palette().text);
 
     // Başarısız olursa (örneğin Windows 10'da renk ayarı yok) pencere yine
     // çalışır, sadece başlık çubuğu varsayılan kalır.

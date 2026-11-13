@@ -49,8 +49,6 @@ const PICK_SHARE: f32 = 0.4;
 /// Kahraman kartların zemini: kapak renginin zeminle karışımı (en güçlü
 /// baştaki, bu parlaklık tavanına kadar kısılır) ve tavan. 0,04'te beyaz yazı
 /// ≥ 11:1, ikincil (%64) ≥ 6:1 (test).
-const HERO_TINT: f32 = 0.5;
-const HERO_MAX_LUMINANCE: f32 = 0.04;
 /// Ana sayfa bölümleri arası.
 const SECTION_GAP: f32 = S7;
 
@@ -173,14 +171,7 @@ pub(super) fn time_pick(cards: &[&ExploreCard], hour: u16) -> Option<usize> {
 /// Kahraman kartın zemini: kapak rengi (`glow`) kart yüzeyiyle karışır, en
 /// parlak yeri `HERO_MAX_LUMINANCE`'ı geçmez; (baştaki, sondaki) renk.
 pub(super) fn hero_tint(glow: u32) -> (u32, u32) {
-    let mut t = HERO_TINT;
-    loop {
-        let top = mix(BAR, glow, t);
-        if luminance(top) <= HERO_MAX_LUMINANCE || t <= 0. {
-            return (top, mix(BAR, glow, t * 0.3));
-        }
-        t -= 0.01;
-    }
+    hero_tint_for(palette(), glow)
 }
 
 /// Kahraman kartın dolgusu: tonsuzsa kart yüzeyi, tonluysa üstten alta
@@ -195,7 +186,7 @@ fn hero_fill(tint: Option<u32>) -> gpui::Background {
                 linear_color_stop(rgb(bottom), 1.),
             )
         }
-        None => rgb(BAR).into(),
+        None => rgb(palette().bar).into(),
     }
 }
 
@@ -699,7 +690,7 @@ impl Shell {
                 .child(cover);
             return card
                 .bg(hero_fill(
-                    Some(self.state.accent_at(now).glow).filter(|g| *g != BG),
+                    Some(self.state.accent_at(now).glow).filter(|g| *g != palette().bg),
                 ))
                 .child(cover)
                 .child(
@@ -950,7 +941,7 @@ mod tests {
     /// yeri tavanı geçmez, beyaz yazı ≥ 10:1, ikincil (%64) ≥ 4,5:1.
     #[test]
     fn hero_tint_keeps_text_readable_on_every_hue() {
-        let blend = |alpha: f32, over: u32| mix(over, TEXT, alpha);
+        let blend = |alpha: f32, over: u32| mix(over, palette().text, alpha);
         for h in 0..36 {
             let hue = h as f32 * 10.;
             // Doygun, parlak bir kapak rengi (en kötü durum).
@@ -963,9 +954,9 @@ mod tests {
                     luminance(color)
                 );
                 assert!(
-                    contrast(TEXT, color) >= 10.,
+                    contrast(palette().text, color) >= 10.,
                     "{hue}: {:.2}",
-                    contrast(TEXT, color)
+                    contrast(palette().text, color)
                 );
                 assert!(
                     contrast(blend(0.64, color), color) >= 4.5,
@@ -974,8 +965,8 @@ mod tests {
                 );
             }
         }
-        // Renksiz kapakta (BG) ton kart yüzeyine çok yakın.
-        assert_eq!(hero_tint(BAR).0, BAR);
+        // Renksiz kapakta (palette().bg) ton kart yüzeyine çok yakın.
+        assert_eq!(hero_tint(palette().bar).0, palette().bar);
     }
 
     /// Basit HSL → 0xRRGGBB (yalnız test).

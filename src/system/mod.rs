@@ -12,6 +12,7 @@
 //! durumunu ödünç almış olabilir, ileti işleyicisinden arayüze dokunmak
 //! çakışırdı. Arayüz kanalı kendi döngüsünde okur (`ui::integration`).
 
+pub mod app_theme;
 mod dialog;
 mod hook;
 mod icons;
@@ -48,7 +49,7 @@ pub enum SystemEvent {
     TaskbarButtonCreated,
     /// Explorer yeniden başladı: tepsi simgesi yeniden eklenmeli.
     TaskbarCreated,
-    /// Sistem teması değişti (açık / koyu): simgeler yeniden çizilir.
+    /// Windows renk modu değişti: simgeler ve Sistem tercihindeki UI yenilenir.
     ThemeChanged,
 }
 

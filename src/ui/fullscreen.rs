@@ -5,7 +5,9 @@
 //! iş parçacığında 32 px'e küçültülür, bulanıklaştırılır, 128 px'e
 //! büyütülüp bir kez daha yumuşatılır, karartılır (en parlak yeri göreli
 //! parlaklık 0,025'i, ışımanın tavanını, geçmez: üstündeki sessiz yazı her kapakta ≥ 4,5:1) ve
-//! PNG olarak bir kez hazırlanır; ekranda gpui onu çift doğrusal büyütür. Her
+//! PNG olarak bir kez hazırlanır. Açık temada aynı kapak sıcak açık zeminle
+//! düşük yoğunlukta karışır; koyu yazı için parlaklık tabanı korunur.
+//! Ekranda gpui onu çift doğrusal büyütür. Her
 //! şarkıda bir kez, kare başına iş yok; eskisi gpui'nin önbelleğinden atılır.
 //!
 //! Kapak: motor kapağı 256 px'e küçültüp saklıyor (kenar çubuğu ve hap için
@@ -68,6 +70,20 @@ const SIDE_BY_SIDE_MIN: f32 = 900.;
 /// Arka planın en parlak yeri (göreli parlaklık).
 pub(super) const BACKDROP_MAX_LUMINANCE: f32 = 0.025;
 
+/// Her iş tek bir tema ve kapak kimliğine aittir. Sıra sayısı aynı temaya
+/// dönülen hızlı açık → koyu → açık geçişinde de eski işi ayırt eder.
+struct SurfaceRequest {
+    seq: u64,
+    light: bool,
+    uri: String,
+}
+
+impl SurfaceRequest {
+    fn accepts(&self, seq: u64, light: bool, uri: Option<&str>) -> bool {
+        self.seq == seq && self.light == light && uri == Some(self.uri.as_str())
+    }
+}
+
 pub(super) struct FullState {
     pub open: bool,
     /// Pencereyi Windows'un tam ekranına biz aldık (çıkınca geri).
@@ -86,6 +102,9 @@ pub(super) struct FullState {
     hide_task: Option<Task<()>>,
     /// Çalan şarkının bulanık arka planı (şarkının adresiyle).
     pub backdrop: Option<(String, Arc<gpui::Image>)>,
+    /// Küçük kapağın baytları: tema değişiminde ağa çıkmadan yeniden üretim.
+    surface_source: Option<(String, Arc<[u8]>)>,
+    surface_seq: u64,
     /// Hapın kapak ışığı: aynı kapaktan, aynı iş parçacığında (`pill_glass`).
     pub pill_light: super::pill_glass::Lights,
     /// Çalan şarkının kapağının büyük hâli; yalnız tam ekran ya da panelin
@@ -121,6 +140,8 @@ impl FullState {
             hovering_controls: false,
             hide_task: None,
             backdrop: None,
+            surface_source: None,
+            surface_seq: 0,
             pill_light: Default::default(),
             hires: None,
             hires_pending: None,
@@ -372,6 +393,9 @@ impl Shell {
     /// Kapak geldi: bulanık arka planı ve hapın ışığını arka planda hazırla
     /// (her şarkıda bir kez).
     pub(super) fn compute_backdrop(&mut self, uri: String, bytes: Vec<u8>, cx: &mut Context<Self>) {
+        if self.state.track.as_ref().is_none_or(|t| t.uri != uri) {
+            return;
+        }
         if self
             .now
             .full
@@ -381,13 +405,52 @@ impl Shell {
         {
             return;
         }
+        self.start_theme_surfaces(uri, bytes.into(), cx);
+    }
+
+    /// Eski tema dokularını bırak; sahte çalma dahil mevcut kapaktan yeniden üret.
+    pub(super) fn refresh_theme_surfaces(&mut self, cx: &mut Context<Self>) {
+        self.now.full.surface_seq = self.now.full.surface_seq.wrapping_add(1);
+        if let Some((_, old)) = self.now.full.backdrop.take() {
+            old.remove_asset(cx);
+        }
+        self.clear_pill_lights(cx);
+        if let Some((uri, bytes)) = self.now.full.surface_source.clone()
+            && self.state.track.as_ref().is_some_and(|t| t.uri == uri)
+        {
+            self.start_theme_surfaces(uri, bytes, cx);
+        }
+        self.views.full.update(cx, |_, cx| cx.notify());
+    }
+
+    fn start_theme_surfaces(&mut self, uri: String, bytes: Arc<[u8]>, cx: &mut Context<Self>) {
+        let colors = palette();
+        self.now.full.surface_seq = self.now.full.surface_seq.wrapping_add(1);
+        let request = SurfaceRequest {
+            seq: self.now.full.surface_seq,
+            light: colors.light,
+            uri: uri.clone(),
+        };
+        self.now.full.surface_source = Some((uri.clone(), bytes.clone()));
         let task = cx.background_spawn(async move {
-            (backdrop_png(&bytes), super::pill_glass::light_image(&bytes))
+            (
+                backdrop_png(&bytes, colors),
+                super::pill_glass::light_image(&bytes, colors),
+            )
         });
         cx.spawn(async move |this, cx| {
             let (png, light) = task.await;
             let _ = this.update(cx, |shell, cx| {
-                if shell.state.track.as_ref().is_none_or(|t| t.uri != uri) {
+                if !request.accepts(
+                    shell.now.full.surface_seq,
+                    palette().light,
+                    shell.state.track.as_ref().map(|t| t.uri.as_str()),
+                ) {
+                    // A theme change without a newer request must still refresh.
+                    if request.seq == shell.now.full.surface_seq && request.light != palette().light
+                    {
+                        shell.refresh_theme_surfaces(cx);
+                    }
                     return;
                 }
                 if let Some(light) = light {
@@ -458,7 +521,7 @@ impl Shell {
                 .bg(linear_gradient(
                     180.,
                     linear_color_stop(rgb(glow_top(accent.glow)), 0.),
-                    linear_color_stop(rgb(BG), 1.),
+                    linear_color_stop(rgb(palette().bg), 1.),
                 ))
                 .into_any_element(),
         };
@@ -486,7 +549,7 @@ impl Shell {
                 .relative()
                 .rounded(px(R_XL))
                 .overflow_hidden()
-                .bg(rgb(PLACEHOLDER))
+                .bg(rgb(palette().placeholder))
                 // Köşe resmin kendisinde de: kabın `overflow_hidden`'ı resmi
                 // kırpmıyor (tam ekran kapağı kare çiziliyordu).
                 .child(img(image).size_full().rounded(px(R_XL)))
@@ -504,7 +567,7 @@ impl Shell {
                 .size(px(cover))
                 .flex_none()
                 .rounded(px(R_XL))
-                .bg(rgb(PLACEHOLDER))
+                .bg(rgb(palette().placeholder))
                 .flex()
                 .items_center()
                 .justify_center()
@@ -606,7 +669,7 @@ impl Shell {
             .size_full()
             .relative()
             .overflow_hidden()
-            .bg(rgb(BG))
+            .bg(rgb(palette().bg))
             .font_family(UI_FONT)
             .when_some(fade, |el, f| el.opacity(f))
             .on_mouse_move(cx.listener(|this, _, _, cx| this.wake_full_controls(cx)))
@@ -887,8 +950,8 @@ fn download_hires(url: &str) -> Option<Vec<u8>> {
 
 // ── Bulanık arka plan (iş parçacığında) ─────────────────────────────────
 
-/// Kapak baytlarından (JPEG / PNG) karartılmış, bulanık 128 px'lik PNG.
-pub(super) fn backdrop_png(bytes: &[u8]) -> Option<Vec<u8>> {
+/// Kapak baytlarından temaya uyarlanmış, bulanık 128 px'lik PNG.
+pub(super) fn backdrop_png(bytes: &[u8], colors: Palette) -> Option<Vec<u8>> {
     const SMALL: u32 = 32;
     const SIZE: u32 = 128;
     let source = image::load_from_memory(bytes).ok()?.to_rgb8();
@@ -906,7 +969,7 @@ pub(super) fn backdrop_png(bytes: &[u8]) -> Option<Vec<u8>> {
     }
     let mut out = Vec::with_capacity((SIZE * SIZE * 3) as usize);
     for (i, c) in big.iter().enumerate() {
-        let packed = darken(pack(*c));
+        let packed = backdrop_color(pack(*c), colors);
         // Karanlık, geniş degradede bantlaşma olmasın: yarım basamaklık titreşim.
         let n = dither(i);
         for shift in [16u32, 8, 0] {
@@ -931,10 +994,20 @@ fn pack(c: [f32; 3]) -> u32 {
 }
 
 /// Oda gece kalır: zeminle karışım, sonra parlaklık tavanı.
-pub(super) fn darken(color: u32) -> u32 {
+fn backdrop_color(color: u32, colors: Palette) -> u32 {
+    if colors.light {
+        let mut t = BACKDROP_LIGHT_TINT_MIX;
+        loop {
+            let c = mix(colors.bg, color, t);
+            if luminance(c) >= COVER_TINT_MIN_LUMINANCE || t <= 0. {
+                return c;
+            }
+            t -= 0.02;
+        }
+    }
     let mut t = 0.5;
     loop {
-        let c = mix(BG, color, t);
+        let c = mix(colors.bg, color, t);
         if luminance(c) <= BACKDROP_MAX_LUMINANCE || t <= 0. {
             return c;
         }
@@ -1021,31 +1094,49 @@ mod tests {
     /// Çıta: en parlak kapakta da (beyaz, sarı) arka plan karanlık ve
     /// üstündeki sessiz yazı (sözler, sanatçı, süre) ≥ 4,5:1.
     #[test]
-    fn backdrop_stays_dark_and_text_readable() {
-        for color in [
-            [255, 255, 255],
-            [250, 220, 40],
-            [240, 60, 160],
-            [10, 10, 10],
-        ] {
-            let png = backdrop_png(&solid_jpeg(color)).expect("arka plan");
-            let img = image::load_from_memory(&png).unwrap().to_rgb8();
-            assert_eq!(img.dimensions(), (128, 128));
-            for p in img.pixels() {
-                let c = ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32;
-                // Titreşim yarım basamak: tavanın hemen üstü kabul.
-                assert!(
-                    luminance(c) <= BACKDROP_MAX_LUMINANCE + 0.002,
-                    "{color:?} → {c:06X}"
-                );
-                let muted_text = mix(c, TEXT, 0.64);
-                assert!(
-                    contrast(muted_text, c) >= 4.5,
-                    "{color:?}: {:.2}",
-                    contrast(muted_text, c)
-                );
+    fn backdrop_keeps_both_themes_and_text_readable() {
+        for colors in [Palette::DARK, Palette::LIGHT] {
+            for color in [
+                [255, 255, 255],
+                [250, 220, 40],
+                [240, 60, 160],
+                [230, 20, 20],
+                [30, 60, 255],
+                [20, 230, 60],
+                [10, 10, 10],
+            ] {
+                let png = backdrop_png(&solid_jpeg(color), colors).expect("arka plan");
+                let img = image::load_from_memory(&png).unwrap().to_rgb8();
+                assert_eq!(img.dimensions(), (128, 128));
+                for p in img.pixels() {
+                    let c = ((p[0] as u32) << 16) | ((p[1] as u32) << 8) | p[2] as u32;
+                    // Titreşim yarım basamak: tavanın hemen üstü kabul.
+                    if colors.light {
+                        assert!(luminance(c) >= COVER_TINT_MIN_LUMINANCE - 0.002);
+                    } else {
+                        assert!(luminance(c) <= BACKDROP_MAX_LUMINANCE + 0.002);
+                    }
+                    for alpha in [colors.muted_alpha, colors.label_alpha] {
+                        let quiet = mix(c, colors.text, alpha);
+                        assert!(contrast(quiet, c) >= 4.5, "{color:?}: {quiet:06X}/{c:06X}");
+                    }
+                }
             }
         }
+    }
+
+    #[test]
+    fn surface_request_rejects_old_theme_cover_and_repeated_theme() {
+        let request = SurfaceRequest {
+            seq: 1,
+            light: true,
+            uri: "track:a".into(),
+        };
+        assert!(request.accepts(1, true, Some("track:a")));
+        assert!(!request.accepts(1, false, Some("track:a")));
+        assert!(!request.accepts(3, true, Some("track:a")));
+        assert!(!request.accepts(1, true, Some("track:b")));
+        assert!(!request.accepts(1, true, None));
     }
 
     #[test]

@@ -405,6 +405,11 @@ keys! {
     CloseToTray { en: "Hide to tray", tr: "Tepsiye gizle" }
     CloseQuit { en: "Quit the app", tr: "Uygulamadan çık" }
     SectionBehavior { en: "Appearance and behavior", tr: "Görünüm ve davranış" }
+    RowTheme { en: "Theme", tr: "Tema" }
+    RowThemeDesc { en: "Choose your colors. “System” follows the Windows app color mode.", tr: "Renklerini seç. “Sistem”, Windows'un uygulama renk modunu izler." }
+    ThemeDark { en: "Dark", tr: "Koyu" }
+    ThemeLight { en: "Light", tr: "Açık" }
+    ThemeSystem { en: "System", tr: "Sistem" }
     RowMotion { en: "Reduce motion", tr: "Animasyonları azalt" }
     RowMotionDesc { en: "Keeps transitions and movement to a minimum. “System” follows the Windows setting.", tr: "Geçişleri ve hareketi en aza indirir. “Sistem”, Windows'taki ayarı izler." }
     RowNowPanel { en: "Open the Now Playing panel at launch", tr: "Şimdi çalıyor panelini açık başlat" }

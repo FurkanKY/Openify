@@ -1,6 +1,6 @@
 //! Hapın cam yüzeyi (7 Kasım kararı: "Apple tarzı cam").
 //!
-//! Koyu cam zemin (yukarıdan ışık alır gibi üstten alta hafifçe koyulaşır),
+//! Temaya göre koyu ya da sıcak fildişi cam zemin (üstten alta koyulaşır),
 //! üstte ince ışık çizgisi, 1 px'lik soluk iç halka ve derin yumuşak gölge
 //! (`theme::pill_shadow`, tek katman). Renkli kenar çizgisi yok.
 //!
@@ -20,7 +20,9 @@
 //! vurgu rengiyle aynı 0,8 sn; "animasyonları azalt"ta anında); eskisi geçiş
 //! bitince gpui'nin doku atlasından da atılır (`App::drop_image`).
 //!
-//! Okunurluk: ışığın en parlak noktası göreli parlaklık 0,05'i geçmez
+//! Açık temada düşük yoğunluklu renk lekeleri camla karışır ve karanlık
+//! yazının okunması için parlaklık tabanı korunur. Koyu temada ışığın en
+//! parlak noktası göreli parlaklık 0,05'i geçmez
 //! (`PILL_LIGHT_MAX_LUMINANCE`); ışığın düştüğü yerdeki en soluk yazı
 //! (ikincil, %64) her kapakta ≥ 4,5:1, etiket tonundaki süreler ışığın
 //! söndüğü yerde ≥ 4,5:1, haptaki vurgu rengi de ışığa göre ≥ 4,5:1
@@ -76,6 +78,19 @@ pub(super) struct Lights {
 }
 
 impl Shell {
+    /// Tema değişince eski temanın iki geçiş katmanını da atlasından bırak.
+    pub(super) fn clear_pill_lights(&mut self, cx: &mut Context<Self>) {
+        let lights = &mut self.now.full.pill_light;
+        lights.seq = lights.seq.wrapping_add(1);
+        for old in [lights.current.take(), lights.previous.take()]
+            .into_iter()
+            .flatten()
+        {
+            cx.drop_image(old.image, None);
+        }
+        self.notify_pill(cx);
+    }
+
     /// Yeni şarkının ışığı hazır (bkz. `compute_backdrop`).
     pub(super) fn set_pill_light(&mut self, image: Arc<RenderImage>, cx: &mut Context<Self>) {
         let lights = &mut self.now.full.pill_light;
@@ -157,8 +172,8 @@ impl Shell {
 
 /// Kapak baytlarından (JPEG / PNG) hapın ışıklı yüzeyi, gpui'nin beklediği
 /// BGRA düzeninde. Engellemeli: arka planda çağır.
-pub(super) fn light_image(bytes: &[u8]) -> Option<Arc<RenderImage>> {
-    let pixels = light_pixels(bytes)?;
+pub(super) fn light_image(bytes: &[u8], colors: Palette) -> Option<Arc<RenderImage>> {
+    let pixels = light_pixels(bytes, colors)?;
     let mut out = image::RgbaImage::new(W as u32, H as u32);
     for (dst, src) in out.pixels_mut().zip(pixels) {
         *dst = image::Rgba([src[2], src[1], src[0], 255]);
@@ -167,13 +182,16 @@ pub(super) fn light_image(bytes: &[u8]) -> Option<Arc<RenderImage>> {
 }
 
 /// Yüzeyin pikselleri (RGB, satır satır, `W × H`).
-fn light_pixels(bytes: &[u8]) -> Option<Vec<[u8; 3]>> {
-    let grid = light_grid(bytes)?;
+fn light_pixels(bytes: &[u8], colors: Palette) -> Option<Vec<[u8; 3]>> {
+    let grid = light_grid(bytes, colors)?;
     let mut out = Vec::with_capacity(W * H);
     for y in 0..H {
         let ty = (y as f32 + 0.5) / H as f32;
         // Cam zemini (hapın kendi degradesiyle aynı), kesirli: bantlaşmasın.
-        let (top, bottom) = (unpack(PILL_GLASS_TOP), unpack(PILL_GLASS_BOTTOM));
+        let (top, bottom) = (
+            unpack(colors.pill_glass_top),
+            unpack(colors.pill_glass_bottom),
+        );
         let base = [0, 1, 2].map(|k| top[k] + (bottom[k] - top[k]) * ty);
         for x in 0..W {
             let dx = (x as f32 + 0.5 - LIGHT_X) / LIGHT_RX;
@@ -189,13 +207,24 @@ fn light_pixels(bytes: &[u8]) -> Option<Vec<[u8; 3]>> {
                 c = [0, 1, 2].map(|k| base[k] + (color[k] - base[k]) * t);
                 // Örnekler arası karışım tavanı aşarsa ışık o noktada kısılır.
                 let mut s = 1.;
-                while lum(c) > CAP && s > 0. {
+                while (if colors.light {
+                    lum(c) < COVER_TINT_MIN_LUMINANCE
+                } else {
+                    lum(c) > CAP
+                }) && s > 0.
+                {
                     s -= 0.05;
                     c = [0, 1, 2].map(|k| base[k] + (color[k] - base[k]) * t * s);
                 }
             }
             let n = dither(y * W + x);
-            out.push(c.map(|v| (v + n).round().clamp(0., 255.) as u8));
+            let mut pixel = c.map(|v| (v + n).round().clamp(0., 255.) as u8);
+            // Açık zemindeki taban son 8 bit piksel için de geçerli.
+            // Titreşim + yuvarlama, sınırdaki laciverti ~0,005 düşürebilir.
+            while colors.light && lum(pixel.map(f32::from)) < COVER_TINT_MIN_LUMINANCE {
+                pixel = pixel.map(|v| v.saturating_add(1));
+            }
+            out.push(pixel);
         }
     }
     Some(out)
@@ -203,7 +232,7 @@ fn light_pixels(bytes: &[u8]) -> Option<Vec<[u8; 3]>> {
 
 /// Kapağın bulanık renk ızgarası: her örnek için ışık rengi ve camla en
 /// güçlü karışımı (tavanı aşmadan).
-fn light_grid(bytes: &[u8]) -> Option<Vec<([f32; 3], f32)>> {
+fn light_grid(bytes: &[u8], colors: Palette) -> Option<Vec<([f32; 3], f32)>> {
     let source = image::load_from_memory(bytes).ok()?.to_rgb8();
     let small = image::imageops::resize(&source, GRID as u32, GRID as u32, FilterType::Triangle);
     let mut buf: Vec<[f32; 3]> = small
@@ -216,7 +245,7 @@ fn light_grid(bytes: &[u8]) -> Option<Vec<([f32; 3], f32)>> {
     for _ in 0..3 {
         box_blur(&mut buf, GRID, 6);
     }
-    let glass = unpack(PILL_GLASS_TOP);
+    let glass = unpack(colors.pill_glass_top);
     let glass_lum = lum(glass);
     Some(
         buf.iter()
@@ -232,6 +261,11 @@ fn light_grid(bytes: &[u8]) -> Option<Vec<([f32; 3], f32)>> {
                 // Bulanıklık renkleri karıştırıp soldurur: Apple'ın mini
                 // çalarındaki gibi doygunluk belirgin artırılır.
                 let w = (chroma * 5.).min(1.);
+                if colors.light {
+                    // Fildişinin üstünde düşük yoğunluklu kapak lekeleri.
+                    // Renksiz kapak sıcak camı kirletmez.
+                    return (*c, PILL_LIGHT_TINT_MIX * w);
+                }
                 let saturation = (chroma * 3.2).min(0.9);
                 let lightness = LIGHT_LIGHTNESS * w + l.min(LIGHT_LIGHTNESS) * (1. - w);
                 let color = hsl_to_rgb(h, saturation, lightness);
@@ -343,6 +377,10 @@ mod tests {
 
     use super::*;
 
+    fn light_pixels(bytes: &[u8]) -> Option<Vec<[u8; 3]>> {
+        super::light_pixels(bytes, Palette::DARK)
+    }
+
     fn jpeg(width: u32, height: u32, color: impl Fn(u32, u32) -> [u8; 3]) -> Vec<u8> {
         let img = image::RgbImage::from_fn(width, height, |x, y| image::Rgb(color(x, y)));
         let mut out = Vec::new();
@@ -398,14 +436,63 @@ mod tests {
                     "{name}: {c:06X} {:.4}",
                     luminance(c)
                 );
-                secondary = secondary.min(contrast(mix(c, TEXT, 0.64), c));
+                secondary = secondary.min(contrast(
+                    mix(c, Palette::DARK.text, Palette::DARK.muted_alpha),
+                    c,
+                ));
                 if i % W >= TIMES_FROM {
-                    labels = labels.min(contrast(mix(c, TEXT, LABEL_ALPHA), c));
+                    labels = labels.min(contrast(
+                        mix(c, Palette::DARK.text, Palette::DARK.label_alpha),
+                        c,
+                    ));
                 }
             }
             assert!(secondary >= 4.5, "{name}: ikincil {secondary:.2}:1");
             assert!(labels >= 4.5, "{name}: etiket {labels:.2}:1");
         }
+    }
+
+    /// Eski koyu tavanı açık temaya uygulamak fildişini yok eder ve koyu
+    /// yazıyı okunamaz kılar. Renkli ve renksiz kapaklarda gerçek pikselleri sına.
+    #[test]
+    fn ivory_pill_keeps_quiet_text_and_cover_accents_readable() {
+        let colors = Palette::LIGHT;
+        for (name, bytes) in covers() {
+            let pixels = super::light_pixels(&bytes, colors).expect("surface");
+            let mut darkest = colors.pill_glass_top;
+            for pixel in pixels {
+                let bg = pack(pixel);
+                assert!(
+                    luminance(bg) >= COVER_TINT_MIN_LUMINANCE,
+                    "{name}: {bg:06X}"
+                );
+                if luminance(bg) < luminance(darkest) {
+                    darkest = bg;
+                }
+                for alpha in [colors.muted_alpha, colors.label_alpha] {
+                    let fg = mix(bg, colors.text, alpha);
+                    assert!(contrast(fg, bg) >= 4.5, "{name}: {fg:06X}/{bg:06X}");
+                }
+            }
+            for hue in 0..36 {
+                let cue = hsl_to_rgb(hue as f32 * 10., 0.8, 0.45).map(|v| v.round() as u8);
+                let accent = pill_accent_for(colors, pack(cue));
+                assert!(
+                    contrast(accent, darkest) >= 4.5,
+                    "{name}: {accent:06X}/{darkest:06X}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn ivory_pill_keeps_a_soft_cover_tint() {
+        let colors = Palette::LIGHT;
+        let pixels = super::light_pixels(&jpeg(64, 64, |_, _| [30, 60, 255]), colors).unwrap();
+        let near = pixels[(H / 2) * W + LIGHT_X as usize + 40];
+        let far = pixels[(H / 2) * W + W - 40];
+        assert!(near[2] as i32 - near[0] as i32 >= 8, "{near:?}");
+        assert!(near[0] < far[0], "{near:?}/{far:?}");
     }
 
     /// Işık görünür (doygun kapakta kapağın yanında rengini taşır), sağ
@@ -419,7 +506,11 @@ mod tests {
             near[2] as i32 - near[0] as i32 >= 40,
             "mavi ışık yok: {near:?}"
         );
-        let glass = unpack(mix(PILL_GLASS_TOP, PILL_GLASS_BOTTOM, 0.5 + 0.5 / H as f32));
+        let glass = unpack(mix(
+            Palette::DARK.pill_glass_top,
+            Palette::DARK.pill_glass_bottom,
+            0.5 + 0.5 / H as f32,
+        ));
         for pixels in [
             &blue,
             &light_pixels(&jpeg(64, 64, |_, _| [6, 6, 8])).unwrap(),
@@ -451,7 +542,7 @@ mod tests {
             for light in 0..10 {
                 let h = hue as f32 * 10.;
                 let c = hsl_to_rgb(h, 0.8, 0.05 + light as f32 * 0.09).map(|v| v.round() as u8);
-                let fixed = pill_accent(pack(c));
+                let fixed = pill_accent_for(Palette::DARK, pack(c));
                 assert!(
                     contrast(fixed, PILL_LIGHT_REF) >= 4.5,
                     "{c:?} → {fixed:06X}"

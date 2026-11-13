@@ -7,8 +7,8 @@ colors:
   quiet-edge: "#1C1C21"
   foreground: "#F4F4F5"
   foreground-soft: "rgba(244, 244, 245, 0.86)"
-  foreground-muted: "rgba(244, 244, 245, 0.64)"
-  foreground-label: "rgba(244, 244, 245, 0.52)"
+  foreground-muted: "rgba(244, 244, 245, 0.72)"
+  foreground-label: "rgba(244, 244, 245, 0.68)"
   foreground-disabled: "rgba(244, 244, 245, 0.28)"
   track-groove: "#2A2A30"
   cover-glow-default: "#C2410C"
@@ -354,9 +354,9 @@ components:
 
 ## Overview
 
-**Creative North Star: "Gece dinleme odası"**
+**Creative North Star: "Sakin dinleme odası"**
 
-Openify karanlık, sakin bir oda gibi davranır: oda nötr ve geri çekilmiş, tek ışık kaynağı çalan şarkının kapağı. Vurgu rengi ve pencerenin üstündeki ışıma kapaktan türetilir ve şarkı değişince yavaşça (0,8 sn) yeni renge geçer. Arayüzün geri kalanı bu ışığı taşımak için var; kendisi göze girmez.
+Openify sakin bir dinleme odası gibi davranır: koyu temada nötr gece, açık temada sıcak kırık beyaz yüzeyler geri çekilir; renk çalan şarkının kapağından gelir. Vurgu ve pencerenin üstündeki ton kapaktan türetilir ve şarkı değişince yavaşça (0,8 sn) yeni renge geçer. Arayüzün geri kalanı bu rengi taşımak için var; kendisi göze girmez.
 
 Yön, ağırlık sırasıyla Sade > Atmosferik > Editoryal. Sade taban: nötr siyah zemin, sıkı ama nefes alan satırlar, altta yüzen çalar. Atmosferik katman: kapaktan gelen renk ve ışıma, her yerde kapaklar. Editoryal dokunuş: sayfa başlıklarında kalın, karakterli Figtree. Yüzeyler gölgeyle değil, beyazın saydam ton katmanlarıyla ayrılır; gölge yalnızca içeriğin üstünde yüzen geçici öğelerde.
 
@@ -372,7 +372,45 @@ Bileşenlerin hissi "sakin ve kesin": dururken neredeyse görünmezler, dokununc
 
 ## Colors
 
-Nötr bir gece zemini, tek bir kapak ışığı ve beyazın saydam katmanları.
+Koyu temada nötr gece zemini ve açık temada sıcak kırık beyaz zemin; ikisinde
+de kapaktan gelen tek vurgu. Renklerin kaynağı `theme.rs` içindeki `Palette`;
+yüzeyler ve mürekkep birlikte seçilir, açık tema renk tersine çevirmesi değildir.
+
+### Açık palet ve tema seçimi
+
+| Jeton | Koyu | Açık |
+|---|---|---|
+| Pencere | `#0E0E10` | `#F7F4EE` |
+| Yüzen yüzey | `#121215` | `#FFFCF7` |
+| Kenar | `#1C1C21` | `#DBD5CB` |
+| Metin | `#F4F4F5` | `#24211F` |
+| Oluk | `#2A2A30` | `#D5CEC3` |
+| Kapak yer tutucu | `#1C1C21` | `#E7E0D5` |
+| Tehlike metni | `#F87171` | `#AD2727` |
+| Hap camı, üst → alt | `#19191D` → `#0F0F12` | `#FFFFFB` → `#ECE7DF` |
+
+- **Sıcak yüzey, gerçek mürekkep:** açık temada ikincil metin %80, etiket %78
+  koyu mürekkep; koyu temada ikincil %72, etiket %68. Bu değerler seçili ve
+  basılı satırlarda da karşıtlığı korur. Ana metin %100, simgeler %86. Pasif simgeler okunacak metin
+  yerine kullanılmaz. Ana metin / yüzey çiftleri iki temada WCAG AA ≥ 4,5:1
+  birim testiyle korunur.
+- **Kapak rengi kalır:** açık temada pencere ışıması kapak renginin %8'i,
+  arama hapı %7 (açıkken %10), Home kartı üstte %9 / altta %3 ton alır.
+  Vurgu açık zeminde koyulaştırılır; tonu korunur. Asıl düğmenin yazısı açık
+  mürekkeptir; seçili çipler koyu mürekkep dolgulu ve açık yazılıdır.
+- **Cam ve tam ekran:** hapın renkli lekesi en çok %14, tam ekranın bulanık
+  kapağı %10 karışır; göreli parlaklık en az 0,68 kalır. Arka planda hazırlanan
+  dokular tema değişince mevcut kapaktan yeniden üretilir; eski işin sonucu
+  yeni temanın üstüne gelemez.
+- **Yumuşak derinlik:** açık temada gölge sıcak kahverengi ve koyu gölgenin
+  %28 yoğunluğundadır. Giriş gölgelendirmesi koyu mürekkebin %16 gücüne iner;
+  hapın alt perdesi pencerenin kırık beyazına söner. Kapak üstündeki oynat,
+  büyüt ve sabitle işaretleri kendi koyu perdesi ve beyaz mürekkebini korur.
+- **Ayar:** Görünüm ve davranış → Tema: Koyu / Açık / Sistem. Eksik veya
+  bilinmeyen kayıt Koyu'dur. Sistem, Windows'un uygulama renk modunu izler
+  (`AppsUseLightTheme`, salt okuma); değişim yeniden başlatmadan uygulanır.
+  Başlık çubuğu DWM bayrağı ve renkleri de aynı palete geçer. Tepsi ve görev
+  çubuğu simgeleri Windows'un ayrı kabuk modunu izlemeyi sürdürür.
 
 ### Primary
 - **Kapak Işığı** (çalan şarkıdan; varsayılan `cover-accent-default`): Çalan satırın adı, ekolayzer, asıl düğme, odak halkası, raftaki seçili kartın halkası ve adı, çalan listenin kapağındaki ses simgesi. Zemine ve ışımanın en parlak yerine göre her zaman ≥ 4,5:1 olacak kadar açılır, tonu korunur.
@@ -382,7 +420,7 @@ Nötr bir gece zemini, tek bir kapak ışığı ve beyazın saydam katmanları.
 - **Gece Odası** (`night-room`): Pencerenin zemini.
 - **Çubuk Yüzeyi** (`bar-surface`): Yüzen çalar hapı ve yüzen paneller (palet, menü, ipucu).
 - **Sessiz Kenar** (`quiet-edge`): Yüzen panellerin ve bölgelerin kenarı.
-- **Ön Plan** (`foreground`): Bütün yazılar bu rengin saydam tonlarıdır: ana metin tam, ikincil %64, etiket %52, pasif %28. Gri değil ön plan tonu kullanılır; kapak ışımasının renkli zemininde gri bulanıklaşıyordu.
+- **Ön Plan** (`foreground`): Bütün yazılar bu rengin saydam tonlarıdır: ana metin tam; ikincil ve etiket koyu temada %72 / %68, açık temada %80 / %78; pasif simge %28. Gri değil ön plan tonu kullanılır; kapak tonunun ve etkileşim katmanlarının üstünde okunabilir kalır.
 - **Oluk** (`track-groove`): İlerleme ve ses çubuklarının boş kısmı.
 - **Tehlike Yazısı** (`danger-text`): Silme ve çıkarma gibi geri dönüşü zor işlerin yazısı.
 
@@ -601,7 +639,7 @@ Bütün etkileşimli bileşenlerin beş durumu vardır ve bileşen vitrininde (`
   - **Depolama ve hesap:** Önbellek (boyut, "Önbelleği temizle" + onay), Önbellek konumu (yol, "Klasörü aç"), Spotify hesabı (ad, "Çıkış yap" + onay).
   - **Hakkında:** sürüm ve güncelleme durumu ("Şimdi denetle"), Lisanslar (açık kaynak bileşenler, yazı tipi / simge lisans metinleri tıklayınca), "Spotify ile bağlantılı değildir" notu.
 - **Şarkılar arası geçiş:** yalnız boşluksuz (gapless) var, ayar satırı yok. Yumuşak geçiş (crossfade) kendi çıkışımızda çalar tek akışı yazdığı için (sıradaki şarkı çalara ancak öncekinin sonunda gelir) iki şarkıyı üst üste bindiremiyor: gerçek bir yumuşak geçiş çaların iki şarkıyı birden çözmesini gerektirir. Boş bir "yakında" satırı yok.
-- **Yapılmayan:** Tema (şimdilik yalnız koyu; satır yok), önbellek konumunu değiştirme (gösterilir, `Klasörü aç` ile açılır; değiştirmek ses önbelleğini, kapakları ve SQLite'ı taşımayı gerektirir).
+- **Yapılmayan:** önbellek konumunu değiştirme (gösterilir, `Klasörü aç` ile açılır; değiştirmek ses önbelleğini, kapakları ve SQLite'ı taşımayı gerektirir).
 - **Davranış notları:** her değişiklik hemen uygulanır ve `settings.json`'a yazılır. "Şimdi çalıyor panelini açık başlat" bir tercihtir: panel çalışırken açılıp kapanınca değişmez (eskiden son kapanış hatırlanıyordu). Çıkış yap kayıtlı girişi siler ve Openify'ı kapatır; palette "Çıkış yap" aynı işi paletin kendi onayıyla yapar. Önbellek temizlenince şarkı dosyaları ve kapaklar silinir; kütüphane veritabanı (bekleyen yazmalar, kaldığı yer, sözler) ve giriş silinmez.
 
 ## Ekolayzer (Ayarlar → Ses'in altında, 11 Kasım)

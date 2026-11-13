@@ -158,7 +158,12 @@ impl Shell {
                     .flex()
                     .items_center()
                     .gap(px(S3))
-                    .child(div().size(px(40.)).rounded(px(R_SM)).bg(rgb(PLACEHOLDER)))
+                    .child(
+                        div()
+                            .size(px(40.))
+                            .rounded(px(R_SM))
+                            .bg(rgb(palette().placeholder)),
+                    )
                     .child(
                         div()
                             .flex_1()
@@ -177,9 +182,9 @@ impl Shell {
             .w(px(360.))
             .h(px(520.))
             .rounded(px(R_XL))
-            .bg(rgb(BAR))
+            .bg(rgb(palette().bar))
             .border_1()
-            .border_color(rgb(BORDER))
+            .border_color(rgb(palette().border))
             .shadow(shadows)
             .overflow_hidden()
             .opacity(1.)
@@ -686,7 +691,7 @@ impl Shell {
         // Kapaktan gelen vurgu: zemine göre okunur hâle getirilmiş örnekler.
         let mut accents = div().flex().gap(px(S4));
         for raw in [0xF59E5B, 0x1E3A8A, 0x7F1D1D, 0x14532D, 0x4C1D95, 0x525252] {
-            let fixed = ensure_contrast(raw, BG, 4.5);
+            let fixed = ensure_contrast(raw, palette().bg, 4.5);
             accents = accents.child(
                 div()
                     .flex()
@@ -705,7 +710,7 @@ impl Shell {
                             .type_role(T_LABEL)
                             .tabular()
                             .text_color(label())
-                            .child(format!("{:.1}:1", contrast(fixed, BG))),
+                            .child(format!("{:.1}:1", contrast(fixed, palette().bg))),
                     ),
             );
         }

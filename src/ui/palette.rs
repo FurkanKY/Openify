@@ -1606,7 +1606,7 @@ impl Shell {
             .bg(linear_gradient(
                 180.,
                 linear_color_stop(rgb(surface_top(accent.glow)), 0.),
-                linear_color_stop(rgb(PILL_GLASS_BOTTOM), 1.),
+                linear_color_stop(rgb(palette().pill_glass_bottom), 1.),
             ))
             .border_1()
             .border_color(veil(PILL_RING))
@@ -1771,7 +1771,7 @@ impl Shell {
                 cx.stop_propagation();
                 this.perform(action.clone(), cx);
             }))
-            .child(icon("play-fill", size * 0.4, rgb(BG)))
+            .child(icon("play-fill", size * 0.4, rgb(palette().bg)))
             .into_any_element()
     }
 
@@ -1901,10 +1901,10 @@ impl Shell {
                             .flex()
                             .items_center()
                             .justify_center()
-                            .bg(shade(SCRIM))
+                            .bg(cover_scrim(SCRIM))
                             .opacity(if selected { 1. } else { 0. })
                             .group_hover(group, |s| s.opacity(1.))
-                            .child(icon("play-fill", 16., text())),
+                            .child(icon("play-fill", 16., cover_ink())),
                     ),
             )
             .child(
@@ -2011,7 +2011,7 @@ impl Shell {
             .px(px(S4))
             .rounded(px(R_FULL))
             .border_2()
-            .border_color(ring(selected, if genre { TEXT } else { accent }))
+            .border_color(ring(selected, if genre { palette().text } else { accent }))
             .flex()
             .items_center()
             .gap(px(S2))
@@ -2034,7 +2034,7 @@ impl Shell {
                     .flex()
                     .type_role(if genre { T_BODY } else { T_SECONDARY })
                     .when(genre, |el| el.font_weight(gpui::FontWeight::SEMIBOLD))
-                    .text_color(text())
+                    .text_color(if genre { cover_ink() } else { text() })
                     .child(
                         line_with_tip(("palette-chip-title", i), item.title.clone())
                             .flex()
@@ -2061,7 +2061,7 @@ impl Shell {
         let title_color = if item.disabled {
             label()
         } else if item.danger {
-            rgb(DANGER_TEXT)
+            rgb(palette().danger_text)
         } else {
             text()
         };

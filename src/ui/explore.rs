@@ -106,7 +106,7 @@ fn parse_color(hex: &str) -> Option<u32> {
 pub(super) fn tile_color(hex: &str) -> u32 {
     match parse_color(hex) {
         Some(c) => mix(c, 0x000000, TILE_DARKEN),
-        None => mix(BG, 0xFFFFFF, 0.14),
+        None => mix(Palette::DARK.bg, Palette::DARK.text, 0.14),
     }
 }
 
@@ -115,9 +115,12 @@ pub(super) fn tile_color(hex: &str) -> u32 {
 /// aşmayacak kadar zeminle karışık.
 pub(super) fn category_glow(hex: &str) -> Option<u32> {
     let color = parse_color(hex)?;
+    if is_light() {
+        return Some(glow_top(color));
+    }
     let mut t = 0.62;
     loop {
-        let top = mix(BG, color, t);
+        let top = mix(palette().bg, color, t);
         if luminance(top) <= 3. * GLOW_MAX_LUMINANCE || t <= 0.1 {
             return Some(top);
         }
@@ -585,7 +588,7 @@ impl Shell {
                                 .font_family(font())
                                 .type_role(T_TITLE)
                                 .font_weight(FontWeight::EXTRA_BOLD)
-                                .text_color(text())
+                                .text_color(cover_ink())
                                 .child(
                                     line_with_tip(
                                         ElementId::Name(format!("catn-{}", cat.uri).into()),
@@ -717,12 +720,12 @@ mod tests {
     fn tile_text_is_readable_on_every_category_color() {
         for hex in TILE_COLORS {
             let bg = tile_color(hex);
-            let c = contrast(TEXT, bg);
+            let c = contrast(Palette::DARK.text, bg);
             assert!(c >= 4.5, "{hex}: {c:.2}:1");
         }
         // Rengi olmayan (ya da bozuk) karo sessiz tona düşer.
         assert_eq!(tile_color(""), tile_color("pembe"));
-        assert!(contrast(TEXT, tile_color("")) >= 4.5);
+        assert!(contrast(Palette::DARK.text, tile_color("")) >= 4.5);
     }
 
     #[test]
@@ -732,9 +735,9 @@ mod tests {
             assert!(luminance(glow) <= 3. * GLOW_MAX_LUMINANCE + 1e-3, "{hex}");
             // Başlığın ve listelerin yazısı ışımanın üstünde okunur.
             assert!(
-                contrast(TEXT, glow) >= 7.,
+                contrast(palette().text, glow) >= 7.,
                 "{hex}: {:.2}",
-                contrast(TEXT, glow)
+                contrast(palette().text, glow)
             );
         }
         assert!(category_glow("").is_none());
