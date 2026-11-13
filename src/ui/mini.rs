@@ -305,7 +305,7 @@ impl MiniView {
         if let Some(shell) = self.shell.upgrade() {
             let origin = window.window_bounds().get_bounds().origin;
             let pos = (f32::from(origin.x), f32::from(origin.y));
-            let _ = shell.update(cx, |shell, cx| shell.mini_closed(pos, cx));
+            shell.update(cx, |shell, cx| shell.mini_closed(pos, cx));
         }
         window.remove_window();
     }
@@ -687,15 +687,15 @@ impl Shell {
 
     /// Kullanıcı kapattı (palet, kısayol, hap): pencereyi yok et, tercihi yaz.
     fn close_mini(&mut self, cx: &mut Context<Self>) {
-        if let Some(handle) = self.mini.take() {
-            if let Ok(pos) = handle.update(cx, |_, window, _| {
+        if let Some(handle) = self.mini.take()
+            && let Ok(pos) = handle.update(cx, |_, window, _| {
                 let origin = window.window_bounds().get_bounds().origin;
                 let pos = (f32::from(origin.x), f32::from(origin.y));
                 window.remove_window();
                 pos
-            }) {
-                self.prefs.mini_pos = Some([pos.0, pos.1]);
-            }
+            })
+        {
+            self.prefs.mini_pos = Some([pos.0, pos.1]);
         }
         if self.prefs.mini_open {
             self.prefs.mini_open = false;
