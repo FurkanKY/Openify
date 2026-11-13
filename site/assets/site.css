@@ -334,7 +334,6 @@ kbd {
 .btn-primary {
   background: var(--accent);
   color: var(--on-accent);
-  box-shadow: 0 8px 28px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .btn-primary:hover {
   background: var(--accent-hover);
@@ -404,7 +403,7 @@ kbd {
 }
 .metric dt em {
   font-style: normal;
-  font-size: 0.45em;
+  font-size: clamp(17px, 2vw, 25px);
   letter-spacing: -0.01em;
   color: var(--muted);
   margin-left: 6px;
