@@ -185,6 +185,11 @@
     var W = 0, H = 0, dpr = 1, cols = 0, rows = 0, cw = 0, ch = 0;
     var level = [], peak = [], visible = true, raf = 0, last = 0;
     var ink, acc;
+    var ptr = { x: null, t: 0 };
+    cv.parentElement.addEventListener("pointermove", function (e) {
+      var r = cv.getBoundingClientRect();
+      ptr.x = (e.clientX - r.left) / r.width; ptr.t = performance.now();
+    });
 
     function colours() {
       var cs = getComputedStyle(cv);
@@ -216,6 +221,10 @@
       var wave = 0.5 + 0.22 * Math.sin(t * 1.3 + i * 0.37) + 0.16 * Math.sin(t * 2.7 - i * 0.91) + 0.12 * Math.sin(t * 0.6 + i * 0.13);
       var grain = 0.75 + 0.25 * hash(i, Math.floor(t * 6));
       var v = edge * wave * grain * (0.72 + 0.28 * beat);
+      if (ptr.x !== null) {
+        var d = x - ptr.x, fade = Math.max(0, 1 - (performance.now() - ptr.t) / 1600);
+        v += 0.75 * Math.exp(-(d * d) / 0.004) * fade * (0.7 + 0.3 * grain);
+      }
       return Math.max(0, Math.min(1, mode === "blocks" ? 0.15 + v : 0.04 + v));
     }
     var ease = 0.18, decay = 0.006;
@@ -416,4 +425,432 @@
   }, { rootMargin: "-48% 0px -48% 0px" });
   tour.querySelectorAll(".tour-step").forEach(function (el) { io.observe(el); });
   set(0);
+})();
+
+// ---- experimental motion -------------------------------------------
+(function () {
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var doc = document;
+
+  // 1. The accent phrase of the hero is a level meter: bars rise and fall inside the letters.
+  // The letters are drawn into a canvas over the (transparent) text, then the bars are
+  // composited into them, every frame.
+  var em = doc.querySelector(".hero h1 em");
+  if (em && !reduce && !(window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches)) {
+    // Move the chrome gradient from the h1 onto its plain text, so the accent glyphs underneath
+    // the canvas are truly invisible (background-clip:text on the h1 would paint them too).
+    var h1 = em.parentNode;
+    Array.prototype.slice.call(h1.childNodes).forEach(function (n) {
+      if (n.nodeType === 3 && n.textContent.trim()) {
+        var sp = doc.createElement("span"); sp.className = "chrome"; sp.textContent = n.textContent;
+        h1.replaceChild(sp, n);
+      }
+    });
+    h1.classList.add("split-chrome");
+    var cv = doc.createElement("canvas");
+    cv.setAttribute("aria-hidden", "true");
+    cv.className = "em-meter";
+    var probe = doc.createElement("i");
+    probe.className = "em-probe";
+    em.appendChild(probe);
+    em.appendChild(cv);
+    em.classList.add("metered");
+    var c = cv.getContext("2d");
+    var lv = [], on = true, prev = 0, W = 0, H = 0, dpr = 1, text = em.textContent;
+    var pad = 0.18; // canvas bleeds past the box so italics, ascenders and descenders fit
+    var fit = function () {
+      dpr = Math.min(devicePixelRatio || 1, 2);
+      W = em.offsetWidth; H = em.offsetHeight;
+      var px = H * pad;
+      cv.style.left = -px + "px"; cv.style.top = -px + "px";
+      cv.style.width = W + 2 * px + "px"; cv.style.height = H + 2 * px + "px";
+      cv.width = Math.round((W + 2 * px) * dpr); cv.height = Math.round((H + 2 * px) * dpr);
+      var cs = getComputedStyle(em);
+      fontStr = cs.fontStyle + " " + cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+      ls = cs.letterSpacing;
+      baseY = probe.getBoundingClientRect().top - em.getBoundingClientRect().top;
+    };
+    var fontStr = "", ls = "0px", baseY = 0;
+    var frame = function (now) {
+      requestAnimationFrame(frame);
+      if (!on) return;
+      var dt = Math.min(0.05, (now - prev) / 1000 || 0.016); prev = now;
+      var t = now / 1000;
+      if (em.offsetWidth !== W || em.offsetHeight !== H) fit();
+      var px = H * pad;
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      c.globalCompositeOperation = "source-over";
+      c.clearRect(0, 0, W + 2 * px, H + 2 * px);
+      c.font = fontStr;
+      if ("letterSpacing" in c) c.letterSpacing = ls;
+      c.textBaseline = "alphabetic";
+      c.fillStyle = "#000";
+      c.fillText(text, px, px + baseY);
+      c.globalCompositeOperation = "source-in";
+      var top = px, bottom = px + H;
+      var base = c.createLinearGradient(0, 0, W, 0);
+      base.addColorStop(0, "#7a3410"); base.addColorStop(1, "#5e260b");
+      c.fillStyle = base; c.fillRect(0, 0, W + 2 * px, H + 2 * px);
+      var hot = c.createLinearGradient(0, bottom, 0, top);
+      hot.addColorStop(0, "#e0703a"); hot.addColorStop(0.5, "#f59e5b"); hot.addColorStop(1, "#ffe6cf");
+      c.fillStyle = hot;
+      c.globalCompositeOperation = "source-atop";
+      var bw = 4, gap = 1.25, n = Math.ceil((W + 2 * px) / bw);
+      var beat = Math.pow(Math.max(0, Math.sin(t * Math.PI * 2 * 1.9)), 4);
+      var k = 1 - Math.exp(-dt * 9);
+      for (var i = 0; i < n; i++) {
+        var v = 0.58 + 0.17 * Math.sin(t * 1.7 + i * 0.21) + 0.13 * Math.sin(t * 2.9 - i * 0.47) + 0.07 * Math.sin(t * 5.3 + i * 0.9) + 0.16 * beat * (0.5 + 0.5 * Math.sin(i * 0.33 + t));
+        lv[i] = lv[i] == null ? v : lv[i] + (v - lv[i]) * k;
+        var bh = Math.max(0.1, Math.min(1.05, lv[i])) * (bottom - top);
+        c.fillRect(i * bw, bottom - bh, bw - gap, bh + px);
+      }
+    };
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (e) { on = e[0].isIntersecting; }).observe(em);
+    }
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(function () { W = 0; });
+    requestAnimationFrame(frame);
+  }
+
+  // 2. Section headlines arrive word by word, out of a blur.
+  var heads = doc.querySelectorAll(".section-head h2, h2.display, .repo-card h2");
+  if (!reduce && "IntersectionObserver" in window) {
+    heads.forEach(function (h) {
+      var i = 0;
+      var walk = function (node) {
+        Array.prototype.slice.call(node.childNodes).forEach(function (n) {
+          if (n.nodeType === 3) {
+            var frag = doc.createDocumentFragment();
+            n.textContent.split(/(\s+)/).forEach(function (part) {
+              if (!part) return;
+              if (/^\s+$/.test(part)) { frag.appendChild(doc.createTextNode(part)); return; }
+              var s = doc.createElement("span");
+              s.className = "w"; s.style.setProperty("--i", i++); s.textContent = part;
+              frag.appendChild(s);
+            });
+            n.parentNode.replaceChild(frag, n);
+          } else if (n.nodeType === 1) {
+            walk(n);
+          }
+        });
+      };
+      walk(h);
+      h.classList.add("words");
+    });
+    var io = new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("go"); io.unobserve(e.target); } });
+    }, { threshold: 0.4 });
+    heads.forEach(function (h) { io.observe(h); });
+  }
+
+  // 3. The closing wordmark fills like a level meter as you scroll past it.
+  var mark = doc.querySelector(".mark-word");
+  if (mark) {
+    var upd = function () {
+      var r = mark.getBoundingClientRect(), vh = innerHeight;
+      var p = Math.max(0, Math.min(1, (vh - r.top) / (vh * 0.5 + r.height)));
+      mark.style.setProperty("--fill", (reduce ? 100 : Math.round(p * 1000) / 10) + "%");
+    };
+    upd();
+    addEventListener("scroll", upd, { passive: true });
+    addEventListener("resize", upd);
+  }
+})();
+
+// ---- playable page ------------------------------------------------
+// A mini player, a working command palette, live keys and timed lyrics.
+// Everything is fake and local: no audio, no network.
+(function () {
+  var doc = document, root = doc.documentElement;
+  if (!doc.querySelector(".hero")) return; // home page only; docs stay quiet
+  var TR = (root.lang || "").indexOf("tr") === 0;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var L = TR ? {
+    play: "Çal", pause: "Duraklat", next: "Sonraki", prev: "Önceki",
+    try_: "Burada da çalışıyor. Dene:", ph: "Şarkı ya da komut ara", none: "Sonuç yok",
+    cmds: [["Çal / duraklat", "toggle"], ["Sonraki şarkı", "next"], ["Önceki şarkı", "prev"], ["Karışık çalmayı aç / kapat", "shuffle"], ["Sözlere git", "lyrics"]],
+    song: "Şarkı", cmd: "Komut",
+    lyr_h: "Sözler <em>tam zamanında.</em>",
+    lyr_p: "Senkron sözler şarkıyla birlikte akar, çalan satır öne çıkar. Bir satıra tıklarsan şarkı oraya atlar."
+  } : {
+    play: "Play", pause: "Pause", next: "Next", prev: "Previous",
+    try_: "These work here too. Try", ph: "Search songs or run a command", none: "No results",
+    cmds: [["Play / pause", "toggle"], ["Next song", "next"], ["Previous song", "prev"], ["Turn shuffle on / off", "shuffle"], ["Go to lyrics", "lyrics"]],
+    song: "Song", cmd: "Command",
+    lyr_h: "Lyrics, <em>in time.</em>",
+    lyr_p: "Synced lyrics move with the song and the line being sung stays in focus. Click a line and the song jumps there."
+  };
+
+  // Original placeholder tracks; each cover is drawn from its two colours.
+  var TRACKS = [
+    { t: "Low Orbit", a: "Kite Season", c: ["#f59e5b", "#7c2d12"], d: 204 },
+    { t: "Paper Lanterns", a: "Mira Vale", c: ["#8fb3ff", "#1e2a5a"], d: 187 },
+    { t: "Night Bus", a: "The Quiet Hours", c: ["#d29bff", "#3b1d5e"], d: 231 },
+    { t: "Copper Sky", a: "Ondine", c: ["#5fe0b0", "#0f3d33"], d: 176 }
+  ];
+  var LYRICS = [
+    [0, "Streetlights hum a quiet tune"],
+    [4.2, "I count the windows, one by one"],
+    [8.6, "The night is long, the bus is late"],
+    [13, "But every song still finds its way"],
+    [17.4, "Turn it up and let the city fade"],
+    [21.8, "We're halfway home and wide awake"],
+    [26.2, "Halfway home and wide awake"],
+    [30.6, ""]
+  ];
+
+  var ico = function (p) { return '<svg viewBox="0 0 16 16" aria-hidden="true">' + p + "</svg>"; };
+  var I = {
+    play: ico('<path d="M5 3.2v9.6L12.6 8z" fill="currentColor"/>'),
+    pause: ico('<path d="M4.5 3h2.4v10H4.5zM9.1 3h2.4v10H9.1z" fill="currentColor"/>'),
+    next: ico('<path d="M3.5 3.5v9l6.5-4.5zM11 3.5h1.6v9H11z" fill="currentColor"/>'),
+    prev: ico('<path d="M12.5 3.5v9L6 8zM3.4 3.5H5v9H3.4z" fill="currentColor"/>'),
+    search: ico('<circle cx="7" cy="7" r="4.4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 10.4 13.6 13.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'),
+    cmd: ico('<path d="M3 4.5h10M3 8h10M3 11.5h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>')
+  };
+
+  var cover = function (tr, size) {
+    var cv = doc.createElement("canvas"); cv.width = cv.height = size;
+    var c = cv.getContext("2d");
+    c.fillStyle = tr.c[1]; c.fillRect(0, 0, size, size);
+    var g = c.createRadialGradient(size * 0.3, size * 0.28, 0, size * 0.3, size * 0.28, size * 0.9);
+    g.addColorStop(0, tr.c[0]); g.addColorStop(1, "rgba(0,0,0,0)");
+    c.fillStyle = g; c.fillRect(0, 0, size, size);
+    c.globalAlpha = 0.5; c.strokeStyle = "rgba(255,255,255,.55)"; c.lineWidth = size / 48;
+    for (var i = 1; i <= 3; i++) { c.beginPath(); c.arc(size * 0.72, size * 0.74, size * 0.12 * i, 0, Math.PI * 2); c.stroke(); }
+    return cv.toDataURL();
+  };
+  TRACKS.forEach(function (t) { t.img = cover(t, 120); });
+
+  // ---- state
+  var S = { i: 0, pos: 12, playing: false, shuffle: false };
+  var listeners = [];
+  var emit = function () { listeners.forEach(function (f) { f(); }); };
+  var track = function () { return TRACKS[S.i]; };
+  var act = {
+    toggle: function () { S.playing = !S.playing; emit(); },
+    next: function () { S.i = S.shuffle ? (S.i + 1 + Math.floor(Math.random() * (TRACKS.length - 1))) % TRACKS.length : (S.i + 1) % TRACKS.length; S.pos = 0; S.playing = true; emit(); },
+    prev: function () { if (S.pos > 3) S.pos = 0; else S.i = (S.i + TRACKS.length - 1) % TRACKS.length, S.pos = 0; S.playing = true; emit(); },
+    shuffle: function () { S.shuffle = !S.shuffle; emit(); },
+    seek: function (p) { S.pos = p; emit(); },
+    pick: function (i) { S.i = i; S.pos = 0; S.playing = true; emit(); },
+    lyrics: function () { var s = doc.getElementById("lyrics"); if (s) s.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" }); }
+  };
+  var fmt = function (s) { s = Math.max(0, Math.floor(s)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); };
+
+  // ---- mini player
+  var mp = doc.createElement("div");
+  mp.className = "mini";
+  mp.innerHTML =
+    '<img class="mini-cover" alt="" width="44" height="44">' +
+    '<div class="mini-meta"><b></b><small></small></div>' +
+    '<div class="mini-ctl">' +
+    '<button type="button" data-a="prev" aria-label="' + L.prev + '">' + I.prev + "</button>" +
+    '<button type="button" data-a="toggle" class="mini-play"></button>' +
+    '<button type="button" data-a="next" aria-label="' + L.next + '">' + I.next + "</button>" +
+    "</div>" +
+    '<div class="mini-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></div>' +
+    '<div class="mini-bar" role="slider" tabindex="0" aria-label="Seek"><span></span></div>';
+  doc.body.appendChild(mp);
+  mp.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-a]"); if (b) act[b.dataset.a]();
+  });
+  var bar = mp.querySelector(".mini-bar");
+  bar.addEventListener("click", function (e) {
+    var r = bar.getBoundingClientRect(); act.seek(track().d * (e.clientX - r.left) / r.width);
+  });
+  var renderPlayer = function () {
+    var t = track();
+    mp.querySelector(".mini-cover").src = t.img;
+    mp.querySelector("b").textContent = t.t;
+    mp.querySelector("small").textContent = t.a;
+    var pb = mp.querySelector(".mini-play");
+    pb.innerHTML = S.playing ? I.pause : I.play;
+    pb.setAttribute("aria-label", S.playing ? L.pause : L.play);
+    mp.classList.toggle("on", S.playing);
+    mp.classList.toggle("shuf", S.shuffle);
+    root.style.setProperty("--cover", t.c[0]);
+    root.style.setProperty("--cover-deep", t.c[1]);
+  };
+  listeners.push(renderPlayer);
+
+  // Show the player once the hero is out of view.
+  var hero = doc.querySelector(".hero");
+  if (hero && "IntersectionObserver" in window) {
+    // ...and step aside while the footer is on screen so it never covers text.
+    var pastHero = false, atFoot = false, foot = doc.querySelector(".foot");
+    var sync = function () { mp.classList.toggle("shown", pastHero && !atFoot); };
+    new IntersectionObserver(function (e) { pastHero = !e[0].isIntersecting; sync(); }, { rootMargin: "-40% 0px 0px 0px" }).observe(hero);
+    if (foot) new IntersectionObserver(function (e) { atFoot = e[0].isIntersecting; sync(); }).observe(foot);
+  } else mp.classList.add("shown");
+
+  // ---- clock
+  var prevT = 0, dirty = true, lyrOn = true, barEl = mp.querySelector(".mini-bar span");
+  listeners.push(function () { dirty = true; });
+  var tick = function (now) {
+    requestAnimationFrame(tick);
+    var dt = Math.min(0.1, (now - prevT) / 1000 || 0); prevT = now;
+    if (S.playing) {
+      S.pos += dt;
+      if (S.pos >= track().d) { act.next(); return; }
+    }
+    if (!S.playing && !dirty) return;
+    dirty = false;
+    barEl.style.transform = "scaleX(" + (S.pos / track().d).toFixed(4) + ")";
+    if (lyrOn) lyricTick();
+  };
+
+  // ---- timed lyrics section
+  var lyr = null, lines = [], cur = -1;
+  var feats = doc.getElementById("features");
+  if (feats) {
+    lyr = doc.createElement("section");
+    lyr.className = "section tight lyrics-sec";
+    lyr.id = "lyrics";
+    lyr.innerHTML = '<div class="wrap split"><div class="section-head"><h2>' + L.lyr_h + "</h2><p>" + L.lyr_p +
+      '</p></div><div class="card lyr-card"><div class="lyr-head"><img alt="" width="40" height="40"><div><b></b><small></small></div><span class="lyr-time"></span></div><div class="lyr-view"><ol class="lyr"></ol></div></div></div>';
+    feats.parentNode.insertBefore(lyr, feats.nextSibling);
+    if ("IntersectionObserver" in window) new IntersectionObserver(function (e) { lyrOn = e[0].isIntersecting; if (lyrOn) dirty = true; }).observe(lyr);
+    var ol = lyr.querySelector(".lyr");
+    LYRICS.forEach(function (l, i) {
+      var li = doc.createElement("li");
+      li.textContent = l[1] || "♪";
+      li.addEventListener("click", function () { S.pos = l[0] + 0.01; if (!S.playing) act.toggle(); else emit(); });
+      ol.appendChild(li); lines.push(li);
+    });
+    listeners.push(function () {
+      var t = track();
+      lyr.querySelector(".lyr-head img").src = t.img;
+      lyr.querySelector(".lyr-head b").textContent = t.t;
+      lyr.querySelector(".lyr-head small").textContent = t.a;
+    });
+  }
+  var timeEl = lyr && lyr.querySelector(".lyr-time");
+  var lyricTick = function () {
+    if (!lyr) return;
+    var span = LYRICS[LYRICS.length - 1][0] + 4.4, p = S.pos % span, k = 0;
+    for (var i = 0; i < LYRICS.length; i++) if (p >= LYRICS[i][0]) k = i;
+    var tt = fmt(S.pos) + " / " + fmt(track().d);
+    if (timeEl.textContent !== tt) timeEl.textContent = tt;
+    if (k !== cur) {
+      cur = k;
+      lines.forEach(function (li, i) { li.classList.toggle("now", i === k); li.classList.toggle("past", i < k); });
+      var ol = lyr.querySelector(".lyr"), li = lines[k];
+      ol.style.transform = "translateY(" + (-(li.offsetTop - ol.firstChild.offsetTop)) + "px)";
+    }
+    var nxt = LYRICS[k + 1] ? LYRICS[k + 1][0] : span;
+    lines[k].style.setProperty("--p", Math.min(1, (p - LYRICS[k][0]) / (nxt - LYRICS[k][0])).toFixed(3));
+  };
+
+  // ---- command palette
+  var pal = doc.createElement("div");
+  pal.className = "pal";
+  pal.hidden = true;
+  pal.innerHTML = '<div class="pal-box" role="dialog" aria-modal="true" aria-label="Command palette"><label class="pal-in">' + I.search +
+    '<input type="text" spellcheck="false" autocomplete="off" placeholder="' + L.ph + '"><kbd>Esc</kbd></label><ul class="pal-list" role="listbox"></ul></div>';
+  doc.body.appendChild(pal);
+  var pin = pal.querySelector("input"), plist = pal.querySelector(".pal-list"), sel = 0, items = [], lastFocus = null;
+  var palRender = function () {
+    var q = pin.value.trim().toLowerCase();
+    items = [];
+    TRACKS.forEach(function (t, i) { if (!q || (t.t + " " + t.a).toLowerCase().indexOf(q) >= 0) items.push({ k: "song", i: i, t: t.t, s: t.a, img: t.img }); });
+    L.cmds.forEach(function (c) { if (!q || c[0].toLowerCase().indexOf(q) >= 0) items.push({ k: "cmd", a: c[1], t: c[0] }); });
+    sel = Math.min(sel, Math.max(0, items.length - 1));
+    plist.innerHTML = items.length ? items.map(function (it, n) {
+      var lead = it.k === "song" ? '<img alt="" src="' + it.img + '">' : '<span class="pal-ico">' + I.cmd + "</span>";
+      return '<li role="option" data-n="' + n + '"' + (n === sel ? ' aria-selected="true"' : "") + ">" + lead +
+        '<span class="pal-t"><b>' + it.t + "</b>" + (it.s ? "<small>" + it.s + "</small>" : "") + '</span><em>' + (it.k === "song" ? L.song : L.cmd) + "</em></li>";
+    }).join("") : '<li class="pal-none">' + L.none + "</li>";
+  };
+  var palRun = function (it) {
+    if (!it) return;
+    palClose();
+    if (it.k === "song") act.pick(it.i); else act[it.a]();
+  };
+  var palOpen = function () {
+    if (!pal.hidden) return;
+    lastFocus = doc.activeElement;
+    pin.value = ""; sel = 0; palRender();
+    pal.hidden = false;
+    requestAnimationFrame(function () { pal.classList.add("open"); pin.focus(); });
+  };
+  var palClose = function () {
+    pal.classList.remove("open");
+    setTimeout(function () { pal.hidden = true; }, reduce ? 0 : 160);
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  };
+  pin.addEventListener("input", function () { sel = 0; palRender(); });
+  pin.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { sel = (sel + 1) % Math.max(1, items.length); palRender(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { sel = (sel + items.length - 1) % Math.max(1, items.length); palRender(); e.preventDefault(); }
+    else if (e.key === "Enter") { palRun(items[sel]); e.preventDefault(); }
+    else if (e.key === "Escape") { palClose(); e.preventDefault(); }
+  });
+  plist.addEventListener("click", function (e) { var li = e.target.closest("li[data-n]"); if (li) palRun(items[+li.dataset.n]); });
+  pal.addEventListener("mousedown", function (e) { if (e.target === pal) palClose(); });
+
+  // ---- live keys: every <kbd> on the page lights when its key is held
+  var label = function (e) {
+    var k = e.key;
+    if (k === " ") return "Space";
+    if (k === "Control") return "Ctrl";
+    if (k === "ArrowRight") return "→";
+    if (k === "ArrowLeft") return "←";
+    if (k === "ArrowUp") return "↑";
+    if (k === "ArrowDown") return "↓";
+    if (k === "Escape") return "Esc";
+    if (k.length === 1) return k.toUpperCase();
+    return k;
+  };
+  var kbds = function (lab) {
+    return Array.prototype.filter.call(doc.querySelectorAll("kbd"), function (k) { return k.textContent.trim() === lab; });
+  };
+  var combos = [];
+  doc.querySelectorAll(".keymap .row").forEach(function (row) {
+    var cur = [];
+    row.querySelector("dd").childNodes.forEach(function (n) {
+      if (n.nodeType === 1 && n.tagName === "KBD") cur.push(n.textContent.trim());
+      else if (cur.length) { combos.push({ row: row, keys: cur }); cur = []; }
+    });
+    if (cur.length) combos.push({ row: row, keys: cur });
+  });
+  var keysSec = doc.getElementById("keys"), keysVisible = false;
+  if (keysSec && "IntersectionObserver" in window) new IntersectionObserver(function (e) { keysVisible = e[0].isIntersecting; }).observe(keysSec);
+  var hint = keysSec && keysSec.querySelector(".section-head");
+  if (hint) {
+    var p = doc.createElement("p");
+    p.className = "try";
+    p.innerHTML = L.try_ + " <kbd>Ctrl</kbd><kbd>K</kbd> · <kbd>Space</kbd> · <kbd>Ctrl</kbd><kbd>→</kbd>";
+    hint.appendChild(p);
+  }
+  var typing = function (el) { return el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)); };
+  addEventListener("keydown", function (e) {
+    var lab = label(e);
+    kbds(lab).forEach(function (k) { k.classList.add("down"); });
+    if (e.ctrlKey) kbds("Ctrl").forEach(function (k) { k.classList.add("down"); });
+    if (!pal.hidden || typing(e.target)) return;
+    // Fire the row whose combination is held right now
+    var held = [];
+    if (e.ctrlKey) held.push("Ctrl");
+    if (e.shiftKey) held.push("Shift");
+    if (e.altKey) held.push("Alt");
+    if (["Ctrl", "Shift", "Alt", "Meta"].indexOf(lab) < 0) held.push(lab);
+    combos.forEach(function (c) {
+      if (c.keys.length === held.length && c.keys.every(function (k) { return held.indexOf(k) >= 0; })) {
+        c.row.classList.remove("hit"); void c.row.offsetWidth; c.row.classList.add("hit");
+      }
+    });
+    var combo = held.join("+");
+    var map = { "Ctrl+K": palOpen, "Ctrl+→": act.next, "Ctrl+←": act.prev, "Alt+S": act.shuffle };
+    if (map[combo]) { e.preventDefault(); map[combo](); }
+    else if (combo === "Space" && (keysVisible || mp.matches(":hover") || (lyr && lyr.matches(":hover")))) { e.preventDefault(); act.toggle(); }
+  });
+  addEventListener("keyup", function (e) {
+    kbds(label(e)).forEach(function (k) { k.classList.remove("down"); });
+    if (!e.ctrlKey) kbds("Ctrl").forEach(function (k) { k.classList.remove("down"); });
+  });
+  addEventListener("blur", function () { doc.querySelectorAll("kbd.down").forEach(function (k) { k.classList.remove("down"); }); });
+
+  emit();
+  requestAnimationFrame(tick);
 })();
