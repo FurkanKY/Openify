@@ -159,6 +159,8 @@ pub struct Settings {
     /// düğme görünür ne de Spotify'a tek istek gider. Gayriresmî bir uç
     /// kullanılır; yalnız dinlediklerini paylaşan arkadaşlar görünür.
     pub friend_activity: bool,
+    /// Discord Rich Presence; opt-in, unavailable until a client ID is supplied.
+    pub discord_presence: bool,
 
     // ── Söz çevirisi (bkz. `engine::lyrics`, `ui::lyrics_view`) ─────────
     /// Sözlerde her satırın altında Spotify'ın çevirisi (arayüz dilinde)
@@ -291,6 +293,7 @@ impl Default for Settings {
             skip_explicit: false,
             blocked_artists: Vec::new(),
             friend_activity: false,
+            discord_presence: false,
             lyrics_translation: false,
             karaoke_enabled: false,
             karaoke_amount: 1.0,

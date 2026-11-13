@@ -559,6 +559,34 @@ changes). The `Saver` thread coalesces writes.
 
 ## 7. Windows integration
 
+### Discord Rich Presence (`src/discord.rs`)
+
+`ui/integration.rs::sync_discord` maps playback and the opt-in
+`Settings::discord_presence` preference to the latest desired activity. Private
+sessions, pause, stop and disabling produce no activity. The Windows-only
+`Presence` owns a watch sender; the `openify-discord` thread owns a small tokio
+runtime and asynchronous named-pipe transport. It tries `discord-ipc-0` through
+`discord-ipc-9`, performs opcode-0/READY handshake, then sends nonce-matched
+SET_ACTIVITY frames with little-endian headers. Reads preserve partial frames,
+reject bodies over 64 KiB, handle ping/pong and detect close/EOF. I/O has a
+two-second deadline; failed sessions retry after 15 seconds without logging.
+Updates coalesce and publish at most every five seconds; clears bypass that
+limit. Quit cancels pending I/O and awaits worker cleanup asynchronously.
+Clears get a 50 ms send deadline, without waiting for an acknowledgement, to
+fit gpui's 100 ms quit window; closing the pipe also ends its presence session.
+No audio-thread involvement.
+
+The only client ID is `DISCORD_CLIENT_ID`, initially empty: no worker and no
+Settings section. Test copies never open Discord pipes. Track cover URLs from
+`i.scdn.co` are sent directly; a rejected activity retries once with static
+asset `openify`, remembered for that connection. The status display selects
+the track title; the artist remains in the activity state. Timestamps are Unix
+seconds derived from the playback position,
+so reconnecting retains the current progress without one update per second.
+The generic async-stream transport is tested with in-memory duplex peers.
+
+### Windows shell
+
 `src/system` (compiled on Windows only) is OS-facing and does not know the UI;
 `src/ui/integration.rs` bridges it to the app through a channel.
 

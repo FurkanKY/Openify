@@ -72,6 +72,7 @@ mod imp {
 
     /// `Shell`'in sistemle ilgili durumu.
     pub struct Desk {
+        discord: crate::discord::Presence,
         integration: Option<Integration>,
         pub(in crate::ui) hwnd: Option<HWND>,
         _ipc: Option<HWND>,
@@ -173,9 +174,10 @@ mod imp {
                 // Düzgün kapanış çökme değildir (bkz. `update::clean_exit`).
                 crate::update::clean_exit();
                 shell.desk.shutdown();
-                async {}
+                shell.desk.discord.shutdown()
             });
             Desk {
+                discord: crate::discord::Presence::new(),
                 integration,
                 hwnd,
                 _ipc: ipc,
@@ -254,6 +256,7 @@ mod imp {
         /// Çalanı sisteme bildir. `timeline`: konum da yeniden verilsin
         /// (şarkı değişti, çaldı, durdu, sarıldı).
         pub(in crate::ui) fn sync_system(&mut self, timeline: bool) {
+            self.sync_discord();
             if self.desk.integration.is_none() {
                 return;
             }
@@ -261,6 +264,24 @@ mod imp {
             if let Some(integration) = &mut self.desk.integration {
                 integration.update(now, timeline);
             }
+        }
+
+        pub(in crate::ui) fn sync_discord(&self) {
+            let value = crate::discord::desired(
+                self.prefs.discord_presence,
+                self.private_session(),
+                self.state.is_playing()
+                    && !matches!(
+                        self.state.connection,
+                        super::super::player::Connection::EngineStopped
+                            | super::super::player::Connection::NoAudio
+                            | super::super::player::Connection::NeedsLogin
+                            | super::super::player::Connection::NeedsPremium
+                    ),
+                self.state.track.as_ref(),
+                self.state.position_ms(Instant::now()),
+            );
+            self.desk.discord.update(value);
         }
 
         fn now_playing(&mut self) -> NowPlaying {
@@ -653,5 +674,6 @@ mod imp {
             true
         }
         pub(in crate::ui) fn sync_system(&mut self, _timeline: bool) {}
+        pub(in crate::ui) fn sync_discord(&self) {}
     }
 }

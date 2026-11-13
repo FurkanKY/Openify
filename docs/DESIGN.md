@@ -630,6 +630,15 @@ Bütün etkileşimli bileşenlerin beş durumu vardır ve bileşen vitrininde (`
 
 ## Ayarlar ve profil menüsü (Adım 15, 7 Kasım gece)
 
+Discord uygulama kimliği yapılandırılmışsa Ayarlar'da **Entegrasyonlar** bölümü
+görünür: **Dinlediklerimi Discord'da paylaş** anahtarı, varsayılan kapalı.
+Mevcut `settings_section`, `setting_row` ve anahtar desenini kullanır; yeni
+renk, boyut veya boşluk yoktur. Açıklama, şarkı ve ilerlemenin paylaşılacağını,
+duraklatmada ve gizli oturumda gizleneceğini söyler. Duraklatmada etkinlik
+temizlenir: ilerlemeye devam eden yanıltıcı bir Discord sayacı bırakılmaz.
+Kimlik boşken bölüm ve satır tamamen gizlidir. Tüm metinler İngilizce ve Türkçe
+i18n tablosundadır.
+
 - **Giriş:** başlık çubuğunun **en solunda** (eski "Openify" yazısının yerinde; kullanıcı sağdaki küçük yuvarlak düğmeyi bulamadı) 32 px'lik profil hapı: 24 px yuvarlak avatar (hesabın baş harfi; ad yoksa ya da Spotify'ın ürettiği uzun bir kimlikse kişi simgesi) + hesap adı + aşağı ok (`chevron-down`). Zemin %6 ton katmanı, üzerine gelince / basınca 140 ms'de koyulaşır (`tween::hover_fill`), menü açıkken %10; klavye odağında 2 px vurgu halkası. Ad en çok 140 px, sığmazsa "…" (ipucunda tamamı). Sol yarıdaki yer (pencere − arama) / 2 eksi gezinme düğmeleri ve sekmeler kadar; ad için 48 px bile kalmıyorsa (≈ 1600 px altı, ad uzunluğuna göre) hap yalnız avatar + ok olur. Hap sürükleme alanının dışında (tıklanır); boş alanlar pencereyi sürükler. "Openify" yazısı başlık çubuğundan kalktı (uygulama adı pencere başlığında ve görev çubuğunda). **Spotify profil fotoğrafı yok:** oturum yalnız kullanıcı adını veriyor; fotoğraf için ayrı bir Spotify isteği gerekir, ayarlar için istek eklenmedi (ileride `user-profile-view` sorgusuyla eklenebilir). Tıklayınca hapın altında, sol kenarına hizalı 272 px'lik menü paneli: üstte hesap bloğu (36 px yuvarlak baş harf, ad, "Spotify hesabı"), ayırıcı, **Ayarlar** (Ctrl ,), **Hakkında** (Ayarlar'ı en altına kaydırarak açar), ayırıcı, tehlike renginde **Çıkış yap** (uygulama içi onay kutusu). Klavye: ↑ ↓, Enter, Esc; dışarı tıklamak ya da tekerlek kapatır. **Ctrl ,** Ayarlar'ı doğrudan açar ve palette "Ayarlar" komutu vardır.
 - **Sayfa:** geçmişte bir yer (`Route::Settings`; geri / ileri, Alt+← çalışır), hiçbir sekme seçili değil. Sayfa başlığı (Display, "Ayarlar", altında "Openify'ı kendine göre ayarla"), altında tek sütun: en çok 720 px, `page_margin` kenarından, sola hizalı (diğer sayfalarla aynı sol kenar). Bölüm başlığı (Title, Figtree 800, 48 px alan) ve satırlar; satırlar kutusuz, aralarında %6 çizgi, her biri ad (Body, yarı kalın) + tek cümle açıklama (Secondary, soluk; TEK satır, sığmazsa "…" ve ipucunda tamamı: denetimin altına ya da yanına taşmaz) ve sağda denetim. Sorun notu (ör. kısayol alınamadı) satırın altında tehlike renginde.
 - **Bölümler ve satırlar** (düz Türkçe, teknik terim yok):

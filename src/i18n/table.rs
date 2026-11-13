@@ -610,6 +610,9 @@ keys! {
 
     // Arkadaş etkinliği
     RowFriendActivity { en: "Show friend activity", tr: "Arkadaş etkinliğini göster" }
+    SectionIntegrations { en: "Integrations", tr: "Entegrasyonlar" }
+    RowDiscordPresence { en: "Share listening on Discord", tr: "Dinlediklerimi Discord'da paylaş" }
+    RowDiscordPresenceDesc { en: "Shows your song and progress on Discord. Hidden when paused or in a private session.", tr: "Şarkını ve ilerlemeni Discord'da gösterir. Duraklatınca veya gizli oturumda gizlenir." }
     RowFriendActivityDesc { en: "Shows the song your friends listened to last. Only friends who share what they listen to appear.", tr: "Arkadaşlarının son dinlediği şarkıyı gösterir. Yalnız dinlediklerini paylaşan arkadaşlar görünür." }
     FriendsTitle { en: "Friend activity", tr: "Arkadaş etkinliği" }
     FriendsEmpty { en: "No friend activity to show yet", tr: "Gösterilecek arkadaş etkinliği yok" }

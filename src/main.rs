@@ -31,6 +31,8 @@ mod cli;
 #[cfg(feature = "connect-spike")]
 mod connect_spike;
 mod crash;
+#[cfg(windows)]
+mod discord;
 mod engine;
 mod i18n;
 mod link;

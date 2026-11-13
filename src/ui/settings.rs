@@ -360,6 +360,7 @@ impl Shell {
         engine::set_resume(self.prefs.resume);
         super::theme::set_reduce_motion(&self.prefs.reduce_motion);
         crate::i18n::apply_preference(&self.prefs.language);
+        self.sync_discord();
         self.desk.set_close_to_tray(self.prefs.close_to_tray);
         if !startup {
             self.sui.hotkey_note = self.desk.set_global_hotkey(self.prefs.global_hotkey);
@@ -2112,6 +2113,26 @@ impl Shell {
         list.into_any_element()
     }
 
+    /// Optional sharing integration, hidden until the application ID is configured.
+    #[cfg(windows)]
+    fn discord_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        let control = self.switch_control(
+            "discord-presence",
+            self.prefs.discord_presence,
+            |prefs, on| prefs.discord_presence = on,
+            window,
+            cx,
+        );
+        self.settings_section(
+            t!(SectionIntegrations),
+            vec![setting_row(
+                true,
+                row_text(t!(RowDiscordPresence), t!(RowDiscordPresenceDesc), None),
+                control,
+            )],
+        )
+    }
+
     /// Ayarlar sayfasının gövdesi.
     pub(super) fn settings_body(&self, window: &Window, cx: &mut Context<Self>) -> gpui::Div {
         let meta = div().child(t!(SettingsSubtitle)).into_any_element();
@@ -2123,6 +2144,13 @@ impl Shell {
             .child(self.eq_section(window, cx))
             .child(self.shuffle_section(window, cx))
             .child(self.connect_section(window, cx))
+            .when(cfg!(windows), |view| {
+                #[cfg(windows)]
+                let view = view.when(crate::discord::available(), |view| {
+                    view.child(self.discord_section(window, cx))
+                });
+                view
+            })
             .child(self.behavior_section(window, cx))
             .child(self.startup_section(window, cx))
             .child(self.storage_section(window, cx))

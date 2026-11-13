@@ -48,7 +48,7 @@ serde_json = "1.0.154"
 # Sürüm karşılaştırması (src/update/health.rs); velopack zaten kullanıyor, yeni indirme yok.
 semver = "1"
 thiserror = "2"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net", "io-util", "sync", "time"] }
 # Kalıcı Spotify aygıt kimliği (src/settings.rs, Connect 7.1); librespot-core zaten kullanıyor, yeni indirme yok.
 uuid = { version = "1", default-features = false, features = ["v4"] }
 # Adım 16 (paketleme): kurulum / kaldırma kancaları ve otomatik güncelleme (bkz. src/update.rs).

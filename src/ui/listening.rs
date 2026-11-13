@@ -544,6 +544,7 @@ impl Shell {
         }
         self.listen.private = on;
         stats::set_private_session(on);
+        self.sync_discord();
         self.show_toast(
             if on {
                 t!(ToastPrivateOn)
