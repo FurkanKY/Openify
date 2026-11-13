@@ -498,7 +498,9 @@ async fn scenario(s: &Session, before_liked: &[String], left: &Left) {
 /// Hata ya da çökme olsa da çalışır: sınamanın hesapta bıraktıklarını geri alır.
 async fn cleanup(s: &Session, left: &Left) {
     // Klasör işaretleri (varsa) önce kalkar: liste köke çıksın, silme temiz olsun.
-    if let Some(id) = left.folder_id.lock().unwrap().take() {
+    // Kilit await'ten önce bırakılsın.
+    let folder = left.folder_id.lock().unwrap().take();
+    if let Some(id) = folder {
         println!("TEMİZLİK: sınama klasörünün işaretleri kaldırılıyor ({id})");
         remove_folder_markers(s, &id).await;
     }

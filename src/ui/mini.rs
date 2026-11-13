@@ -860,6 +860,6 @@ mod tests {
     fn mini_window_is_the_card_plus_its_shadow_room() {
         assert_eq!(MINI_WINDOW_W, MINI_W + 2. * SHADOW_ROOM);
         assert_eq!(MINI_WINDOW_H, MINI_H + 2. * SHADOW_ROOM);
-        assert!(MINI_W >= 320. && MINI_W <= 360. && MINI_H >= 88. && MINI_H <= 104.);
+        const { assert!(MINI_W >= 320. && MINI_W <= 360. && MINI_H >= 88. && MINI_H <= 104.) };
     }
 }

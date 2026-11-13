@@ -2684,7 +2684,8 @@ mod tests {
         assert!(folder_delete_ops(&gone, &key2).is_none());
 
         // Geri getir: eski yerine, içeriği sırayla.
-        let (back, _) = folder_restore_ops(&gone, &key2, Some(c.as_str()), &[b.clone()]).unwrap();
+        let (back, _) =
+            folder_restore_ops(&gone, &key2, Some(c.as_str()), std::slice::from_ref(&b)).unwrap();
         assert_eq!(
             back,
             [a, key2.clone(), b, folder_end_marker("f1"), c.clone()]

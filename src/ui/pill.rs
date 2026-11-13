@@ -1593,8 +1593,8 @@ mod tests {
         assert_eq!(time_width(3_600_000), TIME_WIDTH_LONG);
         // İlerleme çizgisinin tıklama alanı düğmelerin (44 px çal düğmesi,
         // ortada) ve kapağın altında kalır.
-        assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + 44.) / 2.);
-        assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + PILL_COVER) / 2.);
+        const { assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + 44.) / 2.) };
+        const { assert!(PILL_HEIGHT - EDGE_HIT >= (PILL_HEIGHT + PILL_COVER) / 2.) };
     }
 
     #[test]
