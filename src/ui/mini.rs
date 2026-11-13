@@ -679,9 +679,12 @@ impl Shell {
     pub(super) fn toggle_mini(&mut self, screen: Option<Bounds<Pixels>>, cx: &mut Context<Self>) {
         if self.mini_is_open(cx) {
             self.close_mini(cx);
-        } else if self.open_mini_window(screen, cx) {
-            self.prefs.mini_open = true;
-            self.save_settings();
+        } else {
+            // Pencere Shell güncellenirken yaratılamaz: Windows ilk kareyi
+            // hemen çizer, MiniView de Shell'i okur (gpui "already being
+            // updated" paniği). Güncelleme bitince aç.
+            let shell = cx.entity();
+            cx.defer(move |cx| open_mini_window(&shell, screen, true, cx));
         }
     }
 
@@ -703,28 +706,28 @@ impl Shell {
         }
         cx.notify();
     }
+}
 
-    /// Pencereyi yarat (kapalıyken hiçbir maliyet yok). `screen`: açılışta
-    /// yerleşecek ekran (ana pencerenin ekranı); yoksa birincil ekran.
-    pub(super) fn open_mini_window(
-        &mut self,
-        screen: Option<Bounds<Pixels>>,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if self
-            .mini
-            .is_some_and(|h| h.update(cx, |_, _, _| {}).is_ok())
-        {
-            return true;
-        }
-        self.mini = None;
-        let displays: Vec<(gpui::DisplayId, Bounds<Pixels>)> =
-            cx.displays().iter().map(|d| (d.id(), d.bounds())).collect();
-        let rects: Vec<Bounds<Pixels>> = displays.iter().map(|(_, b)| *b).collect();
-        let screen = screen.or_else(|| cx.primary_display().map(|d| d.bounds()));
-        let start = self
-            .prefs
-            .mini_pos
+/// Mini pencereyi yarat (kapalıyken hiçbir maliyet yok). Shell'in bir
+/// güncellemesi içinden ÇAĞRILMAZ (`cx.defer` ile): yeni pencerenin ilk
+/// karesi Shell'i okur. `screen`: açılışta yerleşecek ekran (ana pencerenin
+/// ekranı); yoksa birincil ekran. `remember`: açıldıysa tercihe "açık" yaz.
+pub(super) fn open_mini_window(
+    shell: &Entity<Shell>,
+    screen: Option<Bounds<Pixels>>,
+    remember: bool,
+    cx: &mut App,
+) {
+    if shell.update(cx, |shell, cx| shell.mini_is_open(cx)) {
+        return;
+    }
+    let saved = shell.read(cx).prefs.mini_pos;
+    let displays: Vec<(gpui::DisplayId, Bounds<Pixels>)> =
+        cx.displays().iter().map(|d| (d.id(), d.bounds())).collect();
+    let rects: Vec<Bounds<Pixels>> = displays.iter().map(|(_, b)| *b).collect();
+    let screen = screen.or_else(|| cx.primary_display().map(|d| d.bounds()));
+    {
+        let start = saved
             .map(|p| (p[0], p[1]))
             .unwrap_or_else(|| default_pos(screen));
         let (x, y) = visible_pos(start, (MINI_WINDOW_W, MINI_WINDOW_H), &rects);
@@ -749,20 +752,22 @@ impl Shell {
             app_id: Some("Openify".into()),
             ..Default::default()
         };
-        let shell = cx.entity();
+        let owner = shell.clone();
         match cx.open_window(options, move |window, cx| {
-            cx.new(|cx| MiniView::new(&shell, window, cx))
+            cx.new(|cx| MiniView::new(&owner, window, cx))
         }) {
             Ok(handle) => {
-                self.mini = Some(handle);
+                shell.update(cx, |shell, cx| {
+                    shell.mini = Some(handle);
+                    if remember && !shell.prefs.mini_open {
+                        shell.prefs.mini_open = true;
+                        shell.save_settings();
+                    }
+                    cx.notify();
+                });
                 log::info!("mini oynatıcı açıldı");
-                cx.notify();
-                true
             }
-            Err(e) => {
-                log::warn!("mini oynatıcı açılamadı: {e:#}");
-                false
-            }
+            Err(e) => log::warn!("mini oynatıcı açılamadı: {e:#}"),
         }
     }
 }

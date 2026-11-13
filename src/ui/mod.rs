@@ -576,9 +576,9 @@ impl Shell {
                 cx.background_executor()
                     .timer(Duration::from_millis(80))
                     .await;
-                let _ = this.update(cx, |shell, cx| {
-                    shell.open_mini_window(screen, cx);
-                });
+                if let Some(shell) = this.upgrade() {
+                    let _ = cx.update(|cx| mini::open_mini_window(&shell, screen, false, cx));
+                }
             })
             .detach();
         }
