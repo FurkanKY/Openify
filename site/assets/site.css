@@ -1435,27 +1435,13 @@ html:not(.js) .panel + .panel {
 }
 
 /* ------------------------------------------------------------------
-   Display layer: Instrument Serif for headlines (italic for the one
-   phrase that carries the accent). Figtree stays for UI and h3s.
+   Display layer: Segoe UI Variable Display for headlines (Windows'
+   own display face), Figtree as the fallback and for h3s.
    ------------------------------------------------------------------ */
 
-@font-face {
-  font-family: "Instrument Serif";
-  src: url("fonts/InstrumentSerif-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Instrument Serif";
-  src: url("fonts/InstrumentSerif-Italic.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
 
 :root {
-  --serif: "Instrument Serif", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --serif: "Segoe UI Variable Display", "Segoe UI Variable", "Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
   --chrome: linear-gradient(180deg, #ffffff 20%, rgba(244, 244, 245, 0.62) 100%);
   --ember: linear-gradient(100deg, #ffd9b8 0%, #f59e5b 45%, #e0703a 100%);
   --ember-glow: rgba(194, 65, 12, 0.32);
@@ -1475,15 +1461,16 @@ h2.display,
 .doc-hub-head h1,
 .prose h1 {
   font-family: var(--serif);
-  font-weight: 400;
+  font-weight: 600;
+  font-variation-settings: "opsz" 36;
 }
 .hero h1 em,
 .section-head h2 em,
 h2.display em,
 .repo-card h2 em,
 .doc-hub-head h1 em {
-  font-style: italic;
-  padding-right: 0.06em;
+  font-style: normal;
+  padding-right: 0.02em;
   background: var(--ember);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1510,9 +1497,9 @@ h2.display em,
   mask-image: linear-gradient(to top, #000 0%, #000 22%, transparent 62%);
 }
 .hero h1 {
-  font-size: clamp(50px, 8.2vw, 108px);
-  line-height: 0.96;
-  letter-spacing: -0.022em;
+  font-size: clamp(46px, 6.9vw, 96px);
+  line-height: 1;
+  letter-spacing: -0.04em;
   background: var(--chrome);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1522,7 +1509,7 @@ h2.display em,
   display: inline-block;
 }
 .hero-copy {
-  max-width: 940px;
+  max-width: 1060px;
 }
 .lede {
   margin-top: 28px;
@@ -1661,11 +1648,12 @@ h2.display em,
   border-left: 1px solid var(--line-strong);
 }
 .metric dt {
-  font: 400 clamp(56px, 6.4vw, 88px) / 1 var(--serif);
-  letter-spacing: -0.02em;
+  font: 300 clamp(56px, 6.4vw, 88px) / 1 var(--serif);
+  letter-spacing: -0.04em;
 }
 .metric dt em {
-  font-style: italic;
+  font-style: normal;
+  font-weight: 500;
   font-size: 0.5em;
   letter-spacing: 0;
   margin-left: 6px;
@@ -1696,8 +1684,8 @@ h2.display em,
 h2.display,
 .split .section-head h2 {
   font-size: clamp(40px, 5.6vw, 76px);
-  line-height: 1;
-  letter-spacing: -0.02em;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
 }
 .split .section-head h2 {
   font-size: clamp(38px, 4.4vw, 60px);
@@ -1711,8 +1699,8 @@ h2.display,
 }
 .repo-card h2 {
   font-size: clamp(36px, 4.6vw, 60px);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
 }
 
 /* Docs hub: hanging spectrum blocks, centred headline, icon cards */
@@ -1735,8 +1723,8 @@ h2.display,
 }
 .hub .doc-hub-head h1 {
   font-size: clamp(48px, 7.4vw, 96px);
-  line-height: 0.98;
-  letter-spacing: -0.022em;
+  line-height: 1;
+  letter-spacing: -0.04em;
 }
 .hub .doc-hub-head .lede {
   margin-left: auto;
@@ -1763,9 +1751,9 @@ h2.display,
   color: var(--accent-text);
 }
 .prose h1 {
-  font-size: clamp(40px, 5vw, 60px);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
+  font-size: clamp(36px, 4.4vw, 52px);
+  line-height: 1.06;
+  letter-spacing: -0.03em;
 }
 @media (max-width: 720px) {
   .trust {
