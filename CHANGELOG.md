@@ -7,17 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-13
+
+### Changed
+
+- Search redesigned. The search box in the title bar is wider and tinted by the
+  cover that is playing. Before you type, search shows your recent searches,
+  things to listen to again and genre shortcuts. Results show a top result, songs,
+  artists, and albums and playlists, and you can move through them with the arrow
+  keys. Commands only appear when your search clearly matches one.
+- The progress bar in the floating player has its own row and is much wider, so
+  seeking is easier. Lists now end above the floating player, and a soft fade
+  sits behind it.
+
 ### Fixed
 
 - Home, Explore and similar-artist requests now use the interface language
   (English or Turkish) instead of always asking Spotify for Turkish content. The
   Explore page cache is kept per language.
+- Home now uses your computer's time zone instead of always Europe/Istanbul.
 
-### Changed
+### Other
 
-- README, architecture and testing documents corrected and brought up to date
-  (measured memory figures, privacy notes about play reporting and Spotify
-  Connect, known limitations).
+- Documentation corrected and brought up to date (measured memory figures,
+  privacy notes about play reporting and Spotify Connect, known limitations).
+- Release builds are made by GitHub Actions and published with SHA-256 checksums
+  (`SHA256SUMS.txt`).
 
 ## [0.1.0] - 2026-11-12
 
@@ -59,5 +74,6 @@ First public release.
 - Friend activity and artist following have had only limited testing against a
   live account.
 
-[Unreleased]: https://github.com/FurkanKY/Openify/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/FurkanKY/Openify/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/FurkanKY/Openify/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/FurkanKY/Openify/releases/tag/v0.1.0
