@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Openify: a fast, native Spotify client for Windows</title>
+<meta name="description" content="Openify is a quiet, native Windows player for your Spotify Premium account. Written in Rust, about 70 MB of memory, keyboard first, with gapless playback, an equalizer and synced lyrics. Free and open source.">
+<link rel="canonical" href="https://furkanky.github.io/Openify/">
+<link rel="alternate" hreflang="en" href="https://furkanky.github.io/Openify/">
+<link rel="alternate" hreflang="tr" href="https://furkanky.github.io/Openify/tr/">
+<link rel="alternate" hreflang="x-default" href="https://furkanky.github.io/Openify/">
+<meta name="theme-color" content="#0e0e10" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Openify">
+<meta property="og:title" content="Openify: a fast, native Spotify client for Windows">
+<meta property="og:description" content="A quiet Windows player for your Spotify Premium account. Written in Rust, keyboard first, free and open source.">
+<meta property="og:url" content="https://furkanky.github.io/Openify/">
+<meta property="og:image" content="https://furkanky.github.io/Openify/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Openify's library page with the floating player, next to the Openify logo">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="tr_TR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="assets/fonts/Figtree-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="assets/site.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Openify",
+  "operatingSystem": "Windows 10, Windows 11",
+  "applicationCategory": "MultimediaApplication",
+  "description": "A fast, native Windows client for Spotify Premium, written in Rust.",
+  "url": "https://furkanky.github.io/Openify/",
+  "downloadUrl": "https://github.com/FurkanKY/Openify/releases/latest",
+  "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "author": { "@type": "Person", "name": "FurkanKY", "url": "https://github.com/FurkanKY" }
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="./" aria-label="Openify home">
+      <svg viewBox="16 16 224 224" aria-hidden="true"><defs><linearGradient id="t" x1="0" y1="16" x2="0" y2="240" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#1C1C21"/><stop offset="1" stop-color="#0E0E10"/></linearGradient><mask id="n" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256"><rect width="256" height="256" fill="#fff"/><circle cx="170.43" cy="85.57" r="34" fill="#000"/></mask></defs><rect x="16" y="16" width="224" height="224" rx="56" fill="url(#t)"/><circle cx="128" cy="128" r="60" fill="none" stroke="#F4F4F5" stroke-width="32" mask="url(#n)"/><circle cx="170.43" cy="85.57" r="21" fill="#F4F4F5"/></svg>
+      Openify
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a class="hide-sm" href="#features">Features</a>
+      <a class="hide-sm" href="#install">Install</a>
+      <a href="https://github.com/FurkanKY/Openify">GitHub</a>
+      <span class="lang">
+        <a href="./" hreflang="en" lang="en" aria-current="true">EN</a>
+        <a href="tr/" hreflang="tr" lang="tr">TR</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-copy">
+        <h1>Spotify on Windows, <span class="lit">without the weight.</span></h1>
+        <p class="lede">Openify is a fast, quiet desktop player for your Spotify Premium account. It is written in Rust and drawn natively: no web view, no Electron.</p>
+        <div class="get" data-arch-swap>
+          <a class="btn btn-primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+            <span>Download for Windows<small>64-bit installer (x64)</small></span>
+          </a>
+          <a class="btn btn-quiet" data-arch="arm64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+            <span>Windows on ARM<small>ARM64 installer</small></span>
+          </a>
+        </div>
+        <p class="get-note">Free and open source. Windows 10 or 11, Spotify Premium. <a href="#install">Other ways to install</a></p>
+      </div>
+      <div class="shot">
+        <img src="assets/img/library-1360.webp" srcset="assets/img/library-760.webp 760w, assets/img/library-1360.webp 1360w" sizes="(max-width: 1180px) 92vw, 1120px" width="1360" height="850" alt="Openify's library page: a grid of playlists with the floating player at the bottom, playing Levitating by Dua Lipa" fetchpriority="high">
+      </div>
+    </div>
+  </section>
+
+  <section class="facts" aria-labelledby="facts-title">
+    <div class="wrap">
+      <h2 id="facts-title" class="facts-title">Light enough to forget it is running.</h2>
+      <div class="facts-row">
+        <div class="fact"><b>≈ 70 MB</b><span>memory with the window open</span></div>
+        <div class="fact"><b>50–60 MB</b><span>while it waits in the tray</span></div>
+        <div class="fact"><b>≈ 0.5 s</b><span>from launch to the first frame</span></div>
+      </div>
+      <p class="facts-note">Measured on the author's machine with a small library. Your numbers will vary with library size and hardware. Pages you have opened before load from a local cache and appear at once while they refresh.</p>
+    </div>
+  </section>
+
+  <section class="section" id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="features-title">A calm room for your music.</h2>
+        <p>The interface steps back. The cover that is playing tints the player and the full-screen view; everything else stays quiet.</p>
+      </div>
+
+      <div class="features">
+        <article class="feature">
+          <div class="feature-copy">
+            <h3>Keyboard first</h3>
+            <p><kbd>Ctrl</kbd> <kbd>K</kbd> opens search from anywhere: a top result, songs, artists, albums and playlists from your library and Spotify, and a few actions when you type their name.</p>
+            <ul>
+              <li><kbd>Space</kbd>, <kbd>Ctrl</kbd> <kbd>←</kbd> <kbd>→</kbd> and <kbd>Ctrl</kbd> <kbd>↑</kbd> <kbd>↓</kbd> control playback</li>
+              <li><kbd>?</kbd> shows every shortcut</li>
+              <li>Media keys, the tray icon, the Windows media overlay and an optional global search hotkey</li>
+            </ul>
+          </div>
+          <div class="feature-shot">
+            <img src="assets/img/palette-1360.webp" srcset="assets/img/palette-760.webp 760w, assets/img/palette-1360.webp 1360w" sizes="(max-width: 980px) 92vw, 640px" width="1360" height="850" loading="lazy" decoding="async" alt="Search results opened with Ctrl+K: a top result, songs, artists and albums">
+          </div>
+        </article>
+
+        <article class="feature">
+          <div class="feature-copy">
+            <h3>Synced lyrics, with a translation</h3>
+            <p>Lyrics follow the song in the side panel or full screen. They come from Spotify, with <a href="https://lrclib.net">LRCLIB</a> as a fallback, and an optional translation can sit under every line when one is available.</p>
+          </div>
+          <div class="feature-shot">
+            <img src="assets/img/lyrics-1360.webp" srcset="assets/img/lyrics-760.webp 760w, assets/img/lyrics-1360.webp 1360w" sizes="(max-width: 980px) 92vw, 640px" width="1360" height="850" loading="lazy" decoding="async" alt="Full-screen lyrics of Amazing Grace with a Turkish translation under each line">
+          </div>
+        </article>
+
+        <article class="feature">
+          <div class="feature-copy">
+            <h3>Equalizer and headphone profiles</h3>
+            <p>A 10-band equalizer with presets and a preamp. Search your headphone model in the open <a href="https://github.com/opra-project/OPRA">OPRA</a> database and get a ready-made correction curve fitted to the ten bands.</p>
+            <ul>
+              <li>Gapless playback on albums</li>
+              <li>Optional crossfade from 2 to 12 seconds</li>
+              <li>Volume normalization, quality up to 320 kbps</li>
+            </ul>
+          </div>
+          <div class="feature-shot">
+            <img src="assets/img/equalizer-1360.webp" srcset="assets/img/equalizer-760.webp 760w, assets/img/equalizer-1360.webp 1360w" sizes="(max-width: 980px) 92vw, 640px" width="1360" height="850" loading="lazy" decoding="async" alt="The 10-band equalizer with a headphone profile selected">
+          </div>
+        </article>
+
+        <article class="feature">
+          <div class="feature-copy">
+            <h3>Tools for a tidy library</h3>
+            <p>Find duplicate songs and different versions of the same song (remaster, live, radio edit) in a playlist. Merge or split playlists, sort one permanently, back everything up to a JSON file and see your own listening statistics.</p>
+            <ul>
+              <li>Undo library edits with <kbd>Ctrl</kbd> <kbd>Z</kbd></li>
+              <li>Edits made offline are queued and sent when you are back online</li>
+            </ul>
+          </div>
+          <div class="feature-shot">
+            <img src="assets/img/tools-1360.webp" srcset="assets/img/tools-760.webp 760w, assets/img/tools-1360.webp 1360w" sizes="(max-width: 980px) 92vw, 640px" width="1360" height="850" loading="lazy" decoding="async" alt="The duplicate finder in the library tools, listing two versions of the same song">
+          </div>
+        </article>
+      </div>
+
+      <div class="grid">
+        <div class="cell">
+          <h3>Smarter shuffle and queue</h3>
+          <p>Play one version of each song, skip explicit songs, never play a chosen artist, or start a radio from a song, artist, album or playlist.</p>
+        </div>
+        <div class="cell">
+          <h3>Dark, Light or System</h3>
+          <p>Keep the dark room, choose a warm off-white palette, or follow Windows app mode as it changes.</p>
+        </div>
+        <div class="cell">
+          <h3>Spotify Connect</h3>
+          <p>Openify shows up as a device in the Spotify app on your phone, so you can send music to it. You can rename it or turn it off.</p>
+        </div>
+        <div class="cell">
+          <h3>English and Turkish</h3>
+          <p>The whole interface is available in both languages.</p>
+        </div>
+        <div class="cell">
+          <h3>Updates itself</h3>
+          <p>Updates download in the background and apply the next time you open Openify. If a new version fails to start twice, it goes back to the previous one.</p>
+        </div>
+        <div class="cell">
+          <h3>Private session</h3>
+          <p>One switch in the profile menu stops Openify from recording recent plays and statistics for that session.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="motion-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="motion-title">See it move.</h2>
+        <p>Searching, opening an album and starting playback, recorded in the app.</p>
+      </div>
+      <div class="demo">
+        <picture>
+          <source media="(prefers-reduced-motion: reduce)" srcset="assets/img/demo-still.webp">
+          <img src="assets/img/demo.webp" width="960" height="600" loading="lazy" decoding="async" alt="A short recording: typing a search, opening an album and starting a song in Openify">
+        </picture>
+      </div>
+      <p class="caption">The screenshots show Spotify's own public playlists and albums with a sample profile.</p>
+    </div>
+  </section>
+
+  <section class="section" id="install" aria-labelledby="install-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="install-title">Install in a minute.</h2>
+        <p>Openify installs for your user only. It does not need administrator rights.</p>
+      </div>
+
+      <div class="install">
+        <ol class="steps">
+          <li>
+            <h3>Download the installer</h3>
+            <p>Pick the one that matches your PC. Most PCs are x64; Surface Pro X and other Snapdragon laptops are ARM64.</p>
+            <div class="links">
+              <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">Installer, x64</a>
+              <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe">Installer, ARM64</a>
+            </div>
+          </li>
+          <li>
+            <h3>Run it</h3>
+            <p>The installer is not code-signed yet, so Windows SmartScreen may say "Windows protected your PC".</p>
+            <p class="smartscreen">Click <strong>More info</strong>, then <strong>Run anyway</strong>. The source code and SHA-256 checksums of every file are on the <a href="https://github.com/FurkanKY/Openify/releases/latest">release page</a>.</p>
+          </li>
+          <li>
+            <h3>Sign in with Spotify</h3>
+            <p>Openify opens and a browser window asks you to sign in to your Spotify account. Your session is kept in the Windows Credential Manager.</p>
+          </li>
+        </ol>
+
+        <div class="side">
+          <div class="card">
+            <h3>winget <span class="badge">Coming soon</span></h3>
+            <p>The package is in review in the Windows Package Manager. Once it is accepted:</p>
+            <div class="cmd">
+              <code>winget install FurkanKY.Openify</code>
+              <button class="copy" type="button" data-copy="winget install FurkanKY.Openify" data-done="Copied">Copy</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Portable</h3>
+            <p>Prefer not to install? Unzip and run.</p>
+            <div class="links">
+              <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Portable.zip">Portable zip, x64</a>
+              <a class="chip" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Portable.zip">Portable zip, ARM64</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="notes">
+        <div class="card">
+          <h3>Requirements</h3>
+          <ul>
+            <li>Windows 10 or 11, x64 or ARM64</li>
+            <li>A Spotify Premium account. Free accounts cannot stream through third-party clients.</li>
+            <li>A working audio output</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Good to know</h3>
+          <ul>
+            <li>Openify is early (0.1). Friend activity and artist following are experimental.</li>
+            <li>Screen readers are not supported yet: the UI toolkit has no Windows accessibility support. Keyboard use is well covered.</li>
+            <li>Windows only. There are no macOS or Linux builds.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="privacy" aria-labelledby="privacy-title">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="privacy-title">Your data stays on your PC.</h2>
+        <p>There is no Openify server, no analytics and no telemetry.</p>
+      </div>
+      <div class="privacy">
+        <div class="card">
+          <h3>Stored locally</h3>
+          <p>The library cache, play history and statistics live in your user folder; the Spotify session lives in the Windows Credential Manager.</p>
+        </div>
+        <div class="card">
+          <h3>Plays are not reported to Spotify</h3>
+          <p>Songs you play in Openify may not appear in Spotify's Recently played, your Wrapped or artists' play counts. Openify keeps its own history and statistics on your PC.</p>
+        </div>
+        <div class="card">
+          <h3>Only the services a feature needs</h3>
+          <p>Besides Spotify: LRCLIB for missing lyrics, Deezer for similar artists, the OPRA database for headphone profiles and the update server.</p>
+        </div>
+        <div class="card">
+          <h3>Open source</h3>
+          <p>Every line is on GitHub under the GPL-3.0 license. Read it, build it yourself, or <a href="https://github.com/FurkanKY/Openify/blob/master/CONTRIBUTING.md">contribute</a>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing" aria-labelledby="closing-title">
+    <div class="wrap">
+      <h2 id="closing-title">Turn the lights down. Press play.</h2>
+      <p>Free, open source and made for Windows.</p>
+      <div class="get" data-arch-swap>
+        <a class="btn btn-primary" data-arch="x64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          <span>Download for Windows<small>64-bit installer (x64)</small></span>
+        </a>
+        <a class="btn btn-quiet" data-arch="arm64" href="https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 20h14"/></svg>
+          <span>Windows on ARM<small>ARM64 installer</small></span>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <nav class="foot-links" aria-label="Footer">
+      <a href="https://github.com/FurkanKY/Openify">Source code</a>
+      <a href="https://github.com/FurkanKY/Openify/releases/latest">Release notes</a>
+      <a href="https://github.com/FurkanKY/Openify/blob/master/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/FurkanKY/Openify/issues">Report a problem</a>
+      <a href="https://github.com/FurkanKY/Openify/blob/master/LICENSE">License (GPL-3.0)</a>
+      <a href="tr/" hreflang="tr" lang="tr">Türkçe</a>
+    </nav>
+    <p>Openify is an independent project by FurkanKY. It is not affiliated with, endorsed by or sponsored by Spotify AB. Spotify is a trademark of Spotify AB. Openify uses unofficial interfaces that Spotify may change at any time, and using a third-party client may conflict with Spotify's terms of service. It does not download or save music and only plays on Premium accounts.</p>
+  </div>
+</footer>
+
+<script src="assets/site.js" defer></script>
+</body>
+</html>
