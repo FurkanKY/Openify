@@ -96,9 +96,9 @@
           </a>
         </div>
         <ul class="trust">
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Windows 10 and 11</li>
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Spotify Premium required</li>
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Free and open source</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Windows 10 and 11</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Spotify Premium required</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Free and open source</li>
           <li><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a></li>
         </ul>
       </div>
@@ -257,14 +257,17 @@
           <div class="node"><b>Velopack</b><small>installs and updates, per user</small></div>
         </div>
       </div>
-      <ul class="chips-row">
-          <li>Built and tested on Windows for every PR</li>
-          <li>ARM64 built in CI</li>
-          <li>rustfmt and Clippy</li>
-          <li>cargo-deny for licenses and advisories</li>
-          <li>SHA-256 checksums on every release</li>
-          <li>Design rules enforced by tests</li>
-      </ul>
+      <div class="qa">
+        <h3>Checked on every change</h3>
+        <ul class="qa-grid">
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Tested on every PR</b><small>Each pull request is built and tested on Windows.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>ARM64 too</b><small>The ARM64 build compiles in CI next to x64.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>rustfmt and Clippy</b><small>Formatting and lints run on every change.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>cargo-deny</b><small>Checks licenses, banned crates and security advisories.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>SHA-256 checksums</b><small>Every release ships with checksums you can verify.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Design rules as tests</b><small>Type scale, spacing and contrast are checked by tests.</small></div></li>
+        </ul>
+      </div>
       <div class="priv" id="privacy">
         <h3>Your data stays on your PC <span>No Openify server, no analytics, no telemetry.</span></h3>
         <dl class="priv-grid">

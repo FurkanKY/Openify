@@ -96,9 +96,9 @@
           </a>
         </div>
         <ul class="trust">
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Windows 10 ve 11</li>
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Spotify Premium gerekir</li>
-          <li><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.6"/><path d="m5.4 8.2 1.8 1.8 3.4-3.6"/></svg>Ücretsiz ve açık kaynak</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Windows 10 ve 11</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Spotify Premium gerekir</li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Ücretsiz ve açık kaynak</li>
           <li><a href="https://github.com/FurkanKY/Openify/releases/latest" data-gh="version">v0.1.2</a></li>
         </ul>
       </div>
@@ -257,14 +257,17 @@
           <div class="node"><b>Velopack</b><small>kurar ve günceller</small></div>
         </div>
       </div>
-      <ul class="chips-row">
-          <li>Her PR Windows'ta derlenip test ediliyor</li>
-          <li>ARM64 sürümü CI'da derleniyor</li>
-          <li>rustfmt ve Clippy</li>
-          <li>Lisans ve güvenlik için cargo-deny</li>
-          <li>Her sürümde SHA-256 özetleri</li>
-          <li>Tasarım kuralları testlerle korunuyor</li>
-      </ul>
+      <div class="qa">
+        <h3>Her değişiklikte denetleniyor</h3>
+        <ul class="qa-grid">
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Her PR'da test</b><small>Her çekme isteği Windows'ta derlenip test ediliyor.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>ARM64 de var</b><small>ARM64 sürümü x64 ile birlikte CI'da derleniyor.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>rustfmt ve Clippy</b><small>Biçim ve lint denetimleri her değişiklikte çalışıyor.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>cargo-deny</b><small>Lisansları, yasaklı paketleri ve güvenlik bildirimlerini denetliyor.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>SHA-256 özetleri</b><small>Her sürüm doğrulayabileceğin özetlerle yayımlanıyor.</small></div></li>
+          <li><span class="qa-ico"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><b>Testli tasarım kuralları</b><small>Yazı ölçeği, boşluk ve kontrast testlerle denetleniyor.</small></div></li>
+        </ul>
+      </div>
       <div class="priv" id="privacy">
         <h3>Verilerin sende kalır <span>Openify sunucusu yok, analiz yok, telemetri yok.</span></h3>
         <dl class="priv-grid">
