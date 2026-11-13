@@ -769,6 +769,7 @@ impl Db {
                     album: r.get(3)?,
                     duration_ms: r.get(4)?,
                     image: r.get(5)?,
+                    plays: None,
                 })
             })?;
             for row in rows {
@@ -886,6 +887,7 @@ impl Db {
                     album: r.get(3)?,
                     duration_ms: r.get(4)?,
                     image: r.get(5)?,
+                    plays: None,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -1244,6 +1246,7 @@ mod tests {
             album: "Albüm".into(),
             duration_ms: 180_000,
             image: String::new(),
+            plays: None,
         }
     }
 

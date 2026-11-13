@@ -143,7 +143,7 @@ pub(super) struct Card {
 impl Card {
     pub(super) fn kind(&self) -> Kind {
         match &self.id {
-            CollectionId::Liked => Kind::Lists,
+            CollectionId::Liked | CollectionId::Smart(_) => Kind::Lists,
             CollectionId::Album(_) => Kind::Albums,
             CollectionId::Artist(_) => Kind::Artists,
             CollectionId::Playlist(_) if self.subtitle.starts_with("Spotify") => Kind::ForYou,
@@ -407,6 +407,23 @@ impl Shell {
                 ..Default::default()
             },
         }];
+        if self.prefs.show_smart_lists {
+            cards.extend(
+                crate::engine::SmartList::ALL
+                    .into_iter()
+                    .enumerate()
+                    .map(|(n, list)| Card {
+                        id: CollectionId::Smart(list),
+                        name: super::library::smart_title(list).to_string(),
+                        subtitle: t!(SmartListsGroup).to_string(),
+                        image: String::new(),
+                        meta: CardMeta {
+                            seq: n + 1,
+                            ..Default::default()
+                        },
+                    }),
+            );
+        }
         cards.extend(
             library
                 .albums

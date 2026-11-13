@@ -75,8 +75,8 @@ pub use connect::{
 use connect::{ConnectInternal, ConnectPort};
 pub use levels::AudioLevels;
 pub use library::{
-    CollectionId, Library, LibraryItem, LibraryMeta, TrackRow, artist_item, folder_contains,
-    folder_id, mosaic_urls,
+    CollectionId, Library, LibraryItem, LibraryMeta, SmartList, TrackRow, artist_item,
+    folder_contains, folder_id, mosaic_urls,
 };
 pub use output::{MAX_OVERLAP_MS, OutputCtl};
 pub use queue::{QueueEntry, QueueSource, QueueView, RepeatMode};
@@ -1733,7 +1733,9 @@ impl Engine {
     fn open_collection(&mut self, id: CollectionId) {
         self.opened.insert(id.clone());
 
-        if let Some(tracks) = self.collections.get(&id) {
+        if !matches!(id, CollectionId::Smart(_))
+            && let Some(tracks) = self.collections.get(&id)
+        {
             self.emit(Event::CollectionLoaded {
                 id,
                 tracks: tracks.clone(),
@@ -1988,6 +1990,7 @@ fn blank_row(uri: &str) -> TrackRow {
         album: String::new(),
         duration_ms: 0,
         image: String::new(),
+        plays: None,
     }
 }
 

@@ -1258,6 +1258,11 @@ impl Shell {
             _ if view == "settings" => Some(Route::Settings),
             _ if view == "recent" => Some(Route::Recent),
             _ if view == "tools" => Some(Route::Tools),
+            _ if CollectionId::from_key(view)
+                .is_some_and(|id| matches!(id, CollectionId::Smart(_))) =>
+            {
+                CollectionId::from_key(view).map(Route::Collection)
+            }
             _ => None,
         };
         if let Some(route) = route {

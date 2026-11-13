@@ -271,6 +271,7 @@ mod tests {
             album: album.into(),
             duration_ms,
             image: image.into(),
+            plays: None,
         }
     }
 

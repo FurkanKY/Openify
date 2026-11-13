@@ -167,6 +167,8 @@ pub struct Settings {
     /// düğme görünür ne de Spotify'a tek istek gider. Gayriresmî bir uç
     /// kullanılır; yalnız dinlediklerini paylaşan arkadaşlar görünür.
     pub friend_activity: bool,
+    /// Yerel çalma geçmişinden üretilen akıllı listeleri göster.
+    pub show_smart_lists: bool,
     /// Discord Rich Presence; opt-in, unavailable until a client ID is supplied.
     pub discord_presence: bool,
 
@@ -303,6 +305,7 @@ impl Default for Settings {
             skip_explicit: false,
             blocked_artists: Vec::new(),
             friend_activity: false,
+            show_smart_lists: true,
             discord_presence: false,
             lyrics_translation: false,
             karaoke_enabled: false,
@@ -982,6 +985,24 @@ mod tests {
         };
         let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
         assert!(back.sanitized().friend_activity);
+    }
+
+    #[test]
+    fn smart_lists_are_enabled_by_default_and_round_trip() {
+        let default = Settings::default();
+        assert!(default.show_smart_lists);
+        let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
+        assert!(old.show_smart_lists);
+        let off = Settings {
+            show_smart_lists: false,
+            ..default
+        };
+        let saved = serde_json::to_string(&off).unwrap();
+        assert!(
+            !serde_json::from_str::<Settings>(&saved)
+                .unwrap()
+                .show_smart_lists
+        );
     }
 
     #[test]

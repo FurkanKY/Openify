@@ -25,7 +25,11 @@ use std::{
 use anyhow::Result;
 
 use super::{civil, plan::primary_artist};
-use crate::engine::{cache::Db, rules::fold};
+use crate::engine::{
+    cache::Db,
+    library::{SmartList, TrackRow},
+    rules::fold,
+};
 
 // ── Gizli oturum ────────────────────────────────────────────────────────
 
@@ -83,6 +87,13 @@ pub struct PlayRecord {
     pub listened_ms: u64,
     /// Çalmanın sayıldığı an, unix ms.
     pub played_at: i64,
+}
+
+/// Akıllı listede gösterilen şarkı ve yerel çalma sayısı.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SmartTrack {
+    pub track: TrackRow,
+    pub plays: u64,
 }
 
 /// Sayacın yazılmasını istediği şey.
@@ -267,6 +278,85 @@ impl Db {
                     listened_ms: r.get::<_, i64>(6)?.max(0) as u64,
                 })
             })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    /// Akıllı listeyi yalnız yerel geçmiş ve önbellekten hesaplar.
+    pub fn smart_tracks(&self, list: SmartList, now_ms: i64) -> Result<Vec<SmartTrack>> {
+        const DAY: i64 = 86_400_000;
+        let conn = self.r();
+        let mut stmt = match list {
+            SmartList::Top30 => conn.prepare(
+                "WITH counts AS (
+                    SELECT uri, COUNT(*) AS plays, MAX(played_at) AS last_at
+                    FROM play_history WHERE played_at >= ?1 GROUP BY uri
+                 ), latest AS (
+                    SELECT uri, name, artists, album, duration_ms,
+                           ROW_NUMBER() OVER (PARTITION BY uri ORDER BY played_at DESC, id DESC) AS rank
+                    FROM play_history WHERE played_at >= ?1
+                 )
+                 SELECT c.uri, COALESCE(NULLIF(t.name,''), l.name),
+                        COALESCE(NULLIF(t.artists,''), l.artists),
+                        COALESCE(NULLIF(t.album,''), l.album),
+                        COALESCE(t.duration_ms, l.duration_ms), COALESCE(t.image,''), c.plays
+                 FROM counts c JOIN latest l ON l.uri = c.uri AND l.rank = 1
+                 LEFT JOIN tracks t ON t.uri = c.uri
+                 ORDER BY c.plays DESC, c.last_at DESC, c.uri LIMIT 50",
+            )?,
+            SmartList::Unplayed => conn.prepare(
+                "SELECT ct.track_uri, COALESCE(NULLIF(t.name,''), ct.track_uri),
+                        COALESCE(t.artists,''), COALESCE(t.album,''), COALESCE(t.duration_ms,0),
+                        COALESCE(t.image,''), 0
+                 FROM collection_tracks ct
+                 LEFT JOIN tracks t ON t.uri = ct.track_uri
+                 WHERE ct.collection = 'liked'
+                   AND NOT EXISTS (SELECT 1 FROM play_history h WHERE h.uri = ct.track_uri)
+                   AND (ct.added_at IS NULL OR ct.added_at <= ?1)
+                 ORDER BY ct.added_at DESC, ct.position LIMIT -1",
+            )?,
+            SmartList::Forgotten => conn.prepare(
+                "WITH counts AS (
+                    SELECT uri, COUNT(*) AS plays, MAX(played_at) AS last_at
+                    FROM play_history GROUP BY uri
+                 ), latest AS (
+                    SELECT uri, name, artists, album, duration_ms,
+                           ROW_NUMBER() OVER (PARTITION BY uri ORDER BY played_at DESC, id DESC) AS rank
+                    FROM play_history
+                 )
+                 SELECT c.uri, COALESCE(NULLIF(t.name,''), l.name),
+                        COALESCE(NULLIF(t.artists,''), l.artists),
+                        COALESCE(NULLIF(t.album,''), l.album),
+                        COALESCE(t.duration_ms, l.duration_ms), COALESCE(t.image,''), c.plays
+                 FROM counts c JOIN latest l ON l.uri = c.uri AND l.rank = 1
+                 LEFT JOIN tracks t ON t.uri = c.uri
+                 WHERE c.plays >= 3 AND c.last_at < ?1
+                 ORDER BY c.plays DESC, c.last_at ASC, c.uri LIMIT 50",
+            )?,
+        };
+        let rows = stmt
+            .query_map(
+                [now_ms
+                    - if list == SmartList::Top30 {
+                        30 * DAY
+                    } else {
+                        60 * DAY
+                    }],
+                |r| {
+                    Ok(SmartTrack {
+                        track: TrackRow {
+                            uri: r.get(0)?,
+                            name: r.get(1)?,
+                            artists: r.get(2)?,
+                            album: r.get(3)?,
+                            duration_ms: r.get(4)?,
+                            image: r.get(5)?,
+                            plays: Some(r.get::<_, i64>(6)?.max(0) as u64),
+                        },
+                        plays: r.get::<_, i64>(6)?.max(0) as u64,
+                    })
+                },
+            )?
             .collect::<rusqlite::Result<Vec<_>>>()?;
         Ok(rows)
     }
@@ -605,6 +695,187 @@ mod tests {
             listened_ms: listened,
             played_at: at,
         }
+    }
+
+    #[test]
+    fn smart_top30_counts_only_recent_plays_and_caps_at_fifty() {
+        use crate::engine::library::SmartList;
+        let db = Db::open_in_memory().unwrap();
+        let now = 1_800_000_000_000;
+        for (n, count) in [(1, 2), (2, 3), (3, 1)] {
+            for i in 0..count {
+                db.record_play(&rec(
+                    n,
+                    "Artist",
+                    "Album",
+                    40_000,
+                    now - i64::from(i) * 1000,
+                ))
+                .unwrap();
+            }
+        }
+        db.record_play(&rec(1, "Artist", "Album", 40_000, now - 31 * 86_400_000))
+            .unwrap();
+        db.record_play(&rec(4, "Artist", "Album", 40_000, now - 30 * 86_400_000))
+            .unwrap();
+        let got = db.smart_tracks(SmartList::Top30, now).unwrap();
+        assert_eq!(
+            got.iter()
+                .map(|x| (x.track.uri.as_str(), x.plays))
+                .collect::<Vec<_>>(),
+            [
+                ("spotify:track:0000000000000000000002", 3),
+                ("spotify:track:0000000000000000000001", 2),
+                ("spotify:track:0000000000000000000003", 1),
+                ("spotify:track:0000000000000000000004", 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn smart_unplayed_uses_liked_order_and_excludes_any_history() {
+        use crate::engine::{
+            TrackRow,
+            library::{Entry, SmartList},
+        };
+        let db = Db::open_in_memory().unwrap();
+        let now = 1_800_000_000_000;
+        let rows: Vec<_> = (1..=3)
+            .map(|n| TrackRow {
+                uri: format!("spotify:track:{n:022}"),
+                name: format!("Cached {n}"),
+                artists: "Artist".into(),
+                album: "Album".into(),
+                duration_ms: 1000,
+                image: String::new(),
+                plays: None,
+            })
+            .collect();
+        db.save_tracks(&rows).unwrap();
+        db.save_collection_entries(
+            &crate::engine::CollectionId::Liked,
+            None,
+            &[
+                Entry {
+                    track: rows[0].uri.clone(),
+                    added_at: Some(10),
+                },
+                Entry {
+                    track: rows[1].uri.clone(),
+                    added_at: Some(30),
+                },
+                Entry {
+                    track: rows[2].uri.clone(),
+                    added_at: Some(20),
+                },
+            ],
+        )
+        .unwrap();
+        db.record_play(&rec(1, "Old", "Old", 1000, now - 100 * 86_400_000))
+            .unwrap();
+        let got = db.smart_tracks(SmartList::Unplayed, now).unwrap();
+        assert_eq!(
+            got.iter()
+                .map(|x| x.track.name.as_str())
+                .collect::<Vec<_>>(),
+            ["Cached 2", "Cached 3"]
+        );
+    }
+
+    #[test]
+    fn smart_forgotten_requires_three_total_plays_and_sixty_quiet_days() {
+        use crate::engine::library::SmartList;
+        let db = Db::open_in_memory().unwrap();
+        let now = 1_800_000_000_000;
+        for i in 0..4 {
+            db.record_play(&rec(1, "A", "X", 1000, now - 61 * 86_400_000 - i))
+                .unwrap();
+        }
+        for i in 0..3 {
+            db.record_play(&rec(2, "B", "Y", 1000, now - 61 * 86_400_000 - i))
+                .unwrap();
+        }
+        for i in 0..2 {
+            db.record_play(&rec(3, "C", "Z", 1000, now - 90 * 86_400_000 - i))
+                .unwrap();
+        }
+        for i in 0..4 {
+            db.record_play(&rec(4, "D", "W", 1000, now - 10 * 86_400_000 - i))
+                .unwrap();
+        }
+        for i in 0..3 {
+            db.record_play(&rec(5, "E", "V", 1000, now - 60 * 86_400_000 - i))
+                .unwrap();
+        }
+        let got = db.smart_tracks(SmartList::Forgotten, now).unwrap();
+        assert_eq!(
+            got.iter()
+                .map(|x| (x.track.uri.as_str(), x.plays))
+                .collect::<Vec<_>>(),
+            [
+                ("spotify:track:0000000000000000000001", 4),
+                ("spotify:track:0000000000000000000002", 3),
+            ]
+        );
+    }
+
+    #[test]
+    fn smart_lists_are_empty_without_qualifying_data_and_ranked_lists_stop_at_fifty() {
+        use crate::engine::library::SmartList;
+        let db = Db::open_in_memory().unwrap();
+        let now = 1_800_000_000_000;
+        for list in SmartList::ALL {
+            assert!(db.smart_tracks(list, now).unwrap().is_empty());
+        }
+        for n in 0..55 {
+            let uri = format!("spotify:track:{n:022}");
+            let mut current = rec(n, "Artist", "Album", 1000, now - 86_400_000);
+            current.uri = uri;
+            db.record_play(&current).unwrap();
+            for day in 70..73 {
+                let mut old = rec(n + 100, "Artist", "Album", 1000, now - day * 86_400_000);
+                old.uri = format!("spotify:track:{:022}", n + 1000);
+                db.record_play(&old).unwrap();
+            }
+        }
+        assert_eq!(db.smart_tracks(SmartList::Top30, now).unwrap().len(), 50);
+        assert_eq!(
+            db.smart_tracks(SmartList::Forgotten, now).unwrap().len(),
+            50
+        );
+    }
+
+    #[test]
+    fn smart_lists_prefer_cached_metadata_and_fall_back_to_play_history() {
+        use crate::engine::{TrackRow, library::SmartList};
+        let db = Db::open_in_memory().unwrap();
+        let now = 1_800_000_000_000;
+        let history = rec(1, "History artist", "History album", 1000, now - 1000);
+        db.record_play(&history).unwrap();
+        let cached = TrackRow {
+            uri: history.uri.clone(),
+            name: "Cached title".into(),
+            artists: "Cached artist".into(),
+            album: "Cached album".into(),
+            duration_ms: 123_000,
+            image: "cover-url".into(),
+            plays: None,
+        };
+        db.save_tracks(&[cached]).unwrap();
+        let smart = db.smart_tracks(SmartList::Top30, now).unwrap();
+        assert_eq!(smart[0].track.name, "Cached title");
+        assert_eq!(smart[0].track.artists, "Cached artist");
+        assert_eq!(smart[0].track.album, "Cached album");
+        assert_eq!(smart[0].track.duration_ms, 123_000);
+        assert_eq!(smart[0].track.image, "cover-url");
+
+        let fallback = rec(2, "History artist", "History album", 1000, now - 2000);
+        db.record_play(&fallback).unwrap();
+        let smart = db.smart_tracks(SmartList::Top30, now).unwrap();
+        let row = smart.iter().find(|x| x.track.uri == fallback.uri).unwrap();
+        assert_eq!(row.track.name, fallback.name);
+        assert_eq!(row.track.artists, fallback.artists);
+        assert_eq!(row.track.album, fallback.album);
     }
 
     #[test]

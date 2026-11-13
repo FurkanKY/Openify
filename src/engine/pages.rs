@@ -476,6 +476,7 @@ pub fn home(library: &Library, recent_keys: &[String], limit: usize) -> HomePage
             }),
             CollectionId::Playlist(_) => library.playlists.iter().find(|p| p.id == id).cloned(),
             CollectionId::Album(_) => library.albums.iter().find(|a| a.id == id).cloned(),
+            CollectionId::Smart(_) => None,
             // Takip edilen sanatçı bir şarkı listesi değil: "son çalınan" kartı olmaz.
             CollectionId::Artist(_) => None,
         };
@@ -1044,6 +1045,7 @@ mod tests {
             album: "Albüm".into(),
             duration_ms: ms,
             image: "https://i.scdn.co/image/aa".into(),
+            plays: None,
         }
     }
 

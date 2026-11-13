@@ -181,6 +181,7 @@ fn parse_track(v: &Value) -> Option<RadioTrack> {
                 .find_map(|k| v.get(k).and_then(Value::as_u64))
                 .map_or(0, |d| d.min(u64::from(u32::MAX)) as u32),
             image: String::new(),
+            plays: None,
         });
     Some(RadioTrack { uri, row })
 }
@@ -619,6 +620,7 @@ mod tests {
             album: String::new(),
             duration_ms: 1000,
             image: String::new(),
+            plays: None,
         }
     }
 

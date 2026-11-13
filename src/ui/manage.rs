@@ -3243,6 +3243,7 @@ impl Shell {
             album: "Gülümse".into(),
             duration_ms: 231_000,
             image: String::new(),
+            plays: None,
         };
         let mut hearts = div().flex().items_center().gap(px(S5));
         for (i, (liked, look, name)) in [
@@ -3393,6 +3394,7 @@ impl Shell {
             album: String::new(),
             duration_ms: self.state.duration_ms(),
             image: String::new(),
+            plays: None,
         })
     }
 

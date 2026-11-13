@@ -16,6 +16,14 @@ keys! {
     LangSystem { en: "System", tr: "Sistem" }
     LangEnglish { en: "English", tr: "English" }
     LangTurkish { en: "Türkçe", tr: "Türkçe" }
+    SmartListsSettingTitle { en: "Show smart lists", tr: "Akıllı listeleri göster" }
+    SmartListsSettingDesc { en: "Lists based on your local listening history and saved songs.", tr: "Yerel dinleme geçmişine ve Beğenilenler'e dayalı listeler." }
+    SmartListsGroup { en: "Smart lists", tr: "Akıllı listeler" }
+    SmartTop30 { en: "On repeat · 30 days", tr: "Son 30 günde en çok" }
+    SmartUnplayed { en: "Liked, never played", tr: "Beğenip hiç çalmadıkların" }
+    SmartForgotten { en: "Long time no play", tr: "Uzun süredir çalmadıkların" }
+    SmartListEmpty { en: "This list will fill as you listen.", tr: "Birkaç şarkı dinledikçe burası dolar." }
+    SmartListLocal { en: "Based on your listening", tr: "Dinleme geçmişine göre" }
 
     // ── src/ui/explore.rs ──
     NavHome { en: "Home", tr: "Ana sayfa" }

@@ -42,6 +42,7 @@ const MAX_RETRIES: u32 = 4;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CollectionId {
     Liked,
+    Smart(SmartList),
     Playlist(String),
     Album(String),
     /// Takip edilen sanatçı (yalnız kütüphane kartı olarak; şarkı listesi
@@ -49,11 +50,41 @@ pub enum CollectionId {
     Artist(String),
 }
 
+/// Sabit kurallarla üretilen yerel akıllı listeler.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SmartList {
+    Top30,
+    Unplayed,
+    Forgotten,
+}
+
+impl SmartList {
+    pub const ALL: [Self; 3] = [Self::Top30, Self::Unplayed, Self::Forgotten];
+
+    pub fn key(self) -> &'static str {
+        match self {
+            Self::Top30 => "smart:top30",
+            Self::Unplayed => "smart:unplayed",
+            Self::Forgotten => "smart:forgotten",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Option<Self> {
+        match key {
+            "smart:top30" => Some(Self::Top30),
+            "smart:unplayed" => Some(Self::Unplayed),
+            "smart:forgotten" => Some(Self::Forgotten),
+            _ => None,
+        }
+    }
+}
+
 impl CollectionId {
     /// Önbellekteki anahtar: "liked" ya da Spotify URI'si.
     pub fn key(&self) -> &str {
         match self {
             Self::Liked => "liked",
+            Self::Smart(list) => list.key(),
             Self::Playlist(uri) | Self::Album(uri) | Self::Artist(uri) => uri,
         }
     }
@@ -61,6 +92,8 @@ impl CollectionId {
     pub fn from_key(key: &str) -> Option<Self> {
         if key == "liked" {
             Some(Self::Liked)
+        } else if let Some(list) = SmartList::from_key(key) {
+            Some(Self::Smart(list))
         } else if key.starts_with("spotify:playlist:") {
             Some(Self::Playlist(key.into()))
         } else if key.starts_with("spotify:album:") {
@@ -359,6 +392,9 @@ pub struct TrackRow {
     pub duration_ms: u32,
     /// Albüm kapağının küçük (64 px) hali; yoksa boş.
     pub image: String,
+    /// Akıllı listede yerel geçmişten hesaplanan çalma sayısı.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plays: Option<u64>,
 }
 
 /// Spotify resim kimliğinden adres.
@@ -718,6 +754,7 @@ async fn fetch_collection_entries(session: &Session, id: &CollectionId) -> Resul
             .collect::<Result<_>>()?,
         // Takip edilen sanatçının şarkı listesi yok (sayfası açılır, `OpenCollection` gitmez).
         CollectionId::Artist(_) => Vec::new(),
+        CollectionId::Smart(_) => Vec::new(),
     };
     Ok(entries)
 }
@@ -732,6 +769,17 @@ fn only_tracks(uris: Vec<String>) -> Vec<String> {
 /// Önbellekteki haliyle bir listenin şarkıları ve hepsinin bilgisinin
 /// önbellekte olup olmadığı. Liste hiç kaydedilmediyse `None`.
 pub fn cached_tracks(db: &Db, id: &CollectionId) -> Result<Option<(Arc<Vec<TrackRow>>, bool)>> {
+    if let CollectionId::Smart(list) = id {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as i64);
+        let tracks = db
+            .smart_tracks(*list, now)?
+            .into_iter()
+            .map(|x| x.track)
+            .collect();
+        return Ok(Some((Arc::new(tracks), true)));
+    }
     let Some(uris) = db.collection_uris(id)? else {
         return Ok(None);
     };
@@ -750,6 +798,17 @@ pub async fn load_tracks(
     db: &Db,
     id: &CollectionId,
 ) -> Result<Arc<Vec<TrackRow>>> {
+    if let CollectionId::Smart(list) = id {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as i64);
+        return Ok(Arc::new(
+            db.smart_tracks(*list, now)?
+                .into_iter()
+                .map(|x| x.track)
+                .collect(),
+        ));
+    }
     let uris = match db.collection_uris(id)? {
         Some(uris) => uris,
         None => {
@@ -860,6 +919,7 @@ async fn fetch_track_batch(session: &Session, uris: &[String]) -> Result<Vec<Tra
                 album: track.album.name.clone(),
                 duration_ms: track.duration.max(0) as u32,
                 image: pick_cover(&track.album.covers, ImageSize::SMALL),
+                plays: None,
             });
         }
     }
@@ -1252,6 +1312,16 @@ fn wire_type(tag: u32) -> Result<WireType> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn smart_collection_keys_round_trip() {
+        for list in SmartList::ALL {
+            let id = CollectionId::Smart(list);
+            assert_eq!(id.key(), list.key());
+            assert_eq!(CollectionId::from_key(id.key()), Some(id));
+        }
+        assert_eq!(CollectionId::from_key("smart:unknown"), None);
+    }
+
     /// Aynı şarkı listede birden çok kez durur: önbellekten okuma hepsini döner
     /// (sıralar Spotify'daki sıralarla aynı kalır) ve liste "eksiksiz" sayılır.
     #[test]
@@ -1264,6 +1334,7 @@ mod tests {
             album: "B".into(),
             duration_ms: 1,
             image: String::new(),
+            plays: None,
         };
         db.save_tracks(&[row(1), row(2)]).unwrap();
         let id = CollectionId::Playlist("spotify:playlist:1".into());
