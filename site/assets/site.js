@@ -204,6 +204,7 @@
       cols = Math.ceil(W / cw); rows = Math.ceil(H / ch);
       for (var i = 0; i < cols; i++) { if (level[i] == null) { level[i] = 0; peak[i] = 0; } }
       colours();
+      buildAtlas();
     }
     // Target height of column i at time t, 0..1. Tall at the edges, quiet in the middle.
     function target(i, t) {
@@ -219,13 +220,15 @@
       var v = edge * wave * grain * (0.72 + 0.28 * beat);
       return Math.max(0, Math.min(1, mode === "blocks" ? 0.15 + v : 0.04 + v));
     }
-    function draw(t) {
+    var ease = 0.18, decay = 0.006;
+    function draw(t, dt) {
+      if (dt) { ease = 1 - Math.exp(-dt * 5); decay = dt * 0.15; }
       ctx.clearRect(0, 0, W, H);
       var i, r, k;
       for (i = 0; i < cols; i++) {
         var tg = target(i, t);
-        level[i] += (tg - level[i]) * (reduce ? 1 : 0.18);
-        peak[i] = Math.max(peak[i] - 0.006, level[i]);
+        level[i] += (tg - level[i]) * (reduce ? 1 : ease);
+        peak[i] = Math.max(peak[i] - decay, level[i]);
       }
       if (mode === "blocks") {
         var maxR = Math.min(rows, 5);
@@ -245,38 +248,51 @@
         }
         return;
       }
-      ctx.font = (ch - 2) + "px " + getComputedStyle(cv).getPropertyValue("--mono");
-      ctx.textBaseline = "bottom";
-      var maxRows = Math.floor(rows * 0.92);
+      // Glyphs come from a pre-rendered atlas: one drawImage per cell instead of fillText.
+      var maxRows = Math.floor(rows * 0.66);
       for (i = 0; i < cols; i++) {
-        var h = Math.round(level[i] * maxRows);
+        var h = Math.min(maxRows, Math.round(level[i] * maxRows));
         var x = i * cw;
         for (r = 0; r < h; r++) {
           var fromTop = h - 1 - r;
-          var y = H - r * ch;
+          var y = H - (r + 1) * ch;
           var hv = hash(i, r);
-          var ch1;
-          if (hv > 0.93) ch1 = NOISE.charAt(Math.floor(hash(r, Math.floor(t * 3) + i) * NOISE.length));
-          else ch1 = RAMP.charAt(Math.min(RAMP.length - 1, Math.floor((r / Math.max(1, h)) * 3 + (fromTop < 2 ? 0 : 3 + hv * 3))));
-          if (fromTop < 2) ch1 = fromTop === 0 ? "." : ":";
+          var gi;
+          if (fromTop < 2) gi = fromTop === 0 ? 0 : 1;
+          else if (hv > 0.93) gi = RAMP.length + Math.floor(hash(r, Math.floor(t * 3) + i) * NOISE.length);
+          else gi = Math.min(RAMP.length - 1, Math.floor((r / Math.max(1, h)) * 3 + 3 + hv * 3));
           var a = 0.12 + 0.5 * (r / Math.max(8, maxRows));
           var useAcc = hv > 0.965 || (fromTop === 0 && hash(i, 7) > 0.6);
-          var c = useAcc ? acc : ink;
-          ctx.fillStyle = "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + (useAcc ? Math.min(0.9, a + 0.35) : a).toFixed(3) + ")";
-          ctx.fillText(ch1, x, y);
+          ctx.globalAlpha = useAcc ? Math.min(0.9, a + 0.35) : a;
+          ctx.drawImage(atlas, gi * aw, useAcc ? ah : 0, aw, ah, x, y, cw, ch);
         }
-        // Peak hold, like a hardware meter.
-        var pr = Math.round(peak[i] * maxRows);
+        var pr = Math.min(maxRows, Math.round(peak[i] * maxRows));
         if (pr > h + 1) {
-          ctx.fillStyle = "rgba(" + acc[0] + "," + acc[1] + "," + acc[2] + ",0.55)";
-          ctx.fillText("-", x, H - pr * ch);
+          ctx.globalAlpha = 0.55;
+          ctx.drawImage(atlas, GLYPHS.length * aw - aw, ah, aw, ah, x, H - pr * ch, cw, ch);
         }
       }
+      ctx.globalAlpha = 1;
+    }
+    var GLYPHS = RAMP + NOISE + "-", atlas = null, aw = 0, ah = 0;
+    function buildAtlas() {
+      if (mode === "blocks") return;
+      aw = Math.ceil(cw * dpr); ah = Math.ceil(ch * dpr);
+      atlas = document.createElement("canvas");
+      atlas.width = aw * GLYPHS.length; atlas.height = ah * 2;
+      var a = atlas.getContext("2d");
+      a.font = Math.round((ch - 2) * dpr) + "px " + (getComputedStyle(cv).getPropertyValue("--mono") || "monospace");
+      a.textBaseline = "bottom";
+      [ink, acc].forEach(function (c, row) {
+        a.fillStyle = "rgb(" + c[0] + "," + c[1] + "," + c[2] + ")";
+        for (var k = 0; k < GLYPHS.length; k++) a.fillText(GLYPHS.charAt(k), k * aw, (row + 1) * ah);
+      });
     }
     function loop(now) {
       raf = 0;
       if (!visible || document.hidden) return;
-      if (now - last > 40) { last = now; draw(now / 1000); }
+      var dt = Math.min(0.1, (now - last) / 1000); last = now;
+      draw(now / 1000, dt);
       raf = requestAnimationFrame(loop);
     }
     function start() { if (!raf && !reduce) raf = requestAnimationFrame(loop); }
@@ -294,7 +310,7 @@
     });
     if (window.matchMedia) {
       var mq = matchMedia("(prefers-color-scheme: light)");
-      if (mq.addEventListener) mq.addEventListener("change", function () { colours(); draw(performance.now() / 1000); });
+      if (mq.addEventListener) mq.addEventListener("change", function () { colours(); buildAtlas(); draw(performance.now() / 1000); });
     }
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(function (en) {

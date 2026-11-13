@@ -1939,3 +1939,27 @@ h2.display,
 }
 .callout::before { content: none; }
 .callout::after { width: 26px; }
+/* Performance: the floating callouts no longer re-blur what is behind them on
+   every frame, and the grain is a plain translucent layer, not a blend. */
+.callout {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background:
+    linear-gradient(180deg, rgba(30, 26, 26, 0.94), rgba(16, 14, 15, 0.96)) padding-box,
+    linear-gradient(160deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.06) 45%, rgba(245, 158, 91, 0.32)) border-box;
+  will-change: transform;
+}
+@media (prefers-color-scheme: light) {
+  .callout {
+    background:
+      linear-gradient(180deg, rgba(255, 252, 247, 0.96), rgba(247, 244, 238, 0.97)) padding-box,
+      linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(36, 33, 31, 0.1) 50%, rgba(245, 158, 91, 0.45)) border-box;
+  }
+}
+.stage::after {
+  mix-blend-mode: normal;
+  opacity: 0.025;
+}
+.spectrum {
+  will-change: contents;
+}
