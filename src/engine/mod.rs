@@ -45,6 +45,7 @@ mod search;
 mod seed;
 mod seed_readme;
 mod session;
+mod stats;
 mod tap;
 pub mod tools;
 mod traits;
@@ -112,6 +113,9 @@ pub use lyrics::{
 };
 // Şarkı künyesi (bkz. `credits.rs`).
 pub use credits::{Credits, CreditsFailure, RoleKind as CreditRoleKind, parse as parse_credits};
+// Dinlenme sayıları (bkz. `stats.rs`): sanatçı ve albüm sayfalarının isteğe
+// bağlı ek verisi.
+pub use stats::{AlbumPlaycounts, ArtistStats};
 
 use crate::auth;
 use cache::Db;

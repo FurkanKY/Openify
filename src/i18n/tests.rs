@@ -661,6 +661,11 @@ fn real_keys_pluralize_and_format_per_language() {
         assert_eq!(crate::tp!(Songs, 1), "1 song");
         assert_eq!(crate::tp!(Songs, 2), "2 songs");
         assert_eq!(crate::tp!(Songs, 1234), "1,234 songs");
+        assert_eq!(crate::tp!(ArtistMonthlyListeners, 1), "1 monthly listener");
+        assert_eq!(
+            crate::tp!(ArtistMonthlyListeners, 12345678),
+            "12,345,678 monthly listeners"
+        );
         assert_eq!(
             crate::tp!(FailedAddToList, 1, "“A”"),
             "Couldn't add 1 song to “A”"
@@ -676,6 +681,10 @@ fn real_keys_pluralize_and_format_per_language() {
     with_lang(Lang::Tr, || {
         assert_eq!(crate::tp!(Songs, 1), "1 şarkı");
         assert_eq!(crate::tp!(Songs, 1234), "1.234 şarkı");
+        assert_eq!(
+            crate::tp!(ArtistMonthlyListeners, 12345678),
+            "12.345.678 aylık dinleyici"
+        );
         assert_eq!(
             crate::tp!(FailedAddToList, 3, "“A”"),
             "3 şarkı “A” listesine eklenemedi"

@@ -1,0 +1,36 @@
+{
+  "data": {
+    "albumUnion": {
+      "uri": "spotify:album:fixture01",
+      "name": "Sessiz Oda",
+      "tracksV2": {
+        "items": [
+          {
+            "uid": "fixture-a1",
+            "track": {
+              "uri": "spotify:track:fixture11",
+              "name": "Açılış",
+              "playcount": "123456"
+            }
+          },
+          {
+            "uid": "fixture-a2",
+            "track": {
+              "uri": "spotify:track:fixture12",
+              "name": "Sessiz Oda",
+              "playcount": 45678
+            }
+          },
+          {
+            "uid": "fixture-a3",
+            "track": {
+              "uri": "spotify:track:fixture13",
+              "name": "Kapanış",
+              "playcount": "7"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

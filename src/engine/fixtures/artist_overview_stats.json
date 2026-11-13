@@ -1,0 +1,55 @@
+{
+  "data": {
+    "artistUnion": {
+      "uri": "spotify:artist:fixture01",
+      "profile": {
+        "name": "Kuzey Feneri"
+      },
+      "stats": {
+        "monthlyListeners": 12345678,
+        "followers": 2345678,
+        "worldRank": 42,
+        "topCities": {
+          "items": [
+            { "city": "Istanbul", "country": "TR", "numberOfListeners": 987654 },
+            { "city": "Ankara", "country": "TR", "numberOfListeners": 543210 },
+            { "city": "Izmir", "country": "TR", "numberOfListeners": 321098 },
+            { "city": "Bursa", "country": "TR", "numberOfListeners": 210987 },
+            { "city": "Antalya", "country": "TR", "numberOfListeners": 109876 },
+            { "city": "Adana", "country": "TR", "numberOfListeners": 98765 }
+          ]
+        }
+      },
+      "discography": {
+        "topTracks": {
+          "items": [
+            {
+              "uid": "fixture-t1",
+              "track": {
+                "uri": "spotify:track:fixture01",
+                "name": "Gece Yolcusu",
+                "playcount": "4567890"
+              }
+            },
+            {
+              "uid": "fixture-t2",
+              "track": {
+                "uri": "spotify:track:fixture02",
+                "name": "Sessiz Oda",
+                "playcount": 2345678
+              }
+            },
+            {
+              "uid": "fixture-t3",
+              "track": {
+                "uri": "spotify:track:fixture03",
+                "name": "Kıyı Işıkları",
+                "playcount": "1234567"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

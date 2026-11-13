@@ -177,6 +177,9 @@ keys! {
     ShowAll { en: "Show all", tr: "Tümünü göster" }
     ArtistAlbumCount { en: "{} album|{} albums", tr: "{} albüm" }
     ArtistSingleCount { en: "{} single & EP|{} singles & EPs", tr: "{} tekli ve EP" }
+    ArtistMonthlyListeners { en: "{} monthly listener|{} monthly listeners", tr: "{} aylık dinleyici" }
+    ArtistWorldRank { en: "World rank #{}", tr: "Dünya sıralaması #{}" }
+    ArtistTopCities { en: "Most played in {}", tr: "En çok dinlendiği şehirler: {}" }
     PagePopular { en: "Popular", tr: "Popüler" }
     PageSingles { en: "Singles and EPs", tr: "Tekliler ve EP'ler" }
     PageCompilations { en: "Compilations", tr: "Derlemeler" }

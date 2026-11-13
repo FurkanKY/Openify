@@ -46,6 +46,7 @@ use super::{
     pages::{self, AlbumPage, ArtistPage, Loaded, PageCache, TrackLinks},
     related::{self, Freshness, RelatedHint, RelatedList},
     search,
+    stats::{self, AlbumPlaycounts, ArtistStats, StatsFailure},
 };
 
 /// Tam arama sayfasında bölüm başına sonuç.
@@ -147,6 +148,16 @@ pub enum LibraryEvent {
         uri: String,
         page: Arc<AlbumPage>,
     },
+    /// Sanatçı sayfasının dinlenme sayıları (ayrı, isteğe bağlı istek).
+    ArtistStats {
+        uri: String,
+        stats: Arc<ArtistStats>,
+    },
+    /// Albüm şarkılarının dinlenme sayıları (ayrı, isteğe bağlı istek).
+    AlbumPlaycounts {
+        uri: String,
+        stats: Arc<AlbumPlaycounts>,
+    },
     PageFailed {
         uri: String,
         error: String,
@@ -224,6 +235,10 @@ pub(super) enum WireInternal {
         cached: bool,
         result: Result<PageResult, String>,
     },
+    Stats {
+        uri: String,
+        result: Result<StatsResult, StatsFailure>,
+    },
     Links {
         asked: Vec<String>,
         result: Result<Vec<TrackLinks>, String>,
@@ -251,6 +266,12 @@ pub(super) enum WireInternal {
 pub(super) enum PageResult {
     Artist(Loaded<ArtistPage>),
     Album(Loaded<AlbumPage>),
+}
+
+/// Dinlenme sayılarının sonucu (sanatçı ya da albüm).
+pub(super) enum StatsResult {
+    Artist(Arc<ArtistStats>),
+    Album(Arc<AlbumPlaycounts>),
 }
 
 /// Sayfa önbelleği: motor açar, arayüz de okur.
@@ -413,6 +434,9 @@ pub(super) struct Wire {
     /// İstenmiş, henüz gelmemiş sayfalar ve bağlar (aynısı iki kez gitmesin).
     loading: HashSet<String>,
     links_asked: HashSet<String>,
+    /// Dinlenme sayıları bu oturumda sorulmuş sanatçı / albümler (sayfa
+    /// açılışı başına en çok bir ek istek; başarısızsa oturumda yeniden denenmez).
+    stats_asked: HashSet<String>,
     /// Benzerleri istenmiş, henüz gelmemiş sanatçılar; adresi aranan Deezer kartları.
     related_loading: HashSet<String>,
     explore_loading: HashSet<ExploreKey>,
@@ -581,6 +605,16 @@ impl Engine {
                     }
                 }
             }
+            WireInternal::Stats { uri, result } => match result {
+                Ok(StatsResult::Artist(stats)) => {
+                    self.emit(Event::Library(LibraryEvent::ArtistStats { uri, stats }))
+                }
+                Ok(StatsResult::Album(stats)) => {
+                    self.emit(Event::Library(LibraryEvent::AlbumPlaycounts { uri, stats }))
+                }
+                // Ekranda söylenmez: sayılar yoksa sayfa bugünkü gibi kalır.
+                Err(e) => log::info!("dinlenme sayıları alınamadı ({uri}): {e:?}"),
+            },
             WireInternal::Links { asked, result } => match result {
                 Ok(links) => {
                     if !links.is_empty() {
@@ -650,6 +684,12 @@ impl Engine {
         let artist = uri.starts_with("spotify:artist:");
         if !artist && !uri.starts_with("spotify:album:") {
             return;
+        }
+        // Dinlenme sayıları sayfadan ayrı gelir: önbellekteyse bu karede
+        // gösterilir, değilse tek bir ek istek arkada yapılır. Önceden almada
+        // (üzerine gelme) istenmez.
+        if !quiet {
+            self.ensure_stats(&uri);
         }
         let cache = page_cache();
         let mut cached = false;
@@ -727,6 +767,76 @@ impl Engine {
                 cached,
                 result,
             }));
+        });
+    }
+
+    /// Dinlenme sayıları: önce önbellek (anında, bu karede), sonra oturumda
+    /// bir kez tek istek. Hata ekranda söylenmez; sayılar yoksa sayfa bugünkü
+    /// gibi çalışır.
+    fn ensure_stats(&mut self, uri: &str) {
+        let artist = uri.starts_with("spotify:artist:");
+        let Some(cache) = page_cache() else { return };
+        let hook = stats::fixture_active();
+        if hook {
+            // Sınama: ağa ve oturuma hiç gidilmez; fikstür bu karede dolar.
+            if !self.wire.stats_asked.insert(uri.to_string()) {
+                return;
+            }
+            if artist {
+                if let Some(stats) = stats::fixture_artist() {
+                    self.emit(Event::Library(LibraryEvent::ArtistStats {
+                        uri: uri.to_string(),
+                        stats,
+                    }));
+                }
+            } else if let Some(stats) = stats::fixture_album() {
+                self.emit(Event::Library(LibraryEvent::AlbumPlaycounts {
+                    uri: uri.to_string(),
+                    stats,
+                }));
+            }
+            return;
+        }
+        if artist {
+            if let Some(hit) = stats::cached_artist(&cache, uri) {
+                self.emit(Event::Library(LibraryEvent::ArtistStats {
+                    uri: uri.to_string(),
+                    stats: hit.page.clone(),
+                }));
+                if !hit.stale {
+                    return;
+                }
+            }
+        } else if let Some(hit) = stats::cached_album(&cache, uri) {
+            self.emit(Event::Library(LibraryEvent::AlbumPlaycounts {
+                uri: uri.to_string(),
+                stats: hit.page.clone(),
+            }));
+            if !hit.stale {
+                return;
+            }
+        }
+        if !self.wire.stats_asked.insert(uri.to_string()) {
+            return;
+        }
+        let (Some(conn), db) = (&self.host.conn, self.db.clone()) else {
+            self.wire.stats_asked.remove(uri);
+            return;
+        };
+        let session = conn.session.clone();
+        let internal = self.internal.clone();
+        let uri = uri.to_string();
+        self.bg.spawn(async move {
+            let result = if artist {
+                stats::load_artist(&session, db.as_deref(), &cache, &uri)
+                    .await
+                    .map(StatsResult::Artist)
+            } else {
+                stats::load_album(&session, db.as_deref(), &cache, &uri)
+                    .await
+                    .map(StatsResult::Album)
+            };
+            let _ = internal.send(Internal::Wire(WireInternal::Stats { uri, result }));
         });
     }
 
