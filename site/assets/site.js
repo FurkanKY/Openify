@@ -62,17 +62,6 @@
     }
   });
 
-  // A soft light that follows the pointer over cards.
-  if (window.matchMedia && matchMedia("(hover: hover) and (pointer: fine)").matches) {
-    doc.addEventListener("pointermove", function (e) {
-      var card = e.target.closest && e.target.closest(".card");
-      if (!card) return;
-      var r = card.getBoundingClientRect();
-      card.style.setProperty("--mx", e.clientX - r.left + "px");
-      card.style.setProperty("--my", e.clientY - r.top + "px");
-    }, { passive: true });
-  }
-
   // Fade sections in as they scroll into view.
   var items = doc.querySelectorAll(".reveal");
   if (!reduceMotion && "IntersectionObserver" in window) {
