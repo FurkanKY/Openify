@@ -1,6 +1,6 @@
 # Openify
 
-A fast, quiet, native Spotify client for Windows, written in Rust. It plays through your own **Spotify Premium** account, uses about 70 MB of memory with the window open and is built for the keyboard.
+A fast, quiet, native Spotify client for Windows, written in Rust. It plays through your own **Spotify Premium** account, uses about 60 MB of memory while playing with the window open (Task Manager) and is built for the keyboard.
 
 **[Download for Windows](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe)** · [ARM64 installer](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe) · [Website](https://furkanky.github.io/Openify/) · [Release notes](CHANGELOG.md) · [Türkçe](#türkçe)
 
@@ -80,7 +80,7 @@ GNU General Public License, version 3 or later. See [LICENSE](LICENSE). Third-pa
 
 ## Türkçe
 
-Openify, Spotify Premium hesabınla çalışan, Windows için hızlı ve sade bir Spotify istemcisi. Rust ile yazıldı: arayüzü gpui GPU'da çizer, sesi librespot çalar. İçinde tarayıcı ya da Electron yok; pencere açıkken yaklaşık 70 MB bellek kullanır.
+Openify, Spotify Premium hesabınla çalışan, Windows için hızlı ve sade bir Spotify istemcisi. Rust ile yazıldı: arayüzü gpui GPU'da çizer, sesi librespot çalar. İçinde tarayıcı ya da Electron yok; pencere açıkken şarkı çalarken yaklaşık 60 MB bellek kullanır (Görev Yöneticisi).
 
 **[Windows için indir](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-Setup.exe)** · [ARM64 kurulumu](https://github.com/FurkanKY/Openify/releases/latest/download/Openify-win-arm64-Setup.exe) · [Web sitesi](https://furkanky.github.io/Openify/tr/)
 
