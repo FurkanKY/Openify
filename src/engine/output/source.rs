@@ -49,7 +49,8 @@ pub(in crate::engine) struct RingSource {
     coef: [f32; BLOCK],
     /// Ekolayzır (kapalıyken hiç çalışmaz: `Plan::direct`).
     pub(super) eq: Eq,
-    /// Karaoke (yalnız açıkken çalışır: `Plan::direct`).
+    /// Karaoke (yalnız açıkken çalışır: `Plan::direct`); açıkken WOLA çıkışı
+    /// 1024 kare (44,1 kHz'te 23,22 ms) sabit gecikmeyle hizalanır.
     pub(super) karaoke: Karaoke,
     pos: usize,
     /// İniş / çıkış zarfı (0..1).

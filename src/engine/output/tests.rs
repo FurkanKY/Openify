@@ -1640,7 +1640,9 @@ fn eq_cost_bench() {
 
 // ── Karaoke (vokal azaltma) ─────────────────────────────────────────────
 
-use super::karaoke::{GLIDE_BLOCKS as KARAOKE_GLIDE, Karaoke, KaraokeCtl};
+use super::karaoke::{
+    GLIDE_BLOCKS as KARAOKE_GLIDE, Karaoke, KaraokeCtl, WINDOW as KARAOKE_WINDOW,
+};
 
 /// Karaoke'yu doğrudan sürer (ses iş parçacığının `poll` / `process` düzeni).
 /// `ctl` her blok başında okunur; `at(blok, ctl)` ayarı oynatabilir. Giriş
@@ -1746,6 +1748,132 @@ fn karaoke_cuts_the_center_and_spares_the_side() {
         assert!(
             side.abs() <= 1.0,
             "{hz} Hz merkezle yan ton {side:+.2} dB oynadı"
+        );
+    }
+}
+
+/// A single centered vocal and centered drum hits share the same frequency
+/// band. The steady component should fall while causal transient protection
+/// keeps the hit energy close to dry.
+#[test]
+fn karaoke_suppresses_steady_center_and_keeps_centered_transients() {
+    const FRAMES: usize = RATE as usize * 3;
+    const HIT_EVERY: usize = RATE as usize / 2;
+    let input = |n: usize| {
+        let vocal = sin_at(997.0, 0.2, n);
+        let pan = sin_at(2200.0, 0.1, n);
+        let hit = if n > 0 && n % HIT_EVERY < 32 {
+            0.7
+        } else {
+            0.0
+        };
+        (vocal + hit + pan, vocal + hit - pan)
+    };
+    let (inp, out, _) = karaoke_drive(FRAMES, input, |_, c| c.set(true, 1.0));
+
+    let vocal_in = tone_power(
+        inp[RATE as usize + 5_000..RATE as usize + 15_000]
+            .iter()
+            .map(|s| s.0),
+        997.0,
+    );
+    let vocal_out = tone_power(
+        out[RATE as usize + 5_000..RATE as usize + 15_000]
+            .iter()
+            .map(|s| s.0),
+        997.0,
+    );
+    let vocal_db = db(vocal_out / vocal_in);
+    println!("karaoke vocal: {vocal_db:+.1} dB");
+    assert!(
+        vocal_db <= -15.0,
+        "steady center vocal only {vocal_db:.1} dB down"
+    );
+
+    let side_db = db(tone_power(
+        out[RATE as usize + 5_000..RATE as usize + 15_000]
+            .iter()
+            .map(|s| s.0),
+        2200.0,
+    ) / tone_power(
+        inp[RATE as usize + 5_000..RATE as usize + 15_000]
+            .iter()
+            .map(|s| s.0),
+        2200.0,
+    ));
+    println!("karaoke panned tone: {side_db:+.1} dB");
+    assert!(
+        side_db.abs() <= 2.0,
+        "panned tone changed by {side_db:.1} dB"
+    );
+
+    let (mut hit_in, mut hit_out) = (0.0f64, 0.0f64);
+    for hit in (HIT_EVERY..FRAMES).step_by(HIT_EVERY) {
+        for n in hit - 32..hit + 64 {
+            hit_in += f64::from(inp[n].0).powi(2);
+            hit_out += f64::from(out[n + KARAOKE_WINDOW].0).powi(2);
+        }
+    }
+    let hit_db = db(hit_out / hit_in);
+    println!("karaoke centered hits: {hit_db:+.1} dB");
+    assert!(hit_db >= -3.0, "centered hit energy fell by {hit_db:.1} dB");
+}
+
+/// The WOLA path and its aligned dry path have a fixed 1024-frame delay.
+#[test]
+fn karaoke_latency_is_1024_frames_and_below_60_ms() {
+    let input = |n| {
+        let sample = sin_at(713.0, 0.2, n);
+        (sample, 0.0)
+    };
+    let (inp, out, _) = karaoke_drive(RATE as usize * 2, input, |_, c| c.set(true, 1.0));
+    let from = RATE as usize;
+    let mut best = (f64::INFINITY, 0usize);
+    for delay in KARAOKE_WINDOW - 16..=KARAOKE_WINDOW + 16 {
+        let error = (from..from + 4096)
+            .map(|n| f64::from(out[n + delay].0 - inp[n].0).powi(2))
+            .sum::<f64>();
+        if error < best.0 {
+            best = (error, delay);
+        }
+    }
+    let latency_ms = KARAOKE_WINDOW as f64 * 1000.0 / RATE as f64;
+    println!("karaoke latency: {} frames ({latency_ms:.2} ms)", best.1);
+    assert_eq!(best.1, KARAOKE_WINDOW);
+    assert!(
+        best.0 < 0.001,
+        "delay-aligned dry/WOLA gain error {}",
+        best.0
+    );
+    assert!(latency_ms < 60.0);
+}
+
+/// Sixty seconds of deterministic random stereo input stays finite and has no
+/// denormal values in output or persistent DSP state.
+#[test]
+fn karaoke_long_random_run_stays_finite_and_flushes_denormals() {
+    let ctl = KaraokeCtl::new();
+    ctl.set(true, 1.0);
+    let mut k = Karaoke::new();
+    let mut seed = 0x4d59_5df4_d0f3_3173u64;
+    for _ in 0..(RATE as usize * 60).div_ceil(BLOCK) {
+        k.poll(&ctl);
+        let mut block = [0.0f32; BLOCK * CHANNELS];
+        for sample in &mut block {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            *sample = (seed >> 40) as f32 / ((1u32 << 24) - 1) as f32 * 0.5 - 0.25;
+        }
+        k.process(&mut block, BLOCK);
+        assert!(
+            block
+                .iter()
+                .all(|v| v.is_finite() && (*v == 0.0 || v.abs() >= 1.0e-15))
+        );
+        assert!(
+            k.state_is_finite(),
+            "karaoke state became non-finite or denormal"
         );
     }
 }
@@ -1907,14 +2035,15 @@ fn karaoke_transitions_do_not_click() {
     // Duyarlılık: giriş eğimi küçük olduğundan anlık bir kuru→ıslak geçiş bu sınırı aşardı.
     assert!(bound < 0.04, "test girişinin eğimi büyümüş: {bound}");
     // Miktar 0'a inince dal durdu (kuru, durum sıfır).
-    assert!(!k.running() && k.state_is_zero());
+    assert!(!k.running(), "dal kapanmadı (engage {})", k.engage());
+    assert!(k.state_is_zero(), "karaoke durumu sıfır değil");
 }
 
 /// Açma rampası gerçekten rampa: `KARAOKE_GLIDE` blokta tam ıslak.
 #[test]
 fn karaoke_engages_over_the_glide() {
     let (_, _, k) = karaoke_drive(
-        BLOCK * (KARAOKE_GLIDE as usize / 2),
+        KARAOKE_WINDOW + BLOCK * (KARAOKE_GLIDE as usize / 2),
         center_and_side(1000.0, 7000.0),
         |_, c| c.set(true, 1.0),
     );
@@ -1924,7 +2053,7 @@ fn karaoke_engages_over_the_glide() {
         k.engage()
     );
     let (_, _, k) = karaoke_drive(
-        BLOCK * (KARAOKE_GLIDE as usize + 1),
+        KARAOKE_WINDOW + BLOCK * (KARAOKE_GLIDE as usize + 1),
         center_and_side(1000.0, 7000.0),
         |_, c| c.set(true, 1.0),
     );
@@ -2040,7 +2169,15 @@ fn karaoke_cost_bench() {
         runs.push(t.elapsed().as_nanos() as f64 / BLOCKS as f64);
     }
     let (med, min) = median_min(runs);
-    println!("karaoke_cost: Karaoke::process {med:.0} ns/blok (en az {min:.0})");
+    let block_ns = BLOCK as f64 * 1e9 / RATE as f64;
+    let process_cpu = med / block_ns * 100.0;
+    println!(
+        "karaoke_cost: Karaoke::process {med:.0} ns/blok (en az {min:.0}); tek çekirdek {process_cpu:.2}%"
+    );
+    assert!(
+        process_cpu < 3.0,
+        "Karaoke::process CPU payı {process_cpu:.2}% (sınır %3)"
+    );
 
     // Tüm yolda: aynı halka, karaoke kapalı / açık dönüşümlü. Halka gürültü
     // dolu (stereo): açıkken mono sayılmaz, tam ıslak çalışır.
@@ -2058,6 +2195,12 @@ fn karaoke_cost_bench() {
     println!(
         "karaoke_cost: fill karaoke kapalı {am:.0} ns/blok (en az {an:.0}); açık {bm:.0} ns/blok (en az {bn:.0}); karaoke'nin payı {:.0} ns/blok",
         bm - am
+    );
+    let full_path_cpu = (bm - am) / block_ns * 100.0;
+    println!("karaoke_cost: tam çıkış yolunun ek CPU payı {full_path_cpu:.2}%");
+    assert!(
+        full_path_cpu < 3.0,
+        "karaoke tam yol CPU payı {full_path_cpu:.2}% (sınır %3)"
     );
     assert!(
         on.src.karaoke.running() && on.src.karaoke.engage() > 0.99,

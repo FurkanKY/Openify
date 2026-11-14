@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Karaoke now reduces sustained centered vocals while preserving centered drum hits, bass, and panned instruments.
+
 ## [0.1.5] - 2026-11-14
 
 ### Added

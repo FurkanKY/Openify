@@ -109,7 +109,7 @@
 //! - `eq.rs`: 10 bantlı ekolayzır (`EqCtl` ayar paylaşımı, `Eq` süzgeç).
 //! - `beat.rs`, `automix.rs`: AutoMix çözümlemesi (`BeatTap`) ve kararı / sessizlik
 //!   atlama (bkz. "AutoMix" başlığı altındaki notlar, `ARCHITECTURE.md`).
-//! - `karaoke.rs`: vokal azaltma (orta / yan; `KaraokeCtl`, `Karaoke`).
+//! - `karaoke.rs`: beat-aware STFT vokal azaltma (WOLA, `KaraokeCtl`, `Karaoke`).
 //! - `watch.rs`: Windows varsayılan aygıt bildirimleri.
 //! - `tests.rs`: aygıtsız, sanal saatli testler ve altın test.
 
@@ -631,10 +631,11 @@ impl OutputCtl {
         self.eq.set(enabled, &gains_db, preamp_db);
     }
 
-    /// Karaoke (vokal azaltma; bkz. `karaoke.rs`): orta kanalın 150 Hz – 8 kHz
-    /// bandı `amount` (0..1) oranında bastırılır, yan kanal ve bas korunur.
-    /// Motor iş parçacığı; beklemez. Kapalıyken (ya da `amount` 0) çıkış bit bit
-    /// değişmez; mono kaynakta etkisizdir. Motor `Command::SetKaraoke` ile çağırır.
+    /// Karaoke (beat-aware STFT vokal azaltma; bkz. `karaoke.rs`): merkezî,
+    /// sürekli konuşma bileşenleri azaltılır, transient ve panlı bileşenler
+    /// korunur. Etkinken sabit 23,22 ms gecikme ekler. Motor iş parçacığı beklemez.
+    /// Kapalıyken (ya da `amount` 0) çıkış bit bit değişmez; mono etkisizdir.
+    /// Motor `Command::SetKaraoke` ile çağırır.
     pub fn set_karaoke(&self, enabled: bool, amount: f32) {
         self.karaoke.set(enabled, amount);
     }
