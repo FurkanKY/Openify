@@ -1,0 +1,28 @@
+﻿# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+PackageIdentifier: FurkanKY.Openify
+PackageVersion: 0.1.5
+InstallerType: exe
+Scope: user
+InstallModes:
+  - silent
+  - silentWithProgress
+InstallerSwitches:
+  Silent: --silent
+  SilentWithProgress: --silent
+UpgradeBehavior: install
+AppsAndFeaturesEntries:
+  - DisplayName: Openify
+    InstallerType: exe
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/FurkanKY/Openify/releases/download/v0.1.5/Openify-win-Setup.exe
+    InstallerSha256: 565F9ED36AE4E52A8CB3345D82713D5F75D0E90AB46589D5292B356DA3F59352
+  - Architecture: arm64
+    InstallerUrl: https://github.com/FurkanKY/Openify/releases/download/v0.1.5/Openify-win-arm64-Setup.exe
+    InstallerSha256: 67BD32E67BCA9E8426B4AE3FC2FBA66BBE75E2DB4B2B2B576E100C6EB2132A69
+ManifestType: installer
+ManifestVersion: 1.10.0
+
+
+
+
