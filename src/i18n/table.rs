@@ -32,7 +32,6 @@ keys! {
     NavStats { en: "Stats", tr: "İstatistikler" }
     CmdStatsDesc { en: "Your listening history on this computer", tr: "Bu bilgisayardaki dinleme geçmişin" }
     StatsSubtitle { en: "Your listening, kept on this computer", tr: "Dinleme geçmişin bu bilgisayarda tutulur" }
-    StatsIntro { en: "A look at what you have listened to", tr: "Neler dinlediğine bir göz at" }
     StatsEmptyTitle { en: "Your listening story starts here", tr: "Dinleme geçmişin burada başlıyor" }
     StatsEmptyBody { en: concat!("Import your Spotify history or keep listening in ", app_name!(), "."), tr: concat!("Spotify geçmişini içe aktar ya da ", app_name_acc!(), " dinlemeye devam et.") }
     StatsPlays { en: "Plays", tr: "Çalma" }

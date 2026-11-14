@@ -435,13 +435,13 @@ pub struct StatsReport {
 }
 
 fn rank_key(
-    listened: u64,
     plays: u32,
+    listened: u64,
     name: &str,
-) -> (std::cmp::Reverse<u64>, std::cmp::Reverse<u32>, String) {
+) -> (std::cmp::Reverse<u32>, std::cmp::Reverse<u64>, String) {
     (
-        std::cmp::Reverse(listened),
         std::cmp::Reverse(plays),
+        std::cmp::Reverse(listened),
         fold(name),
     )
 }
@@ -501,17 +501,17 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
     report.tracks = tracks.into_values().collect();
     report
         .tracks
-        .sort_by_key(|t| rank_key(t.listened_ms, t.plays, &t.name));
+        .sort_by_key(|t| rank_key(t.plays, t.listened_ms, &t.name));
     report.tracks.truncate(TOP_N);
     report.artists = artists.into_values().collect();
     report
         .artists
-        .sort_by_key(|a| rank_key(a.listened_ms, a.plays, &a.name));
+        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.name));
     report.artists.truncate(TOP_N);
     report.albums = albums.into_values().collect();
     report
         .albums
-        .sort_by_key(|a| rank_key(a.listened_ms, a.plays, &a.album));
+        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.album));
     report.albums.truncate(TOP_N);
     report
 }
@@ -917,41 +917,60 @@ mod tests {
     }
 
     #[test]
-    fn aggregate_ranks_by_listened_time_then_plays_and_sums_local_buckets() {
+    fn aggregate_ranks_by_plays_then_listened_time_and_sums_local_buckets() {
         // Yerel saat farkı +3: UTC 09:00 → 12:00.
         let nine = 9 * 3_600_000i64;
         let records = vec![
             rec(1, "Mavi Orman", "Uzun Yol", 200_000, nine),
             rec(2, "Mavi Orman, Konuk", "Uzun Yol", 100_000, nine + 1000),
             rec(1, "Mavi Orman", "Uzun Yol", 150_000, nine + 2000),
-            rec(3, "Kuzey", "Kuzey Işıkları", 300_000, nine + 3_600_000),
-            rec(4, "kuzey", "Kuzey Işıkları", 60_000, 20 * 3_600_000),
+            rec(3, "Kuzey", "Kuzey Işıkları", 2_000_000, nine + 3_600_000),
+            rec(4, "kuzey", "Kuzey Işıkları", 1_000_000, 20 * 3_600_000),
+            rec(5, "Duman", "Sessiz", 100_000, nine + 3000),
+            rec(5, "Duman", "Sessiz", 100_000, nine + 4000),
+            rec(5, "Duman", "Sessiz", 100_000, nine + 5000),
         ];
         let r = aggregate(StatsRange::All, &records, 180);
-        assert_eq!(r.plays, 5);
-        assert_eq!(r.listened_ms, 810_000);
-        assert_eq!(r.tracks[0].uri, records[0].uri);
-        assert_eq!((r.tracks[0].plays, r.tracks[0].listened_ms), (2, 350_000));
-        // Sanatçılar: Mavi Orman 3 çalma; "Kuzey" ve "kuzey" aynı sanatçı (2).
+        assert_eq!(r.plays, 8);
+        assert_eq!(r.listened_ms, 3_750_000);
+        assert_eq!(
+            r.tracks
+                .iter()
+                .map(|track| (track.plays, track.listened_ms))
+                .collect::<Vec<_>>(),
+            [
+                (3, 300_000),
+                (2, 350_000),
+                (1, 2_000_000),
+                (1, 1_000_000),
+                (1, 100_000)
+            ]
+        );
+        // Eşit çalmada süre sırası; daha çok çalma, uzun süreyi geçer.
         assert_eq!(
             r.artists
                 .iter()
                 .map(|a| (a.name.as_str(), a.plays))
                 .collect::<Vec<_>>(),
-            [("Mavi Orman", 3), ("Kuzey", 2)]
+            [("Mavi Orman", 3), ("Duman", 3), ("Kuzey", 2)]
         );
-        assert_eq!(r.albums[0].album, "Uzun Yol");
-        assert_eq!((r.albums[0].plays, r.albums[1].plays), (3, 2));
-        assert_eq!(r.hours[12], 450_000, "saat 12 (UTC 09 + 3)");
-        assert_eq!(r.hours[13], 300_000);
-        assert_eq!(r.hours[23], 60_000, "UTC 20 + 3 = 23");
+        assert_eq!(
+            r.albums
+                .iter()
+                .map(|a| (a.album.as_str(), a.plays))
+                .collect::<Vec<_>>(),
+            [("Uzun Yol", 3), ("Sessiz", 3), ("Kuzey Işıkları", 2)]
+        );
+        assert_eq!(r.hours[12], 750_000, "saat 12 (UTC 09 + 3)");
+        assert_eq!(r.hours[13], 2_000_000);
+        assert_eq!(r.hours[23], 1_000_000, "UTC 20 + 3 = 23");
         assert_eq!(r.hours.iter().sum::<u64>(), r.listened_ms);
         assert_eq!(
             r.weekdays[3], r.listened_ms,
             "epoch günü UTC ve +3 yerel aynı Perşembe"
         );
         assert_eq!(r.weekdays.iter().sum::<u64>(), r.listened_ms);
-        assert_eq!((r.unique_tracks, r.unique_artists), (4, 2));
+        assert_eq!((r.unique_tracks, r.unique_artists), (5, 3));
     }
 
     #[test]

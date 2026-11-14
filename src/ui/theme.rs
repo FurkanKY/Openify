@@ -978,6 +978,8 @@ icons!(
     "cast",
     // Arama yüzeyi: son aramalar.
     "history",
+    // İstatistikler sekmesi ve komutu.
+    "chart-no-axes-column-increasing",
     // Mini oynatıcı (ayrı, hep üstte duran küçük pencere).
     "picture-in-picture-2",
 );

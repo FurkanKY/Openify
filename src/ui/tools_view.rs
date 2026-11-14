@@ -1301,7 +1301,7 @@ impl Shell {
 
     fn stats_content(&self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let accent = self.accent().text;
-        let mut out = vec![self.tools_text(t!(StatsIntro))];
+        let mut out = Vec::new();
         // Aralık düğmeleri.
         let mut chips = div().flex().items_center().gap(px(S2)).flex_wrap();
         for range in StatsRange::ALL {
@@ -1516,7 +1516,7 @@ impl Shell {
                         div()
                             .type_role(T_LABEL)
                             .text_color(muted())
-                            .child(format!("{}", row.plays)),
+                            .child(tp!(ToolsPlays, row.plays)),
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.play_stats_track(&row, cx)))
             }))
