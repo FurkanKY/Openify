@@ -947,7 +947,7 @@ impl Shell {
         let description = (!compact)
             .then(|| self.library.list_description(&id))
             .flatten()
-            .map(|d| d.split_whitespace().collect::<Vec<_>>().join(" "))
+            .map(crate::engine::plain_text)
             .filter(|d| !d.is_empty());
         let extra = self.header_extra();
         // Açıklama satırı, başlık kapanırken yüksekliğiyle birlikte kısalır
@@ -1115,6 +1115,8 @@ impl Shell {
                     let now = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map_or(0, |d| d.as_millis() as i64);
+                    let mut offset_minutes = None;
+                    let mut added_labels = HashMap::<(String, i64), SharedString>::new();
                     let rows = range
                         .filter_map(|pos| {
                             let ix = match &visible {
@@ -1139,9 +1141,22 @@ impl Shell {
                                     dates
                                         .as_ref()
                                         .and_then(|d| d.get(&track.uri))
-                                        .map(|at| super::added_date::added_label(now, *at))
+                                        .map(|at| {
+                                            added_labels
+                                                .entry((track.uri.clone(), *at))
+                                                .or_insert_with(|| {
+                                                    let offset = *offset_minutes
+                                                        .get_or_insert_with(
+                                                            super::added_date::local_offset_minutes,
+                                                        );
+                                                    super::added_date::added_label_in(
+                                                        now, *at, offset,
+                                                    )
+                                                    .into()
+                                                })
+                                                .clone()
+                                        })
                                         .unwrap_or_default()
-                                        .into()
                                 }),
                                 plays: smart_shows_plays(&id)
                                     .then_some(track.plays.unwrap_or_default()),

@@ -116,17 +116,21 @@ impl Element for Line {
         style.flex_shrink = 1.;
         let layout_id =
             window.request_measured_layout(style, move |known, available, window, _| {
-                let started = std::time::Instant::now();
-                let natural = window
-                    .text_system()
-                    .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
-                    .width;
-                super::frames::text_spent(started.elapsed(), false);
-                let width = known.width.unwrap_or(match available.width {
-                    AvailableSpace::Definite(space) => natural.min(space),
-                    AvailableSpace::MinContent => px(0.),
-                    AvailableSpace::MaxContent => natural,
-                });
+                let width = if let Some(width) = known.width {
+                    width
+                } else {
+                    let started = std::time::Instant::now();
+                    let natural = window
+                        .text_system()
+                        .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
+                        .width;
+                    super::frames::text_spent(started.elapsed(), false);
+                    match available.width {
+                        AvailableSpace::Definite(space) => natural.min(space),
+                        AvailableSpace::MinContent => px(0.),
+                        AvailableSpace::MaxContent => natural,
+                    }
+                };
                 size(width, line_height)
             });
         (layout_id, ())

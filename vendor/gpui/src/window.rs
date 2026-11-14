@@ -878,6 +878,10 @@ pub struct Window {
     hovered: Rc<Cell<bool>>,
     pub(crate) needs_present: Rc<Cell<bool>>,
     pub(crate) last_input_timestamp: Rc<Cell<Instant>>,
+    frame_stats_enabled: bool,
+    frame_prepaint_time: Duration,
+    frame_paint_started: Option<Instant>,
+    frame_present_time: Cell<Duration>,
     pub(crate) refreshing: bool,
     pub(crate) activation_observers: SubscriberSet<(), AnyObserver>,
     pub(crate) focus: Option<FocusId>,
@@ -1261,6 +1265,10 @@ impl Window {
             hovered,
             needs_present,
             last_input_timestamp,
+            frame_stats_enabled: std::env::var_os("OPENIFY_FRAME_STATS").is_some(),
+            frame_prepaint_time: Duration::ZERO,
+            frame_paint_started: None,
+            frame_present_time: Cell::new(Duration::ZERO),
             refreshing: false,
             activation_observers: SubscriberSet::new(),
             focus: None,
@@ -1316,6 +1324,18 @@ impl ContentMask<Pixels> {
 }
 
 impl Window {
+    /// Phase timings for the current frame (layout/prepaint, paint, previous present).
+    pub fn frame_phase_timings(&self) -> (Duration, Duration, Duration) {
+        let paint = self
+            .frame_paint_started
+            .map_or(Duration::ZERO, |started| started.elapsed());
+        (
+            self.frame_prepaint_time,
+            paint,
+            self.frame_present_time.get(),
+        )
+    }
+
     fn mark_view_dirty(&mut self, view_id: EntityId) {
         // Mark ancestor views as dirty. If already in the `dirty_views` set, then all its ancestors
         // should already be dirty.
@@ -2039,7 +2059,11 @@ impl Window {
 
     #[profiling::function]
     fn present(&self) {
+        let started = self.frame_stats_enabled.then(Instant::now);
         self.platform_window.draw(&self.rendered_frame.scene);
+        if let Some(started) = started {
+            self.frame_present_time.set(started.elapsed());
+        }
         self.needs_present.set(false);
         profiling::finish_frame!();
     }
@@ -2067,6 +2091,7 @@ impl Window {
         };
 
         // Layout all root elements.
+        let prepaint_started = self.frame_stats_enabled.then(Instant::now);
         let mut root_element = self.root.as_ref().unwrap().clone().into_any();
         root_element.prepaint_as_root(Point::default(), root_size.into(), self, cx);
 
@@ -2097,6 +2122,10 @@ impl Window {
         }
 
         self.mouse_hit_test = self.next_frame.hit_test(self.mouse_position);
+        if let Some(started) = prepaint_started {
+            self.frame_prepaint_time = started.elapsed();
+            self.frame_paint_started = Some(Instant::now());
+        }
 
         // Now actually paint the elements.
         self.invalidator.set_phase(DrawPhase::Paint);

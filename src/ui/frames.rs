@@ -1,13 +1,14 @@
 //! Kare ölçümü (geliştirme aracı).
 //!
-//! `OPENIFY_FRAME_STATS=<dosya>` verilirse her karede iki süre kaydedilir:
+//! `OPENIFY_FRAME_STATS=<dosya>` verilirse her karede aşama süreleri kaydedilir:
 //! - çizim: pencerenin `render`'ının başından son öğenin boyanmasına kadar
 //!   geçen süre (ana iş parçacığında kurma, yerleşim, boyama; ekran kartına
 //!   gönderme hariç),
 //! - aralık: bir önceki karenin boyanmasından bu yana geçen süre (sürekli
 //!   hareket varken kare hızını gösterir).
 //!
-//! Satırlar `zaman_sn,çizim_ms,aralık_ms` olarak saniyede bir dosyaya
+//! Satırlar `t_s,cpu_ms,interval_ms,build_ms,layout_ms,paint_ms,present_ms,text_ms,text_n` olarak
+//! saniyede bir dosyaya
 //! bir yazıcı iş parçacığınca her 200 ms'de (değişmişse) dosyaya yazılır;
 //! kareler dursa da son satırlar kalır, süreç öldürülse de kayıt eksik
 //! olmaz. Değişken yoksa hiçbir şey yapmaz.
@@ -36,7 +37,7 @@ thread_local! {
         std::env::var_os("OPENIFY_FRAME_STATS").map(|path| {
             let path = PathBuf::from(path);
             let rows = Arc::new(Mutex::new(String::from(
-                "t_s,cpu_ms,interval_ms,build_ms,text_ms,text_n\n",
+                "t_s,cpu_ms,interval_ms,build_ms,layout_ms,paint_ms,present_ms,text_ms,text_n\n",
             )));
             spawn_writer(path, Arc::clone(&rows));
             Recorder {
@@ -104,7 +105,7 @@ pub fn text_spent(d: Duration, new_element: bool) {
 }
 
 /// Son öğe boyandı: kareyi kaydet.
-pub fn painted() {
+pub fn painted(window: &gpui::Window) {
     RECORDER.with(|r| {
         let mut r = r.borrow_mut();
         let Some(r) = r.as_mut() else { return };
@@ -116,13 +117,17 @@ pub fn painted() {
         };
         let cpu = r.render_start.take().map(|s| format!("{:.3}", ms(now - s)));
         let interval = r.last_paint.map(|l| format!("{:.3}", ms(now - l)));
+        let (layout, paint, present) = window.frame_phase_timings();
         r.last_paint = Some(now);
         let row = format!(
-            "{:.4},{},{},{},{:.3},{}\n",
+            "{:.4},{},{},{},{:.3},{:.3},{:.3},{:.3},{}\n",
             (now - r.origin).as_secs_f64(),
             cpu.unwrap_or_default(),
             interval.unwrap_or_default(),
             build,
+            ms(layout),
+            ms(paint),
+            ms(present),
             ms(std::mem::take(&mut r.text)),
             std::mem::take(&mut r.text_count)
         );

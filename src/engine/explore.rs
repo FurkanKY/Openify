@@ -266,15 +266,50 @@ pub fn plain_text(html: &str) -> String {
             _ => {}
         }
     }
-    out.replace("&#x27;", "'")
-        .replace("&#39;", "'")
-        .replace("&quot;", "\"")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
+    decode_html_entities(&out)
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ")
+}
+
+fn decode_html_entities(text: &str) -> String {
+    let mut decoded = String::with_capacity(text.len());
+    let mut offset = 0;
+    while offset < text.len() {
+        let rest = &text[offset..];
+        if rest.starts_with('&')
+            && let Some(end) = rest.find(';').filter(|end| *end <= 12)
+            && let Some(value) = decode_html_entity(&rest[1..end])
+        {
+            decoded.push(value);
+            offset += end + 1;
+            continue;
+        }
+        let ch = rest.chars().next().expect("offset is within text");
+        decoded.push(ch);
+        offset += ch.len_utf8();
+    }
+    decoded
+}
+
+fn decode_html_entity(entity: &str) -> Option<char> {
+    match entity {
+        "amp" => Some('&'),
+        "quot" => Some('"'),
+        "apos" => Some('\''),
+        "lt" => Some('<'),
+        "gt" => Some('>'),
+        "nbsp" => Some(' '),
+        _ => {
+            let number = entity.strip_prefix('#')?;
+            let (digits, radix) = number
+                .strip_prefix(['x', 'X'])
+                .map_or((number, 10), |digits| (digits, 16));
+            u32::from_str_radix(digits, radix)
+                .ok()
+                .and_then(char::from_u32)
+        }
+    }
 }
 
 fn artist_names(artists: &Value) -> String {
@@ -861,6 +896,10 @@ mod tests {
             "Quiet music for you. Also try Quiet Mix"
         );
         assert_eq!(plain_text("Here&#x27;s  a &amp; b"), "Here's a & b");
+        assert_eq!(
+            plain_text("Buzuq &amp; &#x61; &#97; &nbsp; &#39;"),
+            "Buzuq & a a '"
+        );
     }
 
     #[test]
