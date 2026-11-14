@@ -1515,6 +1515,7 @@ impl Shell {
     // ── Görünüm ─────────────────────────────────────────────────────────
 
     fn render_titlebar(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
+        frames::component_built("titlebar");
         let maximized = window.is_maximized();
         let accent = self.accent().text;
         // Pencere düğmelerini fare Windows'un kendi isabet sınamasıyla
@@ -1747,6 +1748,7 @@ impl Shell {
     /// zeminle önceden karıştırılıp opak, dikey bir degrade çiziliyor: üstte
     /// kapak rengi, aşağıda zemin renginin kendisine eriyor (dikiş yok).
     fn render_glow(&self) -> AnyElement {
+        frames::component_built("glow");
         let collapse = self.collapse_progress();
         // Tür sayfasında ışıma türün rengi (başlık o renkte); diğer yerlerde
         // çalan şarkının kapak rengi.

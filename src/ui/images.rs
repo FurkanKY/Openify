@@ -73,11 +73,17 @@ impl ImageStore {
 
     /// Resim diskteyse yolu; değilse `None` (ve indirme isteği sıraya girer).
     pub fn get(&self, url: &str) -> Option<PathBuf> {
+        let started = super::frames::enabled().then(Instant::now);
         if url.is_empty() {
+            record_lookup(started, super::frames::ImageResult::Empty);
             return None;
         }
-        let path = cover_path(url)?;
+        let Some(path) = cover_path(url) else {
+            record_lookup(started, super::frames::ImageResult::Missing);
+            return None;
+        };
         if self.ready.borrow().contains(url) {
+            record_lookup(started, super::frames::ImageResult::Ready);
             return Some(path);
         }
         let now = Instant::now();
@@ -85,6 +91,7 @@ impl ImageStore {
         if let Some(at) = asked_at
             && now.duration_since(at) < self.retry_after
         {
+            record_lookup(started, super::frames::ImageResult::Missing);
             return None;
         }
         // Uzun süredir gelmedi: indirme büyük olasılıkla başarısız oldu.
@@ -92,10 +99,12 @@ impl ImageStore {
         if path.exists() {
             self.requested.borrow_mut().remove(url);
             self.ready.borrow_mut().insert(url.to_string());
+            record_lookup(started, super::frames::ImageResult::Ready);
             return Some(path);
         }
         self.requested.borrow_mut().insert(url.to_string(), now);
         self.pending.borrow_mut().push(url.to_string());
+        record_lookup(started, super::frames::ImageResult::Missing);
         None
     }
 
@@ -143,6 +152,12 @@ impl ImageStore {
 
     pub fn has_pending(&self) -> bool {
         !self.pending.borrow().is_empty()
+    }
+}
+
+fn record_lookup(started: Option<Instant>, result: super::frames::ImageResult) {
+    if let Some(started) = started {
+        super::frames::image_lookup(started.elapsed(), result);
     }
 }
 
