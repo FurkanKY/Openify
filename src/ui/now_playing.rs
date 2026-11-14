@@ -1191,12 +1191,49 @@ pub(super) fn test_view() -> Option<&'static str> {
         .as_deref()
 }
 
+fn test_autoscroll_duration() -> Option<Duration> {
+    if !crate::crash::is_test_run() {
+        return None;
+    }
+    std::env::var("OPENIFY_TEST_AUTOSCROLL")
+        .ok()
+        .and_then(|value| parse_test_autoscroll_duration(&value))
+}
+
+fn parse_test_autoscroll_duration(value: &str) -> Option<Duration> {
+    let seconds = value.trim().parse::<u64>().ok()?;
+    (1..=60)
+        .contains(&seconds)
+        .then(|| Duration::from_secs(seconds))
+}
+
 impl Shell {
     /// `OPENIFY_TEST_VIEW` (bkz. `test_view`). Sahte çalmada çalan şarkıya
     /// diskteki küçük kapağı verir: tam ekranın arka planı ve ışık gerçek bir
     /// kapakla ölçülsün (Spotify'a hiçbir şey gitmez).
     pub(super) fn apply_test_view(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(view) = test_view() else { return };
+        if let Some(duration) = test_autoscroll_duration() {
+            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: 4 sn sonra {} sn kaydırma", duration.as_secs());
+            cx.spawn(async move |this, cx| {
+                cx.background_executor().timer(Duration::from_secs(4)).await;
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma başladı");
+                let deadline = Instant::now() + duration;
+                while Instant::now() < deadline {
+                    let _ = this.update(cx, |shell, cx| {
+                        let handle = shell.library.scroll.0.borrow().base_handle.clone();
+                        let offset = handle.offset();
+                        handle.set_offset(gpui::point(offset.x, offset.y - gpui::px(28.)));
+                        cx.notify();
+                    });
+                    cx.background_executor()
+                        .timer(Duration::from_millis(5))
+                        .await;
+                }
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma bitti");
+            })
+            .detach();
+        }
         if self.now.fake
             && let Some(t) = self
                 .library
@@ -1257,6 +1294,7 @@ impl Shell {
             _ if view == "library" => Some(Route::Library),
             _ if view == "settings" => Some(Route::Settings),
             _ if view == "recent" => Some(Route::Recent),
+            _ if view == "liked" => Some(Route::Collection(CollectionId::Liked)),
             _ if view == "tools" => Some(Route::Tools),
             _ if view == "stats" => Some(Route::Stats),
             _ if CollectionId::from_key(view)
@@ -1293,5 +1331,21 @@ impl Shell {
             "credits" => self.apply_credits_test_view(window, cx),
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod test_autoscroll_tests {
+    use super::{Duration, parse_test_autoscroll_duration};
+
+    #[test]
+    fn accepts_bounded_integer_duration_only() {
+        assert_eq!(
+            parse_test_autoscroll_duration("10"),
+            Some(Duration::from_secs(10))
+        );
+        assert_eq!(parse_test_autoscroll_duration("0"), None);
+        assert_eq!(parse_test_autoscroll_duration("61"), None);
+        assert_eq!(parse_test_autoscroll_duration("ten"), None);
     }
 }
