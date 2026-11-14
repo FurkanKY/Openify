@@ -2120,7 +2120,7 @@ impl Render for Shell {
             // Kare ölçümü (yalnız `OPENIFY_FRAME_STATS` ile): en son boyanan öğe.
             .when(frames::enabled(), |el| {
                 el.child(
-                    canvas(|_, _, _| {}, |_, _, _, _| frames::painted())
+                    canvas(|_, _, _| {}, |_, _, window, _| frames::painted(window))
                         .absolute()
                         .size_0(),
                 )

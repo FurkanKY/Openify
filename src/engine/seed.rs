@@ -286,8 +286,9 @@ mod demo {
             .collect();
         db.save_collection_entries(&CollectionId::Playlist(playlist_key(8)), Some(b"1"), &old)
             .unwrap();
-        // "Büyük karışık": 120 satır, 10 şarkı 12'şer kez (≥ 50 değişiklik: toplu işlem onayı).
-        let big: Vec<Entry> = (0..120)
+        // "Büyük karışık": 360 satır; sanal listenin uzun listede ölçümü ve
+        // toplu işlem onayı için 10 şarkı yinelenerek kullanılır.
+        let big: Vec<Entry> = (0..360)
             .map(|n| Entry {
                 track: rows[(n * 7) % 10].uri.clone(),
                 added_at: Some(ago(10 + n as i64 * 450)),

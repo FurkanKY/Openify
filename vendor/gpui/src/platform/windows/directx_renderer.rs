@@ -103,10 +103,7 @@ struct FrameStatsLogger {
 
 impl FrameStatsLogger {
     fn new() -> Self {
-        let enabled = std::env::var_os("OPENIFY_FRAME_STATS").is_some_and(|v| v == "1");
-        if enabled {
-            log::info!(target: "openify", "OPENIFY_FRAME_STATS etkin: DXGI kare sayaçları saniyede bir örneklenecek");
-        }
+        let enabled = crate::window::openify_frame_stats_enabled();
         Self {
             enabled,
             present_count: 0,
@@ -159,19 +156,24 @@ impl FrameStatsLogger {
             // to one visible frame; the refresh delta is therefore an upper
             // bound, capped by the number of presents issued in this interval.
             let (shown, missed) = estimated_frame_counts(presents, dxgi_presents as u64);
+            let (phase_frames, layout, paint, present) = crate::window::take_openify_frame_phases();
+            let phase_ms = |duration: std::time::Duration| {
+                if phase_frames == 0 {
+                    0.0
+                } else {
+                    duration.as_secs_f64() * 1000.0 / phase_frames as f64
+                }
+            };
             log::info!(target: "openify",
-                "DXGI_FRAME_STATS {:.2}s sunulan={} ekrana_yansıyan~={} kaçırılan~={} PresentCount={} PresentRefreshCount={} SyncRefreshCount={} delta_present={} delta_present_refresh={} delta_sync_refresh={}",
+                "OPENIFY_FRAME_STATS {:.2}s sunulan={} yansiyan~={} duzen_ms={:.3} boyama_ms={:.3} sunum_ms={:.3}",
                 elapsed,
                 presents,
                 shown,
-                missed,
-                stats.PresentCount,
-                stats.PresentRefreshCount,
-                stats.SyncRefreshCount,
-                dxgi_presents,
-                refreshes,
-                sync_refreshes,
+                phase_ms(layout),
+                phase_ms(paint),
+                phase_ms(present),
             );
+            let _ = (missed, refreshes, sync_refreshes);
         }
         self.last_sample = Some((
             now,

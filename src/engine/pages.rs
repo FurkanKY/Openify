@@ -1012,24 +1012,7 @@ pub async fn load_links(
 
 /// Biyografi metnindeki etiketleri ve varlıkları atar ("<a href=..>X</a>" → "X").
 fn strip_html(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut in_tag = false;
-    for c in text.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' if in_tag => in_tag = false,
-            _ if in_tag => {}
-            _ => out.push(c),
-        }
-    }
-    out.replace("&amp;", "&")
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&nbsp;", " ")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .trim()
-        .to_string()
+    super::explore::plain_text(text)
 }
 
 #[cfg(test)]

@@ -1207,6 +1207,31 @@ fn parse_test_autoscroll_duration(value: &str) -> Option<Duration> {
         .then(|| Duration::from_secs(seconds))
 }
 
+fn test_view_route(view: &str) -> Option<super::history::Route> {
+    use super::history::Route;
+    match view.split_once(':') {
+        Some(("search", q)) => Some(Route::Search(q.to_string())),
+        Some(("artist", uri)) => Some(Route::Artist(uri.to_string())),
+        Some(("album", uri)) => Some(Route::Album(uri.to_string())),
+        Some(("category", id)) => Some(Route::Category(format!("spotify:page:{id}"))),
+        _ => match CollectionId::from_key(view) {
+            Some(
+                id @ (CollectionId::Liked | CollectionId::Smart(_) | CollectionId::Playlist(_)),
+            ) => Some(Route::Collection(id)),
+            _ => match view {
+                "home" => Some(Route::Home),
+                "explore" => Some(Route::Explore),
+                "library" => Some(Route::Library),
+                "settings" => Some(Route::Settings),
+                "recent" => Some(Route::Recent),
+                "tools" => Some(Route::Tools),
+                "stats" => Some(Route::Stats),
+                _ => None,
+            },
+        },
+    }
+}
+
 impl Shell {
     /// `OPENIFY_TEST_VIEW` (bkz. `test_view`). Sahte çalmada çalan şarkıya
     /// diskteki küçük kapağı verir: tam ekranın arka planı ve ışık gerçek bir
@@ -1283,27 +1308,7 @@ impl Shell {
             .detach();
             return;
         }
-        use super::history::Route;
-        let route = match view.split_once(':') {
-            Some(("search", q)) => Some(Route::Search(q.to_string())),
-            Some(("artist", uri)) => Some(Route::Artist(uri.to_string())),
-            Some(("album", uri)) => Some(Route::Album(uri.to_string())),
-            Some(("category", id)) => Some(Route::Category(format!("spotify:page:{id}"))),
-            _ if view == "home" => Some(Route::Home),
-            _ if view == "explore" => Some(Route::Explore),
-            _ if view == "library" => Some(Route::Library),
-            _ if view == "settings" => Some(Route::Settings),
-            _ if view == "recent" => Some(Route::Recent),
-            _ if view == "liked" => Some(Route::Collection(CollectionId::Liked)),
-            _ if view == "tools" => Some(Route::Tools),
-            _ if view == "stats" => Some(Route::Stats),
-            _ if CollectionId::from_key(view)
-                .is_some_and(|id| matches!(id, CollectionId::Smart(_))) =>
-            {
-                CollectionId::from_key(view).map(Route::Collection)
-            }
-            _ => None,
-        };
+        let route = test_view_route(view);
         if let Some(route) = route {
             // Bağlantı kurulduktan sonra (açılışta sayfa isteği bağlantıdan
             // önce gidip "ulaşılamadı" dönüyordu); `OPENIFY_TEST_VIEW_AFTER`
@@ -1335,8 +1340,10 @@ impl Shell {
 }
 
 #[cfg(test)]
-mod test_autoscroll_tests {
+mod test_view_and_autoscroll_tests {
+    use super::{super::history::Route, test_view_route};
     use super::{Duration, parse_test_autoscroll_duration};
+    use crate::engine::CollectionId;
 
     #[test]
     fn accepts_bounded_integer_duration_only() {
@@ -1347,5 +1354,14 @@ mod test_autoscroll_tests {
         assert_eq!(parse_test_autoscroll_duration("0"), None);
         assert_eq!(parse_test_autoscroll_duration("61"), None);
         assert_eq!(parse_test_autoscroll_duration("ten"), None);
+    }
+
+    #[test]
+    fn test_view_opens_a_playlist_uri() {
+        let uri = "spotify:playlist:0000000000000000000009";
+        assert_eq!(
+            test_view_route(uri),
+            Some(Route::Collection(CollectionId::Playlist(uri.into())))
+        );
     }
 }

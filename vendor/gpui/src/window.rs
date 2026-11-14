@@ -49,6 +49,23 @@ use std::{
     },
     time::{Duration, Instant},
 };
+
+static OPENIFY_FRAME_PHASES: std::sync::Mutex<(u64, Duration, Duration, Duration)> =
+    std::sync::Mutex::new((0, Duration::ZERO, Duration::ZERO, Duration::ZERO));
+static OPENIFY_FRAME_STATS_ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+#[doc(hidden)]
+pub fn openify_frame_stats_enabled() -> bool {
+    *OPENIFY_FRAME_STATS_ENABLED
+        .get_or_init(|| std::env::var_os("OPENIFY_FRAME_STATS").is_some())
+}
+
+pub(crate) fn take_openify_frame_phases() -> (u64, Duration, Duration, Duration) {
+    let mut phases = OPENIFY_FRAME_PHASES
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    std::mem::replace(&mut *phases, (0, Duration::ZERO, Duration::ZERO, Duration::ZERO))
+}
 use util::post_inc;
 use util::{ResultExt, measure};
 use uuid::Uuid;
@@ -878,6 +895,10 @@ pub struct Window {
     hovered: Rc<Cell<bool>>,
     pub(crate) needs_present: Rc<Cell<bool>>,
     pub(crate) last_input_timestamp: Rc<Cell<Instant>>,
+    frame_stats_enabled: bool,
+    frame_prepaint_time: Duration,
+    frame_paint_started: Option<Instant>,
+    frame_present_time: Cell<Duration>,
     pub(crate) refreshing: bool,
     pub(crate) activation_observers: SubscriberSet<(), AnyObserver>,
     pub(crate) focus: Option<FocusId>,
@@ -942,6 +963,18 @@ fn default_bounds(display_id: Option<DisplayId>, cx: &mut App) -> Bounds<Pixels>
 }
 
 impl Window {
+    #[doc(hidden)]
+    pub fn record_openify_frame_phases(&self) {
+        let (layout, paint, present) = self.frame_phase_timings();
+        let mut phases = OPENIFY_FRAME_PHASES
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        phases.0 += 1;
+        phases.1 += layout;
+        phases.2 += paint;
+        phases.3 += present;
+    }
+
     pub(crate) fn new(
         handle: AnyWindowHandle,
         options: WindowOptions,
@@ -1261,6 +1294,10 @@ impl Window {
             hovered,
             needs_present,
             last_input_timestamp,
+            frame_stats_enabled: openify_frame_stats_enabled(),
+            frame_prepaint_time: Duration::ZERO,
+            frame_paint_started: None,
+            frame_present_time: Cell::new(Duration::ZERO),
             refreshing: false,
             activation_observers: SubscriberSet::new(),
             focus: None,
@@ -1316,6 +1353,18 @@ impl ContentMask<Pixels> {
 }
 
 impl Window {
+    /// Phase timings for the current frame (layout/prepaint, paint, previous present).
+    pub fn frame_phase_timings(&self) -> (Duration, Duration, Duration) {
+        let paint = self
+            .frame_paint_started
+            .map_or(Duration::ZERO, |started| started.elapsed());
+        (
+            self.frame_prepaint_time,
+            paint,
+            self.frame_present_time.get(),
+        )
+    }
+
     fn mark_view_dirty(&mut self, view_id: EntityId) {
         // Mark ancestor views as dirty. If already in the `dirty_views` set, then all its ancestors
         // should already be dirty.
@@ -2039,7 +2088,11 @@ impl Window {
 
     #[profiling::function]
     fn present(&self) {
+        let started = self.frame_stats_enabled.then(Instant::now);
         self.platform_window.draw(&self.rendered_frame.scene);
+        if let Some(started) = started {
+            self.frame_present_time.set(started.elapsed());
+        }
         self.needs_present.set(false);
         profiling::finish_frame!();
     }
@@ -2067,6 +2120,7 @@ impl Window {
         };
 
         // Layout all root elements.
+        let prepaint_started = self.frame_stats_enabled.then(Instant::now);
         let mut root_element = self.root.as_ref().unwrap().clone().into_any();
         root_element.prepaint_as_root(Point::default(), root_size.into(), self, cx);
 
@@ -2097,6 +2151,10 @@ impl Window {
         }
 
         self.mouse_hit_test = self.next_frame.hit_test(self.mouse_position);
+        if let Some(started) = prepaint_started {
+            self.frame_prepaint_time = started.elapsed();
+            self.frame_paint_started = Some(Instant::now());
+        }
 
         // Now actually paint the elements.
         self.invalidator.set_phase(DrawPhase::Paint);
