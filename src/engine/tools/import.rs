@@ -1,7 +1,10 @@
 //! Spotify Extended Streaming History içe aktarımı. Dosyalar yalnız okunur;
 //! hiçbir Spotify isteği yapılmaz.
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 use rusqlite::params;
@@ -31,6 +34,54 @@ struct ImportedPlay {
     album: String,
     duration_ms: u32,
     listened_ms: u64,
+}
+
+const COLLISION_TOLERANCE_MS: i64 = 90_000;
+// 30 minutes covers a single paused listen, but is short enough that a
+// separate listen of the same track hours apart is never swallowed.
+const MAX_PAUSE_MS: i64 = 30 * 60 * 1_000;
+
+#[derive(Debug)]
+struct LocalPlay {
+    played_at: i64,
+    listened_ms: i64,
+    matched: bool,
+}
+
+fn overlaps_local_play(
+    play: &ImportedPlay,
+    local_plays: &mut HashMap<String, Vec<LocalPlay>>,
+) -> bool {
+    let end = play
+        .played_at
+        .saturating_add(play.listened_ms.min(i64::MAX as u64) as i64);
+    let imported_start = play
+        .played_at
+        .saturating_sub(MAX_PAUSE_MS)
+        .saturating_sub(COLLISION_TOLERANCE_MS);
+    let earliest_local_start = end.saturating_sub(MAX_PAUSE_MS);
+    let Some(candidates) = local_plays.get_mut(&play.uri) else {
+        return false;
+    };
+    let candidate = candidates
+        .iter_mut()
+        .filter(|local| {
+            if local.matched || local.played_at > end || local.played_at < earliest_local_start {
+                return false;
+            }
+            let local_end = local
+                .played_at
+                .saturating_add(local.listened_ms)
+                .saturating_add(COLLISION_TOLERANCE_MS);
+            imported_start <= local_end && local.played_at <= end
+        })
+        .max_by_key(|local| local.played_at);
+    if let Some(local) = candidate {
+        local.matched = true;
+        true
+    } else {
+        false
+    }
 }
 
 fn parse_time(value: &str, short: bool) -> Option<i64> {
@@ -223,7 +274,38 @@ impl Db {
             ..Default::default()
         };
         {
-            let mut exists = tx.prepare_cached("SELECT EXISTS(SELECT 1 FROM play_history WHERE uri=?1 AND ((source='import' AND played_at=?2) OR (source='local' AND played_at BETWEEN ?2-90000 AND ?2+90000)))")?;
+            let mut local_plays: HashMap<String, Vec<LocalPlay>> = HashMap::new();
+            {
+                let mut stmt = tx.prepare_cached(
+                    "SELECT uri, played_at, listened_ms FROM play_history WHERE source='local'",
+                )?;
+                let rows = stmt.query_map([], |r| {
+                    Ok((
+                        r.get::<_, String>(0)?,
+                        r.get::<_, i64>(1)?,
+                        r.get::<_, i64>(2)?,
+                    ))
+                })?;
+                for row in rows {
+                    let (uri, played_at, listened_ms) = row?;
+                    local_plays.entry(uri).or_default().push(LocalPlay {
+                        played_at,
+                        listened_ms,
+                        matched: false,
+                    });
+                }
+            }
+            let mut imported_plays = HashSet::new();
+            {
+                let mut stmt = tx.prepare_cached(
+                    "SELECT uri, played_at FROM play_history WHERE source='import'",
+                )?;
+                let rows =
+                    stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?)))?;
+                for row in rows {
+                    imported_plays.insert(row?);
+                }
+            }
             let mut insert = tx.prepare_cached("INSERT OR IGNORE INTO play_history (played_at, uri, name, artists, album, duration_ms, listened_ms, source) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 'import')")?;
             for value in source {
                 // A URI-less short-history row can use its cached duration after matching.
@@ -244,7 +326,8 @@ impl Db {
                     summary.skipped += 1;
                     continue;
                 }
-                if exists.query_row(params![play.uri, play.played_at], |r| r.get::<_, bool>(0))? {
+                let key = (play.uri.clone(), play.played_at);
+                if imported_plays.contains(&key) || overlaps_local_play(&play, &mut local_plays) {
                     summary.existing += 1;
                     continue;
                 }
@@ -258,6 +341,7 @@ impl Db {
                     play.listened_ms.min(i64::MAX as u64) as i64
                 ])?;
                 if changed == 1 {
+                    imported_plays.insert(key);
                     summary.added += 1;
                 } else {
                     summary.existing += 1;
@@ -367,6 +451,156 @@ mod tests {
             (0, 1, 0, true)
         );
         assert_eq!(db.plays_since(0).unwrap().len(), 1);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn paused_local_play_overlaps_exported_play_interval() {
+        let db = Db::open_in_memory().unwrap();
+        let actual_start = civil::unix_ms(2023, 5, 1, 18, 21, 0, 0);
+        // Locally this row is stamped at the 31 s counting threshold. A five
+        // minute pause separates that stamp from Spotify's resumed stream.
+        db.record_play(&stats::PlayRecord {
+            uri: "spotify:track:pause".into(),
+            name: "Song".into(),
+            artists: "Artist".into(),
+            album: "Album".into(),
+            duration_ms: 200_000,
+            listened_ms: 90_000,
+            played_at: actual_start + 31_000,
+        })
+        .unwrap();
+        let path = temp_json(
+            "paused-local-collision",
+            r#"[{"ts":"2023-05-01T18:27:30Z","ms_played":90000,"master_metadata_track_name":"Song","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:pause"}]"#,
+        );
+        let summary = db
+            .import_spotify_history(std::slice::from_ref(&path), false)
+            .unwrap();
+        assert_eq!((summary.added, summary.existing), (0, 1));
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn local_play_two_hours_earlier_does_not_swallow_exported_play() {
+        let db = Db::open_in_memory().unwrap();
+        db.record_play(&stats::PlayRecord {
+            uri: "spotify:track:pause".into(),
+            name: "Song".into(),
+            artists: "Artist".into(),
+            album: "Album".into(),
+            duration_ms: 200_000,
+            listened_ms: 90_000,
+            played_at: civil::unix_ms(2023, 5, 1, 16, 27, 30, 0),
+        })
+        .unwrap();
+        let path = temp_json(
+            "two-hour-gap",
+            r#"[{"ts":"2023-05-01T18:27:30Z","ms_played":90000,"master_metadata_track_name":"Song","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:pause"}]"#,
+        );
+        let summary = db
+            .import_spotify_history(std::slice::from_ref(&path), false)
+            .unwrap();
+        assert_eq!(summary.added, 1);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn consecutive_same_track_plays_consume_distinct_local_rows() {
+        let db = Db::open_in_memory().unwrap();
+        let start = civil::unix_ms(2023, 5, 1, 18, 0, 0, 0);
+        for played_at in [start + 31_000, start + 231_000] {
+            db.record_play(&stats::PlayRecord {
+                uri: "spotify:track:repeat".into(),
+                name: "Song".into(),
+                artists: "Artist".into(),
+                album: "Album".into(),
+                duration_ms: 200_000,
+                listened_ms: 120_000,
+                played_at,
+            })
+            .unwrap();
+        }
+        let path = temp_json(
+            "repeat-local-collision",
+            r#"[{"ts":"2023-05-01T18:02:00Z","ms_played":120000,"master_metadata_track_name":"Song","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:repeat"},{"ts":"2023-05-01T18:05:20Z","ms_played":120000,"master_metadata_track_name":"Song","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:repeat"}]"#,
+        );
+        let summary = db
+            .import_spotify_history(std::slice::from_ref(&path), false)
+            .unwrap();
+        assert_eq!((summary.added, summary.existing), (0, 2));
+        assert_eq!(db.plays_since(0).unwrap().len(), 2);
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn unrelated_exported_play_is_added() {
+        let db = Db::open_in_memory().unwrap();
+        db.record_play(&stats::PlayRecord {
+            uri: "spotify:track:local".into(),
+            name: "Local".into(),
+            artists: "Artist".into(),
+            album: "Album".into(),
+            duration_ms: 200_000,
+            listened_ms: 120_000,
+            played_at: civil::unix_ms(2023, 5, 1, 18, 0, 0, 0),
+        })
+        .unwrap();
+        let path = temp_json(
+            "unrelated-play",
+            r#"[{"ts":"2023-05-01T18:02:00Z","ms_played":120000,"master_metadata_track_name":"Song","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:other"}]"#,
+        );
+        let summary = db
+            .import_spotify_history(std::slice::from_ref(&path), false)
+            .unwrap();
+        assert_eq!((summary.added, summary.existing), (1, 0));
+        let _ = std::fs::remove_file(path);
+    }
+
+    #[test]
+    fn imports_150000_rows_with_years_and_many_uris_in_under_five_seconds() {
+        use std::time::Instant;
+
+        let db = Db::open_in_memory().unwrap();
+        let mut json = String::with_capacity(45_000_000);
+        json.push('[');
+        for i in 0..150_000u32 {
+            if i > 0 {
+                json.push(',');
+            }
+            let year = 2017 + (i % 9);
+            let month = (i / 9) % 12 + 1;
+            let day = (i / 108) % 28 + 1;
+            let uri_index = i % 15_000;
+            if i % 100 == 0 {
+                let end = civil::unix_ms(year as i64, month, day, 12, 0, i % 60, 0);
+                db.record_play(&stats::PlayRecord {
+                    uri: format!("spotify:track:{uri_index}"),
+                    name: format!("Song {uri_index}"),
+                    artists: "Artist".into(),
+                    album: "Album".into(),
+                    duration_ms: 0,
+                    listened_ms: 120_000,
+                    played_at: end - 120_000,
+                })
+                .unwrap();
+            }
+            json.push_str(&format!(
+                r#"{{"ts":"{year:04}-{month:02}-{day:02}T12:00:{:02}Z","ms_played":120000,"master_metadata_track_name":"Song {uri_index}","master_metadata_album_artist_name":"Artist","master_metadata_album_album_name":"Album","spotify_track_uri":"spotify:track:{uri_index}"}}"#,
+                i % 60
+            ));
+        }
+        json.push(']');
+        let path = temp_json("150k", &json);
+        drop(json);
+        let started = Instant::now();
+        let summary = db
+            .import_spotify_history(std::slice::from_ref(&path), false)
+            .unwrap();
+        let elapsed = started.elapsed();
+        eprintln!("150,000-row import elapsed: {elapsed:.3?}");
+        assert_eq!((summary.added, summary.existing), (148_500, 1_500));
+        assert!(elapsed.as_secs_f64() < 5.0, "import took {elapsed:.3?}");
         let _ = std::fs::remove_file(path);
     }
 
