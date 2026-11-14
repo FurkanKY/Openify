@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Spotify Connect: "Playing on <device>" and "Play here" now sit in a tab
+  attached to the top edge of the now-playing pill instead of a separate box.
+- "Liked, never played" no longer shows a Plays column (every row was 0).
+- Mini player: the close button sits on the title row instead of its own row,
+  and the title doubles as the drag handle.
+- README and site: memory figure re-measured in real use (~100 MB in Task
+  Manager after browsing and playing).
+- CI: a weekly dependency advisory check runs separately and never blocks a
+  release.
+
 ## [0.1.4] - 2026-11-14
 
 ### Added

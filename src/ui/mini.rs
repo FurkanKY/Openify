@@ -382,20 +382,6 @@ impl Render for MiniView {
             }))
             .child(icon("x", 14., muted()).group_hover("mini-close", |s| s.text_color(text())));
 
-        let header = div()
-            .h(px(HEADER))
-            .flex_none()
-            .flex()
-            .items_center()
-            .child(
-                div()
-                    .id("mini-drag")
-                    .flex_1()
-                    .h_full()
-                    .window_control_area(WindowControlArea::Drag),
-            )
-            .child(close);
-
         let art: AnyElement = match &m.cover {
             Some(image) => img(image.clone())
                 .size(px(COVER))
@@ -417,16 +403,30 @@ impl Render for MiniView {
                 .into_any_element(),
         };
 
+        // Şarkı adı satırı hem sürükleme tutamağı hem kapat düğmesinin yeri:
+        // kapat ayrı bir satır kaplamasın (14 Kasım), kart da sürüklenebilsin.
         let title = div()
-            .h(px(T_BODY.line))
+            .h(px(HEADER))
             .w_full()
             .min_w_0()
             .flex()
             .items_center()
-            .type_role(T_BODY)
-            .font_weight(FontWeight::SEMIBOLD)
-            .text_color(text())
-            .child(line(m.title.clone()));
+            .gap(px(S1))
+            .child(
+                div()
+                    .id("mini-drag")
+                    .flex_1()
+                    .min_w_0()
+                    .h_full()
+                    .flex()
+                    .items_center()
+                    .window_control_area(WindowControlArea::Drag)
+                    .type_role(T_BODY)
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(text())
+                    .child(line(m.title.clone())),
+            )
+            .child(close);
 
         let prev = icon_button(
             "mini-prev",
@@ -589,10 +589,10 @@ impl Render for MiniView {
         let column = div()
             .size_full()
             .pt(px(S2))
-            .px(px(S3))
+            .pl(px(S3))
+            .pr(px(S2))
             .flex()
             .flex_col()
-            .child(header)
             .child(body)
             .child(progress);
 
