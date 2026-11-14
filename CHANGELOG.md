@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Stats page in the top navigation: plays, minutes, distinct songs and
+  artists, listening by hour and by weekday (local time), and the top 10
+  songs, artists and albums for the last 4 weeks, 6 months or all time.
+- Import your Spotify listening history (the "Extended streaming history"
+  export, JSON or ZIP; the older account-data files too). Re-importing never
+  double-counts, plays Openify already logged are skipped, podcasts and
+  private-session plays are left out. Nothing is sent to Spotify.
+
 ### Changed
 
 - Spotify Connect: "Playing on <device>" and "Play here" now sit in a tab
