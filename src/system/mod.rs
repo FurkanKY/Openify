@@ -29,7 +29,7 @@ use std::{
 use windows::Win32::Foundation::HWND;
 
 use crate::{t, tf};
-pub use dialog::save_file_dialog;
+pub use dialog::{open_files_dialog, save_file_dialog};
 pub use hook::hotkey_label;
 
 /// İşletim sisteminden arayüze gelen olaylar.

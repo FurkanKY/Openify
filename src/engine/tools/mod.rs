@@ -17,6 +17,7 @@ pub mod backup;
 pub mod civil;
 pub mod dupes;
 mod handlers;
+pub mod import;
 pub mod plan;
 pub mod stats;
 

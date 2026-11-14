@@ -29,6 +29,33 @@ keys! {
     NavHome { en: "Home", tr: "Ana sayfa" }
     NavExplore { en: "Explore", tr: "Keşfet" }
     NavLibrary { en: "Library", tr: "Kütüphane" }
+    NavStats { en: "Stats", tr: "İstatistikler" }
+    CmdStatsDesc { en: "Your listening history on this computer", tr: "Bu bilgisayardaki dinleme geçmişin" }
+    StatsSubtitle { en: "Your listening, kept on this computer", tr: "Dinleme geçmişin bu bilgisayarda tutulur" }
+    StatsIntro { en: "A look at what you have listened to", tr: "Neler dinlediğine bir göz at" }
+    StatsEmptyTitle { en: "Your listening story starts here", tr: "Dinleme geçmişin burada başlıyor" }
+    StatsEmptyBody { en: concat!("Import your Spotify history or keep listening in ", app_name!(), "."), tr: concat!("Spotify geçmişini içe aktar ya da ", app_name_acc!(), " dinlemeye devam et.") }
+    StatsPlays { en: "Plays", tr: "Çalma" }
+    StatsMinutes { en: "Minutes listened", tr: "Dinlenen dakika" }
+    StatsTracks { en: "Different songs", tr: "Farklı şarkı" }
+    StatsArtists { en: "Different artists", tr: "Farklı sanatçı" }
+    StatsTotalTime { en: "total listening time", tr: "toplam dinleme süresi" }
+    StatsHours { en: "Listening by hour", tr: "Saatlere göre dinleme" }
+    StatsWeekdays { en: "Listening by day", tr: "Günlere göre dinleme" }
+    WeekdayMon { en: "Mon", tr: "Pzt" }
+    WeekdayTue { en: "Tue", tr: "Sal" }
+    WeekdayWed { en: "Wed", tr: "Çar" }
+    WeekdayThu { en: "Thu", tr: "Per" }
+    WeekdayFri { en: "Fri", tr: "Cum" }
+    WeekdaySat { en: "Sat", tr: "Cmt" }
+    WeekdaySun { en: "Sun", tr: "Paz" }
+    HistoryImportButton { en: "Import Spotify history", tr: "Spotify geçmişini içe aktar" }
+    HistoryImportDialogTitle { en: "Choose Spotify streaming history", tr: "Spotify dinleme geçmişini seç" }
+    HistoryImporting { en: "Importing listening history…", tr: "Dinleme geçmişi içe aktarılıyor…" }
+    HistoryImportDone { en: "{0} plays added · {1} already present · {2} skipped", tr: "{0} çalma eklendi · {1} zaten vardı · {2} atlandı" }
+    HistoryImportFailed { en: "The history file could not be imported.", tr: "Geçmiş dosyası içe aktarılamadı." }
+    HistoryImportedPrivate { en: "Imported during a private session. These plays are included in local stats.", tr: "Gizli oturumda içe aktarıldı. Bu çalmalar yerel istatistiklerine eklendi." }
+    StatsLocal { en: "Stored only on this computer. No history is requested from Spotify.", tr: "Yalnız bu bilgisayarda tutulur. Spotify'dan geçmiş istenmez." }
     ExploreMeta { en: "New releases, trending playlists, genres and moods", tr: "Yeni çıkanlar, trend listeler, türler ve ruh hâlleri" }
     ExploreNew { en: "New releases", tr: "Yeni çıkanlar" }
     ExploreCharts { en: "Trending playlists", tr: "Trend listeler" }

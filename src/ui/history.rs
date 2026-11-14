@@ -26,6 +26,8 @@ pub enum Route {
     /// Kütüphane: kapak rafı + kütüphanedeki her şey (süzgeç, sıralama,
     /// ızgara / liste); raf ve liste yerine bu görünüm.
     Library,
+    /// Yerel dinleme istatistikleri.
+    Stats,
     /// Tam arama sonuçları.
     Search(String),
     /// Ayarlar (Adım 15): tek sayfa, kısa bölümler alt alta.
@@ -43,6 +45,7 @@ pub enum Tab {
     Home,
     Explore,
     Library,
+    Stats,
 }
 
 impl Route {
@@ -59,6 +62,7 @@ impl Route {
             Route::Home | Route::Recent => Some(Tab::Home),
             Route::Explore | Route::Category(_) => Some(Tab::Explore),
             Route::Collection(_) | Route::Library | Route::Tools => Some(Tab::Library),
+            Route::Stats => Some(Tab::Stats),
             Route::Artist(_) | Route::Album(_) | Route::Search(_) | Route::Settings => None,
         }
     }

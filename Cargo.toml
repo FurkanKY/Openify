@@ -24,6 +24,7 @@ cpal = "0.16"
 dirs = "7"
 env_logger = "0.11.11"
 futures = "0.3"
+futures-lite = "2"
 gpui = "0.2.2"
 http = "1"
 # Benzer sanatçılar (src/engine/related.rs): yanıt gövdesini 429 yinelemesi olmadan
@@ -51,6 +52,8 @@ thiserror = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "signal", "net", "io-util", "sync", "time"] }
 # Kalıcı Spotify aygıt kimliği (src/settings.rs, Connect 7.1); librespot-core zaten kullanıyor, yeni indirme yok.
 uuid = { version = "1", default-features = false, features = ["v4"] }
+# Spotify GDPR geçmişi ZIP'leri; yalnız deflate sıkıştırması gerekir.
+async_zip = { version = "0.0.17", default-features = false, features = ["deflate"] }
 # Adım 16 (paketleme): kurulum / kaldırma kancaları ve otomatik güncelleme (bkz. src/update.rs).
 velopack = "=1.2.161"
 

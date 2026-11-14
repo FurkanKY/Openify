@@ -82,6 +82,27 @@ impl Engine {
             let _ = events.try_send(Event::Library(event));
         });
     }
+
+    /// Geçmiş dosyalarını yerelde işler; hiçbir Spotify bağlantı yoluna girmez.
+    pub(in crate::engine) fn tools_import_history(&mut self, paths: Vec<PathBuf>) {
+        let events = self.events.clone();
+        let Some(db) = self.db.clone() else {
+            let _ = events.try_send(Event::Library(LibraryEvent::HistoryImportFailed));
+            return;
+        };
+        let private_session = stats::private_session();
+        self.bg.spawn_blocking(
+            move || match db.import_spotify_history(&paths, private_session) {
+                Ok(summary) => {
+                    let _ = events.try_send(Event::Library(LibraryEvent::HistoryImported(summary)));
+                }
+                Err(error) => {
+                    log::warn!("Spotify geçmişi içe aktarılamadı: {error:#}");
+                    let _ = events.try_send(Event::Library(LibraryEvent::HistoryImportFailed));
+                }
+            },
+        );
+    }
 }
 
 #[cfg(test)]

@@ -398,6 +398,7 @@ pub struct TopTrack {
     pub artists: String,
     pub plays: u32,
     pub listened_ms: u64,
+    pub image: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -420,6 +421,8 @@ pub struct StatsReport {
     pub range: StatsRange,
     /// Sayılan çalma sayısı.
     pub plays: u64,
+    pub unique_tracks: u64,
+    pub unique_artists: u64,
     /// Toplam dinleme süresi (ms).
     pub listened_ms: u64,
     pub tracks: Vec<TopTrack>,
@@ -427,16 +430,18 @@ pub struct StatsReport {
     pub albums: Vec<TopAlbum>,
     /// Yerel saate göre saat başına dinlenen süre (ms), 0..=23.
     pub hours: [u64; 24],
+    /// Yerel güne göre dinlenen süre (Pazartesi 0, Pazar 6).
+    pub weekdays: [u64; 7],
 }
 
 fn rank_key(
-    plays: u32,
     listened: u64,
+    plays: u32,
     name: &str,
-) -> (std::cmp::Reverse<u32>, std::cmp::Reverse<u64>, String) {
+) -> (std::cmp::Reverse<u64>, std::cmp::Reverse<u32>, String) {
     (
-        std::cmp::Reverse(plays),
         std::cmp::Reverse(listened),
+        std::cmp::Reverse(plays),
         fold(name),
     )
 }
@@ -455,12 +460,14 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
         report.plays += 1;
         report.listened_ms += r.listened_ms;
         report.hours[civil::hour_of(r.played_at, offset_minutes).min(23)] += r.listened_ms;
+        report.weekdays[civil::weekday_of(r.played_at, offset_minutes).min(6)] += r.listened_ms;
         let t = tracks.entry(r.uri.as_str()).or_insert_with(|| TopTrack {
             uri: r.uri.clone(),
             name: r.name.clone(),
             artists: r.artists.clone(),
             plays: 0,
             listened_ms: 0,
+            image: String::new(),
         });
         t.plays += 1;
         t.listened_ms += r.listened_ms;
@@ -489,20 +496,22 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
             a.listened_ms += r.listened_ms;
         }
     }
+    report.unique_tracks = tracks.len() as u64;
+    report.unique_artists = artists.len() as u64;
     report.tracks = tracks.into_values().collect();
     report
         .tracks
-        .sort_by_key(|t| rank_key(t.plays, t.listened_ms, &t.name));
+        .sort_by_key(|t| rank_key(t.listened_ms, t.plays, &t.name));
     report.tracks.truncate(TOP_N);
     report.artists = artists.into_values().collect();
     report
         .artists
-        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.name));
+        .sort_by_key(|a| rank_key(a.listened_ms, a.plays, &a.name));
     report.artists.truncate(TOP_N);
     report.albums = albums.into_values().collect();
     report
         .albums
-        .sort_by_key(|a| rank_key(a.plays, a.listened_ms, &a.album));
+        .sort_by_key(|a| rank_key(a.listened_ms, a.plays, &a.album));
     report.albums.truncate(TOP_N);
     report
 }
@@ -510,7 +519,15 @@ pub fn aggregate(range: StatsRange, records: &[PlayRecord], offset_minutes: i64)
 /// Veritabanından, verilen aralık ve anda rapor.
 pub fn report(db: &Db, range: StatsRange, now_ms: i64, offset_minutes: i64) -> Result<StatsReport> {
     let rows = db.plays_since(range.since_ms(now_ms))?;
-    Ok(aggregate(range, &rows, offset_minutes))
+    let mut report = aggregate(range, &rows, offset_minutes);
+    let conn = db.r();
+    let mut stmt = conn.prepare_cached("SELECT image FROM tracks WHERE uri=?1")?;
+    for track in &mut report.tracks {
+        track.image = stmt
+            .query_row([&track.uri], |r| r.get(0))
+            .unwrap_or_default();
+    }
+    Ok(report)
 }
 
 #[cfg(test)]
@@ -900,7 +917,7 @@ mod tests {
     }
 
     #[test]
-    fn aggregate_ranks_by_plays_then_time_and_sums_hours() {
+    fn aggregate_ranks_by_listened_time_then_plays_and_sums_local_buckets() {
         // Yerel saat farkı +3: UTC 09:00 → 12:00.
         let nine = 9 * 3_600_000i64;
         let records = vec![
@@ -929,6 +946,12 @@ mod tests {
         assert_eq!(r.hours[13], 300_000);
         assert_eq!(r.hours[23], 60_000, "UTC 20 + 3 = 23");
         assert_eq!(r.hours.iter().sum::<u64>(), r.listened_ms);
+        assert_eq!(
+            r.weekdays[3], r.listened_ms,
+            "epoch günü UTC ve +3 yerel aynı Perşembe"
+        );
+        assert_eq!(r.weekdays.iter().sum::<u64>(), r.listened_ms);
+        assert_eq!((r.unique_tracks, r.unique_artists), (4, 2));
     }
 
     #[test]

@@ -61,17 +61,10 @@ pub enum Tool {
     MergeSplit,
     Sort,
     Backup,
-    Stats,
 }
 
 impl Tool {
-    pub const ALL: [Tool; 5] = [
-        Tool::Duplicates,
-        Tool::MergeSplit,
-        Tool::Sort,
-        Tool::Backup,
-        Tool::Stats,
-    ];
+    pub const ALL: [Tool; 4] = [Tool::Duplicates, Tool::MergeSplit, Tool::Sort, Tool::Backup];
 
     pub fn key(self) -> &'static str {
         match self {
@@ -79,7 +72,6 @@ impl Tool {
             Tool::MergeSplit => "merge",
             Tool::Sort => "sort",
             Tool::Backup => "backup",
-            Tool::Stats => "stats",
         }
     }
 
@@ -95,7 +87,6 @@ impl Tool {
             Tool::MergeSplit => t!(ToolsMergeSplit),
             Tool::Sort => t!(ToolsSort),
             Tool::Backup => t!(ToolsBackup),
-            Tool::Stats => t!(ToolsStats),
         }
     }
 }
@@ -260,6 +251,15 @@ pub struct StatsState {
     pub more: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ImportStatus {
+    Idle,
+    Choosing,
+    Importing,
+    Done(engine::tools::import::ImportSummary),
+    Failed,
+}
+
 /// Sıralama önizlemesi: istenen sıra ve gereken taşımalar (liste ya da ölçüt
 /// değişmedikçe yeniden hesaplanmaz; her karede kurmak büyük listede takılırdı).
 pub struct SortView {
@@ -288,6 +288,7 @@ pub struct ToolsUi {
     pub sort: SortState,
     pub backup: BackupStatus,
     pub stats: StatsState,
+    pub history_import: ImportStatus,
     pub confirm: Option<Bulk>,
     pub dup_view: RefCell<Option<Rc<DupView>>>,
     /// Önizleme hesapları: (anahtar, sonuç); anahtar kaynak listelerin içeriği ve
@@ -345,6 +346,7 @@ impl ToolsUi {
                 report: None,
                 more: false,
             },
+            history_import: ImportStatus::Idle,
             confirm: None,
             dup_view: RefCell::new(None),
             merge_memo: RefCell::new(None),
@@ -431,7 +433,6 @@ impl Shell {
             BackupStatus::Choosing | BackupStatus::Writing => self.tools.backup.clone(),
             _ => BackupStatus::Idle,
         };
-        self.tools_want_stats();
         self.tools_run_script(cx);
         cx.notify();
     }
@@ -1074,7 +1075,7 @@ impl Shell {
     // ── İstatistik ──────────────────────────────────────────────────────
 
     fn tools_want_stats(&mut self) {
-        if self.tools_on() && self.tools.tool == Tool::Stats {
+        if matches!(self.pages.history.current(), Route::Stats) {
             self.engine.send(Command::Library(LibraryCommand::PlayStats(
                 self.tools.stats.range,
             )));
@@ -1088,16 +1089,119 @@ impl Shell {
         cx.notify();
     }
 
-    pub(super) fn tools_more_stats(&mut self, cx: &mut Context<Self>) {
-        self.tools.stats.more = !self.tools.stats.more;
-        cx.notify();
-    }
-
     pub(super) fn on_play_stats(&mut self, report: Arc<StatsReport>, cx: &mut Context<Self>) {
         if report.range == self.tools.stats.range {
             self.tools.stats.report = Some(report);
             cx.notify();
         }
+    }
+
+    pub(super) fn enter_stats(&mut self, cx: &mut Context<Self>) {
+        self.tools_want_stats();
+        cx.notify();
+    }
+
+    pub(super) fn import_spotify_history(&mut self, cx: &mut Context<Self>) {
+        if matches!(
+            self.tools.history_import,
+            ImportStatus::Choosing | ImportStatus::Importing
+        ) {
+            return;
+        }
+        if let Some(paths) = std::env::var_os("OPENIFY_TEST_IMPORT_PATH") {
+            let paths = paths
+                .to_string_lossy()
+                .split(';')
+                .map(std::path::PathBuf::from)
+                .collect();
+            self.tools_start_history_import(paths, cx);
+            return;
+        }
+        self.tools.history_import = ImportStatus::Choosing;
+        let (tx, rx) = async_channel::bounded(1);
+        let title = t!(HistoryImportDialogTitle).to_string();
+        std::thread::Builder::new()
+            .name("openify-open-dialog".into())
+            .spawn(move || {
+                let _ = tx.send_blocking(crate::system::open_files_dialog(&title));
+            })
+            .ok();
+        cx.spawn(async move |this, cx| {
+            let picked = rx.recv().await.ok().flatten();
+            let _ = this.update(cx, |shell, cx| match picked {
+                Some(paths) => shell.tools_start_history_import(paths, cx),
+                None => {
+                    shell.tools.history_import = ImportStatus::Idle;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
+        cx.notify();
+    }
+
+    fn tools_start_history_import(
+        &mut self,
+        paths: Vec<std::path::PathBuf>,
+        cx: &mut Context<Self>,
+    ) {
+        if paths.is_empty() {
+            self.tools.history_import = ImportStatus::Idle;
+            return;
+        }
+        self.tools.history_import = ImportStatus::Importing;
+        self.engine
+            .send(Command::Library(LibraryCommand::ImportSpotifyHistory(
+                paths,
+            )));
+        cx.notify();
+    }
+
+    pub(super) fn on_history_imported(
+        &mut self,
+        summary: engine::tools::import::ImportSummary,
+        cx: &mut Context<Self>,
+    ) {
+        self.tools.history_import = ImportStatus::Done(summary);
+        self.engine
+            .send(Command::Library(LibraryCommand::RefreshSmartLists));
+        self.tools_want_stats();
+        cx.notify();
+    }
+
+    pub(super) fn on_history_import_failed(&mut self, cx: &mut Context<Self>) {
+        self.tools.history_import = ImportStatus::Failed;
+        cx.notify();
+    }
+
+    pub(super) fn play_stats_track(
+        &mut self,
+        track: &crate::engine::tools::stats::TopTrack,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.ready_to_play(cx) {
+            return;
+        }
+        let row = TrackRow {
+            uri: track.uri.clone(),
+            name: track.name.clone(),
+            artists: track.artists.clone(),
+            album: String::new(),
+            duration_ms: 0,
+            image: track.image.clone(),
+            plays: None,
+        };
+        self.state.notice = None;
+        self.state.pending = Some(super::player::PendingTrack {
+            name: row.name.clone(),
+            image: row.image.clone(),
+        });
+        self.engine.send(Command::PlayTracks {
+            context: None,
+            tracks: Arc::new(vec![row]),
+            index: 0,
+        });
+        cx.notify();
     }
 
     // ── Çalma sayma (istatistiğin kaynağı) ──────────────────────────────

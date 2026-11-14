@@ -1258,6 +1258,7 @@ impl Shell {
             _ if view == "settings" => Some(Route::Settings),
             _ if view == "recent" => Some(Route::Recent),
             _ if view == "tools" => Some(Route::Tools),
+            _ if view == "stats" => Some(Route::Stats),
             _ if CollectionId::from_key(view)
                 .is_some_and(|id| matches!(id, CollectionId::Smart(_))) =>
             {

@@ -130,6 +130,10 @@ pub enum LibraryCommand {
     PlayStats(super::tools::stats::StatsRange),
     /// Kütüphaneyi bu dosyaya JSON olarak yaz (`BackupDone` / `BackupFailed`).
     ExportBackup(std::path::PathBuf),
+    /// Spotify dışa aktarımını yerel geçmişe ekle (dosya okuma ve DB işlemi arka planda).
+    ImportSpotifyHistory(Vec<std::path::PathBuf>),
+    /// İçeri aktarılan geçmişten akıllı listeleri yeniden hesapla.
+    RefreshSmartLists,
     /// Şarkıları yerel olarak gizle (`on`) ya da göster (bkz. `hidden.rs`).
     /// Spotify'a hiçbir şey yazılmaz; cevap `LibraryEvent::Hidden`.
     SetHidden {
@@ -213,6 +217,10 @@ pub enum LibraryEvent {
     BackupDone(super::tools::backup::Summary),
     /// Yedek yazılamadı (ayrıntı günlükte; arayüz kendi cümlesini yazar).
     BackupFailed,
+    /// Dışa aktarım içe aktarıldı.
+    HistoryImported(super::tools::import::ImportSummary),
+    /// Dışa aktarım içe aktarılamadı.
+    HistoryImportFailed,
     /// Yerel olarak gizlenen şarkıların güncel dizini (açılışta ve her değişiklikte).
     Hidden(Arc<super::hidden::HiddenList>),
 }
@@ -566,6 +574,15 @@ impl Engine {
             LibraryCommand::RecordPlay(log) => self.tools_record_play(log),
             LibraryCommand::PlayStats(range) => self.tools_play_stats(range),
             LibraryCommand::ExportBackup(path) => self.tools_export_backup(path),
+            LibraryCommand::ImportSpotifyHistory(paths) => self.tools_import_history(paths),
+            LibraryCommand::RefreshSmartLists => {
+                for list in crate::engine::SmartList::ALL {
+                    let id = CollectionId::Smart(list);
+                    if self.opened.contains(&id) {
+                        self.open_collection(id);
+                    }
+                }
+            }
             LibraryCommand::SetHidden { songs, on } => self.set_hidden(songs, on),
         }
     }

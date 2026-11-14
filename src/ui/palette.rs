@@ -85,6 +85,8 @@ pub enum PaletteCommand {
     /// Keşfet ve Kütüphane sekmeleri.
     Explore,
     Library,
+    /// Yerel dinleme istatistikleri.
+    Stats,
     /// Yeni, boş liste (Adım 13).
     NewPlaylist,
     /// Ayarlar sayfası (Adım 15).
@@ -103,7 +105,7 @@ pub enum PaletteCommand {
 
 /// Eylem, adı, açıklaması. Çal ve sessize al eylemlerinin adı o anki duruma
 /// göre değişir (bkz. `command_state`).
-fn commands() -> [(PaletteCommand, &'static str, &'static str); 17] {
+fn commands() -> [(PaletteCommand, &'static str, &'static str); 18] {
     [
         (PaletteCommand::TogglePlay, t!(CmdTogglePlay), ""),
         (PaletteCommand::Next, t!(CmdNext), ""),
@@ -117,6 +119,7 @@ fn commands() -> [(PaletteCommand, &'static str, &'static str); 17] {
         (PaletteCommand::Home, t!(NavHome), t!(CmdHomeDesc)),
         (PaletteCommand::Explore, t!(NavExplore), t!(CmdExploreDesc)),
         (PaletteCommand::Library, t!(NavLibrary), t!(CmdLibraryDesc)),
+        (PaletteCommand::Stats, t!(NavStats), t!(CmdStatsDesc)),
         (
             PaletteCommand::Recent,
             t!(RecentPageTitle),
@@ -1338,6 +1341,7 @@ impl Shell {
                     PaletteCommand::Home
                         | PaletteCommand::Explore
                         | PaletteCommand::Library
+                        | PaletteCommand::Stats
                         | PaletteCommand::NewPlaylist
                         | PaletteCommand::Settings
                         | PaletteCommand::Recent
@@ -1406,6 +1410,7 @@ impl Shell {
             PaletteCommand::Home => self.go_home(cx),
             PaletteCommand::Explore => self.go_tab(super::history::Tab::Explore, cx),
             PaletteCommand::Library => self.go_tab(super::history::Tab::Library, cx),
+            PaletteCommand::Stats => self.navigate(Route::Stats, cx),
             PaletteCommand::NewPlaylist => self.ask_new_playlist(Vec::new(), true, cx),
             PaletteCommand::Settings => self.open_settings(cx),
             PaletteCommand::Recent => self.navigate(Route::Recent, cx),
@@ -2397,6 +2402,7 @@ fn command_icon(cmd: PaletteCommand) -> &'static str {
         PaletteCommand::Home => "house",
         PaletteCommand::Explore => "compass",
         PaletteCommand::Library => "library",
+        PaletteCommand::Stats => "chart-no-axes-column-increasing",
         PaletteCommand::NewPlaylist => "plus",
         PaletteCommand::Settings => "settings",
         PaletteCommand::Recent => "list-music",

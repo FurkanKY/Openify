@@ -15,6 +15,7 @@ use super::{
     components::{
         Look, chip, primary_button_sized, secondary_button, segment, segmented_track, state_view,
     },
+    cover_image,
     library::Loadable,
     text::line_with_tip,
     theme::*,
@@ -46,8 +47,7 @@ const ALBUM_MIN_WIDTH: f32 = 1000.;
 /// Önizlemede gösterilen en çok satır / liste.
 const PREVIEW_ROWS: usize = 6;
 /// İstatistik listelerinde varsayılan satır sayısı ("Tümünü göster" ile `TOP_N`).
-const TOP_SHORT: usize = 5;
-
+///
 /// Onay kutusu: bir işaret (seçili), çoklu seçimde kare, tekilde yuvarlak.
 fn mark(on: bool, radio: bool, accent: u32) -> Div {
     let el = div()
@@ -79,7 +79,6 @@ impl Shell {
             Tool::MergeSplit => self.merge_tool(window, cx),
             Tool::Sort => self.sort_tool(window, cx),
             Tool::Backup => self.backup_tool(window, cx),
-            Tool::Stats => self.stats_tool(window, cx),
         };
         div()
             .flex()
@@ -87,6 +86,20 @@ impl Shell {
             .child(self.page_header(None, t!(ToolsTitle), meta, Vec::new()))
             .child(self.tools_tabs(window, cx))
             .child(self.tools_column(body))
+    }
+
+    pub(super) fn stats_body(&self, window: &Window, cx: &mut Context<Self>) -> Div {
+        let content = self.stats_content(window, cx);
+        div()
+            .flex()
+            .flex_col()
+            .child(self.page_header(
+                None,
+                t!(NavStats),
+                div().child(t!(StatsSubtitle)).into_any_element(),
+                Vec::new(),
+            ))
+            .child(self.tools_column(content))
     }
 
     /// Sütunun eni: içerik eni (`Shell::grid` ile aynı kaynak: pencere eni) eksi
@@ -1286,9 +1299,9 @@ impl Shell {
 
     // ── İstatistik ──────────────────────────────────────────────────────
 
-    fn stats_tool(&self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
+    fn stats_content(&self, window: &Window, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let accent = self.accent().text;
-        let mut out = vec![self.tools_text(t!(ToolsStatsIntro))];
+        let mut out = vec![self.tools_text(t!(StatsIntro))];
         // Aralık düğmeleri.
         let mut chips = div().flex().items_center().gap(px(S2)).flex_wrap();
         for range in StatsRange::ALL {
@@ -1326,51 +1339,66 @@ impl Shell {
                 div()
                     .py(px(S5))
                     .flex()
-                    .justify_center()
-                    .child(state_view(
-                        "music",
-                        t!(ToolsStatsEmptyTitle),
-                        t!(ToolsStatsEmptyBody),
+                    .flex_col()
+                    .items_start()
+                    .gap(px(S4))
+                    .child(state_view("music", t!(StatsEmptyTitle), t!(StatsEmptyBody)))
+                    .child(self.tools_action(
+                        "stats-import-empty",
+                        true,
+                        "download",
+                        t!(HistoryImportButton).to_string(),
+                        true,
+                        window,
+                        cx,
+                        |this, cx| this.import_spotify_history(cx),
                     ))
+                    .when_some(match &self.tools.history_import {
+                        super::tools::ImportStatus::Done(s) => Some(tf!(HistoryImportDone, s.added, s.existing, s.skipped)),
+                        super::tools::ImportStatus::Failed => Some(t!(HistoryImportFailed).to_string()),
+                        _ => None,
+                    }, |view, note| view.child(self.tools_note(note, false)))
+                    .when(matches!(&self.tools.history_import, super::tools::ImportStatus::Done(s) if s.private_session), |view| view.child(self.tools_note(t!(HistoryImportedPrivate), false)))
                     .into_any_element(),
             );
             return out;
         }
-        // Özet: çalma sayısı ve toplam süre.
+        // Özet değerleri.
         out.push(
             div()
                 .flex()
-                .gap(px(S6))
+                .gap(px(S5))
                 .flex_wrap()
-                .child(
-                    self.stat_figure(report.plays.to_string(), t!(ToolsPlaysCaption).to_string()),
-                )
+                .child(self.stat_figure(report.plays.to_string(), t!(StatsPlays).to_string()))
                 .child(self.stat_figure(
-                    listened_text(report.listened_ms),
-                    t!(ToolsListened).to_string(),
+                    format!("{}", report.listened_ms / 60_000),
+                    t!(StatsMinutes).to_string(),
+                ))
+                .child(self.stat_figure(
+                    report.unique_tracks.to_string(),
+                    t!(StatsTracks).to_string(),
+                ))
+                .child(self.stat_figure(
+                    report.unique_artists.to_string(),
+                    t!(StatsArtists).to_string(),
                 ))
                 .into_any_element(),
         );
-        // Saat dağılımı.
-        out.push(self.tools_step(t!(ToolsHours), None));
-        out.push(self.hours_chart(&report.hours, accent));
-        let take = if self.tools.stats.more {
-            TOP_N
-        } else {
-            TOP_SHORT
-        };
-        out.push(self.tools_step(t!(ToolsTopTracks), None));
-        out.push(
-            self.top_list(
-                "tools-top-tracks",
-                report
-                    .tracks
-                    .iter()
-                    .take(take)
-                    .map(|x| (x.name.clone(), x.artists.clone(), x.plays))
-                    .collect(),
+        out.push(self.tools_note(
+            format!(
+                "{} · {}",
+                listened_text(report.listened_ms),
+                t!(StatsTotalTime)
             ),
-        );
+            false,
+        ));
+        // Saat dağılımı.
+        out.push(self.tools_step(t!(StatsHours), None));
+        out.push(self.hours_chart(&report.hours, accent));
+        out.push(self.tools_step(t!(StatsWeekdays), None));
+        out.push(self.weekdays_chart(&report.weekdays, accent));
+        out.push(self.tools_step(t!(ToolsTopTracks), None));
+        out.push(self.stats_track_list(&report.tracks, cx));
         out.push(self.tools_step(t!(ToolsTopArtists), None));
         out.push(
             self.top_list(
@@ -1378,7 +1406,7 @@ impl Shell {
                 report
                     .artists
                     .iter()
-                    .take(take)
+                    .take(TOP_N)
                     .map(|x| (x.name.clone(), String::new(), x.plays))
                     .collect(),
             ),
@@ -1390,40 +1418,155 @@ impl Shell {
                 report
                     .albums
                     .iter()
-                    .take(take)
+                    .take(TOP_N)
                     .map(|x| (x.album.clone(), x.artist.clone(), x.plays))
                     .collect(),
             ),
         );
-        let more = report.tracks.len() > TOP_SHORT
-            || report.artists.len() > TOP_SHORT
-            || report.albums.len() > TOP_SHORT;
-        if more {
-            let (stop, look) =
-                self.stop_look("tools-stats-more", super::tab::PAGE, true, window, cx);
-            out.push(
-                div()
-                    .flex()
-                    .child(
-                        chip(
-                            "tools-stats-more",
-                            if self.tools.stats.more {
-                                t!(ShowLess)
-                            } else {
-                                t!(ShowAll)
-                            },
-                            false,
-                            look,
-                            accent,
-                        )
-                        .when_some(stop, |el, h| el.child(self.focus_probe(&h)).track_focus(&h))
-                        .on_click(cx.listener(|this, _, _, cx| this.tools_more_stats(cx))),
-                    )
-                    .into_any_element(),
-            );
+        let status = match &self.tools.history_import {
+            super::tools::ImportStatus::Choosing | super::tools::ImportStatus::Importing => {
+                Some(t!(HistoryImporting).to_string())
+            }
+            super::tools::ImportStatus::Done(summary) => Some(tf!(
+                HistoryImportDone,
+                summary.added,
+                summary.existing,
+                summary.skipped
+            )),
+            super::tools::ImportStatus::Failed => Some(t!(HistoryImportFailed).to_string()),
+            super::tools::ImportStatus::Idle => None,
+        };
+        if let Some(status) = status {
+            out.push(self.tools_note(
+                status,
+                matches!(
+                    self.tools.history_import,
+                    super::tools::ImportStatus::Failed
+                ),
+            ));
         }
-        out.push(self.tools_note(t!(ToolsStatsLocal), false));
+        out.push(self.tools_action(
+            "stats-import",
+            true,
+            "download",
+            t!(HistoryImportButton).to_string(),
+            true,
+            window,
+            cx,
+            |this, cx| this.import_spotify_history(cx),
+        ));
+        if matches!(&self.tools.history_import, super::tools::ImportStatus::Done(s) if s.private_session)
+        {
+            out.push(self.tools_note(t!(HistoryImportedPrivate), false));
+        }
+        out.push(self.tools_note(t!(StatsLocal), false));
         out
+    }
+
+    fn stats_track_list(
+        &self,
+        rows: &[crate::engine::tools::stats::TopTrack],
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        div()
+            .flex()
+            .flex_col()
+            .children(rows.iter().enumerate().map(|(i, row)| {
+                let row = row.clone();
+                let cover = cover_image(&self.images, &row.image, &row.name, 40., R_SM, "music");
+                div()
+                    .id(("stats-track", i))
+                    .min_h(px(ROW_H))
+                    .px(px(S3))
+                    .flex()
+                    .items_center()
+                    .gap(px(S3))
+                    .rounded(px(R_MD))
+                    .hover(|s| s.bg(veil(VEIL_HOVER)))
+                    .child(
+                        div()
+                            .w(px(S3))
+                            .type_role(T_LABEL)
+                            .text_color(label())
+                            .child((i + 1).to_string()),
+                    )
+                    .child(cover)
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .flex()
+                            .flex_col()
+                            .child(
+                                div()
+                                    .type_role(T_SECONDARY)
+                                    .text_color(text())
+                                    .truncate()
+                                    .child(row.name.clone()),
+                            )
+                            .child(
+                                div()
+                                    .type_role(T_LABEL)
+                                    .text_color(muted())
+                                    .truncate()
+                                    .child(row.artists.clone()),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .type_role(T_LABEL)
+                            .text_color(muted())
+                            .child(format!("{}", row.plays)),
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| this.play_stats_track(&row, cx)))
+            }))
+            .into_any_element()
+    }
+
+    fn weekdays_chart(&self, days: &[u64; 7], accent: u32) -> AnyElement {
+        let max = days.iter().copied().max().unwrap_or(1).max(1);
+        let names = [
+            t!(WeekdayMon),
+            t!(WeekdayTue),
+            t!(WeekdayWed),
+            t!(WeekdayThu),
+            t!(WeekdayFri),
+            t!(WeekdaySat),
+            t!(WeekdaySun),
+        ];
+        let bars = (0..7).map(|d| {
+            div().flex_1().h(px(HOURS_HEIGHT)).flex().items_end().child(
+                div()
+                    .w_full()
+                    .h(px(if days[d] == 0 {
+                        S0
+                    } else {
+                        (HOURS_HEIGHT * days[d] as f32 / max as f32).max(S1)
+                    }))
+                    .rounded(px(R_XS))
+                    .bg(if days[d] == max && days[d] > 0 {
+                        rgb(accent)
+                    } else {
+                        accent_veil(accent, 0.45)
+                    }),
+            )
+        });
+        let axis = names.into_iter().map(|name| {
+            div()
+                .flex_1()
+                .flex()
+                .justify_center()
+                .type_role(T_LABEL)
+                .text_color(label())
+                .child(name)
+        });
+        div()
+            .flex()
+            .flex_col()
+            .gap(px(S1))
+            .child(div().flex().gap(px(S0)).items_end().children(bars))
+            .child(div().flex().gap(px(S0)).children(axis))
+            .into_any_element()
     }
 
     fn stat_figure(&self, value: String, caption: String) -> AnyElement {

@@ -136,6 +136,7 @@ impl Shell {
             Tab::Home => Route::Home,
             Tab::Explore => Route::Explore,
             Tab::Library => Route::Library,
+            Tab::Stats => Route::Stats,
         };
         self.navigate(route, cx);
     }
@@ -159,6 +160,13 @@ impl Shell {
                 "library",
                 t!(NavLibrary),
                 "Ctrl 3",
+                super::tab::LIBRARY,
+            ),
+            (
+                Tab::Stats,
+                "chart-no-axes-column-increasing",
+                t!(NavStats),
+                "",
                 super::tab::LIBRARY,
             ),
         ] {

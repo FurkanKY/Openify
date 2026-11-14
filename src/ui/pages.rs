@@ -457,6 +457,7 @@ impl Shell {
             }
             Route::Settings => self.enter_settings(cx),
             Route::Tools => self.enter_tools(cx),
+            Route::Stats => self.enter_stats(cx),
             Route::Home => self.ask_explore(&[crate::engine::ExploreKey::Home]),
             Route::Explore => self.enter_explore(cx),
             Route::Category(uri) => {
@@ -828,6 +829,8 @@ impl Shell {
             LibraryEvent::PlayStats(report) => self.on_play_stats(report, cx),
             LibraryEvent::BackupDone(summary) => self.on_backup_done(summary, cx),
             LibraryEvent::BackupFailed => self.on_backup_failed(cx),
+            LibraryEvent::HistoryImported(summary) => self.on_history_imported(summary, cx),
+            LibraryEvent::HistoryImportFailed => self.on_history_import_failed(cx),
             LibraryEvent::Hidden(list) => self.on_hidden(list),
         }
         cx.notify();
@@ -1000,6 +1003,7 @@ impl Shell {
             Route::Settings => self.settings_body(window, cx),
             Route::Recent => self.recent_body(window, cx),
             Route::Tools => self.tools_body(window, cx),
+            Route::Stats => self.stats_body(window, cx),
             Route::Collection(_) | Route::Library => div(),
         };
         self.page_frame(content, &route, cx)
@@ -1092,6 +1096,7 @@ impl Shell {
         let column = match self.pages.history.current() {
             Route::Settings => Some(super::settings::SETTINGS_WIDTH),
             Route::Tools => Some(super::tools_view::TOOLS_WIDTH),
+            Route::Stats => Some(super::tools_view::TOOLS_WIDTH),
             _ => None,
         };
         column_margin(self.window_width, column)
