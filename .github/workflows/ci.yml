@@ -70,9 +70,9 @@ jobs:
           command: check licenses bans sources
       # 11 Nov 2026: the RUSTSEC findings were reviewed (librespot-core ones fixed,
       # the rest ignored with reasons in deny.toml); `cargo deny check advisories`
-      # now passes locally. TODO: make blocking (drop continue-on-error) once this
-      # has stayed green in CI for a while; new advisories then fail the build.
-      - name: Advisories (non-blocking for now)
+      # now passes locally. Stays non-blocking here so a new advisory never stops
+      # a release; advisories.yml checks weekly and turns red on its own (14 Nov 2026).
+      - name: Advisories (non-blocking)
         continue-on-error: true
         uses: EmbarkStudios/cargo-deny-action@v2
         with:

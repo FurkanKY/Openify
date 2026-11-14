@@ -706,8 +706,10 @@ impl Shell {
     }
 
     /// Başka bir aygıtta çalıyor (Spotify Connect, bkz. `engine::connect`):
-    /// bildirim şeridinin yerinde sakin bir satır ("<aygıt> cihazında çalıyor") ve
-    /// çalmayı bu bilgisayara alan düğme. Uzak aygıta başka komut gitmez.
+    /// hapın üst kenarına oturan bir sekme ("<aygıt> cihazında çalıyor") ve
+    /// çalmayı bu bilgisayara alan düğme. Hapla tek parça okunsun diye aynı
+    /// cam zeminde, alt kenarı hapın içine 1 px girer, yanları hapın yuvarlak
+    /// uçlarının başladığı yerde (14 Kasım kararı). Uzak aygıta başka komut gitmez.
     fn remote_strip(&self, device: &str, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = pill_accent(self.accent().text);
         let (stop, look) =
@@ -729,23 +731,25 @@ impl Shell {
         div()
             .id("remote-strip")
             .absolute()
-            .left(px(S6))
-            .right(px(S6))
-            .bottom(px(PILL_HEIGHT + S3))
-            .min_h(px(S7))
+            .left(px(EDGE_INSET))
+            .right(px(EDGE_INSET))
+            .bottom(px(PILL_HEIGHT - 1.))
             .pl(px(S4))
             .pr(px(S2))
-            .py(px(S2))
+            .pt(px(S1))
+            .pb(px(S1 + 1.))
             .flex()
             .items_center()
             .gap(px(S3))
-            .rounded(px(R_XL))
-            .border_1()
+            .rounded_t(px(R_XL))
+            .border_t_1()
+            .border_l_1()
+            .border_r_1()
             .border_color(rgb(palette().border))
-            .bg(rgb(palette().bar))
+            .bg(rgb(palette().pill_glass_top))
             // Altındaki satırlar tıklanmasın, üzerine gelmek onları boyamasın.
             .block_mouse_except_scroll()
-            .child(icon("cast", 18., label()))
+            .child(icon("cast", 18., rgb(accent)))
             .child(
                 div()
                     .flex_1()

@@ -211,6 +211,15 @@ impl LibraryState {
     }
 }
 
+/// Dinlenme sütunu yalnız sayısı anlam taşıyan akıllı listelerde: "Beğenip
+/// hiç çalmadıkların"da her satır 0 olurdu.
+fn smart_shows_plays(id: &CollectionId) -> bool {
+    matches!(
+        id,
+        CollectionId::Smart(SmartList::Top30 | SmartList::Forgotten)
+    )
+}
+
 pub(super) fn smart_title(list: SmartList) -> &'static str {
     match list {
         SmartList::Top30 => t!(SmartTop30),
@@ -1042,7 +1051,7 @@ impl Shell {
             .child(column_header(
                 matches!(id, CollectionId::Album(_)),
                 self.shows_added_column(&id),
-                matches!(id, CollectionId::Smart(_)),
+                smart_shows_plays(&id),
                 page_margin(self.window_width),
             ))
             .child(body)
@@ -1134,7 +1143,7 @@ impl Shell {
                                         .unwrap_or_default()
                                         .into()
                                 }),
-                                plays: matches!(id, CollectionId::Smart(_))
+                                plays: smart_shows_plays(&id)
                                     .then_some(track.plays.unwrap_or_default()),
                             };
                             Some(this.song_row(spec, track, cx))

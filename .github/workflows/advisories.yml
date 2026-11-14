@@ -1,0 +1,24 @@
+name: Advisories
+
+# Weekly security check of dependencies (RustSec). Kept out of CI on purpose:
+# a newly published advisory turns this run red and GitHub emails the owner,
+# but it never blocks a CI run or a release (decided 14 Nov 2026).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advisories:
+    name: cargo-deny advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check advisories
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
