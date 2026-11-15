@@ -319,14 +319,6 @@ pub enum Command {
         gains_db: [f32; 10],
         preamp_db: f32,
     },
-    /// Karaoke / vokal azaltma (bkz. `output/karaoke.rs`): açık mı ve orta
-    /// kanalın konuşma bandı ne kadar bastırılsın (0..1). Bağlantı gerekmez:
-    /// motor ayarı tutar, çıkış kurulunca uygular; açma / kapama / miktar
-    /// değişimi birkaç blokta süzülür (tıkırtı yok). Mono kaynakta etkisizdir.
-    SetKaraoke {
-        enabled: bool,
-        amount: f32,
-    },
 
     // ── Sıra, karıştırma, tekrar (bkz. `queue.rs`). Hepsi bağlanmadan da
     // çalışır (yalnız sırayı düzenler); sıra değişince `QueueChanged` ve
@@ -807,8 +799,6 @@ struct Engine {
     levels: AudioLevels,
     /// Ekolayzer ayarı (arayüzden; çıkış her kurulduğunda uygulanır).
     eq: equalizer::EqSetting,
-    /// Karaoke ayarı (açık mı, miktar 0..1; çıkış her kurulduğunda uygulanır).
-    karaoke: (bool, f32),
     /// Sayfalar ve yazma kuyruğu (bkz. `wire.rs`).
     wire: wire::Wire,
     /// Spotify Connect yaşam döngüsü (varsayılan açık; bkz. `connect.rs`).
@@ -1005,7 +995,6 @@ impl Engine {
             ),
             levels,
             eq: equalizer::EqSetting::default(),
-            karaoke: (false, 1.0),
             wire: wire::Wire::default(),
             connect: connect::ConnectHost::new(),
         }
@@ -1085,26 +1074,6 @@ impl Engine {
         }
     }
 
-    /// Karaoke ayarını tutar ve (çıkış varsa) uygular.
-    fn set_karaoke(&mut self, enabled: bool, amount: f32) {
-        self.karaoke = (
-            enabled,
-            if amount.is_finite() {
-                amount.clamp(0.0, 1.0)
-            } else {
-                0.0
-            },
-        );
-        self.apply_karaoke();
-    }
-
-    /// Tutulan karaoke ayarını çıkışa verir (çıkış yoksa bağlanınca).
-    fn apply_karaoke(&self) {
-        if let Some(deck) = &self.pb.deck {
-            deck.out.set_karaoke(self.karaoke.0, self.karaoke.1);
-        }
-    }
-
     fn on_command(&mut self, command: Command) {
         // Boşluksuz geçiş duyulmadan: komut arayüzün gösterdiği şarkıya göre.
         let Some(command) = self.with_pb(|pb, cx| pb.handover_command(cx, command)) else {
@@ -1131,7 +1100,6 @@ impl Engine {
                     .sanitized(),
                 );
             }
-            Command::SetKaraoke { enabled, amount } => return self.set_karaoke(enabled, amount),
             Command::Connect(c) => return self.on_connect_command(c),
             // Sıra düzenleme bağlantı istemez: yalnız modeli değiştirir.
             Command::Enqueue(rows) => return self.enqueue(rows, false),
@@ -1274,7 +1242,6 @@ impl Engine {
             | Command::StartLogin
             | Command::CancelLogin
             | Command::SetEq { .. }
-            | Command::SetKaraoke { .. }
             | Command::Connect(_)
             | Command::SetCrossfade(_)
             | Command::SetAutoMix(_)

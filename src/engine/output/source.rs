@@ -11,7 +11,7 @@ use super::{
     RATE, XRUN_GROW_MS, frames_to_ns, ms_to_frames,
 };
 
-use super::{eq::Eq, karaoke::Karaoke};
+use super::eq::Eq;
 
 /// `RingSource::fill`in bir blok için verdiği karar (`plan` aşaması).
 pub(super) struct Plan {
@@ -28,7 +28,7 @@ pub(super) struct Plan {
     avail: usize,
     /// Blok tamamen sessiz: `buf` sıfırlandı, çekilecek kare yok.
     silent: bool,
-    /// Ekolayzır ve karaoke çalışmıyor: ham kare `pull`da hemen çarpılır (aynı
+    /// Ekolayzır çalışmıyor: ham kare `pull`da hemen çarpılır (aynı
     /// işlem, ayrı bir geçiş yok); `shape` yalnız kuyruğu sıfırlar.
     direct: bool,
 }
@@ -49,9 +49,6 @@ pub(in crate::engine) struct RingSource {
     coef: [f32; BLOCK],
     /// Ekolayzır (kapalıyken hiç çalışmaz: `Plan::direct`).
     pub(super) eq: Eq,
-    /// Karaoke (yalnız açıkken çalışır: `Plan::direct`); açıkken WOLA çıkışı
-    /// 1024 kare (44,1 kHz'te 23,22 ms) sabit gecikmeyle hizalanır.
-    pub(super) karaoke: Karaoke,
     pos: usize,
     /// İniş / çıkış zarfı (0..1).
     env: f32,
@@ -98,7 +95,6 @@ impl RingSource {
             buf: [0.0; BLOCK * CHANNELS],
             coef: [0.0; BLOCK],
             eq: Eq::new(),
-            karaoke: Karaoke::new(),
             pos: BLOCK * CHANNELS,
             env: 0.0,
             gain: f32::from_bits(gain_bits),
@@ -169,7 +165,6 @@ impl RingSource {
         let gain_target = f32::from_bits(self.gain_bits);
         // Yeni ekolayzır ayarı yayınlandıysa al (blok başına bir atomik okuma).
         self.eq.poll(&ctl.eq);
-        self.karaoke.poll(&ctl.karaoke);
         let silent = |r: u64| Plan {
             now,
             gain_target,
@@ -226,7 +221,6 @@ impl RingSource {
                 self.flush_done = req;
                 // Kuyruk atıldı, akış kesildi: ekolayzırın çınlaması yeni sese sızmasın.
                 self.eq.reset();
-                self.karaoke.reset();
             }
             self.gain = gain_target;
             self.gain_left = 0;
@@ -250,7 +244,7 @@ impl RingSource {
             w,
             avail,
             silent: false,
-            direct: !(self.eq.running() || self.karaoke.running()),
+            direct: !self.eq.running(),
         }
     }
 
@@ -391,20 +385,14 @@ impl RingSource {
         produced
     }
 
-    /// 3. aşama: `buf`taki ilk `n` ham kareyi `coef` ile çarpar (varsa önce
-    ///    ekolayzır, sonra karaoke, ham kareler üstünde), gerisini sıfırlar.
-    ///    İkisi de yokken (`plan.direct`) çarpma `pull`da yapılmıştır, burada
+    /// 3. aşama: `buf`taki ilk `n` ham kareyi `coef` ile çarpar (varsa
+    ///    ekolayzır, ham kareler üstünde), gerisini sıfırlar.
+    ///    Ekolayzır yokken (`plan.direct`) çarpma `pull`da yapılmıştır, burada
     ///    yalnız kuyruk sıfırlanır.
     fn shape(&mut self, plan: &Plan, n: usize) {
         if !plan.direct {
-            if n > 0 {
-                if self.eq.running() {
-                    self.eq.process(&mut self.buf, n);
-                }
-                if self.karaoke.running() {
-                    self.karaoke
-                        .process_with_repet(&mut self.buf, n, &self.ctl.karaoke, plan.r);
-                }
+            if n > 0 && self.eq.running() {
+                self.eq.process(&mut self.buf, n);
             }
             for (frame, c) in self
                 .buf

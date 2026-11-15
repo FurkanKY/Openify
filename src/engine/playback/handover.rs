@@ -312,7 +312,6 @@ impl Playback {
             | Command::SetVolume(_)
             | Command::SetCrossfade(_)
             | Command::SetEq { .. }
-            | Command::SetKaraoke { .. }
             | Command::OpenCollection(_)
             | Command::Search { .. }
             | Command::RefreshLibrary

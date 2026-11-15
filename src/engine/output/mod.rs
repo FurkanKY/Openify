@@ -109,7 +109,6 @@
 //! - `eq.rs`: 10 bantlı ekolayzır (`EqCtl` ayar paylaşımı, `Eq` süzgeç).
 //! - `beat.rs`, `automix.rs`: AutoMix çözümlemesi (`BeatTap`) ve kararı / sessizlik
 //!   atlama (bkz. "AutoMix" başlığı altındaki notlar, `ARCHITECTURE.md`).
-//! - `karaoke.rs`: beat-aware STFT vokal azaltma (WOLA, `KaraokeCtl`, `Karaoke`).
 //! - `watch.rs`: Windows varsayılan aygıt bildirimleri.
 //! - `tests.rs`: aygıtsız, sanal saatli testler ve altın test.
 
@@ -117,7 +116,6 @@ mod automix;
 mod beat;
 mod device;
 pub(in crate::engine) mod eq;
-mod karaoke;
 mod ring;
 mod source;
 mod watch;
@@ -132,7 +130,6 @@ pub(in crate::engine) use device::Device;
 pub use device::{
     default_output_device_name, has_device, output_device_names, set_preferred_device,
 };
-pub(super) use karaoke::{REPET_MAX_CHUNK_FRAMES, REPET_WORKER_STACK_BYTES, RepetAnalyzer};
 pub(in crate::engine) use writer::Writer;
 pub use xfade::{Curve, MAX_OVERLAP_MS, Transition, TransitionSpec};
 
@@ -402,8 +399,6 @@ pub struct OutputCtl {
     levels: AudioLevels,
     /// Ekolayzır ayarı: motor yazar, ses iş parçacığı okur (bkz. `eq.rs`).
     eq: eq::EqCtl,
-    /// Karaoke ayarı: motor yazar, ses iş parçacığı okur (bkz. `karaoke.rs`).
-    karaoke: karaoke::KaraokeCtl,
     /// Aygıt tarafı gecikmesi (geri çağrıdan hoparlöre), ns.
     device_ns: u64,
     /// İz satırları: (an, olay, ek değer ms; yoksa NaN).
@@ -507,7 +502,6 @@ impl OutputCtl {
             device_ns: super::levels::device_delay_ns(),
             levels,
             eq: eq::EqCtl::new(),
-            karaoke: karaoke::KaraokeCtl::new(),
             trace: trace_tx,
             #[cfg(test)]
             clock,
@@ -630,40 +624,6 @@ impl OutputCtl {
     /// çağırır (bkz. `engine::Engine::apply_eq`).
     pub fn set_eq(&self, enabled: bool, gains_db: [f32; eq::BANDS], preamp_db: f32) {
         self.eq.set(enabled, &gains_db, preamp_db);
-    }
-
-    /// Karaoke (beat-aware STFT vokal azaltma; bkz. `karaoke.rs`): merkezî,
-    /// sürekli konuşma bileşenleri azaltılır, transient ve panlı bileşenler
-    /// korunur. Etkinken sabit 23,22 ms gecikme ekler. Motor iş parçacığı beklemez.
-    /// Kapalıyken (ya da `amount` 0) çıkış bit bit değişmez; mono etkisizdir.
-    /// Motor `Command::SetKaraoke` ile çağırır.
-    pub fn set_karaoke(&self, enabled: bool, amount: f32) {
-        self.karaoke.set(enabled, amount);
-    }
-
-    pub(in crate::engine) fn karaoke_enabled(&self) -> bool {
-        self.karaoke.get() > 0.0
-    }
-
-    pub(in crate::engine) fn reset_repet_mask(&self) -> u64 {
-        self.karaoke.reset_repet()
-    }
-
-    pub(in crate::engine) fn prepare_repet_mask(&self) {
-        self.karaoke.prepare_repet_mask();
-    }
-
-    pub(in crate::engine) fn repet_generation(&self) -> u64 {
-        self.karaoke.generation()
-    }
-
-    pub(in crate::engine) fn publish_repet_mask(
-        &self,
-        generation: u64,
-        frame: u64,
-        mask: &[f32; karaoke::REPET_BANDS],
-    ) {
-        self.karaoke.publish_repet(generation, frame, mask);
     }
 
     /// Kuyrukta çalınmayı bekleyen kare (atılacak eski ses hariç).

@@ -632,21 +632,7 @@ impl Shell {
             } else {
                 (w - 2. * S8).min(lyrics_max)
             };
-            // "Karaoke": sözlerin sağ üstünde, denetimlerle birlikte belirir / söner.
-            let karaoke = (shown > 0. && self.state.track.is_some()).then(|| {
-                div()
-                    .absolute()
-                    .top_0()
-                    .right_0()
-                    .opacity(shown)
-                    .child(self.karaoke_group(Place::Full, window, cx))
-            });
-            div()
-                .w(px(lyrics_w))
-                .h_full()
-                .relative()
-                .child(lyrics)
-                .children(karaoke)
+            div().w(px(lyrics_w)).h_full().relative().child(lyrics)
         });
 
         let content = div()

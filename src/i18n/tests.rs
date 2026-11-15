@@ -121,7 +121,6 @@ fn turkish_text_is_not_pasted_into_english() {
         "Dil / Language",
         "Normal",
         "Podcast",
-        "Karaoke",
         "AutoMix",
         "Spotify Connect",
     ];

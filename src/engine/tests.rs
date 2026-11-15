@@ -806,65 +806,6 @@ fn set_eq_command_reaches_the_output() {
     );
 }
 
-// ── Karaoke komutu ──
-
-/// `Command::SetKaraoke` bağlantı beklemeden tutulur, çıkış kurulunca uygulanır,
-/// sonraki komutlar anında çıkışa ulaşır; miktar 0..1'e çekilir; çıkış
-/// yeniden kurulursa (yeniden bağlanma) ayar kaybolmaz.
-#[test]
-fn set_karaoke_command_reaches_the_output() {
-    let mut r = rig(Arc::new(Db::open_in_memory().unwrap()));
-    // Çıkış yok: komut düşmez, motor tutar.
-    r.engine.on_command(Command::SetKaraoke {
-        enabled: true,
-        amount: 0.6,
-    });
-    assert!(r.engine.pb.deck.is_none() && r.engine.pending.is_empty());
-    assert_eq!(r.engine.karaoke, (true, 0.6));
-
-    // Çıkış kurulunca (attach) tutulan ayar uygulanır.
-    let (deck, _spy, out) = testkit::fake_deck();
-    assert_eq!(out.karaoke_published(), (false, 0.0), "başlangıçta kapalı");
-    r.engine.pb.deck = Some(deck);
-    r.engine.apply_karaoke();
-    assert_eq!(out.karaoke_published(), (true, 0.6));
-
-    // Çıkış varken komut hemen ulaşır: kapatma, sonra sınırlar.
-    r.engine.on_command(Command::SetKaraoke {
-        enabled: false,
-        amount: 0.6,
-    });
-    assert_eq!(out.karaoke_published(), (false, 0.0));
-    r.engine.on_command(Command::SetKaraoke {
-        enabled: true,
-        amount: 9.0,
-    });
-    assert_eq!(out.karaoke_published(), (true, 1.0));
-    r.engine.on_command(Command::SetKaraoke {
-        enabled: true,
-        amount: f32::NAN,
-    });
-    assert_eq!(
-        out.karaoke_published(),
-        (false, 0.0),
-        "sonlu olmayan miktar 0: etkisiz"
-    );
-
-    // Yeniden bağlanma: yeni çıkış, aynı ayar.
-    r.engine.on_command(Command::SetKaraoke {
-        enabled: true,
-        amount: 0.25,
-    });
-    let (deck2, _spy2, out2) = testkit::fake_deck();
-    r.engine.pb.deck = Some(deck2);
-    r.engine.apply_karaoke();
-    assert_eq!(
-        out2.karaoke_published(),
-        (true, 0.25),
-        "yeni çıkış tutulan ayarı aldı"
-    );
-}
-
 // ── Dinleme çekirdeği: gizlenen şarkılar ve radyo (bkz. `listening.rs`) ──
 
 fn hidden_song(uri: &str, context: Option<&str>) -> HiddenSong {

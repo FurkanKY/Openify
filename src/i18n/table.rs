@@ -989,12 +989,6 @@ keys! {
     CrossfadeSec8 { en: "8 s", tr: "8 sn" }
     CrossfadeSec12 { en: "12 s", tr: "12 sn" }
 
-    // Karaoke
-    Karaoke { en: "Karaoke", tr: "Karaoke" }
-    KaraokeOnTip { en: "Karaoke: reduce the vocals", tr: "Karaoke: vokali azalt" }
-    KaraokeOffTip { en: "Turn karaoke off", tr: "Karaoke'yu kapat" }
-    KaraokeAmount { en: "Vocal reduction", tr: "Vokal azaltma" }
-
     // AutoMix
     AutoMixName { en: "AutoMix", tr: "AutoMix" }
     AutoMixNote { en: "Picks where and how long to blend from how each song ends. It also lines up the beat for songs you've already played here.", tr: "Geçişin yerini ve süresini şarkının bitişine bakarak seçer. Burada daha önce çaldığın şarkılarda vuruşları da hizalar." }
