@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-11-15
+
 ### Changed
 
-- Karaoke now reduces sustained centered vocals while preserving centered drum hits, bass, and panned instruments.
+- Karaoke now reduces sustained centered vocals while preserving centered
+  drum hits, bass, and panned instruments.
+- Smoother scrolling: frames are paced to the display's refresh, long lists
+  copy only the visible rows, and truncated text in narrow columns is cached.
+
+### Fixed
+
+- Raw HTML tags no longer show up in playlist and show descriptions.
 
 ## [0.1.5] - 2026-11-14
 
