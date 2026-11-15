@@ -627,6 +627,41 @@ mod readme {
             })
             .unwrap();
         }
+
+        // Deterministic UI fixtures: ten Beğenilenler songs have known demo
+        // metrics; the remaining rows intentionally stay unresolved (—).
+        drop(db);
+        let conn = rusqlite::Connection::open(dir.join("library.db")).unwrap();
+        let demo_features = [
+            (124.0, 0, false, 0.91, 72),
+            (128.0, 9, true, 0.88, 84),
+            (126.0, 2, true, 0.86, 67),
+            (132.0, 2, false, 0.83, 76),
+            (120.0, 4, true, 0.89, 58),
+            (117.0, 7, false, 0.85, 49),
+            (130.0, 11, true, 0.92, 91),
+            (145.0, 0, true, 0.81, 63),
+            (123.0, 9, false, 0.87, 78),
+            (174.0, 5, false, 0.9, 86),
+        ];
+        for (i, (bpm, key, minor, key_conf, energy)) in demo_features.into_iter().enumerate() {
+            let row = &rows[(i * 7 + 3) % rows.len()];
+            conn.execute(
+                "INSERT INTO track_features
+                    (uri, algo, bpm, bpm_conf, key_index, key_minor, key_conf, energy, analyzed_at)
+                 VALUES (?1, 1, ?2, 0.9, ?3, ?4, ?5, ?6, ?7)",
+                rusqlite::params![
+                    row.uri,
+                    bpm,
+                    key,
+                    i64::from(minor),
+                    key_conf,
+                    energy,
+                    now - i as i64
+                ],
+            )
+            .unwrap();
+        }
     }
 
     /// Sayfa önbelleği (`pages.db`): sanatçı / albüm sayfaları ve Keşfet / Ana sayfa

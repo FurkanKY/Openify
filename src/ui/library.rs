@@ -359,7 +359,7 @@ impl Shell {
     fn shows_features(&self, id: &CollectionId) -> bool {
         self.prefs.show_track_features
             && !matches!(id, CollectionId::Album(_))
-            && self.window_width - self.dock_inset() >= 1440.0
+            && self.window_width - self.dock_inset() >= 1180.0
     }
 
     /// Listenin şarkılarının eklenme anlarını motordan iste (önbellekten gelir,

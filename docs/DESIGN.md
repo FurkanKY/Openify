@@ -735,4 +735,4 @@ Yalnız baştan sona kesintisiz çalınan çözülmüş ses ölçülür; analiz 
 
 Enerji 0–100 aralığındadır: `round(70 × loudness + 30 × density)`. `loudness = clamp((RMS_dBFS + 60) / 60, 0, 1)`; `density = (0.2 × low + 0.5 × mid + 0.9 × high) / (low + mid + high)`, her bant tüm tam hop'lardaki güç toplamıdır ve oran 0–1'e sıkıştırılır. Bu sabit ağırlıklar UI'da “enerji” etiketini açıklamak için de kullanılır; dans edilebilirlik hesabı yoktur.
 
-BPM, Ton ve Enerji sütunları Ayarlar'dan açılır ve 1440 px kullanılabilir genişlikten itibaren görünür. Hücrede ölçüm yoksa `—` gösterilir. Liste araması `bpm:120-130`, `key~8A` (aynı Camelot numarası ya da komşu numara) ve `sort:bpm`, `sort:key`, `sort:energy` terimlerini tanır. Sayaç yalnız o anki listede ölçümü olan / toplam şarkı sayısını verir.
+BPM, Ton ve Enerji sütunları Ayarlar'dan açılır ve 1180 px kullanılabilir genişlikten itibaren görünür. Hücrede ölçüm yoksa `—` gösterilir. Liste araması `bpm:120-130`, `key~8A` (aynı Camelot numarası ya da komşu numara) ve `sort:bpm`, `sort:key`, `sort:energy` terimlerini tanır. Sayaç yalnız o anki listede ölçümü olan / toplam şarkı sayısını verir.
