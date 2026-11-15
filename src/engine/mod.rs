@@ -29,6 +29,7 @@ mod login;
 mod lyrics;
 pub mod opra;
 mod pages;
+mod playlist_history;
 mod related;
 pub use login::{LoginFailReason, PlayBlock};
 mod migrate;
@@ -140,6 +141,42 @@ pub fn has_output_device() -> bool {
 // Ayarlar sayfası (Adım 15): çıkış aygıtı ve önbellek.
 use crate::t;
 pub use cache::{CLEARABLE, clear_subdirs, clearing_allowed, dir_size, settings_cache_dir};
+pub use playlist_history::{
+    ChangeKind as PlaylistHistoryChangeKind, Snapshot as PlaylistHistorySnapshot,
+    StoredChange as PlaylistHistoryEvent,
+};
+
+pub fn set_playlist_history_enabled(on: bool) {
+    playlist_history::set_enabled(on);
+}
+
+pub fn playlist_history_enabled() -> bool {
+    playlist_history::enabled()
+}
+
+pub fn playlist_history(id: &CollectionId) -> anyhow::Result<Option<PlaylistHistorySnapshot>> {
+    cache::Db::open_default()?.playlist_history(id)
+}
+
+pub fn clear_playlist_history(id: Option<&CollectionId>) -> anyhow::Result<()> {
+    cache::Db::open_default()?.clear_playlist_history(id)
+}
+
+pub fn playlist_history_tracks(uris: &[String]) -> anyhow::Result<HashMap<String, TrackRow>> {
+    cache::Db::open_default()?.tracks(uris)
+}
+
+pub fn playlist_history_diff(before: &[String], after: &[String]) -> Vec<playlist_history::Change> {
+    playlist_history::diff(before, after)
+}
+
+pub fn playlist_history_state_at(
+    before: &[String],
+    events: &[PlaylistHistoryEvent],
+    at: i64,
+) -> Vec<String> {
+    playlist_history::state_at(before, events, at)
+}
 pub use output::{
     default_output_device_name, output_device_names, set_preferred_device as set_output_device,
 };

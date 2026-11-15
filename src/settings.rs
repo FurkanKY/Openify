@@ -221,6 +221,8 @@ pub struct Settings {
     pub connect_enabled: bool,
     /// Connect aygıt listesinde görünen ad. Varsayılan "Openify (<bilgisayar adı>)".
     pub device_name: String,
+    /// Keep local playlist content history (independent of private listening mode).
+    pub playlist_history: bool,
 }
 
 /// Seçili OPRA kulaklık profilinin kaydı (atıf satırı için).
@@ -321,6 +323,7 @@ impl Default for Settings {
             device_id: String::new(),
             connect_enabled: true,
             device_name: default_device_name(),
+            playlist_history: true,
         }
     }
 }

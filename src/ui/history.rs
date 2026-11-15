@@ -37,6 +37,8 @@ pub enum Route {
     /// Kütüphane araçları: yinelenenler, birleştir / böl, sıralama, yedek,
     /// istatistik (kütüphane araç çubuğundan ve paletten).
     Tools,
+    /// A locally stored playlist content timeline.
+    PlaylistHistory(String),
 }
 
 /// Başlık çubuğundaki sekmeler.
@@ -61,7 +63,9 @@ impl Route {
             // Son çalınanlar ana sayfanın "tümünü gör" sayfası: Ana sayfa sekmesi seçili kalır.
             Route::Home | Route::Recent => Some(Tab::Home),
             Route::Explore | Route::Category(_) => Some(Tab::Explore),
-            Route::Collection(_) | Route::Library | Route::Tools => Some(Tab::Library),
+            Route::Collection(_) | Route::Library | Route::Tools | Route::PlaylistHistory(_) => {
+                Some(Tab::Library)
+            }
             Route::Stats => Some(Tab::Stats),
             Route::Artist(_) | Route::Album(_) | Route::Search(_) | Route::Settings => None,
         }

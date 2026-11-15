@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Local playlist history: review additions, removals and moves, restore an
+  earlier version through the undoable playlist edit queue, and re-add a
+  removed song at its former position. History stays on this computer and
+  keeps up to 500 changes or one year per playlist within a 20 MB budget.
+
 ## [0.1.6] - 2026-11-15
 
 ### Changed

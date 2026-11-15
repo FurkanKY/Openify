@@ -96,15 +96,19 @@ pub fn audio_dir() -> Option<PathBuf> {
 //        mevcut satıra dokunulmaz. Yeniden indirilebilir (her tazelemede kök
 //        listeden gelir).
 //  11    `play_history.source` yerel / dışa aktarılan kayıtları ayırır.
+//  12    Çalma geçmişi kaynak / adres / zaman araması için dizin.
+//  13    Yerel liste geçmişi: ilk taban görüntüsü ve değişiklik farkları.
+//        Kullanıcı verisi; hiçbir göç düşürmez.
 //
 // Hangi tablo hangi tür veri:
 //   yeniden indirilebilir  meta, library_items, library_list_info, collections,
 //                          collection_tracks, tracks
 //   yeniden indirilebilir ama pahalı (istek harcar) ve ASLA düşürülmez  lyrics
 //   kullanıcı durumu, ASLA düşürülmez  playback (kaldığı yer), library_pins (sabitleme),
-//                                      play_history (yerel çalma geçmişi), hidden_songs (gizlenen şarkılar)
-// Version 12 adds the source/URI/timestamp index used by history matching.
-const MIGRATIONS: [Step; 10] = [
+//                                      play_history (yerel çalma geçmişi), hidden_songs (gizlenen şarkılar),
+//                                      playlist_history_* (liste geçmişi)
+// Version 13 adds local playlist content history (baseline + deltas).
+const MIGRATIONS: [Step; 11] = [
     Step {
         to: 3,
         name: "baseline",
@@ -154,6 +158,11 @@ const MIGRATIONS: [Step; 10] = [
         to: 12,
         name: "play history source uri timestamp index",
         up: play_history_lookup_index,
+    },
+    Step {
+        to: 13,
+        name: "playlist content history",
+        up: super::playlist_history::migration,
     },
 ];
 
@@ -704,6 +713,62 @@ impl Db {
         Ok(Some(entries))
     }
 
+    pub fn playlist_history(
+        &self,
+        id: &CollectionId,
+    ) -> Result<Option<super::playlist_history::Snapshot>> {
+        if !matches!(id, CollectionId::Playlist(_)) {
+            return Ok(None);
+        }
+        let conn = self.r();
+        let baseline: Option<(i64, String)> = conn
+            .query_row(
+                "SELECT observed_at, entries FROM playlist_history_baselines WHERE collection=?1",
+                [id.key()],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .optional()?;
+        let Some((baseline_at, json)) = baseline else {
+            return Ok(None);
+        };
+        let mut stmt = conn.prepare(
+            "SELECT id, at, kind, track_uri, from_position, to_position, added_by, source
+             FROM playlist_history_events WHERE collection=?1 ORDER BY at, id",
+        )?;
+        let events = stmt
+            .query_map([id.key()], |r| {
+                let kind: String = r.get(2)?;
+                Ok(super::playlist_history::StoredChange {
+                    id: r.get(0)?,
+                    at: r.get(1)?,
+                    kind: match kind.as_str() {
+                        "added" => super::playlist_history::ChangeKind::Added,
+                        "removed" => super::playlist_history::ChangeKind::Removed,
+                        _ => super::playlist_history::ChangeKind::Moved,
+                    },
+                    uri: r.get(3)?,
+                    from: r.get::<_, Option<i64>>(4)?.map(|x| x as usize),
+                    to: r.get::<_, Option<i64>>(5)?.map(|x| x as usize),
+                    added_by: r.get(6)?,
+                    source: r.get(7)?,
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(Some(super::playlist_history::Snapshot {
+            baseline_at,
+            baseline: serde_json::from_str(&json)?,
+            events,
+        }))
+    }
+
+    pub fn clear_playlist_history(&self, id: Option<&CollectionId>) -> Result<()> {
+        let mut conn = self.w();
+        let tx = conn.transaction()?;
+        super::playlist_history::clear(&tx, id.map(CollectionId::key))?;
+        tx.commit()?;
+        Ok(())
+    }
+
     /// Listenin ilk şarkılarının farklı albüm kapakları (en çok `n`, liste
     /// sırasıyla): kapağı olmayan listede 2x2 mozaik için. Yalnız önbellekten
     /// (listenin şarkıları hiç kaydedilmediyse boş).
@@ -744,6 +809,56 @@ impl Db {
     ) -> Result<()> {
         let mut conn = self.w();
         let tx = conn.transaction()?;
+        let history_now = super::playlist_history::now_ms();
+        if matches!(id, CollectionId::Playlist(_)) {
+            super::playlist_history::prune(&tx, history_now)?;
+        }
+        let old_revision: Option<Option<Vec<u8>>> = if matches!(id, CollectionId::Playlist(_)) {
+            tx.query_row(
+                "SELECT revision FROM collections WHERE id=?1",
+                [id.key()],
+                |r| r.get(0),
+            )
+            .optional()?
+        } else {
+            None
+        };
+        let before = if matches!(id, CollectionId::Playlist(_)) {
+            let mut stmt = tx.prepare(
+                "SELECT track_uri FROM collection_tracks WHERE collection=?1 ORDER BY position",
+            )?;
+            let existing = stmt
+                .query_map([id.key()], |r| r.get::<_, String>(0))?
+                .collect::<rusqlite::Result<Vec<_>>>()?;
+            let exists: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM collections WHERE id=?1)",
+                [id.key()],
+                |r| r.get(0),
+            )?;
+            exists.then_some(existing)
+        } else {
+            None
+        };
+        let revision_changed = revision.is_none_or(|rev| {
+            old_revision
+                .as_ref()
+                .is_none_or(|old| old.as_deref() != Some(rev))
+        });
+        if matches!(id, CollectionId::Playlist(_))
+            && super::playlist_history::enabled()
+            && revision_changed
+        {
+            let after: Vec<String> = entries.iter().map(|e| e.track.clone()).collect();
+            let source = if revision.is_some() { "spotify" } else { "sen" };
+            super::playlist_history::record(
+                &tx,
+                id.key(),
+                before.as_deref(),
+                &after,
+                history_now,
+                source,
+            )?;
+        }
         let mut known: HashMap<String, i64> = HashMap::new();
         {
             let mut stmt = tx.prepare(
@@ -1582,7 +1697,7 @@ mod tests {
     fn every_older_version_reaches_the_latest_and_the_same_schema() {
         let dir = temp_dir("migrate-all");
         let fresh = Db::open(&dir.join("fresh.db")).unwrap();
-        assert_eq!(version(&fresh), 12);
+        assert_eq!(version(&fresh), 13);
         let want = migrate::schema_columns(&fresh.w());
         assert_eq!(
             want["library_items"],
@@ -1623,11 +1738,29 @@ mod tests {
             want["library_list_info"],
             ["id", "description", "collaborative"]
         );
+        assert_eq!(
+            want["playlist_history_baselines"],
+            ["collection", "observed_at", "entries"]
+        );
+        assert_eq!(
+            want["playlist_history_events"],
+            [
+                "id",
+                "collection",
+                "at",
+                "kind",
+                "track_uri",
+                "from_position",
+                "to_position",
+                "added_by",
+                "source"
+            ]
+        );
         for v in [1, 2, 3] {
             let path = dir.join(format!("v{v}.db"));
             legacy_file(&path, v);
             let db = Db::open(&path).unwrap();
-            assert_eq!(version(&db), 12, "sürüm {v}");
+            assert_eq!(version(&db), 13, "sürüm {v}");
             assert_eq!(
                 migrate::schema_columns(&db.w()),
                 want,
@@ -1677,7 +1810,7 @@ mod tests {
             // İkinci açılış hiçbir şeyi değiştirmez.
             drop(db);
             let again = Db::open(&path).unwrap();
-            assert_eq!(version(&again), 12);
+            assert_eq!(version(&again), 13);
             assert_eq!(again.load_playback().unwrap().unwrap().0, "durum");
         }
         let _ = fs::remove_dir_all(&dir);
@@ -1703,7 +1836,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         // Mevcut veri aynen: liste, sabitleme, eklenme anı, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -1739,7 +1872,7 @@ mod tests {
         db.save_library(&with_artists).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 12);
+        assert_eq!(version(&again), 13);
         assert_eq!(again.load_library().unwrap().unwrap().artists.len(), 1);
         let _ = fs::remove_dir_all(&dir);
     }
@@ -1751,13 +1884,13 @@ mod tests {
         legacy_file(&path, 3);
         Connection::open(&path)
             .unwrap()
-            .pragma_update(None, "user_version", 13)
+            .pragma_update(None, "user_version", 14)
             .unwrap();
         let err = Db::open(&path).err().expect("daha yeni sürüm açılmamalı");
-        assert!(format!("{err:#}").contains("version 13"), "{err:#}");
+        assert!(format!("{err:#}").contains("version 14"), "{err:#}");
         // Dosyaya dokunulmadı: sürüm ve veri aynı.
         let raw = Connection::open(&path).unwrap();
-        assert_eq!(migrate::user_version(&raw).unwrap(), 13);
+        assert_eq!(migrate::user_version(&raw).unwrap(), 14);
         let n: i64 = raw
             .query_row("SELECT COUNT(*) FROM collection_tracks", [], |r| r.get(0))
             .unwrap();
@@ -1996,7 +2129,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
             (lib.playlists[0].name.as_str(), lib.artists.len()),
@@ -2032,7 +2165,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         // Mevcut veri aynen.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2065,7 +2198,7 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 12);
+        assert_eq!(version(&again), 13);
         let n: i64 = again
             .r()
             .query_row("SELECT COUNT(*) FROM play_history", [], |r| r.get(0))
@@ -2097,7 +2230,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         // Mevcut veri aynen: kütüphane, sabitleme, çalma geçmişi, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2130,7 +2263,7 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 12);
+        assert_eq!(version(&again), 13);
         let kept = again.hidden_songs().unwrap();
         assert_eq!(
             kept.len(),
@@ -2161,7 +2294,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         // Mevcut veri aynen: kütüphane, sabitleme, gizlenenler, kaldığı yer, sözler.
         let lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2186,7 +2319,7 @@ mod tests {
         db.save_library_nodes(&[], 1).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 12);
+        assert_eq!(version(&again), 13);
         assert_eq!(
             again.analysis("spotify:track:a").unwrap().unwrap().tail_ms,
             900
@@ -2214,7 +2347,7 @@ mod tests {
             .unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         // Mevcut veri aynen: kütüphane, sabitleme, çalma geçmişi, kaldığı yer, sözler.
         let mut lib = db.load_library().unwrap().unwrap();
         assert_eq!(
@@ -2236,7 +2369,7 @@ mod tests {
         db.save_library(&lib).unwrap();
         drop(db);
         let again = Db::open(&path).unwrap();
-        assert_eq!(version(&again), 12);
+        assert_eq!(version(&again), 13);
         let back = again.load_library().unwrap().unwrap();
         assert_eq!(
             back.meta
@@ -2261,7 +2394,7 @@ mod tests {
             conn.execute("INSERT INTO play_history (played_at, uri, name, artists, album, duration_ms, listened_ms) VALUES (1, 'spotify:track:a', 'A', 'X', 'Y', 1000, 500)", []).unwrap();
         }
         let db = Db::open(&path).unwrap();
-        assert_eq!(version(&db), 12);
+        assert_eq!(version(&db), 13);
         let source: String = db
             .r()
             .query_row("SELECT source FROM play_history", [], |r| r.get(0))

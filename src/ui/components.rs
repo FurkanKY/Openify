@@ -174,6 +174,8 @@ pub fn icon_button(
     icon_button_tinted(id, icon_name, soft(), look, accent)
 }
 
+pub const ICON_BUTTON_SIZE: f32 = 36.;
+
 /// `icon_button`, simge rengi verilen (kayıtlı albümün kalbi vurgu renginde).
 /// Simgenin rengi düğmenin `text_color`ından değil buradan gelir; pasifken
 /// ton yine `disabled()`.
@@ -187,7 +189,7 @@ pub fn icon_button_tinted(
     let color = if look.enabled() { tint } else { disabled() };
     let el = div()
         .id(id)
-        .size(px(36.))
+        .size(px(ICON_BUTTON_SIZE))
         .flex_shrink_0()
         .flex()
         .items_center()

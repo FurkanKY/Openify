@@ -55,6 +55,50 @@ keys! {
     HistoryImportFailed { en: "The history file could not be imported.", tr: "Geçmiş dosyası içe aktarılamadı." }
     HistoryImportedPrivate { en: "Imported during a private session. These plays are included in local stats.", tr: "Gizli oturumda içe aktarıldı. Bu çalmalar yerel istatistiklerine eklendi." }
     StatsLocal { en: "Stored only on this computer. No history is requested from Spotify.", tr: "Yalnız bu bilgisayarda tutulur. Spotify'dan geçmiş istenmez." }
+    PlaylistHistoryTitle { en: "Keep playlist history", tr: "Liste geçmişini tut" }
+    PlaylistHistoryDesc { en: "Save playlist changes on this computer, including during a private session. Up to 500 changes or one year per playlist, within 20 MB.", tr: "Gizli oturumda da liste değişikliklerini bu bilgisayarda sakla. Liste başına en çok 500 olay veya bir yıl; toplam 20 MB ile sınırlı." }
+    ClearPlaylistHistory { en: "Clear history", tr: "Geçmişi temizle" }
+    PlaylistHistoryClearTitle { en: "Clear playlist history?", tr: "Liste geçmişi temizlensin mi?" }
+    PlaylistHistoryClearBody { en: "This removes the locally saved playlist history from this computer.", tr: "Bu bilgisayarda tutulan liste geçmişi silinir." }
+    PlaylistHistoryClearFailed { en: "Playlist history couldn't be cleared.", tr: "Liste geçmişi temizlenemedi." }
+    PlaylistHistoryCleared { en: "Playlist history cleared.", tr: "Liste geçmişi temizlendi." }
+    PlaylistHistoryOpen { en: "History", tr: "Geçmiş" }
+    PlaylistHistoryEmpty { en: "Changes will appear here after this playlist is refreshed.", tr: "Liste yenilendikçe değişiklikler burada görünür." }
+    PlaylistHistoryLoading { en: "Loading playlist history…", tr: "Liste geçmişi yükleniyor…" }
+    PlaylistHistoryError { en: "Playlist history couldn't be loaded.", tr: "Liste geçmişi yüklenemedi." }
+    PlaylistHistoryPrivateNote { en: "Only playlist contents are saved. Listening history stays private.", tr: "Yalnız liste içeriği kaydedilir. Dinleme geçmişin gizli kalır." }
+    PlaylistHistoryAdded { en: "{0} songs added", tr: "{0} şarkı eklendi" }
+    PlaylistHistoryRemoved { en: "{0} songs removed", tr: "{0} şarkı çıkarıldı" }
+    PlaylistHistoryAddedOne { en: "Added", tr: "Eklendi" }
+    PlaylistHistoryRemovedOne { en: "Removed", tr: "Çıkarıldı" }
+    PlaylistHistoryMoved { en: "Moved", tr: "Taşındı" }
+    PlaylistHistoryMovedCount { en: "{0} songs moved", tr: "{0} şarkı taşındı" }
+    PlaylistHistoryAddedBy { en: "Added by {0}", tr: "Ekleyen: {0}" }
+    PlaylistHistoryRestored { en: "Restore this version", tr: "Bu hâline döndür" }
+    PlaylistHistoryReadd { en: "Add back", tr: "Geri ekle" }
+    PlaylistHistoryPreview { en: "This will add {0} and remove {1} songs.", tr: "{0} şarkı eklenecek, {1} şarkı çıkarılacak." }
+    PlaylistHistoryConfirm { en: "Restore", tr: "Döndür" }
+    PlaylistHistoryReadOnly { en: "You can view this history, but only the playlist owner can make changes.", tr: "Bu geçmişi görüntüleyebilirsin; değişiklikleri yalnız liste sahibi yapabilir." }
+    PlaylistHistoryCopy { en: "Copy to your library", tr: "Kendi listene kopyala" }
+    PlaylistHistoryYou { en: "You", tr: "Sen" }
+    PlaylistHistoryContext { en: "Playlist history", tr: "Liste geçmişi" }
+    PlaylistHistoryDisabled { en: "History is paused. Turn on playlist history in Settings to record future changes.", tr: "Geçmiş kaydı kapalı. Yeni değişiklikleri kaydetmek için Ayarlar'dan liste geçmişini aç." }
+    PlaylistHistoryToday { en: "Today", tr: "Bugün" }
+    PlaylistHistoryYesterday { en: "Yesterday", tr: "Dün" }
+    PlaylistHistoryDateMonthDay { en: "{0} {1}", tr: "{1} {0}" }
+    PlaylistHistoryDateMonthDayYear { en: "{0} {1}, {2}", tr: "{1} {0} {2}" }
+    PlaylistHistoryMonthJanuary { en: "January", tr: "Ocak" }
+    PlaylistHistoryMonthFebruary { en: "February", tr: "Şubat" }
+    PlaylistHistoryMonthMarch { en: "March", tr: "Mart" }
+    PlaylistHistoryMonthApril { en: "April", tr: "Nisan" }
+    PlaylistHistoryMonthMay { en: "May", tr: "Mayıs" }
+    PlaylistHistoryMonthJune { en: "June", tr: "Haziran" }
+    PlaylistHistoryMonthJuly { en: "July", tr: "Temmuz" }
+    PlaylistHistoryMonthAugust { en: "August", tr: "Ağustos" }
+    PlaylistHistoryMonthSeptember { en: "September", tr: "Eylül" }
+    PlaylistHistoryMonthOctober { en: "October", tr: "Ekim" }
+    PlaylistHistoryMonthNovember { en: "November", tr: "Kasım" }
+    PlaylistHistoryMonthDecember { en: "December", tr: "Aralık" }
     ExploreMeta { en: "New releases, trending playlists, genres and moods", tr: "Yeni çıkanlar, trend listeler, türler ve ruh hâlleri" }
     ExploreNew { en: "New releases", tr: "Yeni çıkanlar" }
     ExploreCharts { en: "Trending playlists", tr: "Trend listeler" }

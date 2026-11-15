@@ -1217,6 +1217,7 @@ fn test_view_route(view: &str) -> Option<super::history::Route> {
         Some(("search", q)) => Some(Route::Search(q.to_string())),
         Some(("artist", uri)) => Some(Route::Artist(uri.to_string())),
         Some(("album", uri)) => Some(Route::Album(uri.to_string())),
+        Some(("history", uri)) => Some(Route::PlaylistHistory(uri.to_string())),
         Some(("category", id)) => Some(Route::Category(format!("spotify:page:{id}"))),
         _ => match CollectionId::from_key(view) {
             Some(
