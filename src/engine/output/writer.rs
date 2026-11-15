@@ -439,6 +439,12 @@ impl Writer {
             .map_or(0, |xf| (xf.overlap - xf.k).min(frames))
     }
 
+    /// Global output frame corresponding to the beginning of this packet's
+    /// incoming audio during a crossfade.
+    pub(in crate::engine) fn overlap_start(&self) -> Option<u64> {
+        self.xf.as_ref().map(|xf| xf.start + xf.k)
+    }
+
     /// Örnekleri halkaya koyar (yer yoksa yer açılana dek bekler). Bu arada
     /// bir `flush` onaylandıysa paketin kalanı atılır ve `true` döner.
     ///

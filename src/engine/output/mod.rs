@@ -132,6 +132,7 @@ pub(in crate::engine) use device::Device;
 pub use device::{
     default_output_device_name, has_device, output_device_names, set_preferred_device,
 };
+pub(super) use karaoke::{REPET_MAX_CHUNK_FRAMES, REPET_WORKER_STACK_BYTES, RepetAnalyzer};
 pub(in crate::engine) use writer::Writer;
 pub use xfade::{Curve, MAX_OVERLAP_MS, Transition, TransitionSpec};
 
@@ -638,6 +639,31 @@ impl OutputCtl {
     /// Motor `Command::SetKaraoke` ile çağırır.
     pub fn set_karaoke(&self, enabled: bool, amount: f32) {
         self.karaoke.set(enabled, amount);
+    }
+
+    pub(in crate::engine) fn karaoke_enabled(&self) -> bool {
+        self.karaoke.get() > 0.0
+    }
+
+    pub(in crate::engine) fn reset_repet_mask(&self) -> u64 {
+        self.karaoke.reset_repet()
+    }
+
+    pub(in crate::engine) fn prepare_repet_mask(&self) {
+        self.karaoke.prepare_repet_mask();
+    }
+
+    pub(in crate::engine) fn repet_generation(&self) -> u64 {
+        self.karaoke.generation()
+    }
+
+    pub(in crate::engine) fn publish_repet_mask(
+        &self,
+        generation: u64,
+        frame: u64,
+        mask: &[f32; karaoke::REPET_BANDS],
+    ) {
+        self.karaoke.publish_repet(generation, frame, mask);
     }
 
     /// Kuyrukta çalınmayı bekleyen kare (atılacak eski ses hariç).
