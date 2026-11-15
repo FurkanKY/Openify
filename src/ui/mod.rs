@@ -33,7 +33,6 @@ mod history;
 mod home;
 mod images;
 mod integration;
-mod karaoke;
 mod library;
 mod library_layout;
 mod library_tree;
@@ -257,9 +256,6 @@ struct Shell {
     /// ekranda değişir, bırakınca atlanır (motora art arda sarma gitmez).
     dragging: Option<Drag>,
     volume_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
-    /// Karaoke miktar sürgüsünün ekrandaki yeri: sözler paneli ve tam ekran (bkz. `karaoke`).
-    karaoke_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
-    karaoke_full_bounds: Rc<Cell<Option<Bounds<Pixels>>>>,
     /// Çalarken süre yazısını ve çubuğu güncel tutan görev.
     ticker: Option<Task<()>>,
     /// Hapın son çizildiği hâlin özeti (zamanlayıcı yalnız bu değişince
@@ -474,8 +470,6 @@ impl Shell {
             progress_bounds: Rc::default(),
             dragging: None,
             volume_bounds: Rc::default(),
-            karaoke_bounds: Rc::default(),
-            karaoke_full_bounds: Rc::default(),
             ticker: None,
             bar_signature: None,
             scale_factor: window.scale_factor(),
@@ -1197,15 +1191,6 @@ impl Shell {
             }
             // Seçenek düğmesinde ← / → gruptaki komşuya geçer; başka düğmede
             // ok tuşu bir şey yapmaz.
-            "left" | "right"
-                if !ctrl
-                    && !shift
-                    && focused == Some(NavTarget::Other)
-                    && self.karaoke_slider_focused(window) =>
-            {
-                self.karaoke_step(key == "right", cx);
-                true
-            }
             "left" | "right" if !ctrl && !shift && focused == Some(NavTarget::Other) => {
                 self.segment_step(key == "right", window, cx);
                 true
@@ -1365,7 +1350,6 @@ impl Shell {
                 }
             }
             Drag::Eq(slot) => self.eq_drag_to(slot, ev.position, cx),
-            Drag::Karaoke(place) => self.karaoke_drag_to(place, ev.position, cx),
             Drag::Scroll {
                 bar,
                 start_y,
@@ -1521,9 +1505,6 @@ impl Shell {
         }
         if matches!(drag, Drag::Eq(_)) {
             self.eq_commit();
-        }
-        if matches!(drag, Drag::Karaoke(_)) {
-            self.save_settings();
         }
         // Sürükleme görünüşü (tutamaç rengi, ses düzeyinin başka yerlerdeki
         // izi) kalmasın: her bırakışta bütün pencere bir kez yenilenir.
@@ -2422,8 +2403,6 @@ enum Drag {
     Volume,
     /// Ekolayzer sürgüsü: 0..10 bant, 10 ön kazanç (bkz. `equalizer`).
     Eq(usize),
-    /// Karaoke miktar sürgüsü: panelde ya da tam ekranda (bkz. `karaoke`).
-    Karaoke(lyrics_view::Place),
     /// Kaydırma çubuğu tutamacı: tutulduğu andaki fare ve kaydırma konumu.
     Scroll {
         bar: ScrollBar,

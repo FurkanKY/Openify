@@ -336,13 +336,6 @@ impl Shell {
         self.notify_lyric_views(cx);
     }
 
-    /// Karaoke'yu aç / kapat (sözler paneli ve tam ekran; kalıcı tercih).
-    pub(super) fn toggle_karaoke(&mut self, cx: &mut Context<Self>) {
-        let on = !self.prefs.karaoke_enabled;
-        self.set_pref(cx, |p| p.karaoke_enabled = on);
-        self.notify_lyric_views(cx);
-    }
-
     /// Ayarların motora, temaya ve sisteme uygulanması. Açılışta (`startup`)
     /// kısayol ve pencere işleri `Desk` kurulurken zaten yapıldı.
     pub(super) fn apply_prefs(&mut self, startup: bool) {
@@ -357,7 +350,6 @@ impl Shell {
         self.engine
             .send(engine::Command::SetAutoMix(self.prefs.automix));
         self.eq_send();
-        self.karaoke_send();
         self.connect_send();
         engine::set_resume(self.prefs.resume);
         super::theme::set_reduce_motion(&self.prefs.reduce_motion);

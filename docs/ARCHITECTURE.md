@@ -333,20 +333,6 @@ felt late. Ours:
   pass filters) is fitted to the ten bands by least squares on a log frequency
   grid (`engine/equalizer.rs`, Gauss-Newton with the engine's own band responses,
   gains clamped to +-12 dB); the fit error is reported with the profile.
-- **Karaoke** (`settings.karaoke_*`, `Command::SetKaraoke { enabled, amount }`).
-  Vocal reduction without a model: mid/side (`output/karaoke.rs`). After the
-  equalizer in `RingSource::shape` (before envelope and volume), only while on.
-  `M = (L+R)/2` is split with two Linkwitz-Riley crossovers (150 Hz, 8 kHz); the
-  band between them is subtracted from an all-passed copy of `M` (`M' = AP(M) -
-  amount * mid`, the all-pass being exactly low + mid + high, so the cut does not
-  suffer the poor skirts of subtracting a phase-shifted band-pass); `S` goes
-  through the same all-pass, so side content and the stereo image keep their
-  level. Bass (< 150 Hz) and air (> 8 kHz) stay in the middle. Mono sources
-  (side energy below -40 dB of mid over ~150 ms, or sample-identical L = R for 4
-  blocks) are detected and bypassed silently, otherwise the whole song would
-  vanish. Enable, disable, amount and mono changes glide over 32 blocks (46 ms)
-  as a wet/dry ramp. Off (or amount 0) the branch never runs: output bit-identical
-  (golden test). One atomic `KaraokeCtl` between engine and audio thread.
 - Deterministic tests drive the ring without a sound card (`output/tests.rs`,
   `output/xfade_tests.rs`: crossfade, growth, no allocation on the audio thread);
   `OPENIFY_SINK_TRACE=<csv>` writes a timeline of commands and events for

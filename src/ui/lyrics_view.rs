@@ -149,10 +149,9 @@ impl Shell {
         }
     }
 
-    /// Sözler; kayma sürüyorsa `true`. Panelde sözlerin üstünde bir şerit:
-    /// solda "Karaoke" (hap + açıkken sürgü), sağda (yalnız çeviri varken)
-    /// "Çeviri". Çalan şarkı yokken şerit de yok. Tam ekranda iki düğme de
-    /// denetimlerde (`fullscreen`).
+    /// Sözler; kayma sürüyorsa `true`. Panelde, çeviri varken sözlerin üstünde
+    /// sağda "Çeviri" hapı olan bir şerit. Çalan şarkı yokken şerit de yok.
+    /// Tam ekranda düğme denetimlerde (`fullscreen`).
     pub(super) fn render_lyrics(
         &mut self,
         place: Place,
@@ -163,12 +162,12 @@ impl Shell {
         if place == Place::Full || self.state.track.is_none() {
             return (body, animating);
         }
-        let translation = self.lyrics_translation_ix().is_some().then(|| {
-            let (stop, look) =
-                self.stop_look("lyrics-translation", super::tab::PANEL, true, window, cx);
-            self.translation_chip("lyrics-translation", stop, look, cx)
-        });
-        let karaoke = self.karaoke_group(Place::Panel, window, cx);
+        if self.lyrics_translation_ix().is_none() {
+            return (body, animating);
+        }
+        let (stop, look) =
+            self.stop_look("lyrics-translation", super::tab::PANEL, true, window, cx);
+        let translation = self.translation_chip("lyrics-translation", stop, look, cx);
         let view = div()
             .size_full()
             .flex()
@@ -181,10 +180,9 @@ impl Shell {
                     .flex()
                     .flex_wrap()
                     .items_center()
-                    .justify_between()
+                    .justify_end()
                     .gap(px(S2))
-                    .child(karaoke)
-                    .children(translation),
+                    .child(translation),
             )
             .child(div().flex_1().min_h_0().relative().child(body))
             .into_any_element();

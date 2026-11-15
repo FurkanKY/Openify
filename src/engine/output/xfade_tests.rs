@@ -1056,11 +1056,6 @@ fn audio_thread_never_allocates() {
         for _ in 0..2_000 {
             std::hint::black_box(src.next());
         }
-        // Karaoke: mono (DC) kaynakta dal ölçer ama süzmez; ıslak yol aşağıda.
-        x.ctl.set_karaoke(true, 0.8);
-        for _ in 0..2_000 {
-            std::hint::black_box(src.next());
-        }
         x.ctl.flush();
         for _ in 0..2_000 {
             std::hint::black_box(src.next());
@@ -1075,50 +1070,7 @@ fn audio_thread_never_allocates() {
     });
     assert_eq!(
         n, 0,
-        "ses iş parçacığı {n} kez bellek ayırdı (duck / flush / EQ / karaoke / aygıt)"
-    );
-
-    // Karaoke'nin ıslak yolu (stereo: orta ve yan ≠ 0): açma, miktar değişimi,
-    // kapama, flush; ayırma yok.
-    let mut y = X::new(0);
-    y.w.start();
-    let mut ysrc = RingSource::new(y.ctl.clone());
-    let stereo: Vec<f64> = (0..16_384)
-        .flat_map(|n| {
-            [
-                0.3 * ((n % 97) as f64 / 97.0) + 0.1,
-                -0.2 * ((n % 53) as f64 / 53.0),
-            ]
-        })
-        .collect();
-    y.w.sync();
-    assert!(y.w.accept(16_384));
-    y.w.begin_packet();
-    y.w.push(&stereo).unwrap();
-    let mut engaged = 0.0f32;
-    let n = allocs_during(|| {
-        y.ctl.set_karaoke(true, 1.0);
-        for _ in 0..4_000 {
-            std::hint::black_box(ysrc.next());
-        }
-        engaged = ysrc.karaoke.engage();
-        y.ctl.set_karaoke(true, 0.4);
-        for _ in 0..4_000 {
-            std::hint::black_box(ysrc.next());
-        }
-        y.ctl.set_karaoke(false, 0.4);
-        for _ in 0..4_000 {
-            std::hint::black_box(ysrc.next());
-        }
-        y.ctl.flush();
-        for _ in 0..2_000 {
-            std::hint::black_box(ysrc.next());
-        }
-    });
-    assert!(engaged > 0.0, "ıslak yol hiç çalışmadı (karışım {engaged})");
-    assert_eq!(
-        n, 0,
-        "ses iş parçacığı {n} kez bellek ayırdı (karaoke ıslak yol)"
+        "ses iş parçacığı {n} kez bellek ayırdı (duck / flush / EQ / aygıt)"
     );
 }
 

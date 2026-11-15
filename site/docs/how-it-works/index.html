@@ -97,7 +97,7 @@
 <li>Atomics control a short pause fade, seek and manual track-change flushes, and a roughly 10 ms volume ramp. Volume follows the queue, leaving the level display independent of listening volume.</li>
 <li>A roughly 4-second track-end buffer absorbs decoder delays. The handover gate keeps the UI aligned with audible playback.</li>
 <li>Crossfade overlaps up to 12 seconds on the writer side, only at natural transitions between different albums. Same-album neighbours, repeat-one and manual changes do not overlap.</li>
-<li>AutoMix chooses overlap timing from cached silence, tempo and beat analysis. The ten-band equalizer and karaoke run in the audio callback; disabled processing has bit-identical bypass tests. OPRA headphone profiles download on first use.</li>
+<li>AutoMix chooses overlap timing from cached silence, tempo and beat analysis. The ten-band equalizer runs in the audio callback; disabled processing has bit-identical bypass tests. OPRA headphone profiles download on first use.</li>
 </ul>
 <h2 id="persistence">Persistence</h2>
 <div class="table"><table><thead><tr><th>Data</th><th>Location</th></tr></thead><tbody>

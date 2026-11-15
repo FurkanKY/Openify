@@ -180,14 +180,6 @@ pub struct Settings {
     /// yalnız orada görünür. Varsayılan KAPALI. Tercih kalıcı.
     pub lyrics_translation: bool,
 
-    // ── Karaoke / vokal azaltma (bkz. `engine::output::karaoke`) ────────
-    /// Karaoke açık mı: orta kanalın konuşma bandı bastırılır (vokal azalır,
-    /// bas ve yan kanal kalır). Varsayılan KAPALI: kapalıyken ses yolu hiç
-    /// değişmez. Tercih kalıcı; mono kaynakta kendiliğinden etkisiz.
-    pub karaoke_enabled: bool,
-    /// Karaoke miktarı, 0.0–1.0 (arayüzde % 0–100).
-    pub karaoke_amount: f32,
-
     // ── Geçiş / crossfade (bkz. `engine::playback::crossfade`) ──────────
     /// Şarkılar arası geçişin süresi, ms. 0 = KAPALI (varsayılan: boşluksuz).
     /// Yalnız şarkı kendiliğinden bitince, farklı albümler arasında uygulanır;
@@ -313,8 +305,6 @@ impl Default for Settings {
             show_smart_lists: true,
             discord_presence: false,
             lyrics_translation: false,
-            karaoke_enabled: false,
-            karaoke_amount: 1.0,
             crossfade_ms: 0,
             automix: false,
             eq_enabled: false,
@@ -577,12 +567,6 @@ impl Settings {
             !a.name.is_empty() && seen.insert(crate::engine::fold_name(&a.name))
         });
         self.blocked_artists.truncate(crate::engine::BLOCKED_MAX);
-        // Karaoke miktarı: 0..1 (elle düzenlenmiş dosya; sonlu olmayan varsayılana).
-        self.karaoke_amount = if self.karaoke_amount.is_finite() {
-            self.karaoke_amount.clamp(0.0, 1.0)
-        } else {
-            1.0
-        };
         // Ekolayzer: tam 10 bant, sınırlar içinde (elle düzenlenmiş dosya).
         let eq = self.eq_setting();
         self.eq_gains = eq.gains_db.to_vec();
@@ -1011,27 +995,19 @@ mod tests {
         );
     }
 
+    /// 0.1.6 kullanıcılarının dosyasında kaldırılan karaoke anahtarları var:
+    /// yükleme (göç + tipli okuma) bozulmaz, bilinmeyen alanlar yok sayılır,
+    /// diğer ayarlar korunur ve sonraki kayıtta anahtarlar kendiliğinden düşer.
     #[test]
-    fn karaoke_is_off_by_default_persists_and_needs_no_migration() {
-        let d = Settings::default();
-        assert!(!d.karaoke_enabled && d.karaoke_amount == 1.0);
-        let old: Settings = serde_json::from_str(r#"{"volume": 0.5}"#).unwrap();
+    fn legacy_karaoke_keys_are_ignored_on_load() {
+        let text = r#"{"volume": 0.5, "karaoke_enabled": true, "karaoke_amount": 0.4}"#;
+        let (s, _) = Settings::parse(text).expect("eski karaoke anahtarları yüklemeyi bozmamalı");
+        assert_eq!(s.volume, 0.5);
+        let saved = serde_json::to_string(&s.sanitized()).unwrap();
         assert!(
-            !old.karaoke_enabled && old.karaoke_amount == 1.0,
-            "eski dosyada alan yok: kapalı"
+            !saved.contains("karaoke"),
+            "eski anahtarlar yeniden yazıldı"
         );
-        let on = Settings {
-            karaoke_enabled: true,
-            karaoke_amount: 0.4,
-            ..Settings::default()
-        };
-        let back: Settings = serde_json::from_str(&serde_json::to_string(&on).unwrap()).unwrap();
-        let back = back.sanitized();
-        assert!(back.karaoke_enabled && back.karaoke_amount == 0.4);
-        let wild: Settings = serde_json::from_str(r#"{"karaoke_amount": 7.5}"#).unwrap();
-        assert_eq!(wild.sanitized().karaoke_amount, 1.0);
-        let neg: Settings = serde_json::from_str(r#"{"karaoke_amount": -3}"#).unwrap();
-        assert_eq!(neg.sanitized().karaoke_amount, 0.0);
     }
 
     #[test]

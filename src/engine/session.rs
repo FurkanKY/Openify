@@ -255,7 +255,6 @@ impl Engine {
             volume,
         ));
         self.apply_eq();
-        self.apply_karaoke();
         self.apply_automix();
 
         // Önbellekte eksik olan açık listeleri şimdi tamamla.
