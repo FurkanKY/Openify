@@ -877,6 +877,14 @@ fn clean_state(value: f32) -> f32 {
 }
 
 #[cfg(test)]
+impl super::OutputCtl {
+    pub(in crate::engine) fn karaoke_published(&self) -> (bool, f32) {
+        let depth = self.karaoke.get();
+        (depth > 0.0, depth)
+    }
+}
+
+#[cfg(test)]
 mod repet_tests {
     use super::*;
 
@@ -919,7 +927,7 @@ mod repet_tests {
             + REPET_WORKER_STACK_BYTES;
         assert!(analyzer_bytes <= 10 * 1024 * 1024, "{analyzer_bytes} bytes");
         eprintln!("REPET bounded state estimate: {analyzer_bytes} bytes");
-        assert!(REPET_HISTORY_FRAMES <= REPET_MAX_HISTORY_FRAMES);
+        const { assert!(REPET_HISTORY_FRAMES <= REPET_MAX_HISTORY_FRAMES) };
     }
 
     #[test]
@@ -1104,13 +1112,5 @@ mod repet_tests {
             "REPET used {:.2}% of one core",
             core_fraction * 100.0
         );
-    }
-}
-
-#[cfg(test)]
-impl super::OutputCtl {
-    pub(in crate::engine) fn karaoke_published(&self) -> (bool, f32) {
-        let depth = self.karaoke.get();
-        (depth > 0.0, depth)
     }
 }
