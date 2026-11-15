@@ -18,7 +18,11 @@
 //!
 //! `Raw` paketler (geçiş kipi; Openify'da kapalı) çalınamaz, atılır.
 
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering::Relaxed},
+    mpsc::{SyncSender, TrySendError, sync_channel},
+};
 
 use librespot::playback::{
     NUM_CHANNELS, SAMPLE_RATE,
@@ -29,8 +33,104 @@ use librespot::playback::{
 
 use super::{
     levels::{self, LevelTap},
-    output::{self, BeatTap, Device, OutputCtl, Writer},
+    output::{self, BeatTap, Device, OutputCtl, RepetAnalyzer, Writer},
 };
+
+struct RepetChunk {
+    generation: u64,
+    reset: bool,
+    frame_start: u64,
+    mono: Vec<f32>,
+}
+
+/// Decoded audio is copied into a tiny bounded queue; the worker owns all FFT
+/// and similarity work, so the device callback never waits for analysis.
+struct RepetWorker {
+    tx: SyncSender<RepetChunk>,
+    out: Arc<OutputCtl>,
+    dropped: AtomicBool,
+}
+
+impl RepetWorker {
+    fn new(out: Arc<OutputCtl>) -> Self {
+        out.prepare_repet_mask();
+        let (tx, rx) = sync_channel::<RepetChunk>(2);
+        let worker_out = Arc::clone(&out);
+        let _ = std::thread::Builder::new()
+            .name("openify-karaoke-repet".into())
+            .stack_size(output::REPET_WORKER_STACK_BYTES)
+            .spawn(move || {
+                lower_repet_priority();
+                let mut analyzer = RepetAnalyzer::new();
+                while let Ok(chunk) = rx.recv() {
+                    if chunk.generation != worker_out.repet_generation() {
+                        continue;
+                    }
+                    if chunk.reset {
+                        analyzer.reset();
+                    }
+                    analyzer.feed(&chunk.mono, chunk.frame_start, |frame, mask| {
+                        worker_out.publish_repet_mask(chunk.generation, frame, &mask);
+                    });
+                }
+            });
+        Self {
+            tx,
+            out,
+            dropped: AtomicBool::new(false),
+        }
+    }
+
+    fn reset(&self) {
+        self.out.reset_repet_mask();
+        self.dropped.store(true, Relaxed);
+    }
+
+    fn feed(&self, samples: &[f64], frame_start: u64) -> bool {
+        for (part_index, part) in samples
+            .chunks(2 * output::REPET_MAX_CHUNK_FRAMES)
+            .enumerate()
+        {
+            let mut mono = Vec::with_capacity(part.len() / 2);
+            for &[left, right] in part.as_chunks::<2>().0 {
+                let left = if left.is_finite() { left as f32 } else { 0.0 };
+                let right = if right.is_finite() { right as f32 } else { 0.0 };
+                mono.push((left + right) * 0.5);
+            }
+            let chunk = RepetChunk {
+                generation: self.out.repet_generation(),
+                reset: self.dropped.swap(false, Relaxed),
+                frame_start: frame_start + (part_index * output::REPET_MAX_CHUNK_FRAMES) as u64,
+                mono,
+            };
+            if let Err(error) = self.tx.try_send(chunk) {
+                match error {
+                    TrySendError::Full(_) => {
+                        self.out.reset_repet_mask();
+                        self.dropped.store(true, Relaxed);
+                    }
+                    TrySendError::Disconnected(_) => {
+                        self.out.reset_repet_mask();
+                        return false;
+                    }
+                }
+            }
+        }
+        true
+    }
+}
+
+#[cfg(windows)]
+fn lower_repet_priority() {
+    use windows::Win32::System::Threading::{
+        GetCurrentThread, SetThreadPriority, THREAD_PRIORITY_BELOW_NORMAL,
+    };
+    // SAFETY: changes only the priority of this worker thread.
+    let _ = unsafe { SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL) };
+}
+
+#[cfg(not(windows))]
+fn lower_repet_priority() {}
 
 // levels.rs / output.rs librespot'u bilmez; sabit varsayımlar burada
 // doğrulanır.
@@ -50,6 +150,7 @@ pub struct LevelSink {
     /// AutoMix çözümleyicisi (`output/beat.rs`); ilk kullanımda kurulur, AutoMix
     /// kapalıyken hiç kurulmaz / çalışmaz.
     beat: Option<Box<BeatTap>>,
+    repet: Option<RepetWorker>,
 }
 
 impl LevelSink {
@@ -76,6 +177,7 @@ impl LevelSink {
             boosted: false,
             raw_warned: false,
             beat: None,
+            repet: None,
         }
     }
 
@@ -92,6 +194,37 @@ impl LevelSink {
         self.tap.on_flush(self.out.now_ns());
         if let Some(beat) = &mut self.beat {
             beat.discontinuity();
+        }
+        if let Some(repet) = &self.repet {
+            repet.reset();
+        }
+    }
+
+    fn prepare_repet(&mut self) {
+        if !self.out.ctl().karaoke_enabled() {
+            self.repet = None;
+            return;
+        }
+        let new_track = self.out.pending_track().is_some();
+        let repet = self
+            .repet
+            .get_or_insert_with(|| RepetWorker::new(Arc::clone(self.out.ctl())));
+        if new_track {
+            repet.reset();
+        }
+    }
+
+    fn analyze_repet(&mut self, samples: &[f64], frame_start: u64) {
+        if !self.out.ctl().karaoke_enabled() {
+            self.repet = None;
+            return;
+        }
+        let alive = self
+            .repet
+            .as_ref()
+            .is_some_and(|repet| repet.feed(samples, frame_start));
+        if !alive {
+            self.repet = None;
         }
     }
 
@@ -178,6 +311,9 @@ impl Sink for LevelSink {
             self.tap
                 .resume(self.out.ctl().pull_ns(read, self.out.now_ns()), read);
         }
+        // REPET-SIM (karaoke kapalıyken hiçbir şey): decoded örnekleri sınırlı
+        // kanalla düşük öncelikli iş parçacığına ver; doluysa analiz bağlamı sıfırlanır.
+        self.prepare_repet();
         // AutoMix çözümlemesi (kapalıyken hiçbir şey): yeni şarkıysa öncekini kapat
         // (canlı sonucu yazar geçişi kurarken kullanır), paketi besle.
         self.analyze_beats(samples);
@@ -198,6 +334,8 @@ impl Sink for LevelSink {
         let skip = self.out.overlap_in(frames) as usize;
         // Çözümleme ses düzeyinden ÖNCE (çalar 1,0 gördü).
         let first = self.out.written();
+        let repet_start = self.out.overlap_start().unwrap_or(first);
+        self.analyze_repet(samples, repet_start);
         let now = self.out.now_ns();
         let pull = self.out.ctl().pull_ns(first, now);
         if skip < frames as usize {
