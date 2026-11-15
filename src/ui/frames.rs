@@ -200,12 +200,16 @@ fn current_thread_cpu_100ns() -> Option<u64> {
 
     let mut kernel = FileTime { low: 0, high: 0 };
     let mut user = FileTime { low: 0, high: 0 };
+    // GetThreadTimes tüm FILETIME çıktı işaretçilerini zorunlu tutar; ilk iki
+    // sonuç kullanılmasa bile NULL geçirilemez (Windows KERNELBASE NULL'a yazar).
+    let mut creation = FileTime { low: 0, high: 0 };
+    let mut exit = FileTime { low: 0, high: 0 };
     // FILETIME is in 100 ns units; only kernel and user time accumulate here.
     let ok = unsafe {
         GetThreadTimes(
             GetCurrentThread(),
-            std::ptr::null_mut(),
-            std::ptr::null_mut(),
+            &mut creation,
+            &mut exit,
             &mut kernel,
             &mut user,
         )
@@ -214,6 +218,16 @@ fn current_thread_cpu_100ns() -> Option<u64> {
         let value = |time: FileTime| (u64::from(time.high) << 32) | u64::from(time.low);
         value(kernel) + value(user)
     })
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::current_thread_cpu_100ns;
+
+    #[test]
+    fn current_thread_cpu_sample_uses_valid_output_pointers() {
+        assert!(current_thread_cpu_100ns().is_some());
+    }
 }
 
 #[cfg(not(windows))]

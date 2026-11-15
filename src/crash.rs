@@ -17,6 +17,9 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+#[cfg(windows)]
+use std::ffi::c_void;
+
 /// Saklanan en çok çökme raporu.
 pub const KEEP_REPORTS: usize = 5;
 
@@ -36,6 +39,174 @@ pub fn log_dir() -> Option<PathBuf> {
 pub fn is_test_run() -> bool {
     std::env::var_os("OPENIFY_TEST_DISPLAY").is_some()
         || std::env::var_os("OPENIFY_SETTINGS_PATH").is_some()
+}
+
+/// Sınama kopyalarında Windows'un erişim ihlali ileti kutusunu kapat.
+/// `main` bunu güncelleme kancalarından ve pencere oluşturulmasından önce çağırır.
+pub fn initialize_early() {
+    #[cfg(windows)]
+    if is_test_run() {
+        // SEM_NOGPFAULTERRORBOX: 0x0002. Bilerek normal açılış davranışını değiştirmez.
+        unsafe { SetErrorMode(0x0002) };
+    }
+}
+
+/// Erişim ihlallerini yalnız izole sınama çalışmasında modül + göreli adresle kaydet.
+pub fn install_test_exception_handler() {
+    #[cfg(windows)]
+    if is_test_run() {
+        // Handler süreç sonuna kadar Windows tarafından tutulur.
+        let handler = unsafe { AddVectoredExceptionHandler(1, Some(log_native_exception)) };
+        if handler.is_null() {
+            log::error!(target: "openify", "VEH kurulamadı: AddVectoredExceptionHandler başarısız");
+        } else {
+            log::info!(target: "openify", "sınama VEH hata tanılaması kuruldu");
+        }
+    }
+}
+
+#[cfg(windows)]
+#[repr(C)]
+struct NativeExceptionRecord {
+    code: u32,
+    flags: u32,
+    record: *mut NativeExceptionRecord,
+    address: *mut c_void,
+    parameter_count: u32,
+    information: [usize; 15],
+}
+
+#[cfg(windows)]
+#[repr(C)]
+struct NativeExceptionPointers {
+    record: *mut NativeExceptionRecord,
+    context: *mut c_void,
+}
+
+#[cfg(windows)]
+unsafe extern "system" fn log_native_exception(pointers: *mut NativeExceptionPointers) -> i32 {
+    const ACCESS_VIOLATION: u32 = 0xC000_0005;
+    if pointers.is_null() || unsafe { (*pointers).record.is_null() } {
+        return 0; // EXCEPTION_CONTINUE_SEARCH
+    }
+    let record = unsafe { &*(*pointers).record };
+    if record.code != ACCESS_VIOLATION {
+        return 0;
+    }
+
+    let address = record.address as usize;
+    let (module_name, base) = native_address_module(address);
+    let access = match record.information[0] {
+        0 => "read",
+        1 => "write",
+        8 => "execute",
+        _ => "unknown",
+    };
+    let bad_address = record.information[1];
+    let context = unsafe { (*pointers).context.cast::<u8>() };
+    // x64 CONTEXT offsets: Rsp=152, Rip=248. This target is a 64-bit Windows build.
+    let rsp = unsafe { std::ptr::read_unaligned(context.add(152).cast::<u64>()) } as usize;
+    let rip = unsafe { std::ptr::read_unaligned(context.add(248).cast::<u64>()) } as usize;
+    let mut stack = [0usize; 32];
+    let mut bytes_read = 0usize;
+    let stack_read = unsafe {
+        ReadProcessMemory(
+            usize::MAX as *mut c_void,
+            rsp as *const c_void,
+            stack.as_mut_ptr().cast(),
+            std::mem::size_of_val(&stack),
+            &mut bytes_read,
+        )
+    } != 0;
+    let stack_modules = if stack_read {
+        stack
+            .iter()
+            .take(bytes_read / std::mem::size_of::<usize>())
+            .filter_map(|&frame| {
+                (frame > 0x1_0000)
+                    .then(|| native_address_module(frame))
+                    .filter(|(_, frame_base)| *frame_base != 0)
+                    .map(|(name, frame_base)| {
+                        format!("{}+0x{:X}", module_leaf(&name), frame - frame_base)
+                    })
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    } else {
+        format!("stack unreadable ({bytes_read} bytes)")
+    };
+    let report = format_native_exception(
+        record.code,
+        &module_name,
+        address,
+        base,
+        access,
+        bad_address,
+    );
+    log::error!(target: "openify", "{report}");
+    log::error!(target: "openify", "NATIVE EXCEPTION stack rip=0x{rip:X} [{stack_modules}]");
+    log::logger().flush();
+    0 // EXCEPTION_CONTINUE_SEARCH: uygulamanın normal exception akışı sürsün.
+}
+
+#[cfg(windows)]
+fn native_address_module(address: usize) -> (String, usize) {
+    let mut module = std::ptr::null_mut();
+    let found = unsafe {
+        GetModuleHandleExW(
+            0x0000_0004 | 0x0000_0002, // FROM_ADDRESS | UNCHANGED_REFCOUNT
+            address as *const u16,
+            &mut module,
+        )
+    } != 0;
+    if !found {
+        return ("unknown module".to_string(), 0);
+    }
+    let mut buffer = [0u16; 260];
+    let length = unsafe { GetModuleFileNameW(module, buffer.as_mut_ptr(), buffer.len() as u32) };
+    (
+        String::from_utf16_lossy(&buffer[..length.min(buffer.len() as u32) as usize]),
+        module as usize,
+    )
+}
+
+#[cfg(windows)]
+fn module_leaf(path: &str) -> &str {
+    path.rsplit(['\\', '/']).next().unwrap_or(path)
+}
+
+#[cfg(windows)]
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn SetErrorMode(mode: u32) -> u32;
+    fn AddVectoredExceptionHandler(
+        first: u32,
+        handler: Option<unsafe extern "system" fn(*mut NativeExceptionPointers) -> i32>,
+    ) -> *mut c_void;
+    fn GetModuleHandleExW(flags: u32, address: *const u16, module: *mut *mut c_void) -> i32;
+    fn GetModuleFileNameW(module: *mut c_void, file_name: *mut u16, size: u32) -> u32;
+    fn ReadProcessMemory(
+        process: *mut c_void,
+        base_address: *const c_void,
+        buffer: *mut c_void,
+        size: usize,
+        bytes_read: *mut usize,
+    ) -> i32;
+}
+
+/// Erişim ihlali için modül yolu, ham adres ve modül içi ofset.
+fn format_native_exception(
+    code: u32,
+    module: &str,
+    address: usize,
+    base: usize,
+    access: &str,
+    target: usize,
+) -> String {
+    format!(
+        "NATIVE EXCEPTION code=0x{code:08X} module={module}+0x{:X} address=0x{address:X} access={access} target=0x{target:X}",
+        address.saturating_sub(base),
+    )
 }
 
 /// Sınama koşusunda klasör açıkça verilmemişse kullanılan geçici kum havuzu
@@ -261,6 +432,22 @@ mod tests {
         ] {
             assert!(r.contains(needle), "{needle} yok:\n{r}");
         }
+    }
+
+    #[test]
+    fn native_exception_report_identifies_module_and_offset() {
+        let report = format_native_exception(
+            0xC000_0005,
+            "C:\\Windows\\System32\\dxgi.dll",
+            0x7FFB_33BD_27A9,
+            0x7FFB_33BD_0000,
+            "write",
+            0,
+        );
+        assert!(report.contains("0xC0000005"), "{report}");
+        assert!(report.contains("dxgi.dll"), "{report}");
+        assert!(report.contains("dxgi.dll+0x27A9"), "{report}");
+        assert!(report.contains("access=write target=0x0"), "{report}");
     }
 
     #[test]

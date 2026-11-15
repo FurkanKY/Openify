@@ -1207,6 +1207,10 @@ fn parse_test_autoscroll_duration(value: &str) -> Option<Duration> {
         .then(|| Duration::from_secs(seconds))
 }
 
+fn should_start_test_autoscroll(view: Option<&str>, liked_list_loaded: bool) -> bool {
+    view == Some("liked") && liked_list_loaded
+}
+
 fn test_view_route(view: &str) -> Option<super::history::Route> {
     use super::history::Route;
     match view.split_once(':') {
@@ -1239,23 +1243,52 @@ impl Shell {
     pub(super) fn apply_test_view(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(view) = test_view() else { return };
         if let Some(duration) = test_autoscroll_duration() {
-            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: 4 sn sonra {} sn kaydırma", duration.as_secs());
+            const LIST_LOAD_TIMEOUT: Duration = Duration::from_secs(30);
+            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kanca kuruldu; Beğenilenler listesi en çok {} sn beklenecek, süre {} sn", LIST_LOAD_TIMEOUT.as_secs(), duration.as_secs());
             cx.spawn(async move |this, cx| {
-                cx.background_executor().timer(Duration::from_secs(4)).await;
-                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma başladı");
+                let load_deadline = Instant::now() + LIST_LOAD_TIMEOUT;
+                let loaded_count = loop {
+                    let loaded = this.update(cx, |shell, _| {
+                        let loaded = shell.library.selected.as_ref() == Some(&CollectionId::Liked)
+                            && shell.library.tracks(&CollectionId::Liked).is_some();
+                        if should_start_test_autoscroll(Some(view), loaded) {
+                            shell.library.tracks(&CollectionId::Liked).map(|tracks| tracks.len())
+                        } else {
+                            None
+                        }
+                    });
+                    match loaded {
+                        Ok(Some(count)) => break count,
+                        Err(_) => {
+                            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: pencere kapandığı için kanca iptal edildi");
+                            return;
+                        }
+                        _ if Instant::now() >= load_deadline => {
+                            log::warn!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: Beğenilenler listesi 30 sn içinde yüklenmedi; kaydırma başlatılmadı");
+                            return;
+                        }
+                        _ => cx.background_executor().timer(Duration::from_millis(100)).await,
+                    }
+                };
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma başladı (Beğenilenler: {loaded_count} şarkı, {} sn)", duration.as_secs());
                 let deadline = Instant::now() + duration;
+                let mut updates = 0usize;
                 while Instant::now() < deadline {
-                    let _ = this.update(cx, |shell, cx| {
+                    if this.update(cx, |shell, cx| {
                         let handle = shell.library.scroll.0.borrow().base_handle.clone();
                         let offset = handle.offset();
                         handle.set_offset(gpui::point(offset.x, offset.y - gpui::px(28.)));
                         cx.notify();
-                    });
+                    }).is_err() {
+                        log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: pencere kapandığı için kaydırma erken bitti ({updates} adım)");
+                        return;
+                    }
+                    updates += 1;
                     cx.background_executor()
                         .timer(Duration::from_millis(5))
                         .await;
                 }
-                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma bitti");
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma bitti ({updates} adım)");
             })
             .detach();
         }
@@ -1341,7 +1374,7 @@ impl Shell {
 
 #[cfg(test)]
 mod test_view_and_autoscroll_tests {
-    use super::{super::history::Route, test_view_route};
+    use super::{super::history::Route, should_start_test_autoscroll, test_view_route};
     use super::{Duration, parse_test_autoscroll_duration};
     use crate::engine::CollectionId;
 
@@ -1354,6 +1387,13 @@ mod test_view_and_autoscroll_tests {
         assert_eq!(parse_test_autoscroll_duration("0"), None);
         assert_eq!(parse_test_autoscroll_duration("61"), None);
         assert_eq!(parse_test_autoscroll_duration("ten"), None);
+    }
+
+    #[test]
+    fn autoscroll_waits_for_the_liked_list_to_be_loaded() {
+        assert!(!should_start_test_autoscroll(Some("liked"), false));
+        assert!(should_start_test_autoscroll(Some("liked"), true));
+        assert!(!should_start_test_autoscroll(Some("home"), true));
     }
 
     #[test]

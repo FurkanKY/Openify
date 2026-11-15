@@ -83,6 +83,8 @@ fn test_exit_after(value: Option<&str>) -> u64 {
 }
 
 fn main() -> Result<()> {
+    // Sınama çöküşü kullanıcıya ileti kutusu çıkarmasın; normal çalışmaya etkisi yok.
+    crash::initialize_early();
     STARTED.get_or_init(Instant::now);
     // Velopack kurulum / güncelleme / kaldırma kancaları: her şeyden önce
     // (tek kopya kilidinden ve pencereden önce; gerekirse süreç burada çıkar).
@@ -109,6 +111,7 @@ fn main() -> Result<()> {
     // librespot'un uyarı ve hataları terminalde görünsün.
     // Daha ayrıntılı çıktı için: $env:RUST_LOG="librespot=debug"
     init_logging();
+    crash::install_test_exception_handler();
     // Release derlemede konsol yok: paniği (motor ve ses iş parçacıkları
     // dahil) günlüğe ve çökme raporuna yaz, sessizce ölmesin.
     crash::install_panic_hook();
