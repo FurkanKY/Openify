@@ -28,7 +28,7 @@ use crate::engine::{CollectionId, Command, Library, LibraryItem, SmartList, Trac
 use crate::{t, tf, tp};
 
 pub(super) const ROW_HEIGHT: f32 = 56.;
-const ROW_THUMB: f32 = 40.;
+pub(super) const ROW_THUMB: f32 = 40.;
 /// Numara / çal hücresi: en küçük tıklama alanı (32×32 px).
 const NUMBER_CELL: f32 = 32.;
 /// En dar sayfa kenar boşluğu (32 px). Gerçek boşluk pencere enine göre
@@ -2041,7 +2041,7 @@ const ADDED_COLUMN: f32 = 132.;
 pub(super) const ADDED_MIN_WIDTH: f32 = 1000.;
 /// Dinlenme sayısı sütununun eni (sabit, sağa yaslı) ve görünmesi için içeriğin
 /// en az eni; daha darda "Eklenme tarihi" gibi gizlenir.
-const PLAYS_COLUMN: f32 = 72.;
+pub(super) const PLAYS_COLUMN: f32 = 72.;
 pub(super) const PLAYS_MIN_WIDTH: f32 = 1000.;
 
 fn column(grow: f32) -> gpui::Div {

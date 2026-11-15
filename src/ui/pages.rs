@@ -458,6 +458,15 @@ impl Shell {
             Route::Settings => self.enter_settings(cx),
             Route::Tools => self.enter_tools(cx),
             Route::Stats => self.enter_stats(cx),
+            Route::PlaylistHistory(uri) => {
+                let id = CollectionId::Playlist(uri.clone());
+                if !self.library.collections.contains_key(&id) {
+                    self.library
+                        .collections
+                        .insert(id.clone(), super::library::Loadable::Loading);
+                    self.engine.send(Command::OpenCollection(id));
+                }
+            }
             Route::Home => self.ask_explore(&[crate::engine::ExploreKey::Home]),
             Route::Explore => self.enter_explore(cx),
             Route::Category(uri) => {
@@ -1004,6 +1013,7 @@ impl Shell {
             Route::Recent => self.recent_body(window, cx),
             Route::Tools => self.tools_body(window, cx),
             Route::Stats => self.stats_body(window, cx),
+            Route::PlaylistHistory(uri) => self.playlist_history_body(uri, cx),
             Route::Collection(_) | Route::Library => div(),
         };
         self.page_frame(content, &route, cx)
@@ -1097,6 +1107,7 @@ impl Shell {
             Route::Settings => Some(super::settings::SETTINGS_WIDTH),
             Route::Tools => Some(super::tools_view::TOOLS_WIDTH),
             Route::Stats => Some(super::tools_view::TOOLS_WIDTH),
+            Route::PlaylistHistory(_) => None,
             _ => None,
         };
         column_margin(self.window_width, column)

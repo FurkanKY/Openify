@@ -60,6 +60,7 @@ const DEVICE_ROWS: usize = 8;
 pub enum Confirm {
     SignOut,
     ClearCache,
+    ClearPlaylistHistory,
 }
 
 /// Ayarlar sayfasının ve profil menüsünün ekran durumu.
@@ -345,6 +346,7 @@ impl Shell {
     /// Ayarların motora, temaya ve sisteme uygulanması. Açılışta (`startup`)
     /// kısayol ve pencere işleri `Desk` kurulurken zaten yapıldı.
     pub(super) fn apply_prefs(&mut self, startup: bool) {
+        engine::set_playlist_history_enabled(self.prefs.playlist_history);
         engine::apply_audio(self.prefs.kbps(), self.prefs.normalise);
         engine::apply_normalisation_level(self.prefs.normalise_pregain_db());
         self.engine
@@ -529,6 +531,33 @@ impl Shell {
         cx.notify();
     }
 
+    fn ask_clear_playlist_history(&mut self, cx: &mut Context<Self>) {
+        self.sui.close_menus();
+        self.sui.confirm = Some(Confirm::ClearPlaylistHistory);
+        cx.notify();
+    }
+
+    fn clear_playlist_history(&mut self, cx: &mut Context<Self>) {
+        let result = cx.background_spawn(async move { engine::clear_playlist_history(None) });
+        cx.spawn(async move |this, cx| {
+            let result = result.await;
+            let _ = this.update(cx, |shell, cx| {
+                if let Err(error) = result {
+                    log::warn!("Liste geçmişi temizlenemedi: {error:#}");
+                    shell
+                        .state
+                        .notify(engine::NoticeKind::Problem, t!(PlaylistHistoryClearFailed));
+                } else {
+                    shell
+                        .state
+                        .notify(engine::NoticeKind::Info, t!(PlaylistHistoryCleared));
+                }
+                cx.notify();
+            });
+        })
+        .detach();
+    }
+
     /// Kayıtlı Spotify girişini sil ve Openify'ı kapat. Bir sonraki açılışta
     /// giriş yeniden istenir.
     pub(super) fn sign_out(&mut self, cx: &mut Context<Self>) {
@@ -579,6 +608,7 @@ impl Shell {
         match confirm {
             Confirm::SignOut => self.sign_out(cx),
             Confirm::ClearCache => self.clear_cache(cx),
+            Confirm::ClearPlaylistHistory => self.clear_playlist_history(cx),
         }
         cx.notify();
     }
@@ -1138,6 +1168,13 @@ impl Shell {
                 t!(Clear),
                 "trash-2",
                 false,
+            ),
+            Confirm::ClearPlaylistHistory => (
+                t!(PlaylistHistoryClearTitle),
+                t!(PlaylistHistoryClearBody).to_string(),
+                t!(Clear),
+                "trash-2",
+                true,
             ),
         };
         let ok_color = if danger {
@@ -1842,6 +1879,30 @@ impl Shell {
 
     fn storage_section(&self, window: &Window, cx: &mut Context<Self>) -> AnyElement {
         let accent = self.accent().text;
+        let keep_history = self.switch_control(
+            "playlist-history",
+            self.prefs.playlist_history,
+            |prefs, on| prefs.playlist_history = on,
+            window,
+            cx,
+        );
+        let (history_stop, history_look) =
+            self.stop_look("clear-playlist-history", super::tab::PAGE, true, window, cx);
+        let clear_history = secondary_button(
+            "clear-playlist-history",
+            "trash-2",
+            t!(ClearPlaylistHistory),
+            history_look,
+            accent,
+        )
+        .when_some(history_stop, |el, h| {
+            el.child(self.focus_probe(&h)).track_focus(&h)
+        })
+        .on_click(cx.listener(|this, ev: &ClickEvent, window, cx| {
+            this.leave_button(ev, window);
+            this.ask_clear_playlist_history(cx);
+        }))
+        .into_any_element();
         let allowed = engine::clearing_allowed();
         let size = match (&self.sui.cache_note, self.sui.cache_bytes) {
             (Some(note), _) => note.clone(),
@@ -1943,7 +2004,25 @@ impl Shell {
         self.settings_section(
             t!(SectionStorage),
             vec![
-                setting_row(true, row_text(t!(Cache), tf!(CacheDesc, size), None), clear),
+                setting_row(
+                    true,
+                    row_text(t!(PlaylistHistoryTitle), t!(PlaylistHistoryDesc), None),
+                    keep_history,
+                ),
+                setting_row(
+                    false,
+                    row_text(
+                        t!(PlaylistHistoryClearTitle),
+                        t!(PlaylistHistoryClearBody),
+                        None,
+                    ),
+                    clear_history,
+                ),
+                setting_row(
+                    false,
+                    row_text(t!(Cache), tf!(CacheDesc, size), None),
+                    clear,
+                ),
                 setting_row(false, row_text(t!(CacheLocation), dir_text, None), open),
                 setting_row(
                     false,

@@ -49,6 +49,7 @@ mod palette;
 mod pill;
 mod pill_glass;
 mod player;
+mod playlist_history_view;
 #[cfg(windows)]
 mod popups;
 mod queue_panel;
@@ -148,6 +149,7 @@ pub fn run(start_hidden: bool) {
     // Ses ayarları motor kurulmadan önce (ilk şarkıdan geçerli olsun).
     engine::apply_audio(settings.kbps(), settings.normalise);
     engine::apply_normalisation_level(settings.normalise_pregain_db());
+    engine::set_playlist_history_enabled(settings.playlist_history);
     engine::set_output_device(settings.output_device.clone());
     engine::set_resume(settings.resume);
     // Spotify Connect açıksa oturum kalıcı aygıt kimliğiyle açılır (kapalıyken hiçbir şey).
@@ -307,6 +309,8 @@ struct Shell {
     friends: friends::FriendsUi,
     /// Kütüphane araçları sayfası ve dinleme sayacı (bkz. `tools`).
     tools: tools::ToolsUi,
+    /// Timestamp selected for a playlist-history restore preview.
+    history_preview: Option<(String, i64)>,
     /// Gizlenen şarkılar ve gizli oturum (bkz. `listening`).
     listen: listening::ListeningUi,
     /// Mini oynatıcı penceresi (bkz. `mini`): kapalıyken `None`, maliyet yok.
@@ -494,6 +498,7 @@ impl Shell {
             welcome: welcome::WelcomeUi::new(),
             friends: friends::FriendsUi::new(),
             tools: tools::ToolsUi::new(),
+            history_preview: None,
             listen: listening::ListeningUi::new(),
             mini: None,
         };

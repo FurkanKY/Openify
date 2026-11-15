@@ -197,6 +197,7 @@ pub enum Act {
         rows: Vec<(usize, TrackRow)>,
     },
     Open(CardTarget),
+    PlaylistHistory(String),
     Play(CardTarget),
     Rename {
         playlist: String,
@@ -1960,6 +1961,13 @@ impl Shell {
                 id: id @ CollectionId::Playlist(uri),
                 title,
             } => {
+                if uri.starts_with("spotify:playlist:") {
+                    entries.push(item(
+                        "history",
+                        t!(PlaylistHistoryOpen).into(),
+                        Act::PlaylistHistory(uri.clone()),
+                    ));
+                }
                 // Henüz oluşmakta olan (geçici adresli) liste de senin.
                 let own = self.library.item(id).is_some_and(is_own) || uri.starts_with("local:");
                 let in_library = self.library.item(id).is_some();
@@ -2267,6 +2275,9 @@ impl Shell {
             }
             Act::RemoveRows { playlist, rows } => self.remove_rows(playlist, rows, cx),
             Act::Open(target) => self.open_card(target, cx),
+            Act::PlaylistHistory(uri) => {
+                self.navigate(super::history::Route::PlaylistHistory(uri), cx)
+            }
             Act::Play(target) => self.play_card(target, cx),
             Act::Rename { playlist, name } => self.ask_rename(playlist, name, cx),
             Act::EditDescription { playlist } => self.ask_description(playlist, cx),
