@@ -1191,12 +1191,107 @@ pub(super) fn test_view() -> Option<&'static str> {
         .as_deref()
 }
 
+fn test_autoscroll_duration() -> Option<Duration> {
+    if !crate::crash::is_test_run() {
+        return None;
+    }
+    std::env::var("OPENIFY_TEST_AUTOSCROLL")
+        .ok()
+        .and_then(|value| parse_test_autoscroll_duration(&value))
+}
+
+fn parse_test_autoscroll_duration(value: &str) -> Option<Duration> {
+    let seconds = value.trim().parse::<u64>().ok()?;
+    (1..=60)
+        .contains(&seconds)
+        .then(|| Duration::from_secs(seconds))
+}
+
+fn should_start_test_autoscroll(view: Option<&str>, liked_list_loaded: bool) -> bool {
+    view == Some("liked") && liked_list_loaded
+}
+
+fn test_view_route(view: &str) -> Option<super::history::Route> {
+    use super::history::Route;
+    match view.split_once(':') {
+        Some(("search", q)) => Some(Route::Search(q.to_string())),
+        Some(("artist", uri)) => Some(Route::Artist(uri.to_string())),
+        Some(("album", uri)) => Some(Route::Album(uri.to_string())),
+        Some(("category", id)) => Some(Route::Category(format!("spotify:page:{id}"))),
+        _ => match CollectionId::from_key(view) {
+            Some(
+                id @ (CollectionId::Liked | CollectionId::Smart(_) | CollectionId::Playlist(_)),
+            ) => Some(Route::Collection(id)),
+            _ => match view {
+                "home" => Some(Route::Home),
+                "explore" => Some(Route::Explore),
+                "library" => Some(Route::Library),
+                "settings" => Some(Route::Settings),
+                "recent" => Some(Route::Recent),
+                "tools" => Some(Route::Tools),
+                "stats" => Some(Route::Stats),
+                _ => None,
+            },
+        },
+    }
+}
+
 impl Shell {
     /// `OPENIFY_TEST_VIEW` (bkz. `test_view`). Sahte çalmada çalan şarkıya
     /// diskteki küçük kapağı verir: tam ekranın arka planı ve ışık gerçek bir
     /// kapakla ölçülsün (Spotify'a hiçbir şey gitmez).
     pub(super) fn apply_test_view(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(view) = test_view() else { return };
+        if let Some(duration) = test_autoscroll_duration() {
+            const LIST_LOAD_TIMEOUT: Duration = Duration::from_secs(30);
+            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kanca kuruldu; Beğenilenler listesi en çok {} sn beklenecek, süre {} sn", LIST_LOAD_TIMEOUT.as_secs(), duration.as_secs());
+            cx.spawn(async move |this, cx| {
+                let load_deadline = Instant::now() + LIST_LOAD_TIMEOUT;
+                let loaded_count = loop {
+                    let loaded = this.update(cx, |shell, _| {
+                        let loaded = shell.library.selected.as_ref() == Some(&CollectionId::Liked)
+                            && shell.library.tracks(&CollectionId::Liked).is_some();
+                        if should_start_test_autoscroll(Some(view), loaded) {
+                            shell.library.tracks(&CollectionId::Liked).map(|tracks| tracks.len())
+                        } else {
+                            None
+                        }
+                    });
+                    match loaded {
+                        Ok(Some(count)) => break count,
+                        Err(_) => {
+                            log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: pencere kapandığı için kanca iptal edildi");
+                            return;
+                        }
+                        _ if Instant::now() >= load_deadline => {
+                            log::warn!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: Beğenilenler listesi 30 sn içinde yüklenmedi; kaydırma başlatılmadı");
+                            return;
+                        }
+                        _ => cx.background_executor().timer(Duration::from_millis(100)).await,
+                    }
+                };
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma başladı (Beğenilenler: {loaded_count} şarkı, {} sn)", duration.as_secs());
+                let deadline = Instant::now() + duration;
+                let mut updates = 0usize;
+                while Instant::now() < deadline {
+                    if this.update(cx, |shell, cx| {
+                        let handle = shell.library.scroll.0.borrow().base_handle.clone();
+                        let offset = handle.offset();
+                        handle.set_offset(gpui::point(offset.x, offset.y - gpui::px(28.)));
+                        cx.notify();
+                    }).is_err() {
+                        log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: pencere kapandığı için kaydırma erken bitti ({updates} adım)");
+                        return;
+                    }
+                    updates += 1;
+                    cx.background_executor()
+                        .timer(Duration::from_millis(5))
+                        .await;
+                }
+                log::info!(target: "openify", "OPENIFY_TEST_AUTOSCROLL: kaydırma bitti ({updates} adım)");
+            })
+            .detach();
+        }
         if self.now.fake
             && let Some(t) = self
                 .library
@@ -1246,26 +1341,7 @@ impl Shell {
             .detach();
             return;
         }
-        use super::history::Route;
-        let route = match view.split_once(':') {
-            Some(("search", q)) => Some(Route::Search(q.to_string())),
-            Some(("artist", uri)) => Some(Route::Artist(uri.to_string())),
-            Some(("album", uri)) => Some(Route::Album(uri.to_string())),
-            Some(("category", id)) => Some(Route::Category(format!("spotify:page:{id}"))),
-            _ if view == "home" => Some(Route::Home),
-            _ if view == "explore" => Some(Route::Explore),
-            _ if view == "library" => Some(Route::Library),
-            _ if view == "settings" => Some(Route::Settings),
-            _ if view == "recent" => Some(Route::Recent),
-            _ if view == "tools" => Some(Route::Tools),
-            _ if view == "stats" => Some(Route::Stats),
-            _ if CollectionId::from_key(view)
-                .is_some_and(|id| matches!(id, CollectionId::Smart(_))) =>
-            {
-                CollectionId::from_key(view).map(Route::Collection)
-            }
-            _ => None,
-        };
+        let route = test_view_route(view);
         if let Some(route) = route {
             // Bağlantı kurulduktan sonra (açılışta sayfa isteği bağlantıdan
             // önce gidip "ulaşılamadı" dönüyordu); `OPENIFY_TEST_VIEW_AFTER`
@@ -1293,5 +1369,39 @@ impl Shell {
             "credits" => self.apply_credits_test_view(window, cx),
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod test_view_and_autoscroll_tests {
+    use super::{super::history::Route, should_start_test_autoscroll, test_view_route};
+    use super::{Duration, parse_test_autoscroll_duration};
+    use crate::engine::CollectionId;
+
+    #[test]
+    fn accepts_bounded_integer_duration_only() {
+        assert_eq!(
+            parse_test_autoscroll_duration("10"),
+            Some(Duration::from_secs(10))
+        );
+        assert_eq!(parse_test_autoscroll_duration("0"), None);
+        assert_eq!(parse_test_autoscroll_duration("61"), None);
+        assert_eq!(parse_test_autoscroll_duration("ten"), None);
+    }
+
+    #[test]
+    fn autoscroll_waits_for_the_liked_list_to_be_loaded() {
+        assert!(!should_start_test_autoscroll(Some("liked"), false));
+        assert!(should_start_test_autoscroll(Some("liked"), true));
+        assert!(!should_start_test_autoscroll(Some("home"), true));
+    }
+
+    #[test]
+    fn test_view_opens_a_playlist_uri() {
+        let uri = "spotify:playlist:0000000000000000000009";
+        assert_eq!(
+            test_view_route(uri),
+            Some(Route::Collection(CollectionId::Playlist(uri.into())))
+        );
     }
 }

@@ -163,7 +163,7 @@ mod demo {
             pinned: Vec::new(),
         };
         let library = Library {
-            liked_count: 214,
+            liked_count: 120,
             albums: vec![
                 album(1, "Uzun Yol", "Mavi Orman"),
                 album(2, "Kuzey Işıkları", "Kuzey"),
@@ -219,6 +219,22 @@ mod demo {
         ];
         let mut saved = rows.to_vec();
         saved.extend(versions.iter().cloned());
+        // Beğenilenler için 120 satırlı kaydırma senaryosu. İsimler ve URI'ler
+        // benzersiz, kapaklar boş; bu seed çevrimdışı ve kararlı kalır.
+        let artists = ["Mavi Orman", "Kuzey", "Evanescence", "Deniz Aydın"];
+        let albums = ["Uzun Yol", "Kuzey Işıkları", "Fallen", "Sessiz Ev"];
+        let long_liked: Vec<TrackRow> = (0..109)
+            .map(|n| {
+                track(
+                    100 + n,
+                    &format!("Yol Parçası {:03}", n + 1),
+                    artists[n as usize % artists.len()],
+                    albums[n as usize % albums.len()],
+                    4 + n % 52,
+                )
+            })
+            .collect();
+        saved.extend(long_liked.iter().cloned());
         let smart_unplayed = track(15, "Yumuşak Işık", "Mavi Orman", "Uzun Yol", 6);
         let smart_forgotten = track(16, "Eski Sokak", "Deniz Aydın", "Sessiz Ev", 5);
         saved.extend([smart_unplayed.clone(), smart_forgotten.clone()]);
@@ -243,12 +259,23 @@ mod demo {
                 added_at: Some(ago(a)),
             })
             .collect();
+        entries.extend(long_liked.iter().enumerate().map(|(n, r)| Entry {
+            track: r.uri.clone(),
+            added_at: Some(ago((10 + n as i64) * DAY)),
+        }));
         entries.push(Entry {
             track: smart_unplayed.uri.clone(),
             added_at: Some(ago(1)),
         });
         db.save_collection_entries(&CollectionId::Liked, Some(b"1"), &entries)
             .unwrap();
+        assert_eq!(
+            db.collection_entries(&CollectionId::Liked)
+                .unwrap()
+                .unwrap()
+                .len(),
+            120,
+        );
         // "Gece sürüşü": aynı şarkı iki kez (Sessiz Gece, Ayna) ve sürümler (Remaster, Live, Radio Edit).
         let at = |m: i64| Some(ago(m));
         let night_rows = [
@@ -286,8 +313,9 @@ mod demo {
             .collect();
         db.save_collection_entries(&CollectionId::Playlist(playlist_key(8)), Some(b"1"), &old)
             .unwrap();
-        // "Büyük karışık": 120 satır, 10 şarkı 12'şer kez (≥ 50 değişiklik: toplu işlem onayı).
-        let big: Vec<Entry> = (0..120)
+        // "Büyük karışık": 360 satır; sanal listenin uzun listede ölçümü ve
+        // toplu işlem onayı için 10 şarkı yinelenerek kullanılır.
+        let big: Vec<Entry> = (0..360)
             .map(|n| Entry {
                 track: rows[(n * 7) % 10].uri.clone(),
                 added_at: Some(ago(10 + n as i64 * 450)),

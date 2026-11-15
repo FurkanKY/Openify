@@ -493,6 +493,7 @@ impl Shell {
     /// göre hâli ve içerik alanının eni. Panel açılıp kapanınca içerik aynı
     /// karede yeni enine geçer (kayan bir şey yok).
     pub(super) fn dock_frame(&mut self, window: &mut Window, cx: &mut Context<Self>) -> DockLayout {
+        super::frames::component_built("dock");
         let window_w = f32::from(window.viewport_size().width);
         // Ölçüm kancası `OPENIFY_PROF_HIDE=dock`: panel hiç yerleşmez ve
         // kendiliğinden açılmaz (kare A/B'sinde "panelsiz" taraf).

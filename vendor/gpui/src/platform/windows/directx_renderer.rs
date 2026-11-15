@@ -1,20 +1,23 @@
 use std::{
     mem::ManuallyDrop,
     sync::{Arc, OnceLock},
+    time::Instant,
 };
 
 use ::util::ResultExt;
 use anyhow::{Context, Result};
 use windows::{
     Win32::{
-        Foundation::HWND,
+        Foundation::{CloseHandle, HANDLE, HWND},
         Graphics::{
             Direct3D::*,
             Direct3D11::*,
             DirectComposition::*,
             DirectWrite::*,
+            Dwm::DwmFlush,
             Dxgi::{Common::*, *},
         },
+        System::Threading::{INFINITE, WaitForSingleObject},
     },
     core::Interface,
 };
@@ -49,6 +52,7 @@ pub(crate) struct DirectXRenderer {
     // arabellekleri, yolların ara dokuları) 1×1'e küçültülür; burada
     // gösterilince dönülecek boyut durur (bkz. `release_surfaces`).
     released_size: Option<Size<DevicePixels>>,
+    frame_stats: FrameStatsLogger,
 }
 
 /// Direct3D objects
@@ -64,6 +68,7 @@ pub(crate) struct DirectXRendererDevices {
 struct DirectXResources {
     // Direct3D rendering objects
     swap_chain: IDXGISwapChain1,
+    frame_latency_waitable_object: FrameLatencyWaitableObject,
     render_target: ManuallyDrop<ID3D11Texture2D>,
     render_target_view: [Option<ID3D11RenderTargetView>; 1],
 
@@ -77,6 +82,123 @@ struct DirectXResources {
     width: u32,
     height: u32,
     viewport: [D3D11_VIEWPORT; 1],
+}
+
+struct FrameLatencyWaitableObject(HANDLE);
+
+impl Drop for FrameLatencyWaitableObject {
+    fn drop(&mut self) {
+        if !self.0.is_invalid() {
+            let _ = unsafe { CloseHandle(self.0) };
+        }
+    }
+}
+
+struct FrameStatsLogger {
+    enabled: bool,
+    present_count: u64,
+    last_sample: Option<(Instant, u64, u32, u32, u32)>,
+    last_attempt: Option<Instant>,
+}
+
+impl FrameStatsLogger {
+    fn new() -> Self {
+        let enabled = crate::window::openify_frame_stats_enabled();
+        Self {
+            enabled,
+            present_count: 0,
+            last_sample: None,
+            last_attempt: None,
+        }
+    }
+
+    fn record_present(&mut self, swap_chain: &IDXGISwapChain1) {
+        self.present_count = self.present_count.wrapping_add(1);
+        if !self.enabled {
+            return;
+        }
+
+        let now = Instant::now();
+        if self.last_attempt.is_some_and(|last| now.duration_since(last).as_secs_f32() < 1.0) {
+            return;
+        }
+        self.last_attempt = Some(now);
+
+        let mut stats = DXGI_FRAME_STATISTICS::default();
+        // Some hardware flip-queue paths update DXGI statistics only after the
+        // DWM has completed a composition. This is only the opt-in 1 Hz stats
+        // path; presentation pacing itself is tied to this swap chain below.
+        let _ = unsafe { DwmFlush() };
+        if let Err(error) = unsafe { swap_chain.GetFrameStatistics(&mut stats) } {
+            log::warn!(target: "openify", "DXGI kare istatistiği alınamadı: {error}");
+            return;
+        }
+
+        if let Some((
+            sampled_at,
+            last_app_present_count,
+            last_dxgi_present_count,
+            last_present_refresh_count,
+            last_sync_refresh_count,
+        )) = self.last_sample
+        {
+            let elapsed = now.duration_since(sampled_at).as_secs_f32();
+            let presents = self.present_count.wrapping_sub(last_app_present_count);
+            let dxgi_presents = stats.PresentCount.wrapping_sub(last_dxgi_present_count);
+            let refreshes = stats
+                .PresentRefreshCount
+                .wrapping_sub(last_present_refresh_count);
+            let sync_refreshes = stats
+                .SyncRefreshCount
+                .wrapping_sub(last_sync_refresh_count);
+            // Flip-model statistics associate each retired present with its
+            // scanout refresh. Several presents retired on one refresh collapse
+            // to one visible frame; the refresh delta is therefore an upper
+            // bound, capped by the number of presents issued in this interval.
+            let (shown, missed) = estimated_frame_counts(presents, dxgi_presents as u64);
+            let (phase_frames, layout, paint, present) = crate::window::take_openify_frame_phases();
+            let phase_ms = |duration: std::time::Duration| {
+                if phase_frames == 0 {
+                    0.0
+                } else {
+                    duration.as_secs_f64() * 1000.0 / phase_frames as f64
+                }
+            };
+            log::info!(target: "openify",
+                "OPENIFY_FRAME_STATS {:.2}s sunulan={} yansiyan~={} duzen_ms={:.3} boyama_ms={:.3} sunum_ms={:.3}",
+                elapsed,
+                presents,
+                shown,
+                phase_ms(layout),
+                phase_ms(paint),
+                phase_ms(present),
+            );
+            let _ = (missed, refreshes, sync_refreshes);
+        }
+        self.last_sample = Some((
+            now,
+            self.present_count,
+            stats.PresentCount,
+            stats.PresentRefreshCount,
+            stats.SyncRefreshCount,
+        ));
+    }
+}
+
+fn estimated_frame_counts(presents: u64, dxgi_presented: u64) -> (u64, u64) {
+    let shown = presents.min(dxgi_presented);
+    (shown, presents.saturating_sub(shown))
+}
+
+#[cfg(test)]
+mod frame_stats_tests {
+    use super::estimated_frame_counts;
+
+    #[test]
+    fn estimates_dropped_presents_from_scanout_refreshes() {
+        assert_eq!(estimated_frame_counts(100, 80), (80, 20));
+        assert_eq!(estimated_frame_counts(50, 70), (50, 0));
+    }
 }
 
 struct DirectXRenderPipelines {
@@ -169,6 +291,7 @@ impl DirectXRenderer {
             direct_composition,
             font_info: Self::get_font_info(),
             released_size: None,
+            frame_stats: FrameStatsLogger::new(),
         })
     }
 
@@ -249,8 +372,10 @@ impl DirectXRenderer {
 
     #[inline]
     fn present(&mut self) -> Result<()> {
-        let result = unsafe { self.resources.swap_chain.Present(0, DXGI_PRESENT(0)) };
-        result.ok().context("Presenting swap chain failed")
+        let result = unsafe { self.resources.swap_chain.Present(1, DXGI_PRESENT(0)) };
+        result.ok().context("Presenting swap chain failed")?;
+        self.frame_stats.record_present(&self.resources.swap_chain);
+        Ok(())
     }
 
     pub(crate) fn handle_device_lost(&mut self, directx_devices: &DirectXDevices) {
@@ -337,6 +462,9 @@ impl DirectXRenderer {
         if self.released_size.is_some() {
             self.restore_surfaces()?;
         }
+        unsafe {
+            WaitForSingleObject(self.resources.frame_latency_waitable_object.0, INFINITE);
+        }
         self.pre_draw()?;
         for batch in scene.batches() {
             match batch {
@@ -405,7 +533,7 @@ impl DirectXRenderer {
                     width,
                     height,
                     RENDER_TARGET_FORMAT,
-                    DXGI_SWAP_CHAIN_FLAG(0),
+                    DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT,
                 )
                 .context("Failed to resize swap chain")?;
         }
@@ -734,7 +862,19 @@ impl DirectXResources {
                 height,
             )?
         };
-
+        let swap_chain2: IDXGISwapChain2 = swap_chain
+            .cast()
+            .context("Querying waitable swap chain interface")?;
+        unsafe {
+            swap_chain2
+                .SetMaximumFrameLatency(1)
+                .context("Setting maximum frame latency")?;
+        }
+        let frame_latency_waitable_object =
+            FrameLatencyWaitableObject(unsafe { swap_chain2.GetFrameLatencyWaitableObject() });
+        if frame_latency_waitable_object.0.is_invalid() {
+            anyhow::bail!("Getting frame latency waitable object failed");
+        }
         let (
             render_target,
             render_target_view,
@@ -748,6 +888,7 @@ impl DirectXResources {
 
         Ok(ManuallyDrop::new(Self {
             swap_chain,
+            frame_latency_waitable_object,
             render_target,
             render_target_view,
             path_intermediate_texture,
@@ -1134,7 +1275,7 @@ fn create_swap_chain_for_composition(
         Scaling: DXGI_SCALING_STRETCH,
         SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
         AlphaMode: DXGI_ALPHA_MODE_PREMULTIPLIED,
-        Flags: 0,
+        Flags: DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT.0 as u32,
     };
     Ok(unsafe { dxgi_factory.CreateSwapChainForComposition(device, &desc, None)? })
 }
@@ -1162,7 +1303,7 @@ fn create_swap_chain(
         Scaling: DXGI_SCALING_NONE,
         SwapEffect: DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL,
         AlphaMode: DXGI_ALPHA_MODE_IGNORE,
-        Flags: 0,
+        Flags: DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT.0 as u32,
     };
     let swap_chain =
         unsafe { dxgi_factory.CreateSwapChainForHwnd(device, hwnd, &desc, None, None) }?;

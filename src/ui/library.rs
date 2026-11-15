@@ -947,7 +947,7 @@ impl Shell {
         let description = (!compact)
             .then(|| self.library.list_description(&id))
             .flatten()
-            .map(|d| d.split_whitespace().collect::<Vec<_>>().join(" "))
+            .map(crate::engine::plain_text)
             .filter(|d| !d.is_empty());
         let extra = self.header_extra();
         // Açıklama satırı, başlık kapanırken yüksekliğiyle birlikte kısalır
@@ -1091,7 +1091,7 @@ impl Shell {
             count,
             cx.processor(
                 move |this: &mut Shell, range: std::ops::Range<usize>, _, cx| {
-                    let Some(tracks) = this.library.tracks(&id).cloned() else {
+                    let Some(tracks) = this.library.tracks(&id) else {
                         return Vec::new();
                     };
                     // Çalan satır: sıradaki yeri ve şarkısı tutuyorsa orası; liste
@@ -1108,6 +1108,17 @@ impl Shell {
                             }
                         })
                         .flatten();
+                    // Yalnız sanal listenin bu karede istediği satırları kopyala.
+                    // Önceden tüm koleksiyon her kaydırma karesinde klonlanıyordu.
+                    let visible_tracks = range
+                        .filter_map(|pos| {
+                            let ix = match &visible {
+                                Some(v) => *v.get(pos)?,
+                                None => pos,
+                            };
+                            tracks.get(ix).cloned().map(|track| (ix, track))
+                        })
+                        .collect::<Vec<_>>();
                     let list = ListKey::Collection(id.clone());
                     let dates = show_added
                         .then(|| this.library.added.get(&id).cloned())
@@ -1115,13 +1126,11 @@ impl Shell {
                     let now = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map_or(0, |d| d.as_millis() as i64);
-                    let rows = range
-                        .filter_map(|pos| {
-                            let ix = match &visible {
-                                Some(v) => *v.get(pos)?,
-                                None => pos,
-                            };
-                            let track = tracks.get(ix)?;
+                    let mut offset_minutes = None;
+                    let mut added_labels = HashMap::<(String, i64), SharedString>::new();
+                    let rows = visible_tracks
+                        .into_iter()
+                        .map(|(ix, track)| {
                             let spec = RowSpec {
                                 list: list.clone(),
                                 ix,
@@ -1139,14 +1148,27 @@ impl Shell {
                                     dates
                                         .as_ref()
                                         .and_then(|d| d.get(&track.uri))
-                                        .map(|at| super::added_date::added_label(now, *at))
+                                        .map(|at| {
+                                            added_labels
+                                                .entry((track.uri.clone(), *at))
+                                                .or_insert_with(|| {
+                                                    let offset = *offset_minutes
+                                                        .get_or_insert_with(
+                                                            super::added_date::local_offset_minutes,
+                                                        );
+                                                    super::added_date::added_label_in(
+                                                        now, *at, offset,
+                                                    )
+                                                    .into()
+                                                })
+                                                .clone()
+                                        })
                                         .unwrap_or_default()
-                                        .into()
                                 }),
                                 plays: smart_shows_plays(&id)
                                     .then_some(track.plays.unwrap_or_default()),
                             };
-                            Some(this.song_row(spec, track, cx))
+                            this.song_row(spec, &track, cx)
                         })
                         .collect();
                     // Satırlar çizilirken istenen küçük kapaklar.
@@ -1255,6 +1277,7 @@ impl Shell {
         track: &TrackRow,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        super::frames::component_built("row");
         let RowSpec {
             list,
             ix,
@@ -1945,6 +1968,7 @@ pub(super) fn eq_levels(playing: bool) -> [f32; 3] {
 /// Listede bunu kendi katmanı her karede yeniden çizer (bkz.
 /// `views::EqualizerLayer`): pencerenin geri kalanı önceki kareden kullanılır.
 pub(super) fn equalizer(color: u32, playing: bool) -> AnyElement {
+    super::frames::component_built("equalizer");
     equalizer_bars(color, eq_levels(playing))
 }
 

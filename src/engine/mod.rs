@@ -107,6 +107,7 @@ pub use wire::suggested_artists;
 // Arkadaş etkinliği (bkz. `friends.rs`).
 pub use friends::{Friend, FriendsFailure, PlayPlan, parse as parse_friends, play_plan};
 // Keşfet ve Ana sayfa (Adım 12, 7 Kasım; bkz. `explore.rs`).
+pub(crate) use explore::plain_text;
 pub use explore::{CardKind, CategoryList, ExploreCard, ExploreData, ExploreKey, Feed};
 pub use lyrics::{
     LyricLine, Lyrics, Source as LyricsSource, SyncKind, parse_spotify as parse_spotify_lyrics,

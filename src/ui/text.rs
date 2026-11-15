@@ -11,7 +11,11 @@
 //! darsa kutuya uyar; yüksekliği bir satırdır. Yazı rengi, boyutu ve
 //! kalınlığı üstteki kutudan gelir.
 
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::{HashMap, VecDeque},
+    rc::Rc,
+};
 
 use gpui::{
     App, AppContext, AvailableSpace, Bounds, Context, Div, Element, ElementId, GlobalElementId,
@@ -21,6 +25,39 @@ use gpui::{
 };
 
 const ELLIPSIS: &str = "…";
+const TRUNCATION_CACHE_CAPACITY: usize = 1024;
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct TruncationKey {
+    text: SharedString,
+    font: gpui::Font,
+    font_size: u32,
+    width: u32,
+}
+
+thread_local! {
+    static TRUNCATIONS: RefCell<(HashMap<TruncationKey, SharedString>, VecDeque<TruncationKey>)> =
+        RefCell::new((HashMap::new(), VecDeque::new()));
+}
+
+fn cached_truncation(key: &TruncationKey) -> Option<SharedString> {
+    TRUNCATIONS.with_borrow(|cache| cache.0.get(key).cloned())
+}
+
+fn remember_truncation(key: TruncationKey, value: SharedString) {
+    TRUNCATIONS.with_borrow_mut(|cache| {
+        if cache.0.contains_key(&key) {
+            return;
+        }
+        if cache.1.len() == TRUNCATION_CACHE_CAPACITY
+            && let Some(oldest) = cache.1.pop_front()
+        {
+            cache.0.remove(&oldest);
+        }
+        cache.1.push_back(key.clone());
+        cache.0.insert(key, value);
+    });
+}
 
 pub struct Line {
     text: SharedString,
@@ -116,17 +153,21 @@ impl Element for Line {
         style.flex_shrink = 1.;
         let layout_id =
             window.request_measured_layout(style, move |known, available, window, _| {
-                let started = std::time::Instant::now();
-                let natural = window
-                    .text_system()
-                    .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
-                    .width;
-                super::frames::text_spent(started.elapsed(), false);
-                let width = known.width.unwrap_or(match available.width {
-                    AvailableSpace::Definite(space) => natural.min(space),
-                    AvailableSpace::MinContent => px(0.),
-                    AvailableSpace::MaxContent => natural,
-                });
+                let width = if let Some(width) = known.width {
+                    width
+                } else {
+                    let started = std::time::Instant::now();
+                    let natural = window
+                        .text_system()
+                        .shape_line(text.clone(), font_size, std::slice::from_ref(&run), None)
+                        .width;
+                    super::frames::text_spent(started.elapsed(), super::frames::TextPhase::Layout);
+                    match available.width {
+                        AvailableSpace::Definite(space) => natural.min(space),
+                        AvailableSpace::MinContent => px(0.),
+                        AvailableSpace::MaxContent => natural,
+                    }
+                };
                 size(width, line_height)
             });
         (layout_id, ())
@@ -161,23 +202,38 @@ impl Element for Line {
             if let Some(flag) = &self.truncated {
                 flag.set(false);
             }
-            super::frames::text_spent(started.elapsed(), true);
+            super::frames::text_spent(started.elapsed(), super::frames::TextPhase::Prepaint);
             return Some((full, line_height));
         }
         // Her seferinde taze bir "run" listesi: gpui'nin kısaltması listeyi
         // yerinde değiştiriyor.
         let mut runs = vec![style.to_run(self.text.len())];
-        let text = cx
-            .text_system()
-            .line_wrapper(style.font(), font_size)
-            .truncate_line(self.text.clone(), bounds.size.width, ELLIPSIS, &mut runs);
+        let key = TruncationKey {
+            text: self.text.clone(),
+            font: style.font(),
+            font_size: f32::from(font_size).to_bits(),
+            width: f32::from(bounds.size.width).to_bits(),
+        };
+        let text = if let Some(text) = cached_truncation(&key) {
+            text
+        } else {
+            let text = cx
+                .text_system()
+                .line_wrapper(style.font(), font_size)
+                .truncate_line(self.text.clone(), bounds.size.width, ELLIPSIS, &mut runs);
+            remember_truncation(key, text.clone());
+            text
+        };
+        // `truncate_line` normally shortens the styled run in place. A cache
+        // hit skips that mutation, so restore the same UTF-8 byte length here.
+        runs[0].len = text.len();
         if let Some(flag) = &self.truncated {
             flag.set(text != self.text);
         }
         let shaped = window
             .text_system()
             .shape_line(text, font_size, &runs, None);
-        super::frames::text_spent(started.elapsed(), true);
+        super::frames::text_spent(started.elapsed(), super::frames::TextPhase::Prepaint);
         Some((shaped, line_height))
     }
 
@@ -194,7 +250,7 @@ impl Element for Line {
         if let Some((shaped, line_height)) = prepaint {
             let started = std::time::Instant::now();
             let _ = shaped.paint(bounds.origin, *line_height, window, cx);
-            super::frames::text_spent(started.elapsed(), false);
+            super::frames::text_spent(started.elapsed(), super::frames::TextPhase::Paint);
         }
     }
 }

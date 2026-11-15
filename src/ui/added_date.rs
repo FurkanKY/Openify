@@ -12,12 +12,6 @@ const DAY: i64 = 24 * HOUR;
 /// Bir aydan (30 gün) eski eklenmeler tarih olarak yazılır.
 const RELATIVE_UNTIL_DAYS: i64 = 30;
 
-/// `at_ms` (unix ms) anının, `now_ms`'ye göre yazısı. Gelecekteki an (saat
-/// kayması) "Az önce" sayılır.
-pub fn added_label(now_ms: i64, at_ms: i64) -> String {
-    added_label_in(now_ms, at_ms, local_offset_minutes())
-}
-
 /// `added_label`, yerel saat farkı (UTC'den dakika) verilerek: sınanabilir.
 pub fn added_label_in(now_ms: i64, at_ms: i64, offset_minutes: i64) -> String {
     let secs = ((now_ms - at_ms) / 1000).max(0);
