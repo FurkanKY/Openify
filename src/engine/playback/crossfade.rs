@@ -272,6 +272,7 @@ mod tests {
             duration_ms,
             image: image.into(),
             plays: None,
+            features: None,
         }
     }
 

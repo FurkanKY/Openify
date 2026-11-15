@@ -18,11 +18,13 @@ use rusqlite::{Connection, OptionalExtension, Transaction, params};
 
 use super::{
     cache::Db,
-    output::{Analysis, ENV_SECS, Edge},
+    output::{Analysis, ENV_SECS, Edge, TrackFeatures},
 };
 
 /// Çözümleme algoritmasının sürümü: ölçüm sabitleri / yöntemi değişince artırılır.
 pub const ALGO: i64 = 1;
+/// Version for the whole-track music feature estimator, independent of AutoMix.
+pub const FEATURES_ALGO: i64 = 1;
 /// Tabloda tutulan en çok şarkı.
 pub const KEEP_MAX: i64 = 20_000;
 /// Açılışta (AutoMix açıkken) belleğe alınan en çok şarkı (en yeni çalınanlar).
@@ -52,6 +54,24 @@ pub(super) fn track_analysis_step(tx: &Transaction, _from: i64) -> rusqlite::Res
              analyzed_at  INTEGER NOT NULL
          );
          CREATE INDEX IF NOT EXISTS track_analysis_at ON track_analysis (analyzed_at);",
+    )
+}
+
+/// 13 → 14: whole-track BPM, key, and energy, kept separate from AutoMix data.
+pub(super) fn track_features_step(tx: &Transaction, _from: i64) -> rusqlite::Result<()> {
+    tx.execute_batch(
+        "CREATE TABLE IF NOT EXISTS track_features (
+             uri TEXT PRIMARY KEY,
+             algo INTEGER NOT NULL,
+             bpm REAL NOT NULL,
+             bpm_conf REAL NOT NULL,
+             key_index INTEGER NOT NULL,
+             key_minor INTEGER NOT NULL,
+             key_conf REAL NOT NULL,
+             energy INTEGER NOT NULL,
+             analyzed_at INTEGER NOT NULL
+         );
+         CREATE INDEX IF NOT EXISTS track_features_at ON track_features (analyzed_at);",
     )
 }
 
@@ -88,6 +108,7 @@ fn from_row(r: &rusqlite::Row<'_>, at: usize) -> rusqlite::Result<Analysis> {
         },
         head_env: env_from(r.get(at + 10)?),
         tail_env: env_from(r.get(at + 11)?),
+        features: None,
     })
 }
 
@@ -98,12 +119,66 @@ fn now_ms() -> i64 {
 }
 
 fn read_one(conn: &Connection, uri: &str) -> rusqlite::Result<Option<Analysis>> {
+    let mut analysis = conn
+        .query_row(
+            &format!("SELECT {COLUMNS} FROM track_analysis WHERE uri = ?1 AND algo = ?2"),
+            params![uri, ALGO],
+            |r| from_row(r, 0),
+        )
+        .optional()?;
+    if let Some(a) = &mut analysis {
+        a.features = read_features(conn, uri)?;
+    }
+    Ok(analysis)
+}
+
+pub(super) fn read_features(
+    conn: &Connection,
+    uri: &str,
+) -> rusqlite::Result<Option<TrackFeatures>> {
     conn.query_row(
-        &format!("SELECT {COLUMNS} FROM track_analysis WHERE uri = ?1 AND algo = ?2"),
-        params![uri, ALGO],
-        |r| from_row(r, 0),
+        "SELECT bpm, bpm_conf, key_index, key_minor, key_conf, energy
+         FROM track_features WHERE uri = ?1 AND algo = ?2",
+        params![uri, FEATURES_ALGO],
+        |r| {
+            Ok(TrackFeatures {
+                bpm: r.get::<_, f64>(0)? as f32,
+                bpm_conf: r.get::<_, f64>(1)? as f32,
+                key: r.get::<_, i64>(2)? as u8,
+                minor: r.get::<_, i64>(3)? != 0,
+                key_conf: r.get::<_, f64>(4)? as f32,
+                energy: r.get::<_, i64>(5)? as u8,
+            })
+        },
     )
     .optional()
+}
+
+fn write_features(conn: &Connection, uri: &str, features: TrackFeatures) -> rusqlite::Result<()> {
+    conn.execute(
+        "INSERT INTO track_features (uri, algo, bpm, bpm_conf, key_index, key_minor, key_conf, energy, analyzed_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(uri) DO UPDATE SET algo=excluded.algo, bpm=excluded.bpm,
+            bpm_conf=excluded.bpm_conf, key_index=excluded.key_index, key_minor=excluded.key_minor,
+            key_conf=excluded.key_conf, energy=excluded.energy, analyzed_at=excluded.analyzed_at",
+        params![
+            uri,
+            FEATURES_ALGO,
+            features.bpm,
+            features.bpm_conf,
+            features.key,
+            i64::from(features.minor),
+            features.key_conf,
+            features.energy,
+            now_ms()
+        ],
+    )?;
+    conn.execute(
+        "DELETE FROM track_features WHERE uri IN
+            (SELECT uri FROM track_features ORDER BY analyzed_at DESC LIMIT -1 OFFSET ?1)",
+        [KEEP_MAX],
+    )?;
+    Ok(())
 }
 
 impl Db {
@@ -117,10 +192,16 @@ impl Db {
     /// uçlar eskinin yerine geçer, geçersiz ucu eskisi korunur), en çok `KEEP_MAX`
     /// satır kalır. Hiçbir uç geçerli değilse hiçbir şey yazılmaz.
     pub fn save_analysis(&self, uri: &str, analysis: &Analysis) -> Result<()> {
-        if analysis.flags == 0 || uri.is_empty() {
+        if uri.is_empty() {
             return Ok(());
         }
         let conn = self.w();
+        if analysis.flags == 0 {
+            if let Some(features) = analysis.features {
+                write_features(&conn, uri, features)?;
+            }
+            return Ok(());
+        }
         let merged = match read_one(&conn, uri)? {
             Some(old) => old.merged(analysis),
             None => *analysis,
@@ -154,6 +235,9 @@ impl Db {
                 now_ms(),
             ],
         )?;
+        if let Some(f) = merged.features {
+            write_features(&conn, uri, f)?;
+        }
         conn.execute(
             "DELETE FROM track_analysis WHERE uri IN
                 (SELECT uri FROM track_analysis ORDER BY analyzed_at DESC LIMIT -1 OFFSET ?1)",
@@ -173,7 +257,12 @@ impl Db {
                 Ok((r.get::<_, String>(0)?, from_row(r, 1)?))
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
-        Ok(rows)
+        rows.into_iter()
+            .map(|(uri, mut analysis)| {
+                analysis.features = read_features(&conn, &uri)?;
+                Ok((uri, analysis))
+            })
+            .collect()
     }
 }
 
@@ -226,6 +315,80 @@ mod tests {
         assert_eq!((back.head.beat_ms, back.tail.beat_ms), (210, 55));
         assert_eq!(back.head_env, a.head_env);
         assert_eq!(back.tail_env, a.tail_env);
+    }
+
+    #[test]
+    fn whole_track_features_round_trip_in_their_own_algorithm_version() {
+        let db = Db::open_in_memory().unwrap();
+        let mut a = sample(HAS_TAIL, 0.0);
+        a.features = Some(TrackFeatures {
+            bpm: 123.5,
+            bpm_conf: 0.91,
+            key: 9,
+            minor: true,
+            key_conf: 0.82,
+            energy: 73,
+        });
+        db.save_analysis("t:features", &a).unwrap();
+        assert_eq!(
+            db.analysis("t:features").unwrap().unwrap().features,
+            a.features
+        );
+        let conn = db.r();
+        conn.execute(
+            "UPDATE track_features SET algo = ?1 WHERE uri = ?2",
+            params![FEATURES_ALGO + 1, "t:features"],
+        )
+        .unwrap();
+        drop(conn);
+        assert_eq!(db.analysis("t:features").unwrap().unwrap().features, None);
+    }
+
+    #[test]
+    fn features_persist_without_an_automix_edge() {
+        let db = Db::open_in_memory().unwrap();
+        let features = TrackFeatures {
+            bpm: 123.5,
+            bpm_conf: 0.91,
+            key: 9,
+            minor: true,
+            key_conf: 0.82,
+            energy: 73,
+        };
+        db.save_analysis(
+            "t:short",
+            &Analysis {
+                features: Some(features),
+                ..Analysis::EMPTY
+            },
+        )
+        .unwrap();
+        assert_eq!(read_features(&db.r(), "t:short").unwrap(), Some(features));
+        assert_eq!(db.analysis("t:short").unwrap(), None);
+    }
+
+    #[test]
+    fn features_migration_keeps_existing_automix_rows() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        let tx = conn.transaction().unwrap();
+        track_analysis_step(&tx, 8).unwrap();
+        tx.execute(
+            "INSERT INTO track_analysis (uri, algo, flags, head_env, tail_env, analyzed_at)
+             VALUES ('t:old', ?1, 1, x'', x'', 1)",
+            [ALGO],
+        )
+        .unwrap();
+        track_features_step(&tx, 13).unwrap();
+        tx.commit().unwrap();
+        let kept: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM track_analysis WHERE uri='t:old'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(kept, 1);
+        assert!(migrate::schema_columns(&conn).contains_key("track_features"));
     }
 
     #[test]

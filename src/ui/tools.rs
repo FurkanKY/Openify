@@ -1190,6 +1190,7 @@ impl Shell {
             duration_ms: 0,
             image: track.image.clone(),
             plays: None,
+            features: None,
         };
         self.state.notice = None;
         self.state.pending = Some(super::player::PendingTrack {

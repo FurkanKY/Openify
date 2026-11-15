@@ -166,6 +166,7 @@ impl PlayerState {
             Event::LibraryLoaded(_)
             | Event::LibraryFailed(_)
             | Event::CollectionLoaded { .. }
+            | Event::TrackFeaturesReady { .. }
             | Event::CollectionFailed { .. }
             | Event::SearchIndex(_)
             | Event::SearchResults { .. }

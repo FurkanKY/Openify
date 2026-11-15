@@ -3,7 +3,7 @@
 //! Yazarın AutoMix davranışı (sessizlik atlama, planlı bindirme) `xfade_tests.rs`'te.
 
 use super::RATE;
-use super::beat::{Analysis, BeatTap, ENV_SECS, ENV_UNKNOWN, HAS_HEAD, HAS_TAIL, HOP_RATE};
+use super::beat::{Analysis, BeatTap, ENV_SECS, ENV_UNKNOWN, HAS_HEAD, HAS_TAIL, HOP_RATE, tempo};
 
 const FS: f64 = RATE as f64;
 
@@ -160,6 +160,94 @@ fn tempo_is_within_one_bpm_for_clicks_and_drums() {
             }
         }
     }
+}
+
+#[test]
+fn tempo_synthetic_sweep_60_through_180_bpm_meets_accuracy_target() {
+    let n = (24.0 * HOP_RATE) as usize;
+    let mut within_one = 0;
+    let mut octave_errors = 0;
+    for bpm in 60..=180 {
+        let period = HOP_RATE * 60.0 / f64::from(bpm);
+        let mut onset = vec![0.0f32; n];
+        let mut beat = 0.25;
+        while beat < n as f64 {
+            let ix = beat.round() as usize;
+            if ix < n {
+                onset[ix] = match (beat / period).round() as usize % 4 {
+                    0 => 1.0,
+                    1 | 3 => 0.42,
+                    _ => 0.68,
+                };
+            }
+            beat += period;
+        }
+        let got = tempo(&onset, 0.2).expect("synthetic click train should have tempo");
+        let error = (got.bpm - f64::from(bpm)).abs();
+        let octave_error = (got.bpm - f64::from(bpm) * 2.0).abs() <= 1.0
+            || (got.bpm - f64::from(bpm) * 0.5).abs() <= 1.0;
+        if octave_error {
+            octave_errors += 1;
+        } else {
+            within_one += usize::from(error <= 1.0);
+        }
+    }
+    let scored = 121 - octave_errors;
+    eprintln!(
+        "synthetic tempo: ±1 BPM {within_one}/{scored}; half/double-time errors {octave_errors}/121"
+    );
+    assert!(
+        within_one as f64 / scored as f64 >= 0.95,
+        "±1 BPM excluding separately counted half/double errors: {within_one}/{scored}"
+    );
+}
+
+fn chord_song(root_hz: f64, third_hz: f64, fifth_hz: f64, secs: f64) -> Vec<f64> {
+    let n = (secs * FS) as usize;
+    (0..n)
+        .flat_map(|i| {
+            let t = i as f64 / FS;
+            let mut sample = [root_hz, third_hz, fifth_hz]
+                .into_iter()
+                .map(|hz| 0.12 * (2.0 * std::f64::consts::PI * hz * t).sin())
+                .sum::<f64>();
+            let beat = (t * 2.0).fract();
+            if beat < 0.02 {
+                sample += 0.7 * (1.0 - beat / 0.02);
+            }
+            [sample, sample]
+        })
+        .collect()
+}
+
+#[test]
+fn whole_track_chroma_identifies_known_major_and_minor_chords() {
+    let cases = [
+        (chord_song(261.6256, 329.6276, 391.9954, 12.0), 0, false), // C major
+        (chord_song(220.0, 261.6256, 329.6276, 12.0), 9, true),     // A minor
+    ];
+    for (song, key, minor) in cases {
+        let a = analyse(&song, true, true).unwrap();
+        let f = a.features.expect("whole-track features");
+        assert_eq!((f.key, f.minor), (key, minor));
+        assert!(f.key_conf > 0.05, "key confidence {:.3}", f.key_conf);
+        assert!((0..=100).contains(&f.energy));
+    }
+}
+
+#[test]
+fn whole_track_features_require_uninterrupted_playback_from_the_start_to_the_end() {
+    let song = chord_song(261.6256, 329.6276, 391.9954, 20.0);
+    assert!(analyse(&song, false, true).unwrap().features.is_none());
+    assert!(analyse(&song, true, false).unwrap().features.is_none());
+
+    let mut tap = BeatTap::new();
+    tap.begin(Some("t:seek".into()), true);
+    let middle = song.len() / 2;
+    tap.feed(&song[..middle]);
+    tap.discontinuity();
+    tap.feed(&song[middle..]);
+    assert!(tap.finish(true).unwrap().1.features.is_none());
 }
 
 /// Beklenen vuruş evresi: ilk vuruş müziğin başlangıcından `first_beat` sonra; son

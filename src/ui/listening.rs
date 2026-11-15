@@ -707,6 +707,7 @@ mod tests {
             duration_ms: 1,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

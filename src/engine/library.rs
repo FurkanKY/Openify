@@ -395,6 +395,9 @@ pub struct TrackRow {
     /// Akıllı listede yerel geçmişten hesaplanan çalma sayısı.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plays: Option<u64>,
+    /// Local features from audio that this client has actually played.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub features: Option<super::output::TrackFeatures>,
 }
 
 /// Spotify resim kimliğinden adres.
@@ -920,6 +923,7 @@ async fn fetch_track_batch(session: &Session, uris: &[String]) -> Result<Vec<Tra
                 duration_ms: track.duration.max(0) as u32,
                 image: pick_cover(&track.album.covers, ImageSize::SMALL),
                 plays: None,
+                features: None,
             });
         }
     }
@@ -1335,6 +1339,7 @@ mod tests {
             duration_ms: 1,
             image: String::new(),
             plays: None,
+            features: None,
         };
         db.save_tracks(&[row(1), row(2)]).unwrap();
         let id = CollectionId::Playlist("spotify:playlist:1".into());

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional whole-track BPM, key and energy measurements for songs played
+  locally. Results are stored on this computer, can be shown and sorted in
+  library lists, and remain blank for songs that have not been measured.
 - Local playlist history: review additions, removals and moves, restore an
   earlier version through the undoable playlist edit queue, and re-add a
   removed song at its former position. History stays on this computer and

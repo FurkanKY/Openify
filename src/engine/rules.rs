@@ -465,6 +465,7 @@ mod tests {
             duration_ms: ms,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

@@ -182,6 +182,7 @@ fn parse_track(v: &Value) -> Option<RadioTrack> {
                 .map_or(0, |d| d.min(u64::from(u32::MAX)) as u32),
             image: String::new(),
             plays: None,
+            features: None,
         });
     Some(RadioTrack { uri, row })
 }
@@ -621,6 +622,7 @@ mod tests {
             duration_ms: 1000,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

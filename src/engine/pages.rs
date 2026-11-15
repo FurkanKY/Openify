@@ -1029,6 +1029,7 @@ mod tests {
             duration_ms: ms,
             image: "https://i.scdn.co/image/aa".into(),
             plays: None,
+            features: None,
         }
     }
 

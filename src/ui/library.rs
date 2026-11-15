@@ -65,6 +65,7 @@ pub(super) struct RowSpec {
     /// Dinlenme sayısı sütunu: `Some(sayı)` sütun var (sayfa satırları,
     /// yeterince geniş pencere), `None` yok (kütüphane listeleri, dar pencere).
     pub plays: Option<u64>,
+    pub features: bool,
 }
 
 /// Seçim bitişik bir blok mu: (ilk satır, uzunluk).
@@ -353,6 +354,12 @@ impl Shell {
     pub(super) fn shows_added_column(&self, id: &CollectionId) -> bool {
         matches!(id, CollectionId::Liked | CollectionId::Playlist(_))
             && self.window_width - self.dock_inset() >= ADDED_MIN_WIDTH
+    }
+
+    fn shows_features(&self, id: &CollectionId) -> bool {
+        self.prefs.show_track_features
+            && !matches!(id, CollectionId::Album(_))
+            && self.window_width - self.dock_inset() >= 1440.0
     }
 
     /// Listenin şarkılarının eklenme anlarını motordan iste (önbellekten gelir,
@@ -1048,10 +1055,12 @@ impl Shell {
             .relative()
             .child(header)
             .children(self.render_find_bar(cx))
+            .children(self.render_feature_progress(&id))
             .child(column_header(
                 matches!(id, CollectionId::Album(_)),
                 self.shows_added_column(&id),
                 smart_shows_plays(&id),
+                self.shows_features(&id),
                 page_margin(self.window_width),
             ))
             .child(body)
@@ -1080,6 +1089,7 @@ impl Shell {
             .then(|| self.library.item(&id).map(|i| i.subtitle.clone()))
             .flatten();
         let show_added = self.shows_added_column(&id);
+        let show_features = self.shows_features(&id);
         // Satırlar yüzen hapın altından geçer: liste pencerenin altına kadar
         // (ve hap payı kadar ötesine) uzanır, altındaki iç boşluk (`pb`) son
         // satırın hapın üstünde durabilmesini sağlar. gpui listesi alttaki iç
@@ -1167,6 +1177,7 @@ impl Shell {
                                 }),
                                 plays: smart_shows_plays(&id)
                                     .then_some(track.plays.unwrap_or_default()),
+                                features: show_features,
                             };
                             this.song_row(spec, &track, cx)
                         })
@@ -1263,6 +1274,7 @@ impl Shell {
             reorder: false,
             added: None,
             plays: None,
+            features: false,
         };
         self.song_row(spec, track, cx)
     }
@@ -1291,6 +1303,7 @@ impl Shell {
             reorder,
             added,
             plays,
+            features: show_features,
         } = spec;
         let accent = self.accent().text;
         // Numara sütunundaki her şey (numara, çal simgesi, ekolayzer, "#")
@@ -1469,6 +1482,24 @@ impl Shell {
                         cx,
                     )))
                 }
+            })
+            .when(show_features, |el| {
+                let f = track.features;
+                let (bpm, key, energy) = f.map_or_else(
+                    || ("—".to_string(), "—".to_string(), "—".to_string()),
+                    |f| (format!("{:.0}", f.bpm), key_label(f), f.energy.to_string()),
+                );
+                el.child(feature_cell(
+                    ("t-bpm", ix),
+                    bpm,
+                    f.map(|x| format!("BPM confidence: {:.0}%", x.bpm_conf * 100.)),
+                ))
+                .child(feature_cell(
+                    ("t-key", ix),
+                    key,
+                    f.map(|x| format!("Key confidence: {:.0}%", x.key_conf * 100.)),
+                ))
+                .child(feature_cell(("t-energy", ix), energy, None))
             })
             // Eklenme tarihi (listeler ve Beğenilenler; dar pencerede sütun yok).
             .when_some(added, |el, when| {
@@ -1765,6 +1796,31 @@ impl Shell {
         )
     }
 
+    fn render_feature_progress(&self, id: &CollectionId) -> Option<AnyElement> {
+        if !self.prefs.show_track_features {
+            return None;
+        }
+        let tracks = self.library.tracks(id)?;
+        let resolved = tracks
+            .iter()
+            .filter(|track| track.features.is_some())
+            .count();
+        Some(
+            div()
+                .flex_shrink_0()
+                .px(px(page_margin(self.window_width)))
+                .pb(px(S2))
+                .type_role(T_LABEL)
+                .text_color(label())
+                .child(tf!(
+                    TrackFeaturesProgress,
+                    crate::i18n::num(resolved as u64),
+                    crate::i18n::num(tracks.len() as u64)
+                ))
+                .into_any_element(),
+        )
+    }
+
     /// Kapak: listenin kendisi; beğenilenler için kalp; resim yoksa ton karosu.
     pub(super) fn collection_art(
         &self,
@@ -1977,10 +2033,10 @@ pub(super) fn equalizer(color: u32, playing: bool) -> AnyElement {
 /// albüm sayfası (kapak ve albüm sütunu yok); `plays`: dinlenme sayısı
 /// sütunu görünüyor mu.
 pub(super) fn page_column_header(album: bool, plays: bool, margin: f32) -> AnyElement {
-    column_header(album, false, plays, margin)
+    column_header(album, false, plays, false, margin)
 }
 
-fn column_header(album: bool, added: bool, plays: bool, margin: f32) -> AnyElement {
+fn column_header(album: bool, added: bool, plays: bool, features: bool, margin: f32) -> AnyElement {
     div()
         .mx(px(margin - ROW_INSET))
         .px(px(ROW_INSET))
@@ -1997,6 +2053,11 @@ fn column_header(album: bool, added: bool, plays: bool, margin: f32) -> AnyEleme
         .when(!album, |el| el.child(div().w(px(ROW_THUMB))))
         .child(title_column().child(t!(ColTitle)))
         .when(!album, |el| el.child(column(ALBUM_COLUMN).child(t!(Album))))
+        .when(features, |el| {
+            el.child(feature_header(t!(ColBpm)))
+                .child(feature_header(t!(ColKey)))
+                .child(feature_header(t!(ColEnergy)))
+        })
         .when(added, |el| {
             el.child(
                 div()
@@ -2038,11 +2099,62 @@ const ALBUM_COLUMN: f32 = 3.;
 /// ve sütunun görünmesi için içeriğin en az eni: daha darda gizlenir (900 px
 /// pencere, yerleşik panel açıkken ~1300 px altı).
 const ADDED_COLUMN: f32 = 132.;
+const FEATURE_COLUMN: f32 = 56.;
 pub(super) const ADDED_MIN_WIDTH: f32 = 1000.;
 /// Dinlenme sayısı sütununun eni (sabit, sağa yaslı) ve görünmesi için içeriğin
 /// en az eni; daha darda "Eklenme tarihi" gibi gizlenir.
 pub(super) const PLAYS_COLUMN: f32 = 72.;
 pub(super) const PLAYS_MIN_WIDTH: f32 = 1000.;
+
+fn feature_header(label: &'static str) -> AnyElement {
+    div()
+        .w(px(FEATURE_COLUMN))
+        .flex_none()
+        .flex()
+        .justify_center()
+        .child(label)
+        .into_any_element()
+}
+
+fn feature_cell(id: impl Into<gpui::ElementId>, value: String, tip: Option<String>) -> AnyElement {
+    let cell = div()
+        .id(id)
+        .w(px(FEATURE_COLUMN))
+        .flex_none()
+        .flex()
+        .justify_center()
+        .type_role(T_LABEL)
+        .text_color(label())
+        .tabular()
+        .child(value);
+    if let Some(tip) = tip {
+        cell.tooltip(super::components::Tooltip::text(tip, None))
+            .into_any_element()
+    } else {
+        cell.into_any_element()
+    }
+}
+
+fn key_label(f: crate::engine::TrackFeatures) -> String {
+    const NOTES: [&str; 12] = [
+        "C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "B♭", "B",
+    ];
+    const MAJOR: [&str; 12] = [
+        "8B", "3B", "10B", "5B", "12B", "7B", "2B", "9B", "4B", "11B", "6B", "1B",
+    ];
+    const MINOR: [&str; 12] = [
+        "5A", "12A", "7A", "2A", "9A", "4A", "11A", "6A", "1A", "8A", "3A", "10A",
+    ];
+    let note = NOTES.get(f.key as usize).copied().unwrap_or("?");
+    let camelot = if f.minor { MINOR } else { MAJOR }
+        .get(f.key as usize)
+        .copied()
+        .unwrap_or("?");
+    format!(
+        "{note} {} · {camelot}",
+        if f.minor { t!(KeyMinor) } else { t!(KeyMajor) }
+    )
+}
 
 fn column(grow: f32) -> gpui::Div {
     let mut el = div().flex_basis(gpui::relative(0.)).flex_shrink().min_w_0();

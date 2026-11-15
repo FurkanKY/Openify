@@ -161,11 +161,19 @@ keys! {
     LikeTip { en: "Add to Liked Songs", tr: "Beğen" }
     RemoveFromLibrary { en: "Remove from Your Library", tr: "Kütüphanenden çıkar" }
     MoreTip { en: "More", tr: "Diğer" }
-    FindInList { en: "Find in this playlist", tr: "Bu listede bul" }
+    FindInList { en: "Find songs · bpm:120-130 · key~8A · sort:bpm", tr: "Şarkı ara · bpm:120-130 · key~8A · sort:bpm" }
     CloseFind { en: "Close search", tr: "Bulmayı kapat" }
     ColTitle { en: "Title", tr: "Şarkı" }
     ColDuration { en: "Duration", tr: "Süre" }
     ColPlays { en: "Plays", tr: "Dinlenme" }
+    ColBpm { en: "BPM", tr: "BPM" }
+    ColKey { en: "Key", tr: "Ton" }
+    ColEnergy { en: "Energy", tr: "Enerji" }
+    KeyMajor { en: "major", tr: "majör" }
+    KeyMinor { en: "minor", tr: "minör" }
+    TrackFeaturesSetting { en: "Show BPM, key, and energy", tr: "BPM, ton ve enerjiyi göster" }
+    TrackFeaturesSettingDesc { en: "Local estimates appear after you listen. Unplayed songs are never downloaded for analysis.", tr: "Yerel ölçümler dinledikçe görünür. Dinlenmemiş şarkılar çözümleme için indirilmez." }
+    TrackFeaturesProgress { en: "Analyzed in this list: {0} / {1}", tr: "Bu listede çözümlenen: {0} / {1}" }
     DurMinutes { en: "{} min", tr: "{} dk" }
     DurHoursMinutes { en: "{} hr {} min", tr: "{} sa {} dk" }
 

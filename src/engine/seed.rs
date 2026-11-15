@@ -40,6 +40,7 @@ mod demo {
             duration_ms: minutes * 1000 + 61_000,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

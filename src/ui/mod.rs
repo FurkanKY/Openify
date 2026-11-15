@@ -661,6 +661,19 @@ impl Shell {
                 self.play_if_waiting(id, cx);
                 self.tools_on_data(cx);
             }
+            engine::Event::TrackFeaturesReady { uri, features } => {
+                for collection in self.library.collections.values_mut() {
+                    if let Loadable::Loaded(rows) = collection {
+                        for row in std::sync::Arc::make_mut(rows)
+                            .iter_mut()
+                            .filter(|row| row.uri == *uri)
+                        {
+                            row.features = Some(*features);
+                        }
+                    }
+                }
+                cx.notify();
+            }
             // Sayfalar, şarkı bağları, yazma kuyruğu (bkz. `pages`, `manage`).
             engine::Event::Library(e) => self.on_library_event(e.clone(), cx),
             engine::Event::CollectionFailed { id, error } => {

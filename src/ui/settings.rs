@@ -1779,6 +1779,13 @@ impl Shell {
             window,
             cx,
         );
+        let track_features = self.switch_control(
+            "track-features",
+            p.show_track_features,
+            |p, v| p.show_track_features = v,
+            window,
+            cx,
+        );
         let close = self.choice_control(
             "close",
             &[("tray", t!(CloseToTray)), ("quit", t!(CloseQuit))],
@@ -1817,6 +1824,11 @@ impl Shell {
                     false,
                     row_text(t!(SmartListsSettingTitle), t!(SmartListsSettingDesc), None),
                     smart_lists,
+                ),
+                setting_row(
+                    false,
+                    row_text(t!(TrackFeaturesSetting), t!(TrackFeaturesSettingDesc), None),
+                    track_features,
                 ),
                 setting_row(
                     false,

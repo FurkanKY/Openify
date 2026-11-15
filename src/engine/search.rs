@@ -167,6 +167,7 @@ fn parse_results(value: &Value) -> SearchResults {
                 duration_ms: d["duration"]["totalMilliseconds"].as_u64().unwrap_or(0) as u32,
                 image: smallest_image(&d["albumOfTrack"]["coverArt"]["sources"]),
                 plays: None,
+                features: None,
             })
         })
         .collect();

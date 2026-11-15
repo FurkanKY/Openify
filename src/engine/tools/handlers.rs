@@ -262,6 +262,7 @@ mod tests {
             duration_ms: 1,
             image: String::new(),
             plays: None,
+            features: None,
         };
         rig.db.save_tracks(std::slice::from_ref(&row)).unwrap();
         rig.db

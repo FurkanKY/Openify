@@ -1830,6 +1830,7 @@ mod tests {
                     duration_ms: 1000,
                     image: String::new(),
                     plays: None,
+                    features: None,
                 })
                 .collect(),
         )
@@ -2286,6 +2287,7 @@ mod tests {
             duration_ms: 1000,
             image: String::new(),
             plays: None,
+            features: None,
         };
         let rows = Arc::new((0..3).map(|i| row(&format!("t{i}"))).collect::<Vec<_>>());
         let mut q = Queue::new();
@@ -2366,6 +2368,7 @@ mod tests {
             duration_ms: ms,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

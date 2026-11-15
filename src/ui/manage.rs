@@ -1056,21 +1056,41 @@ impl Shell {
             return Some(rows.clone());
         }
         // Her kelime şarkı adında, sanatçıda ya da albümde geçmeli.
-        let words: Vec<String> = fuzzy::fold(&find.query)
-            .split_whitespace()
-            .map(str::to_string)
+        let (words, bpm, key_filter, sort) = parse_track_find(&find.query);
+        let mut indices: Vec<usize> = tracks
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| {
+                let hay = fuzzy::fold(&format!("{} {} {}", t.name, t.artists, t.album));
+                words.iter().all(|w| hay.contains(w.as_str()))
+                    && bpm.is_none_or(|(lo, hi)| {
+                        t.features.is_some_and(|f| (lo..=hi).contains(&f.bpm))
+                    })
+                    && key_filter.as_ref().is_none_or(|want| {
+                        t.features
+                            .is_some_and(|f| camelot_compatible(&camelot_code(f), want))
+                    })
+            })
+            .map(|(i, _)| i)
             .collect();
-        let rows: Arc<Vec<usize>> = Arc::new(
-            tracks
-                .iter()
-                .enumerate()
-                .filter(|(_, t)| {
-                    let hay = fuzzy::fold(&format!("{} {} {}", t.name, t.artists, t.album));
-                    words.iter().all(|w| hay.contains(w.as_str()))
-                })
-                .map(|(i, _)| i)
-                .collect(),
-        );
+        if let Some(sort) = sort {
+            indices.sort_by(|a, b| {
+                let x = tracks[*a].features;
+                let y = tracks[*b].features;
+                let cmp = match (x, y) {
+                    (Some(x), Some(y)) => match sort {
+                        TrackFeatureSort::Bpm => x.bpm.total_cmp(&y.bpm),
+                        TrackFeatureSort::Key => (x.key, x.minor).cmp(&(y.key, y.minor)),
+                        TrackFeatureSort::Energy => x.energy.cmp(&y.energy),
+                    },
+                    (Some(_), None) => std::cmp::Ordering::Less,
+                    (None, Some(_)) => std::cmp::Ordering::Greater,
+                    (None, None) => std::cmp::Ordering::Equal,
+                };
+                cmp.then_with(|| a.cmp(b))
+            });
+        }
+        let rows: Arc<Vec<usize>> = Arc::new(indices);
         *find.cache.borrow_mut() = Some((key, find.query.clone(), rows.clone()));
         Some(rows)
     }
@@ -3255,6 +3275,7 @@ impl Shell {
             duration_ms: 231_000,
             image: String::new(),
             plays: None,
+            features: None,
         };
         let mut hearts = div().flex().items_center().gap(px(S5));
         for (i, (liked, look, name)) in [
@@ -3406,6 +3427,7 @@ impl Shell {
             duration_ms: self.state.duration_ms(),
             image: String::new(),
             plays: None,
+            features: None,
         })
     }
 
@@ -3537,6 +3559,121 @@ impl Shell {
     }
 }
 
+#[derive(Clone, Copy)]
+enum TrackFeatureSort {
+    Bpm,
+    Key,
+    Energy,
+}
+
+fn parse_track_find(
+    query: &str,
+) -> (
+    Vec<String>,
+    Option<(f32, f32)>,
+    Option<String>,
+    Option<TrackFeatureSort>,
+) {
+    let parts: Vec<&str> = query.split_whitespace().collect();
+    let mut words = Vec::new();
+    let mut bpm = None;
+    let mut key = None;
+    let mut sort = None;
+    let mut i = 0;
+    while i < parts.len() {
+        let folded = parts[i].to_ascii_lowercase();
+        if folded == "bpm" && i + 1 < parts.len() {
+            bpm = parse_bpm_range(parts[i + 1]);
+            i += 2;
+            continue;
+        }
+        if let Some(range) = folded.strip_prefix("bpm:") {
+            bpm = parse_bpm_range(range);
+        } else if let Some(code) = folded.strip_prefix("key~") {
+            let code = code.to_ascii_uppercase();
+            if valid_camelot(&code) {
+                key = Some(code);
+            }
+        } else if let Some(field) = folded.strip_prefix("sort:") {
+            sort = match field {
+                "bpm" => Some(TrackFeatureSort::Bpm),
+                "key" => Some(TrackFeatureSort::Key),
+                "energy" => Some(TrackFeatureSort::Energy),
+                _ => None,
+            };
+        } else {
+            words.push(fuzzy::fold(parts[i]));
+        }
+        i += 1;
+    }
+    (words, bpm, key, sort)
+}
+
+fn parse_bpm_range(value: &str) -> Option<(f32, f32)> {
+    let value = value.replace(['–', '—'], "-");
+    let (lo, hi) = value.split_once('-')?;
+    let (lo, hi) = (lo.parse::<f32>().ok()?, hi.parse::<f32>().ok()?);
+    (lo.is_finite() && hi.is_finite() && (0.0..=300.0).contains(&lo) && lo <= hi && hi <= 300.0)
+        .then_some((lo, hi))
+}
+
+fn valid_camelot(code: &str) -> bool {
+    matches!(
+        code,
+        "1A" | "2A"
+            | "3A"
+            | "4A"
+            | "5A"
+            | "6A"
+            | "7A"
+            | "8A"
+            | "9A"
+            | "10A"
+            | "11A"
+            | "12A"
+            | "1B"
+            | "2B"
+            | "3B"
+            | "4B"
+            | "5B"
+            | "6B"
+            | "7B"
+            | "8B"
+            | "9B"
+            | "10B"
+            | "11B"
+            | "12B"
+    )
+}
+
+fn camelot_code(f: crate::engine::TrackFeatures) -> String {
+    const MAJOR: [&str; 12] = [
+        "8B", "3B", "10B", "5B", "12B", "7B", "2B", "9B", "4B", "11B", "6B", "1B",
+    ];
+    const MINOR: [&str; 12] = [
+        "5A", "12A", "7A", "2A", "9A", "4A", "11A", "6A", "1A", "8A", "3A", "10A",
+    ];
+    (if f.minor { MINOR } else { MAJOR })
+        .get(f.key as usize)
+        .unwrap_or(&"?")
+        .to_string()
+}
+
+fn camelot_compatible(actual: &str, wanted: &str) -> bool {
+    if !valid_camelot(actual) || !valid_camelot(wanted) {
+        return false;
+    }
+    let (a, am) = (
+        actual[..actual.len() - 1].parse::<u8>().unwrap_or(0),
+        actual.as_bytes()[actual.len() - 1],
+    );
+    let (b, bm) = (
+        wanted[..wanted.len() - 1].parse::<u8>().unwrap_or(0),
+        wanted.as_bytes()[wanted.len() - 1],
+    );
+    (am == bm && (a.abs_diff(b) <= 1 || a.abs_diff(b) == 11)) || (a == b && am != bm)
+}
+
 fn item(icon: &'static str, label: String, act: Act) -> Entry {
     Entry::Item {
         icon,
@@ -3661,6 +3798,18 @@ impl DragPreview {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn track_find_filters_by_bpm_and_camelot_neighbors() {
+        let (words, bpm, key, sort) = parse_track_find("BPM 120–130 key~8A sort:bpm");
+        assert!(words.is_empty());
+        assert_eq!(bpm, Some((120.0, 130.0)));
+        assert_eq!(key.as_deref(), Some("8A"));
+        assert!(matches!(sort, Some(TrackFeatureSort::Bpm)));
+        assert!(camelot_compatible("7A", "8A"));
+        assert!(camelot_compatible("8B", "8A"));
+        assert!(!camelot_compatible("10A", "8A"));
+    }
 
     #[test]
     fn web_links_and_ownership() {

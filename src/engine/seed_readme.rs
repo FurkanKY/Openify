@@ -326,6 +326,7 @@ mod readme {
                     duration_ms: secs * 1000,
                     image: album_url(a),
                     plays: None,
+                    features: None,
                 });
             }
         }
@@ -339,6 +340,7 @@ mod readme {
                 duration_ms: secs * 1000,
                 image: album_url(cover),
                 plays: None,
+                features: None,
             };
         rows.push(version(
             1,

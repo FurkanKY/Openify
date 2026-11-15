@@ -112,6 +112,8 @@ pub struct Settings {
     pub library_view: String,
     /// Kütüphane sıralaması (`LIBRARY_SORTS`): son çalınan, eklenme tarihi, ad, yaratıcı.
     pub library_sort: String,
+    /// Show local BPM, key, and energy columns when the track list has room.
+    pub show_track_features: bool,
     /// Kütüphane listesinde açık klasörlerin kalıcı kimlikleri
     /// (`engine::folder_id`: `spotify:start-group:<kimlik>`, ad içermez).
     pub library_open_folders: Vec<String>,
@@ -289,6 +291,7 @@ impl Default for Settings {
             now_panel: true,
             library_view: "grid".into(),
             library_sort: "recent".into(),
+            show_track_features: false,
             library_open_folders: Vec::new(),
             recent_searches: Vec::new(),
             quality: "very_high".into(),
