@@ -1647,13 +1647,27 @@ use super::karaoke::{
 /// Karaoke'yu doğrudan sürer (ses iş parçacığının `poll` / `process` düzeni).
 /// `ctl` her blok başında okunur; `at(blok, ctl)` ayarı oynatabilir. Giriş
 /// (L, R) ve çıkış (L, R) döner.
+/// Maske tek basina olculur: telafi kazanci kapalidir.
 fn karaoke_drive(
     frames: usize,
     input: impl Fn(usize) -> (f32, f32),
+    at: impl FnMut(usize, &KaraokeCtl),
+) -> (Vec<(f32, f32)>, Vec<(f32, f32)>, Karaoke) {
+    karaoke_drive_with(frames, input, at, false)
+}
+
+/// `makeup` aciksa gercek yoldaki telafi kazanci da calisir.
+fn karaoke_drive_with(
+    frames: usize,
+    input: impl Fn(usize) -> (f32, f32),
     mut at: impl FnMut(usize, &KaraokeCtl),
+    makeup: bool,
 ) -> (Vec<(f32, f32)>, Vec<(f32, f32)>, Karaoke) {
     let ctl = KaraokeCtl::new();
     let mut k = Karaoke::new();
+    if !makeup {
+        k.disable_makeup();
+    }
     let (mut inp, mut out) = (Vec::with_capacity(frames), Vec::with_capacity(frames));
     for (b, start) in (0..frames).step_by(BLOCK).enumerate() {
         at(b, &ctl);
@@ -1750,6 +1764,29 @@ fn karaoke_cuts_the_center_and_spares_the_side() {
             "{hz} Hz merkezle yan ton {side:+.2} dB oynadı"
         );
     }
+}
+
+/// At one frequency, reduce the center component while preserving the side component.
+#[test]
+fn karaoke_masks_only_the_center_component_at_each_bin() {
+    const FREQ: f64 = 997.0;
+    let input = |n| {
+        let phase = 2.0 * std::f64::consts::PI * FREQ * n as f64 / RATE as f64;
+        let center = (0.2 * phase.sin()) as f32;
+        let side = (0.05 * phase.sin()) as f32;
+        (center + side, center - side)
+    };
+    let (inp, out, _) = karaoke_drive(K_FRAMES, input, |_, ctl| ctl.set(true, 1.0));
+    let mid_power =
+        |frames: &[(f32, f32)]| tone_power(frames.iter().map(|(l, r)| (l + r) * 0.5), FREQ);
+    let side_power =
+        |frames: &[(f32, f32)]| tone_power(frames.iter().map(|(l, r)| (l - r) * 0.5), FREQ);
+    let input = &inp[K_SKIP..K_SKIP + RATE as usize];
+    let output = &out[K_SKIP..K_SKIP + RATE as usize];
+    let mid_db = db(mid_power(output) / mid_power(input));
+    let side_db = db(side_power(output) / side_power(input));
+    assert!(mid_db <= -12.0, "same-bin center fell only {mid_db:.1} dB");
+    assert!(side_db >= -1.0, "same-bin side changed by {side_db:.1} dB");
 }
 
 /// A single centered vocal and centered drum hits share the same frequency
@@ -1914,17 +1951,54 @@ fn karaoke_keeps_the_bass() {
     }
 }
 
-/// Miktar orantılıdır: yarı miktar merkezi yaklaşık yarı genlikte (−6 dB) bırakır.
+/// Miktar sürekli ve tekdüzedir: maske kazancı (1 − miktar)^3 olduğundan
+/// yarı miktar merkezi yaklaşık −18 dB, çeyrek miktar yaklaşık −7,5 dB bırakır;
+/// tam miktar ise çok daha derindir.
 #[test]
 fn karaoke_amount_scales_the_cut() {
-    let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(1000.0, 7000.0), |_, c| {
-        c.set(true, 0.5)
-    });
-    let d = karaoke_change_db(&inp, &out, 1000.0);
+    let cut_at = |amount: f32| {
+        let (inp, out, _) = karaoke_drive(K_FRAMES, center_and_side(1000.0, 7000.0), |_, c| {
+            c.set(true, amount)
+        });
+        karaoke_change_db(&inp, &out, 1000.0)
+    };
+    let expected = |amount: f64| 20.0 * 3.0 * (1.0 - amount).log10();
+    let (quarter, half, full) = (cut_at(0.25), cut_at(0.5), cut_at(1.0));
     assert!(
-        (d + 6.0).abs() <= 0.5,
-        "yarı miktar {d:.2} dB (beklenen ≈ −6)"
+        (quarter - expected(0.25)).abs() <= 1.0,
+        "çeyrek miktar {quarter:.2} dB (beklenen ≈ {:.1})",
+        expected(0.25)
     );
+    assert!(
+        (half - expected(0.5)).abs() <= 1.0,
+        "yarı miktar {half:.2} dB (beklenen ≈ {:.1})",
+        expected(0.5)
+    );
+    assert!(
+        full < half - 6.0 && half < quarter - 3.0,
+        "miktar tekdüze değil: {quarter:.1} / {half:.1} / {full:.1} dB"
+    );
+}
+
+/// Telafi: orta ton kalkinca kaybolan gurultu, yan tonu en cok +4 dB yukari
+/// cekerek kismen geri verilir; hicbir ornek 1,0 degerini asmaz.
+#[test]
+fn karaoke_makeup_gives_back_part_of_the_loss_without_clipping() {
+    let input = |n: usize| {
+        let (c, s) = (sin_at(1000.0, 0.45, n), sin_at(2200.0, 0.45, n));
+        (c + s, c - s)
+    };
+    let (inp, out, _) = karaoke_drive_with(RATE as usize * 8, input, |_, c| c.set(true, 1.0), true);
+    let from = RATE as usize * 6;
+    let side =
+        |x: &[(f32, f32)]| tone_power(x[from..from + RATE as usize].iter().map(|s| s.0), 2200.0);
+    let rise = db(side(&out) / side(&inp));
+    println!("karaoke telafi: yan ton {rise:+.2} dB");
+    assert!((1.0..=4.1).contains(&rise), "yan ton {rise:+.2} dB");
+    let peak = out
+        .iter()
+        .fold(0.0f32, |m, s| m.max(s.0.abs()).max(s.1.abs()));
+    assert!(peak <= 1.0, "tepe {peak}");
 }
 
 /// Mono kaynak (L = R) hiç değişmez: bit bit aynı, karışım hiç yükselmez.

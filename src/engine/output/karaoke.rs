@@ -10,14 +10,23 @@
 //! added latency is exactly 1024 / 44100 = 23.22 ms, below the 60 ms
 //! lyric-sync allowance.
 //!
-//! For each positive-frequency bin, the mask combines channel level balance
-//! and phase agreement. It therefore attenuates components with similar level
-//! and near-zero phase difference, while leaving panned and out-of-phase parts
-//! largely intact. A short frequency smoother and a fast-attack/slow-release
-//! mask smoother prevent narrow-bin chirps. Causal positive spectral flux
-//! detects attacks and temporarily relaxes the mask; a centered drum hit can
-//! therefore pass even though it occupies the vocal band. A soft 120–220 Hz
-//! and 7.8–9.5 kHz transition protects bass and high-frequency detail.
+//! For each positive-frequency bin, a center estimate combines channel level
+//! balance and phase agreement. A short frequency smoother and a
+//! fast-attack/slow-release mask smoother prevent narrow-bin chirps. The soft
+//! mask `(1 - amount * center * band)^3` (center rescaled above a floor of
+//! 0.3) is applied to the mid component `M = (L+R)/2` only; the side component
+//! `S = (L-R)/2` stays untouched and the output is rebuilt as `L = M' + S`,
+//! `R = M' - S`. Panned and out-of-phase material therefore keeps its level
+//! even at the frequency of a centered voice. Causal positive spectral flux
+//! detects attacks and keeps the mask open for the next analysis frame, so a
+//! centered drum hit is not dipped. A soft 150-350 Hz and 7.5-9 kHz transition
+//! protects bass and high-frequency detail.
+//!
+//! The mask also removes part of the accompaniment, so the wet signal is
+//! lifted by a slowly moving makeup gain (at most +4 dB, never below unity):
+//! half of the loudness the effect removed, measured on one-second energies of
+//! the input and the masked output, is given back. Peaks the gain pushes above
+//! 0.9 go through a tanh soft limiter that stays below 1.0.
 //!
 //! # Real-time constraints
 //!
@@ -32,11 +41,7 @@
 
 use std::{
     f64::consts::PI,
-    sync::OnceLock,
-    sync::atomic::{
-        AtomicU8, AtomicU32, AtomicU64,
-        Ordering::{AcqRel, Acquire, Relaxed, Release},
-    },
+    sync::atomic::{AtomicU32, Ordering::Relaxed},
 };
 
 use super::RATE;
@@ -50,62 +55,58 @@ pub const GLIDE_BLOCKS: u32 = 32;
 
 const BINS: usize = WINDOW / 2 + 1;
 const OLA_CAP: usize = WINDOW * 4;
-pub(super) const REPET_BANDS: usize = 40;
-const REPET_STRIDE: usize = 4;
-const REPET_HOP: usize = HOP * REPET_STRIDE;
-#[cfg(test)]
-const REPET_MAX_INFLIGHT_CHUNKS: usize = 4; // worker + bounded channel + producer copy
-pub(in crate::engine) const REPET_MAX_CHUNK_FRAMES: usize = RATE as usize / 4;
-pub(in crate::engine) const REPET_WORKER_STACK_BYTES: usize = 256 * 1024;
-const REPET_HISTORY_FRAMES: usize = (RATE as usize * 60).div_ceil(REPET_HOP);
-#[cfg(test)]
-const REPET_MAX_HISTORY_FRAMES: usize = REPET_HISTORY_FRAMES;
-const REPET_MIN_DISTANCE_FRAMES: usize = (RATE as usize).div_ceil(REPET_HOP);
-const REPET_NEIGHBORS: usize = 3;
-const REPET_MAX_DISTANCE: u16 = 28;
-const REPET_DB_RANGE: f32 = 70.0;
 const MONO_BELOW: f64 = 1.0e-4;
 const STEREO_ABOVE: f64 = 4.0e-4;
 const EXACT_MONO: f64 = 1.0e-9;
 const EXACT_RUN: u32 = 4;
+// Tuning, measured on 144 seven-second MUSDB18 clips (see `musdb_measure.rs`).
+// Variant B (this one): vocals about -6.3 dB, bass/drums about +0.5 dB and other
+// instruments about -1.9 dB at full amount, all after the makeup gain.
+// Variant A (deeper on vocals, same loudness goal): MASK_CURVE 2.2,
+// CENTER_FLOOR 0.0, MAKEUP_SHARE 0.7, band 120 Hz + 100 Hz / 9500 Hz - 1700 Hz;
+// vocals about -6.8 dB, bass/drums about +0.9 dB, other about -2.4 dB.
+
+/// Exponent that deepens the mask where the center estimate is high while
+/// leaving weakly centered bins nearly untouched.
+const MASK_CURVE: f32 = 3.0;
+/// Depth multiplier of the mask (1 = the mask reaches full depth).
+const STRENGTH: f32 = 1.0;
+/// Center estimates below this are left alone; above it they are rescaled to 0..1.
+const CENTER_FLOOR: f32 = 0.3;
+/// Share (0..1, in dB) of the measured loudness loss that the makeup gain gives back.
+const MAKEUP_SHARE: f32 = 0.5;
+/// The mask is fully active from `BAND_LOW_START + BAND_LOW_WIDTH` Hz up to
+/// `BAND_HIGH_END - BAND_HIGH_WIDTH` Hz and fades out toward both ends.
+const BAND_LOW_START: f32 = 150.0;
+const BAND_LOW_WIDTH: f32 = 200.0;
+const BAND_HIGH_END: f32 = 9000.0;
+const BAND_HIGH_WIDTH: f32 = 1500.0;
+/// Largest makeup gain (linear), +4 dB.
+const MAKEUP_MAX: f32 = 1.584_893_2;
+/// Per-sample coefficient of the 1 s input/output level trackers.
+const LEVEL_K: f64 = 1.0 / RATE as f64;
+/// Per-sample smoothing of the makeup gain (about 0.2 s).
+const MAKEUP_SMOOTH: f32 = 1.0 / (0.2 * RATE as f32);
+/// Samples above this are soft-limited once the makeup gain is above unity.
+const LIMIT_KNEE: f32 = 0.9;
 const LEAK: f64 = 0.990_38;
 const SILENCE: f64 = 1.0e-8;
 const FLUSH_BELOW: f32 = f32::MIN_POSITIVE;
 const FLUSH_ABOVE: f32 = 1.0e6;
-const TRANSIENT_HOLD: u8 = 8;
-const TRANSIENT_SAMPLES: u16 = 2048;
+/// Positive spectral flux, relative to the total magnitude, that marks an attack.
+const TRANSIENT_FLUX: f32 = 0.30;
+/// Analysis frames the mask stays open after an attack.
+const TRANSIENT_HOLD: u8 = 1;
 
 /// Shared karaoke setting: one lock-free atomic float, 0 means disabled.
 pub struct KaraokeCtl {
     depth: AtomicU32,
-    repet: OnceLock<RepetMaskRing>,
-    repet_generation: AtomicU64,
-}
-
-struct RepetMaskRing {
-    bands: Box<[[AtomicU8; REPET_BANDS]]>,
-    frames: Box<[AtomicU64]>,
-}
-
-impl RepetMaskRing {
-    fn new() -> Self {
-        Self {
-            bands: (0..REPET_HISTORY_FRAMES)
-                .map(|_| std::array::from_fn(|_| AtomicU8::new(u8::MAX)))
-                .collect(),
-            frames: (0..REPET_HISTORY_FRAMES)
-                .map(|_| AtomicU64::new(u64::MAX))
-                .collect(),
-        }
-    }
 }
 
 impl KaraokeCtl {
     pub fn new() -> Self {
         Self {
             depth: AtomicU32::new(0.0f32.to_bits()),
-            repet: OnceLock::new(),
-            repet_generation: AtomicU64::new(0),
         }
     }
 
@@ -113,67 +114,11 @@ impl KaraokeCtl {
     pub fn set(&self, enabled: bool, amount: f32) {
         let depth = depth_of(enabled, amount);
         self.depth.store(depth.to_bits(), Relaxed);
-        if depth == 0.0 {
-            self.reset_repet();
-        }
     }
 
     #[inline]
     pub(super) fn get(&self) -> f32 {
         f32::from_bits(self.depth.load(Relaxed))
-    }
-
-    #[inline]
-    fn repet(&self, frame: u64, bin: usize) -> f32 {
-        let Some(ring) = self.repet.get() else {
-            return 1.0;
-        };
-        let row = (frame as usize / REPET_HOP) % REPET_HISTORY_FRAMES;
-        for age in 0..=2 {
-            let at = (row + REPET_HISTORY_FRAMES - age) % REPET_HISTORY_FRAMES;
-            let stamp = ring.frames[at].load(Acquire);
-            if stamp <= frame && frame - stamp <= (REPET_HOP * 2) as u64 {
-                return f32::from(ring.bands[at][repet_band(bin)].load(Relaxed)) / 255.0;
-            }
-        }
-        1.0
-    }
-
-    pub(super) fn generation(&self) -> u64 {
-        self.repet_generation.load(Relaxed)
-    }
-
-    pub(super) fn prepare_repet_mask(&self) {
-        let _ = self.repet.get_or_init(RepetMaskRing::new);
-    }
-
-    pub(super) fn reset_repet(&self) -> u64 {
-        let generation = self.repet_generation.fetch_add(1, Relaxed).wrapping_add(1);
-        if let Some(ring) = self.repet.get() {
-            for frame in &ring.frames {
-                frame.store(u64::MAX, Release);
-            }
-        }
-        generation
-    }
-
-    pub(super) fn publish_repet(&self, generation: u64, frame: u64, gains: &[f32; REPET_BANDS]) {
-        let Some(ring) = self.repet.get() else {
-            return;
-        };
-        if self.repet_generation.load(Relaxed) != generation {
-            return;
-        }
-        let row = (frame as usize / REPET_HOP) % REPET_HISTORY_FRAMES;
-        ring.frames[row].store(u64::MAX, Release);
-        for (slot, gain) in ring.bands[row].iter().zip(gains) {
-            slot.store((gain.clamp(0.0, 1.0) * 255.0).round() as u8, Relaxed);
-        }
-        if self.repet_generation.load(Relaxed) == generation {
-            ring.frames[row].store(frame, Release);
-        } else {
-            let _ = ring.frames[row].compare_exchange(frame, u64::MAX, AcqRel, Relaxed);
-        }
     }
 }
 
@@ -209,179 +154,12 @@ impl Complex {
             im: self.re * other.im + self.im * other.re,
         }
     }
-
-    #[inline]
-    fn scale(&mut self, factor: f32) {
-        self.re *= factor;
-        self.im *= factor;
-    }
 }
 
 /// Radix-2 FFT permutation and twiddles, built before the callback starts.
 struct FftPlan {
     bit_reverse: [usize; WINDOW],
     twiddle: [Complex; WINDOW / 2],
-}
-
-/// Causal k-nearest-neighbour repetition estimate using a 60-second,
-/// eight-bit log-spectrum ring. Recent frames are excluded to avoid matching
-/// a sound against its own local decay.
-pub(in crate::engine) struct RepetAnalyzer {
-    history: Vec<[u8; REPET_BANDS]>,
-    write: usize,
-    len: usize,
-    input: [f32; WINDOW],
-    input_write: usize,
-    input_count: usize,
-    hops: usize,
-    window: [f32; WINDOW],
-    spectrum: [Complex; WINDOW],
-    fft: FftPlan,
-}
-
-impl RepetAnalyzer {
-    pub(in crate::engine) fn new() -> Self {
-        let mut window = [0.0; WINDOW];
-        for (i, value) in window.iter_mut().enumerate() {
-            *value = (0.5 - 0.5 * (2.0 * PI * i as f64 / WINDOW as f64).cos()) as f32;
-        }
-        Self {
-            history: vec![[u8::MAX; REPET_BANDS]; REPET_HISTORY_FRAMES],
-            write: 0,
-            len: 0,
-            input: [0.0; WINDOW],
-            input_write: 0,
-            input_count: 0,
-            hops: 0,
-            window,
-            spectrum: [Complex::default(); WINDOW],
-            fft: FftPlan::new(),
-        }
-    }
-
-    /// Feed centered mono samples. Returns a new non-repeating ratio every
-    /// fourth 256-sample hop, or `None` between analysis frames.
-    pub(in crate::engine) fn feed(
-        &mut self,
-        samples: &[f32],
-        start_frame: u64,
-        mut publish: impl FnMut(u64, [f32; REPET_BANDS]),
-    ) {
-        for (offset, sample) in samples.iter().enumerate() {
-            self.input[self.input_write] = finite_sample(*sample);
-            self.input_write = (self.input_write + 1) % WINDOW;
-            self.input_count += 1;
-            if self.input_count.is_multiple_of(HOP) {
-                self.hops += 1;
-                if self.hops.is_multiple_of(REPET_STRIDE) {
-                    self.spectral_frame();
-                    let bands = self.band_spectrum();
-                    let non_repeating = self.observe(&bands);
-                    publish(start_frame + offset as u64, non_repeating);
-                }
-            }
-        }
-    }
-
-    fn spectral_frame(&mut self) {
-        for i in 0..WINDOW {
-            let sample = if self.input_count >= WINDOW {
-                self.input[(self.input_write + i) % WINDOW]
-            } else {
-                0.0
-            };
-            self.spectrum[i] = Complex::new(sample * self.window[i], 0.0);
-        }
-        self.fft.process(&mut self.spectrum, false);
-    }
-
-    fn band_spectrum(&self) -> [f32; REPET_BANDS] {
-        let mut bands = [0.0f32; REPET_BANDS];
-        for bin in 1..BINS {
-            let hz = bin as f32 * RATE as f32 / WINDOW as f32;
-            if (120.0..=9500.0).contains(&hz) {
-                let band = repet_band(bin);
-                bands[band] = bands[band].max(self.spectrum[bin].magnitude());
-            }
-        }
-        bands
-    }
-
-    fn observe(&mut self, spectrum: &[f32; REPET_BANDS]) -> [f32; REPET_BANDS] {
-        let peak = spectrum.iter().copied().fold(0.0f32, f32::max).max(1.0e-12);
-        let mut current = [u8::MAX; REPET_BANDS];
-        for (slot, magnitude) in current.iter_mut().zip(spectrum) {
-            if magnitude.is_finite() && *magnitude > 0.0 {
-                let db = 20.0 * (*magnitude / peak).log10();
-                *slot = ((-db).clamp(0.0, REPET_DB_RANGE) * 255.0 / REPET_DB_RANGE) as u8;
-            }
-        }
-
-        let mut best_dist = [u16::MAX; REPET_NEIGHBORS];
-        let mut best_at = [0usize; REPET_NEIGHBORS];
-        for age in REPET_MIN_DISTANCE_FRAMES..=self.len {
-            let at = (self.write + REPET_HISTORY_FRAMES - age) % REPET_HISTORY_FRAMES;
-            let prior = &self.history[at];
-            let mut distance = 0u16;
-            for band in 0..REPET_BANDS {
-                distance += current[band].abs_diff(prior[band]) as u16;
-            }
-            distance /= REPET_BANDS as u16;
-            if distance <= REPET_MAX_DISTANCE
-                && let Some(slot) = best_dist.iter().position(|best| distance < *best)
-            {
-                for i in (slot + 1..REPET_NEIGHBORS).rev() {
-                    best_dist[i] = best_dist[i - 1];
-                    best_at[i] = best_at[i - 1];
-                }
-                best_dist[slot] = distance;
-                best_at[slot] = at;
-            }
-        }
-
-        let mut non_repeating = [1.0; REPET_BANDS];
-        for band in 0..REPET_BANDS {
-            let mut median = [u8::MAX; REPET_NEIGHBORS];
-            let mut count = 0;
-            for (distance, at) in best_dist.iter().zip(best_at) {
-                if *distance != u16::MAX {
-                    median[count] = self.history[at][band];
-                    count += 1;
-                }
-            }
-            if count == 0 {
-                continue;
-            }
-            median[..count].sort_unstable();
-            let background_db = -f32::from(median[count / 2]) * REPET_DB_RANGE / 255.0;
-            let current_db = -f32::from(current[band]) * REPET_DB_RANGE / 255.0;
-            let repeated = 10.0f32
-                .powf((background_db - current_db) / 20.0)
-                .clamp(0.0, 1.0);
-            non_repeating[band] = 1.0 - repeated;
-        }
-
-        self.history[self.write] = current;
-        self.write = (self.write + 1) % REPET_HISTORY_FRAMES;
-        self.len = (self.len + 1).min(REPET_HISTORY_FRAMES);
-        non_repeating
-    }
-
-    pub(in crate::engine) fn reset(&mut self) {
-        self.history.fill([u8::MAX; REPET_BANDS]);
-        self.write = 0;
-        self.len = 0;
-        self.input.fill(0.0);
-        self.input_write = 0;
-        self.input_count = 0;
-        self.hops = 0;
-    }
-}
-
-fn repet_band(bin: usize) -> usize {
-    let hz = (bin as f32 * RATE as f32 / WINDOW as f32).max(120.0);
-    let ratio = (hz / 120.0).ln() / (9500.0f32 / 120.0).ln();
-    ((ratio * (REPET_BANDS - 1) as f32).round() as usize).min(REPET_BANDS - 1)
 }
 
 impl FftPlan {
@@ -468,10 +246,18 @@ pub struct Karaoke {
     previous_magnitude: Vec<f32>,
     center: Vec<f32>,
     mask: Vec<f32>,
+    level_in: f64,
+    level_wet: f64,
+    makeup_target: f32,
+    makeup: f32,
+    /// Lets mask tests look at the mask alone.
+    #[cfg(test)]
+    makeup_off: bool,
+    /// Recorded masks; `None` unless a measurement enables it, so ordinary
+    /// tests exercise the allocation-free path.
+    #[cfg(test)]
+    mask_trace: Option<Vec<TraceFrame>>,
     transient_left: u8,
-    transient_samples: u16,
-    last_l: f32,
-    last_r: f32,
     fft: FftPlan,
 }
 
@@ -510,10 +296,15 @@ impl Karaoke {
             previous_magnitude: vec![0.0; BINS],
             center: vec![0.0; BINS],
             mask: vec![1.0; BINS],
+            level_in: 0.0,
+            level_wet: 0.0,
+            makeup_target: 1.0,
+            makeup: 1.0,
+            #[cfg(test)]
+            makeup_off: false,
+            #[cfg(test)]
+            mask_trace: None,
             transient_left: 0,
-            transient_samples: 0,
-            last_l: 0.0,
-            last_r: 0.0,
             fft,
         }
     }
@@ -553,32 +344,22 @@ impl Karaoke {
         self.previous_magnitude.fill(0.0);
         self.center.fill(0.0);
         self.mask.fill(1.0);
+        self.level_in = 0.0;
+        self.level_wet = 0.0;
+        self.makeup_target = 1.0;
+        self.makeup = 1.0;
+        #[cfg(test)]
+        if let Some(trace) = &mut self.mask_trace {
+            trace.clear();
+        }
         self.left.fill(Complex::default());
         self.right.fill(Complex::default());
         self.transient_left = 0;
-        self.transient_samples = 0;
-        self.last_l = 0.0;
-        self.last_r = 0.0;
     }
 
     /// Process interleaved stereo samples. The caller invokes this only while
     /// the pre-existing output callback gate says the effect is running.
-    #[cfg(test)]
     pub fn process(&mut self, raw: &mut [f32], n: usize) {
-        self.process_inner(raw, n, None);
-    }
-
-    pub(super) fn process_with_repet(
-        &mut self,
-        raw: &mut [f32],
-        n: usize,
-        repet: &KaraokeCtl,
-        frame_start: u64,
-    ) {
-        self.process_inner(raw, n, Some((repet, frame_start)));
-    }
-
-    fn process_inner(&mut self, raw: &mut [f32], n: usize, repet: Option<(&KaraokeCtl, u64)>) {
         if n == 0 {
             return;
         }
@@ -663,15 +444,6 @@ impl Karaoke {
             let output_ix = count as usize % OLA_CAP;
             let l = finite_sample(raw[f * 2]);
             let r = finite_sample(raw[f * 2 + 1]);
-            let previous_peak = self.last_l.abs().max(self.last_r.abs());
-            let current_peak = l.abs().max(r.abs());
-            if current_peak - previous_peak > 0.55 {
-                self.transient_samples = TRANSIENT_SAMPLES;
-            } else {
-                self.transient_samples = self.transient_samples.saturating_sub(1);
-            }
-            self.last_l = l;
-            self.last_r = r;
             self.input_l[input_ix] = l;
             self.input_r[input_ix] = r;
 
@@ -680,6 +452,8 @@ impl Karaoke {
             let wet_r = clean_state(self.overlap_r[output_ix] / self.norm[phase]);
             self.overlap_l[output_ix] = 0.0;
             self.overlap_r[output_ix] = 0.0;
+            self.track_levels(l, r, wet_l, wet_r);
+            let (wet_l, wet_r) = self.apply_makeup(wet_l, wet_r);
             if count < WINDOW as u64 {
                 raw[f * 2] = l;
                 raw[f * 2 + 1] = r;
@@ -690,7 +464,8 @@ impl Karaoke {
 
             self.sample_count = count + 1;
             if (self.sample_count as usize).is_multiple_of(HOP) {
-                self.analyze_frame(a, repet.map(|(ctl, frame)| (ctl, frame + f as u64)));
+                self.update_makeup();
+                self.analyze_frame(a);
             }
         }
 
@@ -702,7 +477,69 @@ impl Karaoke {
         }
     }
 
-    fn analyze_frame(&mut self, amount: f32, repet: Option<(&KaraokeCtl, u64)>) {
+    /// Leaky one-second energy of the dry input and of the masked output.
+    #[inline]
+    fn track_levels(&mut self, l: f32, r: f32, wet_l: f32, wet_r: f32) {
+        let dry = f64::from(l * l + r * r);
+        let wet = f64::from(wet_l * wet_l + wet_r * wet_r);
+        self.level_in += (dry - self.level_in) * LEVEL_K;
+        self.level_wet += (wet - self.level_wet) * LEVEL_K;
+        if self.level_in < 1.0e-30 {
+            self.level_in = 0.0;
+        }
+        if self.level_wet < 1.0e-30 {
+            self.level_wet = 0.0;
+        }
+    }
+
+    /// Once per hop: the gain that gives back part of what the mask removed,
+    /// never more than `MAKEUP_MAX` and never below unity.
+    fn update_makeup(&mut self) {
+        #[cfg(test)]
+        if self.makeup_off {
+            return;
+        }
+        self.makeup_target = if self.level_in > 1.0e-9 && self.level_wet > 1.0e-12 {
+            let loss = (self.level_in / self.level_wet) as f32;
+            loss.powf(MAKEUP_SHARE * 0.5).clamp(1.0, MAKEUP_MAX)
+        } else {
+            1.0
+        };
+    }
+
+    /// Smooths the makeup gain, applies it to one wet frame and soft-limits
+    /// peaks that the gain pushed above the knee.
+    #[inline]
+    fn apply_makeup(&mut self, wet_l: f32, wet_r: f32) -> (f32, f32) {
+        self.makeup += (self.makeup_target - self.makeup) * MAKEUP_SMOOTH;
+        let gain = self.makeup;
+        if gain <= 1.0 + 1.0e-4 {
+            return (wet_l, wet_r);
+        }
+        (soft_limit(wet_l * gain), soft_limit(wet_r * gain))
+    }
+
+    /// Scales only the mid part `(L+R)/2` of bin `k` by `self.mask[k]`; the side
+    /// part `(L-R)/2` is kept, so L = M' + S and R = M' - S. The negative
+    /// frequency partner is the conjugate, keeping the frame real.
+    #[inline]
+    fn mask_mid(&mut self, k: usize) {
+        let gain = self.mask[k];
+        let (l, r) = (self.left[k], self.right[k]);
+        let mid = Complex::new((l.re + r.re) * 0.5, (l.im + r.im) * 0.5);
+        let side = Complex::new((l.re - r.re) * 0.5, (l.im - r.im) * 0.5);
+        let left = Complex::new(mid.re * gain + side.re, mid.im * gain + side.im);
+        let right = Complex::new(mid.re * gain - side.re, mid.im * gain - side.im);
+        self.left[k] = left;
+        self.right[k] = right;
+        if k > 0 && k < WINDOW / 2 {
+            let mirror = WINDOW - k;
+            self.left[mirror] = Complex::new(left.re, -left.im);
+            self.right[mirror] = Complex::new(right.re, -right.im);
+        }
+    }
+
+    fn analyze_frame(&mut self, amount: f32) {
         let start = self.sample_count as i64 - WINDOW as i64;
         for i in 0..WINDOW {
             let frame_ix = start + i as i64;
@@ -733,13 +570,10 @@ impl Karaoke {
             let phase_match = ((l.re * r.re + l.im * r.im) / (lm * rm + 1.0e-20)).clamp(0.0, 1.0);
             self.center[k] = clean_state(level_match * phase_match);
         }
-        if total > 1.0e-8 && flux / total > 0.16 {
+        if total > 1.0e-8 && flux / total > TRANSIENT_FLUX {
             self.transient_left = TRANSIENT_HOLD;
         } else {
             self.transient_left = self.transient_left.saturating_sub(1);
-        }
-        if self.transient_samples > 0 {
-            self.transient_left = TRANSIENT_HOLD;
         }
         for k in 0..BINS {
             let smooth_center = (center_at(&self.center, k as isize - 2)
@@ -750,8 +584,7 @@ impl Karaoke {
                 / 9.0;
             let hz = k as f32 * RATE as f32 / WINDOW as f32;
             let band = band_weight(hz);
-            let non_repeating = repet.map_or(1.0, |(ctl, frame)| ctl.repet(frame, k));
-            let target = suppression_target(amount, smooth_center, band, non_repeating);
+            let target = suppression_target(amount, smooth_center, band);
             // Fast attack removes sustained center material; a softer release
             // avoids a zipper-like change between adjacent analysis frames.
             if self.transient_left > 0 {
@@ -760,13 +593,14 @@ impl Karaoke {
                 let smoothing = if target < self.mask[k] { 0.78 } else { 0.28 };
                 self.mask[k] = clean_state(self.mask[k] + (target - self.mask[k]) * smoothing);
             }
-            self.left[k].scale(self.mask[k]);
-            self.right[k].scale(self.mask[k]);
-            if k > 0 && k < WINDOW / 2 {
-                let mirror = WINDOW - k;
-                self.left[mirror].scale(self.mask[k]);
-                self.right[mirror].scale(self.mask[k]);
-            }
+            self.mask_mid(k);
+        }
+        #[cfg(test)]
+        if let Some(trace) = &mut self.mask_trace {
+            trace.push(TraceFrame {
+                mask: self.mask.clone(),
+                makeup: self.makeup_target,
+            });
         }
 
         self.fft.process(&mut self.left, true);
@@ -797,6 +631,24 @@ impl Karaoke {
         self.engage
     }
 
+    /// Turns the makeup gain off so a test sees the mask alone.
+    #[cfg(test)]
+    pub(super) fn disable_makeup(&mut self) {
+        self.makeup_off = true;
+    }
+
+    /// Starts recording the mask of every analysis frame (measurements only).
+    #[cfg(test)]
+    pub(super) fn record_mask_trace(&mut self) {
+        self.mask_trace = Some(Vec::new());
+    }
+
+    /// Hands over the recorded frames (measurements only).
+    #[cfg(test)]
+    pub(super) fn take_mask_trace(&mut self) -> Vec<TraceFrame> {
+        self.mask_trace.take().unwrap_or_default()
+    }
+
     #[cfg(test)]
     pub fn is_mono(&self) -> bool {
         self.mono
@@ -811,7 +663,6 @@ impl Karaoke {
             self.overlap_l.iter().all(|v| *v == 0.0),
             self.overlap_r.iter().all(|v| *v == 0.0),
             self.previous_magnitude.iter().all(|v| *v == 0.0),
-            self.transient_samples == 0,
         ]
         .into_iter()
         .all(|ok| ok)
@@ -834,8 +685,90 @@ impl Karaoke {
             && self.previous_magnitude.iter().all(|v| clean(*v))
             && self.center.iter().all(|v| clean(*v))
             && self.mask.iter().all(|v| clean(*v))
-            && clean(self.last_l)
-            && clean(self.last_r)
+    }
+}
+
+#[cfg(test)]
+impl Karaoke {
+    /// Replays the measured mix mask over a stem for offline MUSDB validation.
+    pub(super) fn process_with_mask_trace(&mut self, raw: &mut [f32], trace: &[TraceFrame]) {
+        if trace.is_empty() {
+            return;
+        }
+        self.clear_dsp();
+        self.sample_count = 0;
+        self.engage = 0.0;
+        let mut trace_index = 0;
+        for block_start in (0..raw.len() / 2).step_by(64) {
+            let n = (raw.len() / 2 - block_start).min(64);
+            let warmed = self.sample_count >= WINDOW as u64;
+            let w0 = self.engage;
+            let w1 = w0 + (1.0 - w0).clamp(-1.0 / GLIDE_BLOCKS as f32, 1.0 / GLIDE_BLOCKS as f32);
+            let dw = (w1 - w0) / n as f32;
+            let mut w = w0;
+            for f in 0..n {
+                if warmed {
+                    w += dw;
+                }
+                let count = self.sample_count;
+                let input_ix = count as usize % WINDOW;
+                let output_ix = count as usize % OLA_CAP;
+                let l = finite_sample(raw[(block_start + f) * 2]);
+                let r = finite_sample(raw[(block_start + f) * 2 + 1]);
+                self.input_l[input_ix] = l;
+                self.input_r[input_ix] = r;
+                let phase = count as usize % HOP;
+                let wet_l = clean_state(self.overlap_l[output_ix] / self.norm[phase]);
+                let wet_r = clean_state(self.overlap_r[output_ix] / self.norm[phase]);
+                self.overlap_l[output_ix] = 0.0;
+                self.overlap_r[output_ix] = 0.0;
+                let (wet_l, wet_r) = self.apply_makeup(wet_l, wet_r);
+                if count < WINDOW as u64 {
+                    raw[(block_start + f) * 2] = l;
+                    raw[(block_start + f) * 2 + 1] = r;
+                } else {
+                    raw[(block_start + f) * 2] = clean_state(l + w * (wet_l - l));
+                    raw[(block_start + f) * 2 + 1] = clean_state(r + w * (wet_r - r));
+                }
+                self.sample_count += 1;
+                if (self.sample_count as usize).is_multiple_of(HOP) {
+                    let frame = &trace[trace_index.min(trace.len() - 1)];
+                    trace_index += 1;
+                    self.makeup_target = frame.makeup;
+                    self.apply_trace_frame(&frame.mask);
+                }
+            }
+            if warmed {
+                self.engage = w1;
+            }
+        }
+    }
+
+    fn apply_trace_frame(&mut self, mask: &[f32]) {
+        let start = self.sample_count as i64 - WINDOW as i64;
+        for i in 0..WINDOW {
+            let ix = (start + i as i64) as usize % WINDOW;
+            self.left[i] = Complex::new(self.input_l[ix] * self.window[i], 0.0);
+            self.right[i] = Complex::new(self.input_r[ix] * self.window[i], 0.0);
+        }
+        self.fft.process(&mut self.left, false);
+        self.fft.process(&mut self.right, false);
+        self.mask.copy_from_slice(mask);
+        for k in 0..BINS {
+            self.mask_mid(k);
+        }
+        self.fft.process(&mut self.left, true);
+        self.fft.process(&mut self.right, true);
+        for i in 0..WINDOW {
+            let output_frame = start + i as i64 + WINDOW as i64;
+            if output_frame >= self.sample_count as i64 {
+                let ix = output_frame as usize % OLA_CAP;
+                self.overlap_l[ix] =
+                    clean_state(self.overlap_l[ix] + self.left[i].re * self.window[i]);
+                self.overlap_r[ix] =
+                    clean_state(self.overlap_r[ix] + self.right[i].re * self.window[i]);
+            }
+        }
     }
 }
 
@@ -848,14 +781,36 @@ fn center_at(values: &[f32], index: isize) -> f32 {
 }
 
 fn band_weight(hz: f32) -> f32 {
-    let low = ((hz - 120.0) / 100.0).clamp(0.0, 1.0);
-    let high = ((9500.0 - hz) / 1700.0).clamp(0.0, 1.0);
+    let low = ((hz - BAND_LOW_START) / BAND_LOW_WIDTH).clamp(0.0, 1.0);
+    let high = ((BAND_HIGH_END - hz) / BAND_HIGH_WIDTH).clamp(0.0, 1.0);
     low.min(high)
 }
 
 #[inline]
-fn suppression_target(amount: f32, center: f32, band: f32, non_repeating: f32) -> f32 {
-    1.0 - amount * center * band * non_repeating
+fn suppression_target(amount: f32, center: f32, band: f32) -> f32 {
+    let center = ((center - CENTER_FLOOR) / (1.0 - CENTER_FLOOR)).clamp(0.0, 1.0);
+    (1.0 - STRENGTH * amount * center * band)
+        .max(0.0)
+        .powf(MASK_CURVE)
+}
+
+/// Smooth ceiling at 1.0: identity up to `LIMIT_KNEE`, then a tanh knee.
+#[inline]
+fn soft_limit(x: f32) -> f32 {
+    let over = x.abs() - LIMIT_KNEE;
+    if over <= 0.0 {
+        x
+    } else {
+        let room = 1.0 - LIMIT_KNEE;
+        (LIMIT_KNEE + room * (over / room).tanh()).copysign(x)
+    }
+}
+
+/// One analysis frame as recorded for offline measurements.
+#[cfg(test)]
+pub(super) struct TraceFrame {
+    pub(super) mask: Vec<f32>,
+    pub(super) makeup: f32,
 }
 
 #[inline]
@@ -885,232 +840,50 @@ impl super::OutputCtl {
 }
 
 #[cfg(test)]
-mod repet_tests {
+mod tests {
     use super::*;
 
     #[test]
-    fn online_repet_distinguishes_repeated_bands_from_a_changing_melody() {
-        let mut repet = RepetAnalyzer::new();
-        let mut last = [0.0; REPET_BANDS];
-
-        for frame in 0..240 {
-            let mut spectrum = [0.0; REPET_BANDS];
-            spectrum[4] = 0.8; // Repeating kick / bass band.
-            spectrum[10] = 0.45; // Repeating chord band.
-            spectrum[if frame == 239 { 35 } else { 24 + frame % 11 }] = 0.7; // Last note has no prior occurrence in this band.
-            last = repet.observe(&spectrum);
+    fn soft_limit_is_transparent_below_the_knee_and_stays_under_one() {
+        for x in [0.0f32, 0.3, -0.7, LIMIT_KNEE, -LIMIT_KNEE] {
+            assert_eq!(soft_limit(x), x);
         }
-
-        assert!(last[4] < 0.2, "repeated beat attenuation: {}", last[4]);
-        assert!(last[10] < 0.2, "repeated chord attenuation: {}", last[10]);
-        assert!(last[35] > 0.75, "novel melody attenuation: {}", last[35]);
-    }
-
-    #[test]
-    fn online_repet_uses_stage_one_factor_until_a_distant_match_exists() {
-        let mut repet = RepetAnalyzer::new();
-        let mut spectrum = [0.0; REPET_BANDS];
-        spectrum[12] = 1.0;
-
-        for _ in 0..REPET_MIN_DISTANCE_FRAMES {
-            assert!(repet.observe(&spectrum).iter().all(|gain| *gain == 1.0));
+        let mut previous = soft_limit(LIMIT_KNEE);
+        for i in 1..=200 {
+            let y = soft_limit(LIMIT_KNEE + i as f32 * 0.05);
+            assert!(y >= previous && y <= 1.0, "{y}");
+            previous = y;
         }
+        assert_eq!(soft_limit(-5.0), -soft_limit(5.0));
     }
 
     #[test]
-    fn online_repet_history_stays_within_the_memory_budget() {
-        let analyzer_bytes = REPET_HISTORY_FRAMES
-            * (REPET_BANDS + std::mem::size_of::<AtomicU64>())
-            + std::mem::size_of::<RepetAnalyzer>()
-            + REPET_MAX_INFLIGHT_CHUNKS * REPET_MAX_CHUNK_FRAMES * std::mem::size_of::<f32>()
-            + std::mem::size_of::<KaraokeCtl>()
-            + REPET_WORKER_STACK_BYTES;
-        assert!(analyzer_bytes <= 10 * 1024 * 1024, "{analyzer_bytes} bytes");
-        eprintln!("REPET bounded state estimate: {analyzer_bytes} bytes");
-        const { assert!(REPET_HISTORY_FRAMES <= REPET_MAX_HISTORY_FRAMES) };
+    fn mask_target_reaches_zero_only_for_a_fully_centered_bin_at_full_amount() {
+        let band = band_weight(1000.0);
+        assert_eq!(band, 1.0);
+        assert_eq!(suppression_target(1.0, 1.0, band), 0.0);
+        // Weakly centered bins are left alone, and amount 0 does nothing.
+        assert_eq!(suppression_target(1.0, CENTER_FLOOR, band), 1.0);
+        assert_eq!(suppression_target(0.0, 1.0, band), 1.0);
+        // The mask never leaves 0..=1, even if the amount ramp overshoots.
+        assert!((0.0..=1.0).contains(&suppression_target(1.0001, 1.0, band)));
+        // Bass and air stay outside the band.
+        assert_eq!(band_weight(60.0), 0.0);
+        assert_eq!(band_weight(12_000.0), 0.0);
     }
 
     #[test]
-    fn repetition_gate_only_attenuates_centered_non_repeating_material() {
-        let amount = 0.95;
-        let vocal_gain = suppression_target(amount, 1.0, 1.0, 1.0);
-        let beat_gain = suppression_target(amount, 1.0, 1.0, 0.0);
-        let panned_gain = suppression_target(amount, 0.0, 1.0, 1.0);
-        let db = |gain: f32| 20.0 * gain.max(1.0e-6).log10();
-
-        assert!(
-            db(vocal_gain) <= -20.0,
-            "vocal reduction {} dB",
-            db(vocal_gain)
-        );
-        assert!(
-            db(beat_gain).abs() <= 2.0,
-            "beat change {} dB",
-            db(beat_gain)
-        );
-        assert!(
-            db(panned_gain).abs() <= 2.0,
-            "panned change {} dB",
-            db(panned_gain)
-        );
-    }
-
-    #[test]
-    fn decoded_loop_keeps_repeated_backing_and_reduces_a_new_centered_note() {
-        let seconds = 8;
-        let mut audio = Vec::with_capacity(RATE as usize * seconds);
-        for sample in 0..RATE as usize * seconds {
-            let time = sample as f32 / RATE as f32;
-            let note = 1000.0 * 1.24f32.powf(time.floor());
-            let backing = 0.22 * (2.0 * PI as f32 * 220.0 * time).sin()
-                + 0.16 * (2.0 * PI as f32 * 330.0 * time).sin()
-                + 0.12 * (2.0 * PI as f32 * 440.0 * time).sin();
-            let beat_phase = sample % (RATE as usize / 2);
-            let beat = if beat_phase < 2400 {
-                0.3 * (2.0 * PI as f32 * 180.0 * time).sin()
-            } else {
-                0.0
-            };
-            let vocal = 0.2 * (2.0 * PI as f32 * note * time).sin();
-            audio.push(backing + beat + vocal);
-        }
-
-        let mut repet = RepetAnalyzer::new();
-        let mut latest = [1.0; REPET_BANDS];
-        repet.feed(&audio, 0, |_, mask| latest = mask);
-        let bass = latest[repet_band((220.0 * WINDOW as f32 / RATE as f32).round() as usize)];
-        let voice_hz = 1000.0 * 1.24f32.powf((seconds - 1) as f32);
-        let voice = latest[repet_band((voice_hz * WINDOW as f32 / RATE as f32).round() as usize)];
-        let bass_db = 20.0 * suppression_target(0.95, 1.0, 1.0, bass).max(1.0e-6).log10();
-        let voice_db = 20.0
-            * suppression_target(0.95, 1.0, 1.0, voice)
-                .max(1.0e-6)
-                .log10();
-
-        assert!(
-            bass_db >= -2.0,
-            "repeating bass changed by {bass_db:.1} dB (factor {bass})"
-        );
-        assert!(
-            voice_db <= -20.0,
-            "new melody reduced by {voice_db:.1} dB (factor {voice})"
-        );
-        eprintln!("REPET synthetic mix: bass {bass_db:.1} dB, melody {voice_db:.1} dB");
-    }
-
-    #[test]
-    fn karaoke_mask_reset_rejects_old_track_results_and_returns_to_stage_one() {
-        let ctl = KaraokeCtl::new();
-        ctl.set(true, 1.0);
-        ctl.prepare_repet_mask();
-        let old_generation = ctl.generation();
-        let mut repeated = [0.0; REPET_BANDS];
-        ctl.publish_repet(old_generation, 1024, &repeated);
-        assert_eq!(ctl.repet(1024, 100), 0.0);
-
-        let generation = ctl.reset_repet();
-        assert!(generation != old_generation);
-        assert_eq!(ctl.repet(1024, 100), 1.0);
-        ctl.publish_repet(old_generation, 1024, &repeated);
-        assert_eq!(ctl.repet(1024, 100), 1.0);
-
-        repeated.fill(0.0);
-        ctl.set(false, 1.0);
-        assert_eq!(ctl.get(), 0.0);
-        assert_eq!(ctl.repet(1024, 100), 1.0);
-    }
-
-    #[test]
-    fn repet_mask_is_selected_by_the_audio_frame_being_played() {
-        let ctl = KaraokeCtl::new();
-        ctl.set(true, 1.0);
-        ctl.prepare_repet_mask();
-        let mut mask = [0.0; REPET_BANDS];
-        ctl.publish_repet(ctl.generation(), 2048, &mask);
-
-        assert_eq!(ctl.repet(2048, 100), 0.0);
-        assert_eq!(ctl.repet(2048 - 1, 100), 1.0);
-        assert_eq!(ctl.repet((2048 + REPET_HOP * 2 + 1) as u64, 100), 1.0);
-
-        mask.fill(1.0);
-    }
-
-    #[test]
-    fn callback_applies_repet_mask_to_centered_material() {
-        let measured_db = |non_repeating: f32| {
-            let ctl = KaraokeCtl::new();
-            ctl.set(true, 0.95);
-            ctl.prepare_repet_mask();
-            let mask = [non_repeating; REPET_BANDS];
-            for frame in (0..RATE as usize * 2).step_by(REPET_HOP) {
-                ctl.publish_repet(ctl.generation(), frame as u64, &mask);
-            }
-            let mut karaoke = Karaoke::new();
-            let mut input_energy = 0.0f64;
-            let mut output_energy = 0.0f64;
-            let total = RATE as usize * 2;
-            for start in (0..total).step_by(64) {
-                let mut block = [0.0f32; 128];
-                for frame in 0..64 {
-                    let sample = start + frame;
-                    let phase = 2.0 * PI * 440.0 * sample as f64 / RATE as f64;
-                    block[frame * 2] = phase.sin() as f32;
-                    block[frame * 2 + 1] = (phase + 0.05).sin() as f32;
-                }
-                let dry = block;
-                karaoke.poll(&ctl);
-                karaoke.process_with_repet(&mut block, 64, &ctl, start as u64);
-                if start >= RATE as usize / 2 {
-                    for (dry, wet) in dry.as_chunks::<2>().0.iter().zip(block.as_chunks::<2>().0) {
-                        input_energy += f64::from(dry[0] * dry[0] + dry[1] * dry[1]);
-                        output_energy += f64::from(wet[0] * wet[0] + wet[1] * wet[1]);
-                    }
-                }
-            }
-            10.0 * (output_energy / input_energy).log10()
-        };
-
-        let vocal_db = measured_db(1.0);
-        let accompaniment_db = measured_db(0.0);
-        assert!(
-            vocal_db <= -20.0,
-            "centered vocal changed by {vocal_db:.1} dB"
-        );
-        assert!(
-            accompaniment_db >= -2.0,
-            "repeating accompaniment changed by {accompaniment_db:.1} dB"
-        );
-        eprintln!(
-            "REPET callback: centered vocal {vocal_db:.1} dB, repeating centered accompaniment {accompaniment_db:.1} dB"
-        );
-    }
-
-    #[test]
-    fn four_minute_repet_cpu_stays_below_three_percent_of_one_core() {
-        use std::time::Instant;
-
-        let mut analyzer = RepetAnalyzer::new();
-        let signal: Vec<f32> = (0..REPET_HOP)
-            .map(|sample| {
-                let phase = sample as f32 / REPET_HOP as f32 * 2.0 * PI as f32;
-                0.2 * phase.mul_add(10.0, 0.0).sin() + 0.1 * phase.mul_add(20.0, 0.0).sin()
-            })
-            .collect();
-        let frames = RATE as usize * 240 / REPET_HOP;
-        let start = Instant::now();
-        for frame in 0..frames {
-            analyzer.feed(&signal, (frame * REPET_HOP) as u64, |_, _| {});
-        }
-        let elapsed = start.elapsed().as_secs_f64();
-        let core_fraction = elapsed / 240.0;
-        eprintln!(
-            "REPET: 4 min stream processed in {elapsed:.3}s ({:.2}% of one core)",
-            core_fraction * 100.0
-        );
-        assert!(
-            core_fraction <= 0.03,
-            "REPET used {:.2}% of one core",
-            core_fraction * 100.0
-        );
+    fn makeup_gain_is_bounded_and_never_attenuates() {
+        let mut k = Karaoke::new();
+        k.level_in = 1.0;
+        k.level_wet = 1.0e-6; // the mask removed almost everything
+        k.update_makeup();
+        assert_eq!(k.makeup_target, MAKEUP_MAX);
+        k.level_wet = 4.0; // output louder than input
+        k.update_makeup();
+        assert_eq!(k.makeup_target, 1.0);
+        k.level_in = 0.0; // silence
+        k.update_makeup();
+        assert_eq!(k.makeup_target, 1.0);
     }
 }

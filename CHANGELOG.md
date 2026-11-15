@@ -19,8 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Karaoke learns what repeats in a song while it plays (drum loops, chords)
-  and keeps it, so sung parts drop further while the beat stays intact.
+- Karaoke now lowers only the centered part of the sound and leaves the
+  left-right difference untouched, then gives back about half of the lost
+  loudness (at most 4 dB, with a soft limiter). On 144 seven-second clips of
+  real music at full amount, the vocal track drops by about 6 dB (median),
+  while bass and drums stay within about 1 dB of their original level and
+  other instruments drop by about 2 dB. The amount slider is not linear:
+  half already cuts a steady centered tone by about 18 dB.
 
 ## [0.1.6] - 2026-11-15
 

@@ -402,8 +402,7 @@ impl RingSource {
                     self.eq.process(&mut self.buf, n);
                 }
                 if self.karaoke.running() {
-                    self.karaoke
-                        .process_with_repet(&mut self.buf, n, &self.ctl.karaoke, plan.r);
+                    self.karaoke.process(&mut self.buf, n);
                 }
             }
             for (frame, c) in self
