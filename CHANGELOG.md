@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed song at its former position. History stays on this computer and
   keeps up to 500 changes or one year per playlist within a 20 MB budget.
 
+### Changed
+
+- Karaoke learns what repeats in a song while it plays (drum loops, chords)
+  and keeps it, so sung parts drop further while the beat stays intact.
+
 ## [0.1.6] - 2026-11-15
 
 ### Changed
