@@ -211,6 +211,7 @@ fn user_item(u: SnapUser) -> UserItem {
         duration_ms: u.duration_ms,
         image: u.image,
         plays: None,
+        features: None,
     });
     UserItem { uri: u.uri, track }
 }
@@ -385,6 +386,7 @@ mod tests {
                 duration_ms: 123_000,
                 image: "https://i.scdn.co/image/x".into(),
                 plays: None,
+                features: None,
             }),
         }
     }
@@ -553,6 +555,7 @@ mod tests {
                 duration_ms: 1000,
                 image: String::new(),
                 plays: None,
+                features: None,
             })
             .collect();
         let mut q = Queue::new();

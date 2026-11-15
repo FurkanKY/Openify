@@ -1,5 +1,6 @@
-//! AutoMix çözümlemesi (`BeatTap`): çaların zaten yazdığı çözülmüş sesten, ek
-//! ağ / çözme olmadan, şarkı başına
+//! Çalma sırasında yerel çözümleme (`BeatTap`): çaların zaten yazdığı çözülmüş
+//! sesten, ek ağ / çözme olmadan; AutoMix uç ölçümleri ve tam şarkı özellikleri
+//! (BPM, ton, enerji) birlikte
 //!
 //! - baştaki sessizlik (`lead_ms`) ve sondaki sessizlik / sönme noktası
 //!   (`tail_ms`: müziğin bittiği yerden şarkının sonuna),
@@ -66,7 +67,7 @@ pub const HAS_HEAD: u8 = 1;
 pub const HAS_TAIL: u8 = 2;
 
 /// Şarkının bir ucundaki (baş / son) ritim bilgisi.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Edge {
     /// Tempo; 0 = bilinmiyor.
     pub bpm: f32,
@@ -101,6 +102,22 @@ pub struct Analysis {
     pub head_env: [i8; ENV_SECS],
     /// Müziğin bittiği yerden geriye saniye başına dBFS (0: son saniye).
     pub tail_env: [i8; ENV_SECS],
+    /// Whole-track BPM, key, and energy. `None` means the track did not contain
+    /// enough usable audio for a defensible estimate.
+    pub features: Option<TrackFeatures>,
+}
+
+/// Whole-track musical features derived only from samples that were played.
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct TrackFeatures {
+    pub bpm: f32,
+    pub bpm_conf: f32,
+    /// Pitch class: C=0 through B=11.
+    pub key: u8,
+    /// `true` for minor, `false` for major.
+    pub minor: bool,
+    pub key_conf: f32,
+    pub energy: u8,
 }
 
 impl Analysis {
@@ -113,6 +130,7 @@ impl Analysis {
         tail: Edge::NONE,
         head_env: [ENV_UNKNOWN; ENV_SECS],
         tail_env: [ENV_UNKNOWN; ENV_SECS],
+        features: None,
     };
 
     pub fn has_head(&self) -> bool {
@@ -138,6 +156,9 @@ impl Analysis {
             self.tail_ms = newer.tail_ms;
             self.tail = newer.tail;
             self.tail_env = newer.tail_env;
+        }
+        if newer.features.is_some() {
+            self.features = newer.features;
         }
         self
     }
@@ -176,6 +197,18 @@ pub struct BeatTap {
     head_edge: Option<Edge>,
     uri: Option<String>,
     active: bool,
+    whole_onsets: Vec<f32>,
+    total_power: f64,
+    total_frames: u64,
+    spectral_score: f64,
+    spectral_total: f64,
+    chroma_q1: [f64; 36],
+    chroma_q2: [f64; 36],
+    chroma_coeff: [f64; 36],
+    chroma_samples: usize,
+    chroma_sum: [f64; 12],
+    chroma_decimator: u8,
+    chroma_acc: f64,
 }
 
 impl Default for BeatTap {
@@ -205,6 +238,18 @@ impl BeatTap {
             head_edge: None,
             uri: None,
             active: false,
+            whole_onsets: Vec::with_capacity(32_768),
+            total_power: 0.0,
+            total_frames: 0,
+            spectral_score: 0.0,
+            spectral_total: 0.0,
+            chroma_q1: [0.0; 36],
+            chroma_q2: [0.0; 36],
+            chroma_coeff: chroma_coefficients(),
+            chroma_samples: 0,
+            chroma_sum: [0.0; 12],
+            chroma_decimator: 0,
+            chroma_acc: 0.0,
         }
     }
 
@@ -219,6 +264,17 @@ impl BeatTap {
         self.lead = None;
         self.trail = 0;
         self.head_edge = None;
+        self.whole_onsets.clear();
+        self.total_power = 0.0;
+        self.total_frames = 0;
+        self.spectral_score = 0.0;
+        self.spectral_total = 0.0;
+        self.chroma_q1.fill(0.0);
+        self.chroma_q2.fill(0.0);
+        self.chroma_samples = 0;
+        self.chroma_sum = [0.0; 12];
+        self.chroma_decimator = 0;
+        self.chroma_acc = 0.0;
         self.uri = uri;
         self.active = true;
     }
@@ -243,11 +299,6 @@ impl BeatTap {
     }
 
     /// Çözümlemeyi bırak (AutoMix kapandı): sonraki `begin`e dek hiçbir şey birikmez.
-    pub fn abort(&mut self) {
-        self.active = false;
-        self.uri = None;
-    }
-
     /// Kesintisiz beslenen toplam süre (sn); testler / bench.
     #[allow(dead_code)]
     pub fn seconds(&self) -> f64 {
@@ -271,6 +322,15 @@ impl BeatTap {
             self.acc[1] += mid * mid;
             self.acc[2] += high * high;
             self.acc[3] += m * m;
+            self.total_power += (f64::from(l * l) + f64::from(r * r)) * 0.5;
+            self.total_frames += 1;
+            self.chroma_decimator += 1;
+            self.chroma_acc += f64::from(m);
+            if self.chroma_decimator == 4 {
+                self.chroma_decimator = 0;
+                self.feed_chroma(self.chroma_acc * 0.25);
+                self.chroma_acc = 0.0;
+            }
             let p = l.abs().max(r.abs());
             if p > self.peak {
                 self.peak = p;
@@ -302,6 +362,12 @@ impl BeatTap {
             power: self.acc[3] * inv,
             onset,
         };
+        self.whole_onsets.push(hop.onset);
+        let low = f64::from(self.acc[0]);
+        let mid = f64::from(self.acc[1]);
+        let high = f64::from(self.acc[2]);
+        self.spectral_score += 0.2 * low + 0.5 * mid + 0.9 * high;
+        self.spectral_total += low + mid + high;
         self.prev_log = logs;
         self.have_prev = true;
         let silent = self.peak < SILENCE_PEAK;
@@ -342,6 +408,30 @@ impl BeatTap {
         }
     }
 
+    /// Downsampled Goertzel chroma at 11.025 kHz. A 1-second spectrum is
+    /// accumulated once per second; the sample loop costs a fixed 36 bins.
+    fn feed_chroma(&mut self, sample: f64) {
+        const WINDOW: usize = 11_025;
+        for i in 0..36 {
+            let q0 = sample + self.chroma_coeff[i] * self.chroma_q1[i] - self.chroma_q2[i];
+            self.chroma_q2[i] = self.chroma_q1[i];
+            self.chroma_q1[i] = q0;
+        }
+        self.chroma_samples += 1;
+        if self.chroma_samples == WINDOW {
+            for i in 0..36 {
+                let power = (self.chroma_q1[i] * self.chroma_q1[i]
+                    + self.chroma_q2[i] * self.chroma_q2[i]
+                    - self.chroma_coeff[i] * self.chroma_q1[i] * self.chroma_q2[i])
+                    .max(0.0);
+                self.chroma_sum[i % 12] += power;
+            }
+            self.chroma_q1.fill(0.0);
+            self.chroma_q2.fill(0.0);
+            self.chroma_samples = 0;
+        }
+    }
+
     /// Baş ucu: (kenar, zarf).
     fn compute_head(&self, lead: usize) -> (Edge, [i8; ENV_SECS]) {
         let from = lead.min(self.head.len());
@@ -365,6 +455,10 @@ impl BeatTap {
         self.active = false;
         let uri = self.uri.take()?;
         let mut a = Analysis::EMPTY;
+
+        a.features = (ended && self.head_valid)
+            .then(|| self.whole_track_features())
+            .flatten();
 
         // Baş.
         if self.head_valid
@@ -417,8 +511,90 @@ impl BeatTap {
                 a.tail_env = env;
             }
         }
-        (a.flags != 0).then_some((uri, a))
+        (a.flags != 0 || a.features.is_some()).then_some((uri, a))
     }
+
+    fn whole_track_features(&self) -> Option<TrackFeatures> {
+        if self.total_frames < RATE as u64 * 8 {
+            return None;
+        }
+        let level = (self.total_power / self.total_frames as f64).sqrt();
+        let tempo = tempo(&self.whole_onsets, level)?;
+        let chroma_total: f64 = self.chroma_sum.iter().sum();
+        if chroma_total <= 1.0e-12 || self.spectral_total <= 1.0e-12 {
+            return None;
+        }
+        let (key, minor, key_conf) = krumhansl_key(&self.chroma_sum)?;
+        // Energy = 70% normalized RMS loudness (-60..0 dBFS) and 30% spectral
+        // density (energy-weighted low/mid/high bands; 0.2/0.5/0.9).
+        let dbfs = 20.0 * level.max(1.0e-10).log10();
+        let loudness = ((dbfs + 60.0) / 60.0).clamp(0.0, 1.0);
+        let density = (self.spectral_score / self.spectral_total).clamp(0.0, 1.0);
+        let energy = ((70.0 * loudness + 30.0 * density).round() as i32).clamp(0, 100) as u8;
+        Some(TrackFeatures {
+            bpm: tempo.bpm as f32,
+            bpm_conf: tempo.conf as f32,
+            key,
+            minor,
+            key_conf,
+            energy,
+        })
+    }
+}
+
+fn chroma_coefficients() -> [f64; 36] {
+    let mut coeff = [0.0; 36];
+    for (i, value) in coeff.iter_mut().enumerate() {
+        let midi = 48 + i as i32;
+        let hz = 440.0 * 2.0f64.powf((midi as f64 - 69.0) / 12.0);
+        *value = 2.0 * (2.0 * std::f64::consts::PI * hz / (RATE as f64 / 4.0)).cos();
+    }
+    coeff
+}
+
+fn krumhansl_key(chroma: &[f64; 12]) -> Option<(u8, bool, f32)> {
+    const MAJOR: [f64; 12] = [
+        6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88,
+    ];
+    const MINOR: [f64; 12] = [
+        6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17,
+    ];
+    let mean = chroma.iter().sum::<f64>() / 12.0;
+    let centered = chroma.map(|v| v - mean);
+    let norm = centered.iter().map(|v| v * v).sum::<f64>().sqrt();
+    if norm <= 1.0e-9 {
+        return None;
+    }
+    let score = |profile: &[f64; 12], root: usize| {
+        let pm = profile.iter().sum::<f64>() / 12.0;
+        let pnorm = profile
+            .iter()
+            .map(|v| (v - pm) * (v - pm))
+            .sum::<f64>()
+            .sqrt();
+        (0..12)
+            .map(|i| centered[i] * (profile[(i + 12 - root) % 12] - pm))
+            .sum::<f64>()
+            / (norm * pnorm)
+    };
+    let mut best = (-2.0, 0u8, false);
+    let mut second = -2.0f64;
+    for root in 0..12 {
+        for minor in [false, true] {
+            let value = score(if minor { &MINOR } else { &MAJOR }, root);
+            if value > best.0 {
+                second = best.0;
+                best = (value, root as u8, minor);
+            } else if value > second {
+                second = value;
+            }
+        }
+    }
+    Some((
+        best.1,
+        best.2,
+        ((best.0 - second) / best.0.abs().max(1.0e-9)).clamp(0.0, 1.0) as f32,
+    ))
 }
 
 fn hops_to_ms(hops: f64) -> u32 {

@@ -920,6 +920,7 @@ impl Shell {
                     duration_ms: 181_000 + n as u32 * 23_000,
                     image: String::new(),
                     plays: None,
+                    features: None,
                 }),
                 source,
             }

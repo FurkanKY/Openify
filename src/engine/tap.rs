@@ -147,8 +147,8 @@ pub struct LevelSink {
     device: Device,
     boosted: bool,
     raw_warned: bool,
-    /// AutoMix çözümleyicisi (`output/beat.rs`); ilk kullanımda kurulur, AutoMix
-    /// kapalıyken hiç kurulmaz / çalışmaz.
+    /// Played-track analysis (`output/beat.rs`); AutoMix edge data and whole-track
+    /// features share this single pass.
     beat: Option<Box<BeatTap>>,
     repet: Option<RepetWorker>,
 }
@@ -232,12 +232,6 @@ impl LevelSink {
     /// yazara verir, motora yayınlar), yenisini başlatır; paketi çözümleyiciye besler.
     /// AutoMix kapalıyken hiçbir şey yapmaz.
     fn analyze_beats(&mut self, samples: &[f64]) {
-        if !self.out.ctl().automix_on() {
-            if let Some(beat) = &mut self.beat {
-                beat.abort();
-            }
-            return;
-        }
         let beat = self.beat.get_or_insert_with(|| Box::new(BeatTap::new()));
         if let Some(track) = self.out.pending_track() {
             let prev = beat.finish(track.ended);

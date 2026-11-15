@@ -233,6 +233,7 @@ mod tests {
             duration_ms: 1000 * n,
             image: String::new(),
             plays: None,
+            features: None,
         }
     }
 

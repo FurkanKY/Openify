@@ -1200,6 +1200,20 @@ fn test_autoscroll_duration() -> Option<Duration> {
         .and_then(|value| parse_test_autoscroll_duration(&value))
 }
 
+fn test_view_scroll() -> Option<f32> {
+    if !crate::crash::is_test_run() {
+        return None;
+    }
+    parse_test_view_scroll(&std::env::var("OPENIFY_TEST_VIEW_SCROLL").ok()?)
+}
+
+fn parse_test_view_scroll(value: &str) -> Option<f32> {
+    value
+        .parse::<f32>()
+        .ok()
+        .filter(|value| value.is_finite() && *value >= 0.)
+}
+
 fn parse_test_autoscroll_duration(value: &str) -> Option<Duration> {
     let seconds = value.trim().parse::<u64>().ok()?;
     (1..=60)
@@ -1351,11 +1365,31 @@ impl Shell {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(3);
+            let scroll = (view == "settings").then(test_view_scroll).flatten();
+            let find = matches!(&route, super::history::Route::Collection(_))
+                .then(|| std::env::var("OPENIFY_TEST_FIND").ok())
+                .flatten();
             cx.spawn(async move |this, cx| {
                 cx.background_executor()
                     .timer(std::time::Duration::from_secs(after))
                     .await;
-                let _ = this.update(cx, |shell, cx| shell.navigate(route, cx));
+                let _ = this.update(cx, |shell, cx| {
+                    shell.navigate(route, cx);
+                    if let Some(query) = find {
+                        shell.manage.find = Some(super::manage::Find::with_query(query));
+                        cx.notify();
+                    }
+                });
+                if let Some(y) = scroll {
+                    cx.background_executor()
+                        .timer(Duration::from_millis(500))
+                        .await;
+                    let _ = this.update(cx, |shell, cx| {
+                        let base = shell.pages.scroll.0.borrow().base_handle.clone();
+                        base.set_offset(gpui::point(gpui::px(0.), gpui::px(-y)));
+                        cx.notify();
+                    });
+                }
             })
             .detach();
             return;
@@ -1376,7 +1410,7 @@ impl Shell {
 #[cfg(test)]
 mod test_view_and_autoscroll_tests {
     use super::{super::history::Route, should_start_test_autoscroll, test_view_route};
-    use super::{Duration, parse_test_autoscroll_duration};
+    use super::{Duration, parse_test_autoscroll_duration, parse_test_view_scroll};
     use crate::engine::CollectionId;
 
     #[test]
@@ -1388,6 +1422,15 @@ mod test_view_and_autoscroll_tests {
         assert_eq!(parse_test_autoscroll_duration("0"), None);
         assert_eq!(parse_test_autoscroll_duration("61"), None);
         assert_eq!(parse_test_autoscroll_duration("ten"), None);
+    }
+
+    #[test]
+    fn test_view_scroll_accepts_only_nonnegative_finite_offsets() {
+        assert_eq!(parse_test_view_scroll("1100"), Some(1100.));
+        assert_eq!(parse_test_view_scroll("0"), Some(0.));
+        assert_eq!(parse_test_view_scroll("-1"), None);
+        assert_eq!(parse_test_view_scroll("NaN"), None);
+        assert_eq!(parse_test_view_scroll("bottom"), None);
     }
 
     #[test]

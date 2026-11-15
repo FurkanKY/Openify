@@ -107,6 +107,7 @@ fn sample_track(n: usize) -> TrackRow {
         duration_ms: 180_000 + n as u32 * 17_000,
         image: String::new(),
         plays: None,
+        features: None,
     }
 }
 

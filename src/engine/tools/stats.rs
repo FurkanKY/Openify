@@ -352,6 +352,7 @@ impl Db {
                             duration_ms: r.get(4)?,
                             image: r.get(5)?,
                             plays: Some(r.get::<_, i64>(6)?.max(0) as u64),
+                            features: None,
                         },
                         plays: r.get::<_, i64>(6)?.max(0) as u64,
                     })
@@ -766,6 +767,7 @@ mod tests {
                 duration_ms: 1000,
                 image: String::new(),
                 plays: None,
+                features: None,
             })
             .collect();
         db.save_tracks(&rows).unwrap();
@@ -878,6 +880,7 @@ mod tests {
             duration_ms: 123_000,
             image: "cover-url".into(),
             plays: None,
+            features: None,
         };
         db.save_tracks(&[cached]).unwrap();
         let smart = db.smart_tracks(SmartList::Top30, now).unwrap();

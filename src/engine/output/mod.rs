@@ -125,7 +125,7 @@ mod writer;
 mod xfade;
 
 pub use automix::{EdgeView, FALLBACK_MS as AUTOMIX_FALLBACK_MS};
-pub use beat::{Analysis, BeatTap, ENV_SECS, Edge};
+pub use beat::{Analysis, BeatTap, ENV_SECS, Edge, TrackFeatures};
 #[cfg(test)]
 pub use beat::{HAS_HEAD, HAS_TAIL};
 pub(in crate::engine) use device::Device;

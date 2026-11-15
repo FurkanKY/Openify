@@ -502,6 +502,7 @@ fn history_row(uri: &str) -> TrackRow {
         duration_ms: 0,
         image: String::new(),
         plays: None,
+        features: None,
     }
 }
 

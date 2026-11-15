@@ -591,6 +591,7 @@ mod tests {
                 duration_ms: 210_000,
                 image: String::new(),
                 plays: None,
+                features: None,
             })
             .collect();
         db.save_tracks(&rows).unwrap();

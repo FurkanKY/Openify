@@ -1512,6 +1512,7 @@ impl Shell {
                     reorder: false,
                     added: None,
                     plays,
+                    features: false,
                 },
                 track,
                 cx,

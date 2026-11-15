@@ -79,7 +79,7 @@ pub use library::{
     CollectionId, Library, LibraryItem, LibraryMeta, SmartList, TrackRow, artist_item,
     folder_contains, folder_id, mosaic_urls,
 };
-pub use output::{MAX_OVERLAP_MS, OutputCtl};
+pub use output::{MAX_OVERLAP_MS, OutputCtl, TrackFeatures};
 pub use queue::{QueueEntry, QueueSource, QueueView, RepeatMode};
 // Dinleme çekirdeği (bkz. `radio.rs`, `hidden.rs`, `listening.rs`).
 pub use hidden::{HiddenList, HiddenSong};
@@ -450,6 +450,11 @@ pub enum Event {
     CollectionLoaded {
         id: CollectionId,
         tracks: Arc<Vec<TrackRow>>,
+    },
+    /// A full-track analysis became available for a locally played song.
+    TrackFeaturesReady {
+        uri: String,
+        features: output::TrackFeatures,
     },
     CollectionFailed {
         id: CollectionId,
@@ -1047,11 +1052,16 @@ impl Engine {
     /// Çalınan şarkının çözümlemesini önbelleğe yazar (arka planda).
     pub(in crate::engine) fn save_analysis(&self, uri: String, analysis: output::Analysis) {
         let Some(db) = self.db.clone() else { return };
-        self.bg.spawn_blocking(move || {
-            if let Err(e) = db.save_analysis(&uri, &analysis) {
-                log::warn!("AutoMix çözümlemesi yazılamadı: {e:#}");
-            }
-        });
+        let gate = self.pb.gate.clone();
+        self.bg
+            .spawn_blocking(move || match db.save_analysis(&uri, &analysis) {
+                Ok(()) => {
+                    if let Some(features) = analysis.features {
+                        gate.send(Event::TrackFeaturesReady { uri, features });
+                    }
+                }
+                Err(e) => log::warn!("Şarkı çözümlemesi yazılamadı: {e:#}"),
+            });
     }
 
     /// Tutulan AutoMix kipini çıkışa verir (çıkış yoksa bağlanınca).
@@ -2029,6 +2039,7 @@ fn blank_row(uri: &str) -> TrackRow {
         duration_ms: 0,
         image: String::new(),
         plays: None,
+        features: None,
     }
 }
 
